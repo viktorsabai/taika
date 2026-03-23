@@ -206,16 +206,31 @@ def _strip_trailing_politeness(thai: str, phonetic: str) -> tuple[str, str]:
     return thai, phonetic
 
 
+# Thai script range: U+0E00–U+0E7F (буквы тайского алфавита)
+_THAI_SCRIPT_RE = re.compile(r"[\u0E00-\u0E7F]+")
+
+
+def _strip_thai_from_phonetic(phonetic: str) -> str:
+    """Убирает тайские символы из phonetic — поле должно быть только кириллица."""
+    return _THAI_SCRIPT_RE.sub("", phonetic)
+
+
+def _has_thai_script(s: str) -> bool:
+    return bool(_THAI_SCRIPT_RE.search(s))
+
+
 def _normalize_phonetic(phonetic: str) -> str:
-    """Убирает IPA-символы (ū ē ʰ и т.п.), оставляет только кириллицу и стрелки →↓↘↑↗."""
+    """Убирает IPA-символы (ū ē ʰ и т.п.), тайский скрипт, оставляет только кириллицу и стрелки →↓↘↑↗."""
     replacements = [
         ("ū", "у"), ("ē", "е"), ("ā", "а"), ("ī", "и"), ("ō", "о"),
         ("í", "и"), ("ú", "у"), ("é", "е"), ("ó", "о"), ("á", "а"),
         ("ʰ", ""), ("ʹ", ""), ("ʿ", ""), ("ʻ", ""),
     ]
-    out = phonetic
+    out = _strip_thai_from_phonetic(phonetic)
     for old, new in replacements:
         out = out.replace(old, new)
+    # схлопнуть лишние пробелы (после удаления тайского могли остаться)
+    out = re.sub(r"\s+", " ", out).strip()
     return out
 
 
@@ -313,16 +328,21 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] 
 
     system = (
         "You are a Thai teacher for Russian speakers. "
-        "Task: translate short everyday Russian phrases into Thai and produce a phonetic transcription.\n"
-        "Phonetic RULES (strict):\n"
-        "- Use ONLY Russian Cyrillic letters (а-я, ё). NO Latin. NO IPA diacritics (ū ē ʰ í ú etc).\n"
-        "- Split syllables by spaces. Each syllable ends with exactly one tone arrow: → ↓ ↘ ↑ ↗\n"
-        "- Example: 'са→ ват→ ди↘ май↗' or 'чан→ мыа↘ кхрап↘'.\n"
-        "- Do NOT add ครับ/ค่ะ or кхрап/кха at the end — we add it separately.\n"
-        "- Return JSON: {\"thai\": \"...\", \"phonetic\": \"...\"}."
+        "Task: translate short everyday Russian phrases into Thai and produce a Cyrillic phonetic transcription.\n\n"
+        "Phonetic RULES (strict — phonetic field must contain ONLY):\n"
+        "- Russian Cyrillic letters (а-я, ё). NO Thai script. NO Latin. NO IPA.\n"
+        "- Syllables separated by spaces. Each syllable ends with one tone arrow: → ↓ ↘ ↑ ↗\n"
+        "- Examples: 'са→ ват→ ди↘ май↗', 'ныа↘ яй↘ ма↗к↘' (tired), 'чан→ мыа↘'.\n"
+        "- Do NOT add ครับ/ค่ะ or кхрап/кха — we add it separately.\n\n"
+        "Phrase types:\n"
+        "- Statements: direct translation.\n"
+        "- Questions (Russian ends with ?): use Thai question structure (ไหม, อะไร, ที่ไหน, กี่โมง, etc.).\n\n"
+        "Return JSON: {\"thai\": \"...\", \"phonetic\": \"...\"}."
     )
 
-    user = f"Russian phrase: {ru!r}. Translate to Thai + Cyrillic phonetic with tone arrows. No politeness particle."
+    is_question = (ru.rstrip()).endswith("?")
+    hint = " (question)" if is_question else ""
+    user = f"Russian phrase: {ru!r}{hint}. Translate to Thai + Cyrillic phonetic with tone arrows. No politeness particle. Phonetic = Cyrillic only."
 
     try:
         resp = requests.post(
@@ -358,9 +378,60 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] 
         phon = str(data.get("phonetic", "")).strip()
         if not thai or not phon:
             return None
+        # Retry once if LLM put Thai script in phonetic (must be Cyrillic only)
+        if _has_thai_script(phon):
+            print("[smart_speaker] phonetic had Thai script, retrying with corrective prompt", file=sys.stderr, flush=True)
+            retried = _llm_translate_ru_to_th_retry(thai)
+            if retried:
+                return retried
+            # Fallback: strip Thai from phonetic (may leave arrows-only, but thai line is correct)
+            phon = _normalize_phonetic(phon)
         return thai, phon
     except Exception as e:  # pragma: no cover - defensive
         print(f"[smart_speaker] parse error: {e}", file=sys.stderr, flush=True)
+        return None
+
+
+def _llm_translate_ru_to_th_retry(original_thai: str) -> tuple[str, str] | None:
+    """Повторный запрос: phonetic должен быть только кириллица. thai уже верный."""
+    if not OPENAI_API_KEY:
+        return None
+    user = (
+        f"Phonetic for Thai '{original_thai}' — MUST be Cyrillic only (no Thai script). "
+        "Example for 'เหนื่อยมาก': 'ныа↘ яй↘ ма↗к↘'. Syllables with arrows, space-separated."
+    )
+    try:
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": OPENAI_MODEL,
+                "messages": [
+                    {"role": "system", "content": "Return JSON: {\"phonetic\": \"Cyrillic transliteration with tone arrows (→↓↘↑↗). No Thai letters.\"}"},
+                    {"role": "user", "content": user},
+                ],
+                "temperature": 0.2,
+                "response_format": {"type": "json_object"},
+            },
+            timeout=15,
+        )
+    except Exception as e:
+        print(f"[smart_speaker] retry failed: {e}", file=sys.stderr, flush=True)
+        return None
+    if resp.status_code >= 300:
+        return None
+    try:
+        content = resp.json()["choices"][0]["message"]["content"]
+        data = json.loads(content)
+        phon = str(data.get("phonetic", "")).strip()
+        if phon and not _has_thai_script(phon):
+            return original_thai, phon
+        # Fallback: strip Thai from original and hope something remains
+        return None
+    except Exception:
         return None
 
 
