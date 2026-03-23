@@ -276,7 +276,7 @@ def _cache_set(text_ru_norm: str, politeness: str, thai: str, phonetic: str) -> 
 _init_cache_db()
 
 OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip()
-OPENAI_MODEL = (os.getenv("TAIKA_SMART_MODEL") or "gpt-4.1-mini").strip()
+OPENAI_MODEL = (os.getenv("TAIKA_SMART_MODEL") or "gpt-4o-mini").strip()
 
 
 def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] | None:
@@ -378,9 +378,15 @@ async def smart_speaker(req: SmartSpeakerReq):
         thai, phonetic = hit
     else:
         # 3. LLM — генерация (если настроен OPENAI_API_KEY)
+        if not OPENAI_API_KEY:
+            print("[smart_speaker] OPENAI_API_KEY not set, cannot translate", file=sys.stderr, flush=True)
+            raise HTTPException(status_code=404, detail="no match and OPENAI_API_KEY not set in Railway Variables")
         llm = _llm_translate_ru_to_th(ru, politeness)
         if not llm:
-            raise HTTPException(status_code=404, detail="no match and LLM not configured")
+            raise HTTPException(
+                status_code=404,
+                detail="LLM translation failed. Check Railway logs for OpenAI errors. Model=" + OPENAI_MODEL,
+            )
         thai, phonetic = llm
 
     thai, phonetic = _apply_politeness(thai, phonetic, politeness)

@@ -1081,7 +1081,7 @@ public final class SpeakerManager: ObservableObject {
                     return
                 }
 
-                let (thText, phonetic) = try await self.withTimeout(seconds: 12) {
+                let (thText, phonetic) = try await self.withTimeout(seconds: 25) {
                     try await self.smartSpeakerTranslate(ru: ruTrimmed)
                 }
 
@@ -1106,9 +1106,25 @@ public final class SpeakerManager: ObservableObject {
                     if let e = error as NSError?, e.domain == "speaker.smart", e.code == 1 {
                         hint = "API не настроен. Запусти ./start_api.sh в scripts/thai_tone_assessment"
                     } else if let e = error as NSError?, e.domain == "speaker.smart.http", e.code == 404 {
-                        hint = "Фраза не найдена. Задай OPENAI_API_KEY для перевода любых фраз"
+                        hint = "Перевод не сработал. Railway: OPENAI_API_KEY + передеплой. Модель gpt-4o-mini."
+                    } else if let e = error as NSError? {
+                        #if DEBUG
+                        print("[speaker] smart_speaker error: \(e.domain) \(e.code) \(e.localizedDescription)")
+                        #endif
+                        if e.domain == NSURLErrorDomain {
+                            switch e.code {
+                            case NSURLErrorTimedOut:
+                                hint = "Таймаут. Скажи короче и попробуй снова"
+                            case NSURLErrorCannotConnectToHost, NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
+                                hint = "Проверь интернет и попробуй снова"
+                            default:
+                                hint = "Ошибка сети: \(e.localizedDescription). Попробуй ещё раз"
+                            }
+                        } else {
+                            hint = "Не удалось перевести. Попробуй ещё раз"
+                        }
                     } else {
-                        hint = "не удалось перевести. попробуй ещё раз"
+                        hint = "Не удалось перевести. Попробуй ещё раз"
                     }
                     self.taikaHints = [hint]
                     self.setPhase(.hint)
@@ -1156,6 +1172,9 @@ public final class SpeakerManager: ObservableObject {
         guard let base = Self.smartSpeakerBaseURL?.trimmingCharacters(in: .whitespacesAndNewlines), !base.isEmpty else {
             throw NSError(domain: "speaker.smart", code: 1)
         }
+        #if DEBUG
+        print("[speaker] smart_speaker POST \(base)/smart_speaker text_ru=\(ru.prefix(30))...")
+        #endif
         let url = URL(string: base.hasSuffix("/") ? base + "smart_speaker" : base + "/smart_speaker")!
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -1978,23 +1997,20 @@ public final class SpeakerManager: ObservableObject {
     /// Debug: симулятор → localhost; устройство → TAIKA_TONE_API_URL или TaikaAPIBaseURL.
     /// Release: Info.plist → TaikaAPIBaseURL (https://your-api.example.com без слэша в конце).
     static var toneAssessmentBaseURL: String? = {
+        // Info.plist или env всегда имеют приоритет (для Railway/прод)
+        if let url = (Bundle.main.object(forInfoDictionaryKey: "TaikaAPIBaseURL") as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !url.isEmpty {
+            return url
+        }
         #if DEBUG
-        #if targetEnvironment(simulator)
-        return "http://127.0.0.1:8000"
-        #else
         if let url = ProcessInfo.processInfo.environment["TAIKA_TONE_API_URL"]?.trimmingCharacters(in: .whitespacesAndNewlines), !url.isEmpty {
             return url
         }
-        if let url = (Bundle.main.object(forInfoDictionaryKey: "TaikaAPIBaseURL") as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !url.isEmpty {
-            return url
-        }
+        #if targetEnvironment(simulator)
+        return "http://127.0.0.1:8000"
+        #else
         return nil
         #endif
         #else
-        // Release / TestFlight: только из Info.plist (прод URL с HTTPS)
-        if let url = (Bundle.main.object(forInfoDictionaryKey: "TaikaAPIBaseURL") as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !url.isEmpty {
-            return url
-        }
         return nil
         #endif
     }()
