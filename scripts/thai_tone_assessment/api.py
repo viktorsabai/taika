@@ -198,14 +198,33 @@ def _load_steps_index() -> dict[str, tuple[str, str]]:
     return idx
 
 
+def _strip_trailing_politeness(thai: str, phonetic: str) -> tuple[str, str]:
+    """Убирает ครับ/ค่ะ и кхрап/кха с конца, чтобы не дублировать при _apply_politeness."""
+    for _ in range(2):  # макс 2 итерации (на случай двойного кхрап)
+        thai = re.sub(r"\s*(ครับ|ค่ะ)\s*$", "", thai).strip()
+        phonetic = re.sub(r"\s*(кхрап↘|кхрап\s*↘|кха↘|кха\s*↘)\s*$", "", phonetic).strip()
+    return thai, phonetic
+
+
+def _normalize_phonetic(phonetic: str) -> str:
+    """Убирает IPA-символы (ū ē ʰ и т.п.), оставляет только кириллицу и стрелки →↓↘↑↗."""
+    replacements = [
+        ("ū", "у"), ("ē", "е"), ("ā", "а"), ("ī", "и"), ("ō", "о"),
+        ("í", "и"), ("ú", "у"), ("é", "е"), ("ó", "о"), ("á", "а"),
+        ("ʰ", ""), ("ʹ", ""), ("ʿ", ""), ("ʻ", ""),
+    ]
+    out = phonetic
+    for old, new in replacements:
+        out = out.replace(old, new)
+    return out
+
+
 def _apply_politeness(thai: str, phonetic: str, politeness: str) -> tuple[str, str]:
+    thai, phonetic = _strip_trailing_politeness(thai, phonetic)
     p = (politeness or "female").strip().lower()
-    # kathoe(y) treated as female per spec
     if p == "male":
-        # ครับ / кхрап↘
         return (thai + " ครับ").strip(), (phonetic + " кхрап↘").strip()
     if p in ("female", "kathoey"):
-        # ค่ะ / кха↘
         return (thai + " ค่ะ").strip(), (phonetic + " кха↘").strip()
     return thai, phonetic
 
@@ -294,24 +313,16 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] 
 
     system = (
         "You are a Thai teacher for Russian speakers. "
-        "Task: translate short everyday Russian phrases into Thai and produce a phonetic transcription "
-        "in Russian letters with Thai tone arrows. "
-        "Rules for phonetic:\n"
-        "- Use Russian letters (кириллица), no Latin.\n"
-        "- Split syllables by spaces.\n"
-        "- Each syllable MUST end with exactly one Thai tone arrow symbol:\n"
-        "  → (Mid), ↓ (Low), ↘ (Falling), ↑ (High), ↗ (Rising).\n"
-        "- Example: 'са→ ват→ ди↘ май↗'.\n"
-        "- Do NOT use accent marks like ´, only arrows.\n"
-        "- Return a single JSON object with fields 'thai' and 'phonetic'."
+        "Task: translate short everyday Russian phrases into Thai and produce a phonetic transcription.\n"
+        "Phonetic RULES (strict):\n"
+        "- Use ONLY Russian Cyrillic letters (а-я, ё). NO Latin. NO IPA diacritics (ū ē ʰ í ú etc).\n"
+        "- Split syllables by spaces. Each syllable ends with exactly one tone arrow: → ↓ ↘ ↑ ↗\n"
+        "- Example: 'са→ ват→ ди↘ май↗' or 'чан→ мыа↘ кхрап↘'.\n"
+        "- Do NOT add ครับ/ค่ะ or кхрап/кха at the end — we add it separately.\n"
+        "- Return JSON: {\"thai\": \"...\", \"phonetic\": \"...\"}."
     )
 
-    user = (
-        f"Russian phrase: {ru!r}.\n"
-        f"Politeness tail: {p} "
-        "(male = 'ครับ', female = 'ค่ะ', kathoey = also 'ค่ะ'). "
-        "Include this particle at the end where natural for spoken Thai."
-    )
+    user = f"Russian phrase: {ru!r}. Translate to Thai + Cyrillic phonetic with tone arrows. No politeness particle."
 
     try:
         resp = requests.post(
@@ -365,10 +376,13 @@ async def smart_speaker(req: SmartSpeakerReq):
     politeness = req.politeness or "female"
     print(f"[smart_speaker] ru={ru!r} ru_norm={ru_norm!r} politeness={politeness}", file=sys.stderr, flush=True)
 
-    # 1. Cache lookup — если уже переводили, возвращаем из кэша
+    # 1. Cache lookup — если уже переводили, возвращаем из кэша (нормализуем на всякий случай)
     cached = _cache_get(ru_norm, politeness)
     if cached:
         thai, phonetic = cached
+        phonetic = _normalize_phonetic(phonetic)
+        thai, phonetic = _strip_trailing_politeness(thai, phonetic)
+        thai, phonetic = _apply_politeness(thai, phonetic, politeness)
         return {"thai": thai, "phonetic": phonetic}
 
     # 2. Steps.json — точное совпадение
@@ -389,6 +403,7 @@ async def smart_speaker(req: SmartSpeakerReq):
             )
         thai, phonetic = llm
 
+    phonetic = _normalize_phonetic(phonetic)
     thai, phonetic = _apply_politeness(thai, phonetic, politeness)
 
     # 4. Сохраняем в кэш (с учётом politeness — результат уже с кхрап/кха)
