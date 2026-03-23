@@ -61,12 +61,9 @@ public struct StepProGateCard: View {
 
                     Spacer(minLength: 0)
 
-                    HStack(spacing: 6) {
-                        AppMiniChip(
-                            title: label.lowercased(),
-                            style: .accent
-                        ) { }
-                    }
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
                 }
                 .padding(.horizontal, CardDS.Metrics.contentX)
                 .padding(.top, 8)
@@ -75,16 +72,12 @@ public struct StepProGateCard: View {
                 Button(action: onPrimaryTap) {
                     Text(primaryTitle.lowercased())
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(CD.ColorToken.text)
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 10)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(CD.ColorToken.card)
-                                .overlay(
-                                    Capsule(style: .continuous)
-                                        .stroke(CD.ColorToken.stroke.opacity(0.35), lineWidth: 1)
-                                )
+                                .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 1.5)
                         )
                 }
                 .buttonStyle(.plain)
@@ -100,16 +93,16 @@ public struct StepProGateCard: View {
                             .foregroundStyle(ThemeManager.shared.currentAccentFill)
 
                         Text(title)
-                            .font(.taikaTitle(24))
-                            .foregroundStyle(CD.ColorToken.text)
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
                             .multilineTextAlignment(.center)
                             .lineLimit(2)
                             .minimumScaleFactor(0.72)
                             .allowsTightening(true)
 
                         Text(subtitle)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(CD.ColorToken.textSecondary)
                             .multilineTextAlignment(.center)
                             .lineLimit(2)
                             .minimumScaleFactor(0.72)
@@ -117,7 +110,7 @@ public struct StepProGateCard: View {
 
                         if let footnote, !footnote.isEmpty {
                             Text(footnote)
-                                .font(.system(size: 13, weight: .regular))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.92))
                                 .multilineTextAlignment(.center)
                                 .lineLimit(2)
@@ -278,6 +271,8 @@ public struct StepLifehackCardLegacy: View {
     public let onFavorite: () -> Void
     public let onNext: (() -> Void)?
 
+    @State private var showExpandSheet: Bool = false
+
     public init(
         body: String,
         label: String = "лайфхак",
@@ -332,31 +327,31 @@ public struct StepLifehackCardLegacy: View {
                     isLearned: false,
                     allowLearn: false,
                     isTip: true,
+                    showsPlayAndFavorite: true,
                     onPlay: nil,
                     onFavorite: onFavorite,
                     onLearn: {},
-                    onNext: onNext
+                    onNext: onNext,
+                    onExpand: { showExpandSheet = true }
                 )
             },
             meta: {
-                VStack(spacing: 0) {
-                    // чуть больше воздуха сверху и снизу, как у StepWordCard
-                    Spacer(minLength: 16)
-                    VStack(spacing: 8) {
-                        taikaFMStyledText(bodyText)
+                // Лайфхак: текст по центру карточки по вертикали; длинный контент скроллится
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        taikaFMStyledText(bodyText, baseColor: CD.ColorToken.textSecondary.opacity(0.92))
                             .font(.system(size: 16, weight: .medium))
                             .multilineTextAlignment(.center)
-                            .lineSpacing(4)
-                            .lineLimit(6)
-                            .minimumScaleFactor(0.7)
-                            .allowsTightening(true)
+                            .lineSpacing(5)
                             .frame(maxWidth: .infinity)
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity)
-                    Spacer(minLength: 20)
+                    .frame(minHeight: max(200, size.height - 120))
+                    .padding(.horizontal, CardDS.Metrics.contentX)
+                    .padding(.vertical, 18)
                 }
-                .padding(.horizontal, CardDS.Metrics.contentX)
-                .padding(.vertical, 18)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             },
             tags: {
                 EmptyView()
@@ -365,6 +360,88 @@ public struct StepLifehackCardLegacy: View {
                 EmptyView()
             }
         )
+        .sheet(isPresented: $showExpandSheet) {
+            StepLifehackExpandSheet(bodyText: bodyText) {
+                showExpandSheet = false
+            }
+        }
+    }
+}
+
+// EPIC 5: оверлей лайфхака — тот же фон, что у «Итоги урока» (dim 0.45 + ultraThinMaterial + black 0.35)
+private struct StepLifehackExpandSheet: View {
+    let bodyText: String
+    let onDismiss: () -> Void
+
+    private static let sheetCornerRadius: CGFloat = 28
+    private var cardShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: Self.sheetCornerRadius, style: .continuous)
+    }
+
+    private var cardContent: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("taikA")
+                    .font(.taikaLogo(16))
+                    .foregroundStyle(CD.ColorToken.text)
+                Spacer(minLength: 0)
+                AppMiniChip(title: "лайфхак", style: .accent) { }
+            }
+            .padding(.horizontal, CardDS.Metrics.contentX)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+
+            let scrollHeight: CGFloat = UIScreen.main.bounds.height * 0.45
+            ScrollView {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 24)
+                    taikaFMStyledText(bodyText, baseColor: CD.ColorToken.textSecondary.opacity(0.92))
+                        .font(.system(size: 16, weight: .medium))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(5)
+                        .padding(.horizontal, CardDS.Metrics.contentX)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    Spacer(minLength: 24)
+                }
+                .frame(minHeight: scrollHeight)
+            }
+            .frame(maxHeight: scrollHeight)
+
+            Button {
+                onDismiss()
+            } label: {
+                Text("закрыть")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(CD.ColorToken.text)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
+            .padding(.horizontal, CardDS.Metrics.contentX)
+            .padding(.bottom, 20)
+            .padding(.top, 8)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: Self.sheetCornerRadius)
+                .fill(.ultraThinMaterial)
+                .overlay(Color.black.opacity(0.35))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Self.sheetCornerRadius)
+                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+        )
+        .clipShape(cardShape)
+        .frame(maxWidth: 320)
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+                .onTapGesture { onDismiss() }
+
+            cardContent
+        }
+        .presentationBackground(.clear)
     }
 }
 
@@ -423,7 +500,9 @@ public enum CardDS {
         // независимые размеры степ‑карточек, чтобы изменения курсов/уроков не влияли на степы
         // делаем все степ‑карты квадратными, чтобы центр секции в StepView выглядел чище
         public static let stepCardWidth: CGFloat = 290            // ширина всех степ‑карт
-        public static let stepWordCardHeight: CGFloat = 290       // учебная квадратная
+        public static let stepWordCardHeight: CGFloat = 290       // учебная квадратная (minHeight при stepCardFlexHeight)
+        /// EPIC 5: max height for step word card when using adaptive height so long text is not truncated.
+        public static let stepCardMaxHeight: CGFloat = 420
         public static let stepLifehackCardHeight: CGFloat = 360   // лайфхак теперь тоже квадратный
 
         // алиасы для старых имён, чтобы не ломать существующие вызовы
@@ -687,70 +766,82 @@ public struct StepCardActionBar: View {
     public let isLearned: Bool
     public let allowLearn: Bool
     public let isTip: Bool
+    public let showsPlayAndFavorite: Bool
     public let onPlay: (() -> Void)?
     public let onFavorite: () -> Void
     public let onLearn: () -> Void
     public let onNext: (() -> Void)?
+    public let onExpand: (() -> Void)?
 
     public init(
         isFavorite: Bool,
         isLearned: Bool,
         allowLearn: Bool = true,
         isTip: Bool = false,
+        showsPlayAndFavorite: Bool = true,
         onPlay: (() -> Void)? = nil,
         onFavorite: @escaping () -> Void,
         onLearn: @escaping () -> Void,
-        onNext: (() -> Void)? = nil
+        onNext: (() -> Void)? = nil,
+        onExpand: (() -> Void)? = nil
     ) {
         self.isFavorite = isFavorite
         self.isLearned = isLearned
         self.allowLearn = allowLearn
         self.isTip = isTip
+        self.showsPlayAndFavorite = showsPlayAndFavorite
         self.onPlay = onPlay
         self.onFavorite = onFavorite
         self.onLearn = onLearn
         self.onNext = onNext
+        self.onExpand = onExpand
     }
 
     public var body: some View {
         HStack(spacing: 28) {
-            if !isTip {
-                StepIconCircleButton(
-                    systemName: "speaker.wave.2.fill",
-                    isActive: false,
-                    action: { onPlay?() }
-                )
-            }
-            AppCardIconButton(
-                kind: .favorite,
-                isActive: isFavorite,
-                onTap: { onFavorite() }
-            )
             if isTip {
+                StepIconCircleButton(
+                    systemName: "rectangle.expand.vertical",
+                    isActive: false,
+                    action: { onExpand?() }
+                )
+                if showsPlayAndFavorite {
+                    AppCardIconButton(
+                        kind: .favorite,
+                        isActive: isFavorite,
+                        onTap: { onFavorite() }
+                    )
+                }
                 StepIconCircleButton(
                     systemName: "chevron.right",
                     isActive: false,
                     action: { onNext?() }
                 )
             } else {
+                if showsPlayAndFavorite {
+                    StepIconCircleButton(
+                        systemName: "speaker.wave.2.fill",
+                        isActive: false,
+                        action: { onPlay?() }
+                    )
+                    AppCardIconButton(
+                        kind: .favorite,
+                        isActive: isFavorite,
+                        onTap: { onFavorite() }
+                    )
+                }
                 if isLearned {
                     AppMiniChip(
                         title: "запомнил",
                         style: .accent
                     ) {
-                        if allowLearn {
-                            onLearn()
-                        }
+                        if allowLearn { onLearn() }
                     }
                 } else {
                     StepIconCircleButton(
                         systemName: "checkmark",
                         isActive: false,
-                        action: {
-                            if allowLearn {
-                                onLearn()
-                            }
-                        }
+                        action: { if allowLearn { onLearn() } }
                     )
                 }
             }
@@ -770,23 +861,16 @@ fileprivate struct StepIconCircleButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 14, weight: .semibold))
-                .frame(width: 32, height: 32)
-                .background(
-                    Circle()
-                        .fill(isActive ? Color.white.opacity(0.14) : Color.clear)
+                .font(.system(size: Theme.IconButton.iconSizeCard, weight: .semibold))
+                .foregroundStyle(
+                    isActive
+                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                    : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92))
                 )
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.22), lineWidth: 1)
-                )
+                .frame(minWidth: Theme.IconButton.tapMinCard, minHeight: Theme.IconButton.tapMinCard)
+                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(
-            isActive
-            ? Color.white
-            : CD.ColorToken.textSecondary
-        )
+        .buttonStyle(PressDownStyle(scale: 0.88, fade: 0.92, useBouncySpring: true, flashOpacity: 0.16))
     }
 }
 public struct StepCardBase<Content: View, Bottom: View>: View {
@@ -1375,38 +1459,37 @@ fileprivate struct TaikaBubblePillShape: Shape {
     }
 }
 
-// MARK: - Taika FM message bubble (universal shell)
+// MARK: - Taika FM message bubble (universal shell). showBubble: false — только маскот и текст, без бабла (фокус на карточках)
 public struct TaikaFMBubble<Content: View>: View {
     public let label: String
     public let reactions: [String]
     public let onReactionTap: ((String) -> Void)?
+    public let showBubble: Bool
     private let content: Content
 
-    /// универсальный бабл: сюда кладём только контент сообщения.
-    /// заголовок «taika fm» и прочие подписи живут в соответствующих DS.
     public init(
         label: String = "taika fm",
         reactions: [String] = [],
         onReactionTap: ((String) -> Void)? = nil,
+        showBubble: Bool = true,
         @ViewBuilder content: () -> Content
     ) {
         self.label = label
         self.reactions = reactions
         self.onReactionTap = onReactionTap
+        self.showBubble = showBubble
         self.content = content()
     }
 
     public var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            // аватар таики слева (единый по приложению)
             Image("mascot.course")
                 .resizable()
                 .scaledToFit()
-                .scaleEffect(x: -1, y: 1, anchor: .center) // смотрит в сторону бабла
+                .scaleEffect(x: -1, y: 1, anchor: .center)
                 .frame(width: 60, height: 60)
 
-            // сам чат‑бабл — максимально близко к привычным мессенджерам
-            ZStack(alignment: .bottomTrailing) {
+            if showBubble {
                 content
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(height: 64)
@@ -1420,7 +1503,11 @@ public struct TaikaFMBubble<Content: View>: View {
                     )
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 320, alignment: .leading)
-                // reactions UI removed
+            } else {
+                content
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minHeight: 44)
+                    .padding(.leading, 4)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1428,7 +1515,7 @@ public struct TaikaFMBubble<Content: View>: View {
     }
 }
 
-// MARK: - Search bubble (same layout as TaikaFMBubble, but with mascot.profile + search field)
+// MARK: - Search bubble (нативный поиск без маскота, в айдентике приложения)
 public struct TaikaSearchBubble: View {
     @Binding public var query: String
     public let placeholder: String
@@ -1445,69 +1532,56 @@ public struct TaikaSearchBubble: View {
     }
 
     public var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            // mascot for search
-            Image("mascot.profile")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 60, height: 60)
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.8))
 
-            // bubble with search chrome
-            ZStack(alignment: .center) {
-                HStack(spacing: 10) {
-                    TextField("", text: $query, prompt: Text(placeholder).foregroundStyle(CD.ColorToken.textSecondary.opacity(0.75)))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundStyle(CD.ColorToken.text)
-                        .tint(ThemeManager.shared.currentAccentFill)
-                        .submitLabel(.search)
-                        .onSubmit { onSubmit?(query) }
+            TextField("", text: $query, prompt: Text(placeholder).foregroundStyle(CD.ColorToken.textSecondary.opacity(0.75)))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .font(.system(size: 15, weight: .regular))
+                .foregroundStyle(CD.ColorToken.text)
+                .tint(ThemeManager.shared.currentAccentFill)
+                .submitLabel(.search)
+                .onSubmit { onSubmit?(query) }
 
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-
-                    if !query.isEmpty {
-                        Button(action: {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            query = ""
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
-                        }
-                        .buttonStyle(.plain)
-                    }
+            if !query.isEmpty {
+                Button(action: {
+                    #if os(iOS)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    #endif
+                    query = ""
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: 44)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(
-                    Theme.Surfaces.card(
-                        TaikaBubblePillShape()
-                    )
-                )
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 320, alignment: .leading)
+                .buttonStyle(.plain)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 4)
+        .frame(height: 44)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(
+            Theme.Surfaces.card(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+            )
+        )
     }
 }
 
 // MARK: - Taika FM message bubble typing animation
 
-// lightweight inline chunk model for [[accent]] parsing inside TaikaFMBubbleTyping
-fileprivate struct TaikaFMInlineChunk {
+// lightweight inline chunk model for [[accent]] parsing (shared: CardDS, FavoriteDS)
+struct TaikaFMInlineChunk {
     let text: String
     let isAccent: Bool
 }
 
 /// simple [[...]] parser: splits string into chunks and marks accent segments
-fileprivate func taikaFMParseAccentChunks(_ raw: String) -> [TaikaFMInlineChunk] {
+func taikaFMParseAccentChunks(_ raw: String) -> [TaikaFMInlineChunk] {
     var result: [TaikaFMInlineChunk] = []
     var buffer = ""
     var isAccent = false
@@ -1542,20 +1616,22 @@ fileprivate func taikaFMParseAccentChunks(_ raw: String) -> [TaikaFMInlineChunk]
     return result
 }
 
-/// builds styled Text from raw TaikaFM string, mirroring LessonsDS accent behaviour
-fileprivate func taikaFMStyledText(_ s: String) -> Text {
+/// builds styled Text from raw string with [[accent]] highlighting (ThemeManager accent). Shared: CardDS, FavoriteDS.
+/// baseColor: для лайфхаков передать textSecondary/white, иначе используется text.
+func taikaFMStyledText(_ s: String, baseColor: Color? = nil) -> Text {
     let chunks = taikaFMParseAccentChunks(s)
+    let nonAccentColor = baseColor ?? CD.ColorToken.text
     guard !chunks.isEmpty else {
-        return Text(s).foregroundStyle(CD.ColorToken.text)
+        return Text(s).foregroundStyle(nonAccentColor)
     }
 
     var result = Text("")
     for chunk in chunks {
         let base = Text(chunk.text)
         if chunk.isAccent {
-            result = result + base.foregroundStyle(ThemeManager.shared.currentAccentFill)
+            result = result + base.foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
         } else {
-            result = result + base.foregroundStyle(CD.ColorToken.text)
+            result = result + base.foregroundStyle(nonAccentColor)
         }
     }
     return result
@@ -1565,6 +1641,7 @@ public struct TaikaFMBubbleTyping: View {
     public let messages: [String]
     public let reactions: [[String]]
     public let repeats: Bool
+    public let showBubble: Bool
 
     private enum Phase {
         case typing
@@ -1580,16 +1657,17 @@ public struct TaikaFMBubbleTyping: View {
     // один таймер, который крутит и точки, и фазы
     @State private var timer = Timer.publish(every: 0.35, on: .main, in: .common).autoconnect()
 
-    /// основной инициализатор: массив сообщений + опциональные реакции
-    public init(messages: [String], reactions: [[String]] = [], repeats: Bool = true) {
+    /// основной инициализатор: массив сообщений + опциональные реакции. showBubble: false — только маскот и текст
+    public init(messages: [String], reactions: [[String]] = [], repeats: Bool = true, showBubble: Bool = true) {
         self.messages = messages
         self.reactions = reactions
         self.repeats = repeats
+        self.showBubble = showBubble
     }
 
     /// совместимость со старым контрактом (один текст, без реакций)
-    public init(text: String, repeats: Bool = true) {
-        self.init(messages: [text], reactions: [], repeats: repeats)
+    public init(text: String, repeats: Bool = true, showBubble: Bool = true) {
+        self.init(messages: [text], reactions: [], repeats: repeats, showBubble: showBubble)
     }
 
     private var currentText: String {
@@ -1606,7 +1684,7 @@ public struct TaikaFMBubbleTyping: View {
 
     public var body: some View {
         let bubbleReactions: [String] = []
-        TaikaFMBubble(label: "taika fm", reactions: [], onReactionTap: nil) {
+        TaikaFMBubble(label: "taika fm", reactions: [], onReactionTap: nil, showBubble: showBubble) {
             Group {
                 switch phase {
                 case .typing:
@@ -1711,7 +1789,8 @@ fileprivate struct CourseInlineProgressView: View {
                             .frame(
                                 width: max(0, w * CGFloat(clamped)),
                                 height: barH
-                            ),
+                            )
+                            .animation(.easeInOut(duration: 0.28), value: clamped),
                         alignment: .leading
                     )
             }
@@ -1764,6 +1843,10 @@ public struct CourseLessonCard: View {
     // Optional taps (can be nil to keep visual-only)
     public let onFavoriteTap: (() -> Void)?
     public let onConsoleTap: (() -> Void)?
+    /// Открыть Спикер для практики произношения по этому уроку (иконка mic вместо info).
+    public let onSpeakerTap: (() -> Void)?
+    /// Открыть превью курса (описание + «Открыть курс»). Иконка info на карточке.
+    public let onTapInfo: (() -> Void)?
 
     // Icons
     public let showFavorite: Bool
@@ -1773,9 +1856,6 @@ public struct CourseLessonCard: View {
     public let visualScale: CGFloat
     public let visualOpacity: CGFloat
     public let visualRotateY: Double
-
-    @State private var isMetaBubbleVisible: Bool = false
-
 
     public init(
         title: String,
@@ -1801,6 +1881,8 @@ public struct CourseLessonCard: View {
         favoriteCount: Int? = nil,
         onFavoriteTap: (() -> Void)? = nil,
         onConsoleTap: (() -> Void)? = nil,
+        onSpeakerTap: (() -> Void)? = nil,
+        onTapInfo: (() -> Void)? = nil,
         showsInlineProgress: Bool = false,
         visualScale: CGFloat = 1.0,
         visualOpacity: CGFloat = 1.0,
@@ -1829,6 +1911,8 @@ public struct CourseLessonCard: View {
         self.favoriteCount = favoriteCount
         self.onFavoriteTap = onFavoriteTap
         self.onConsoleTap = onConsoleTap
+        self.onSpeakerTap = onSpeakerTap
+        self.onTapInfo = onTapInfo
         self.showsInlineProgress = showsInlineProgress
         self.visualScale = visualScale
         self.visualOpacity = visualOpacity
@@ -1837,22 +1921,11 @@ public struct CourseLessonCard: View {
 
     public var body: some View {
         let consoleIsEnabled = isConsoleEnabled || ((completionFraction ?? 0) >= 0.999)
-        let metaInfo: String? = {
-            var parts: [String] = []
-            if let lessonsCount = lessonsCount {
-                parts.append("\(lessonsCount) уроков")
-            }
-            if let durationText = durationText {
-                parts.append(durationText)
-            }
-            return parts.isEmpty ? nil : parts.joined(separator: " · ")
-        }()
-
         let progressFraction: Double? = showsInlineProgress ? (completionFraction ?? 0).clamped01 : nil
 
         let baseCard = CardBase(
             title: title.lowercased(),
-            subtitle: nil,
+            subtitle: subtitle,
             size: size,
             sectionChrome: sectionChrome,
             chromeStyle: chromeStyle,
@@ -1867,9 +1940,19 @@ public struct CourseLessonCard: View {
 
                     Spacer(minLength: 0)
 
-                    VStack(alignment: .trailing, spacing: 4) {
-                        if let statusKind {
-                            AppStatusChip(kind: statusKind)
+                    HStack(spacing: 8) {
+                        if let onTapInfo {
+                            Button(action: onTapInfo) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        VStack(alignment: .trailing, spacing: 4) {
+                            if let statusKind {
+                                AppStatusChip(kind: statusKind)
+                            }
                         }
                     }
                 }
@@ -1877,49 +1960,49 @@ public struct CourseLessonCard: View {
                 .padding(.bottom, 0)
             },
             bottom: {
+                // Порядок: Play (главная CTA, всегда цветная) → счётчик лайков → консоль → Спикер
                 HStack(spacing: 24) {
                     AppCardIconButton(
-                        kind: .info,
-                        isActive: isMetaBubbleVisible,
-                        onTap: {
-                            withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                                isMetaBubbleVisible.toggle()
-                            }
-                        }
-                    )
-                    AppCardIconButton(
-                        kind: .console,
-                        isEnabled: consoleIsEnabled,
-                        onTap: { onConsoleTap?() }
-                    )
-                    AppCardIconButton(
-                        kind: .favorite,
-                        isActive: isFavoriteActive,
-                        onTap: { onFavoriteTap?() }
-                    )
-                    AppCardIconButton(
                         kind: .play,
+                        forceAccent: true,
                         onTap: { onPrimaryTap?() }
                     )
+                    if showFavorite {
+                        if let count = favoriteCount {
+                            // Урок: счётчик лайков (карточки в избранном внутри урока)
+                            AppFavCounterMinimal(
+                                count: count,
+                                onTap: { onFavoriteTap?() }
+                            )
+                        } else {
+                            // Курс: лайк как был — просто сердечко-переключатель (добавить курс в избранное)
+                            AppCardIconButton(
+                                kind: .favorite,
+                                isActive: isFavoriteActive,
+                                onTap: { onFavoriteTap?() }
+                            )
+                        }
+                    }
+                    if showConsole {
+                        AppCardIconButton(
+                            kind: .console,
+                            isEnabled: consoleIsEnabled,
+                            onTap: { onConsoleTap?() }
+                        )
+                    }
+                    if let onSpeaker = onSpeakerTap {
+                        // По аналогии с консолью: активен когда есть хотя бы один пройденный урок (выученные карточки)
+                        let speakerActive = consoleIsEnabled
+                        AppCardIconButton(
+                            kind: .speaker,
+                            isEnabled: speakerActive,
+                            forceAccent: speakerActive,
+                            onTap: onSpeaker
+                        )
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.bottom, 18)
-                .overlay(alignment: .topLeading) {
-                    if let metaInfo, isMetaBubbleVisible {
-                        Text(metaInfo)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(CD.ColorToken.text)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(CD.ColorToken.card)
-                            )
-                            .shadow(color: Color.black.opacity(0.35), radius: 10, x: 0, y: 6)
-                            .offset(x: 4, y: -36)
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
-                    }
-                }
             },
             meta: {
                 HStack(spacing: 8) {
@@ -2787,6 +2870,7 @@ public struct StepWordCard: View {
                     isLearned: isLearned,
                     allowLearn: allowLearn,
                     isTip: false,
+                    showsPlayAndFavorite: true,
                     onPlay: onPlay,
                     onFavorite: onFavorite,
                     onLearn: onLearn,
@@ -2794,46 +2878,44 @@ public struct StepWordCard: View {
                 )
             },
             meta: {
+                // Порядок: тайский оригинал → русский перевод → транслит (без изменения размеров/стиля)
                 VStack(spacing: 0) {
-                    // чуть больше воздуха сверху и снизу относительно текстового блока
-                    Spacer(minLength: 16)
-                    VStack(spacing: 8) {
+                    Spacer(minLength: 10)
+                    VStack(spacing: Theme.StepCardText.blockSpacing) {
+                        Text(thai)
+                            .font(.system(size: Theme.StepCardText.thaiFontSize, weight: .regular))
+                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.92))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(Theme.StepCardText.thaiLines)
+                            .minimumScaleFactor(Theme.StepCardText.thaiScale)
+                            .allowsTightening(true)
+
                         Text(title)
-                            .font(.taikaTitle(28))
+                            .font(.system(size: Theme.StepCardText.titleFontSize, weight: .semibold))
                             .foregroundStyle(CD.ColorToken.text)
                             .multilineTextAlignment(.center)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.7)
+                            .lineLimit(Theme.StepCardText.titleLines)
+                            .minimumScaleFactor(Theme.StepCardText.titleScale)
                             .allowsTightening(true)
 
                         if let phoneticView {
                             phoneticView
                                 .multilineTextAlignment(.center)
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.7)
+                                .lineLimit(Theme.StepCardText.phoneticLines)
+                                .minimumScaleFactor(Theme.StepCardText.phoneticScale)
                                 .allowsTightening(true)
                         } else {
                             phoneticStyledText(translit)
-                                .font(.system(size: 17, weight: .semibold))
+                                .font(.system(size: Theme.StepCardText.phoneticFontSize, weight: .semibold))
                                 .multilineTextAlignment(.center)
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.7)
+                                .lineLimit(Theme.StepCardText.phoneticLines)
+                                .minimumScaleFactor(Theme.StepCardText.phoneticScale)
                                 .allowsTightening(true)
                         }
-
-                        // тайский делаем чуть спокойнее и отделяем дополнительным отступом,
-                        // чтобы фокус был на первых двух строках
-                        Text(thai)
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.92))
-                            .multilineTextAlignment(.center)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.7)
-                            .allowsTightening(true)
-                            .padding(.top, 4)
                     }
                     .frame(maxWidth: .infinity)
-                    Spacer(minLength: 20)
+                    .frame(maxHeight: .infinity)
+                    Spacer(minLength: 12)
                 }
                 .padding(.horizontal, CardDS.Metrics.contentX)
                 .padding(.vertical, 18)
@@ -2848,44 +2930,34 @@ public struct StepWordCard: View {
     }
 }
 
+/// Убираем дефисы между слогами для отображения (разделитель — стрелка тона и пробел).
+fileprivate func phoneticDisplayWithoutHyphens(_ s: String) -> String {
+    var result = s.trimmingCharacters(in: .whitespacesAndNewlines)
+    for arrow in ["→", "↓", "↘", "↑", "↗"] {
+        result = result.replacingOccurrences(of: arrow + "-", with: arrow + " ")
+    }
+    return result
+}
+
 fileprivate func phoneticStyledText(_ s: String) -> Text {
-    // всё, что без ударения — вторичный цвет текста;
-    // слог (кусок между пробелами/дефисами), внутри которого есть диакритика,
-    // подсвечиваем целиком акцентным градиентом.
+    // 1) Для отображения убираем дефисы после стрелок тона (слог→-слог → слог→ слог).
+    let normalized = phoneticDisplayWithoutHyphens(s)
+    // 2) Стрелки тона (→↗↘↑↓) — акцентным цветом; слоги — по диакритике или вторичный цвет.
+    let toneArrows: Set<Character> = ["→", "↓", "↘", "↑", "↗"]
     let accentScalars: Set<UnicodeScalar> = [
-        // acute
-        UnicodeScalar(0x0301)!, // COMBINING ACUTE ACCENT
-        UnicodeScalar(0x00B4)!, // ACUTE ACCENT (spacing)
-        UnicodeScalar(0x02CA)!, // MODIFIER LETTER ACUTE ACCENT
-        // grave
-        UnicodeScalar(0x0300)!, // COMBINING GRAVE ACCENT
-        UnicodeScalar(0x02CB)!, // MODIFIER LETTER GRAVE ACCENT
-        // circumflex
-        UnicodeScalar(0x0302)!, // COMBINING CIRCUMFLEX ACCENT
-        UnicodeScalar(0x02C6)!, // MODIFIER LETTER CIRCUMFLEX ACCENT
-        // breve
-        UnicodeScalar(0x0306)!, // COMBINING BREVE
-        UnicodeScalar(0x02D8)!, // BREVE (spacing)
-        // caron
-        UnicodeScalar(0x030C)!, // COMBINING CARON
-        UnicodeScalar(0x02C7)!  // CARON (modifier)
+        UnicodeScalar(0x0301)!, UnicodeScalar(0x00B4)!, UnicodeScalar(0x02CA)!,
+        UnicodeScalar(0x0300)!, UnicodeScalar(0x02CB)!, UnicodeScalar(0x0302)!,
+        UnicodeScalar(0x02C6)!, UnicodeScalar(0x0306)!, UnicodeScalar(0x02D8)!,
+        UnicodeScalar(0x030C)!, UnicodeScalar(0x02C7)!
     ]
 
     func chunkHasAccent(_ chunk: String) -> Bool {
         chunk.unicodeScalars.contains { accentScalars.contains($0) }
     }
 
-    // быстрый путь: если нет ни одного ударения — просто вторичный цвет
-    guard s.unicodeScalars.contains(where: { accentScalars.contains($0) }) else {
-        return Text(s).foregroundStyle(CD.ColorToken.textSecondary.opacity(0.96))
-    }
-
-    // слогами считаем куски между пробелами и дефисами
     let separators: Set<Character> = [" ", "-", "·"]
-
     var result = Text("")
     var currentChunk = ""
-    var currentSeparator: Character? = nil
 
     func flushChunk() {
         guard !currentChunk.isEmpty else { return }
@@ -2899,21 +2971,17 @@ fileprivate func phoneticStyledText(_ s: String) -> Text {
         currentChunk = ""
     }
 
-    for ch in s {
-        if separators.contains(ch) {
-            // сначала выкидываем накопленный слог
+    for ch in normalized {
+        if toneArrows.contains(ch) {
             flushChunk()
-            // сам разделитель добавляем тонким серым
-            let sepText = Text(String(ch))
-                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.96))
-            result = result + sepText
-            currentSeparator = ch
+            result = result + Text(String(ch)).foregroundStyle(ThemeManager.shared.currentAccentFill)
+        } else if separators.contains(ch) {
+            flushChunk()
+            result = result + Text(String(ch)).foregroundStyle(CD.ColorToken.textSecondary.opacity(0.96))
         } else {
-            currentSeparator = nil
             currentChunk.append(ch)
         }
     }
-    // последний слог
     flushChunk()
 
     return result
@@ -3400,7 +3468,7 @@ public extension CardDS {
                                 Capsule().fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
                             )
                             .overlay(
-                                Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                             )
                             .allowsHitTesting(false)
                         }

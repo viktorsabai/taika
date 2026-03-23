@@ -74,6 +74,13 @@
             ReferencedContainer = "container:taika.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "TAIKA_TONE_API_URL"
+            value = "http://192.168.1.104:8000"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

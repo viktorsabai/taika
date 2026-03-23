@@ -37,25 +37,24 @@ final class StepData {
             lastURL = url
             let data = try Data(contentsOf: url)
 
-            // content hash (so we don't need to bump version manually)
+            // Single decode: use result for both version check and map (avoids 2x full parse of large JSON)
+            let decoded = try JSONDecoder.stepsDecoder.decode(StepsRoot.self, from: data)
+
+            let version = decoded.version
             let hash = Self.sha256Hex(data)
 
-            // quick parse of version to detect changes without full decode
-            let version = (try? JSONDecoder.stepsDecoder.decode(StepsRoot.self, from: data).version)
-
-            let shouldReload: Bool = force || !isLoaded || loadedURL != url || (version != nil && version != loadedVersion) || loadedHash != hash
+            let shouldReload: Bool = force || !isLoaded || loadedURL != url || version != loadedVersion || loadedHash != hash
             guard shouldReload else { return }
 
-            let decoded = try JSONDecoder.stepsDecoder.decode(StepsRoot.self, from: data)
             var map: [String: StepSet] = [:]
             for set in decoded.stepsets { map[set.lesson_id] = set }
 
             self.stepsetsByLessonId = map
             self.isLoaded = true
             self.loadedURL = url
-            self.loadedVersion = decoded.version
+            self.loadedVersion = version
             self.loadedHash = hash
-            Self.logHead(url: url, data: data)
+            Self.logHead(url: url, data: data, hash: hash)
         } catch {
             if let url = lastURL {
                 Self.logJSONSyntaxErrorIfAny(for: url)
@@ -73,10 +72,66 @@ final class StepData {
         return stepsetsByLessonId[lessonId]
     }
 
+    /// Resolve actual lessonId from steps.json when caller has normalized id (e.g. lowercased from FavoriteManager).
+    /// Use in buildFavoritesQueue so Speaker can resolve favorites regardless of case in JSON.
+    func lessonIdForCaseInsensitiveLookup(_ normalizedLessonId: String) -> String? {
+        preload()
+        let lower = normalizedLessonId.lowercased()
+        return stepsetsByLessonId.keys.first { $0.lowercased() == lower }
+    }
+
     // Convenience: items for lesson, already sorted by order
     func items(for lessonId: String) -> [StepItem] {
         preload()
         return stepsetsByLessonId[lessonId]?.items.sorted(by: { $0.order < $1.order }) ?? []
+    }
+
+    /// Atomic contract for learnable steps (word/phrase/casual): transcript must exist so the step can be shown and counted.
+    /// Audio is optional for progress (used by Speaker when playing). Invalid steps are excluded from progress totals.
+    public static func isValidForProgress(_ item: StepItem) -> Bool {
+        switch item.kind {
+        case .word, .phrase, .casual:
+            let hasTranscript = (item.phonetic?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
+            return hasTranscript
+        case .tip, .dialog:
+            return false
+        }
+    }
+
+    /// Indices of steps that are learnable (word/phrase/casual) but invalid (missing transcript).
+    /// Caller should exclude these from progressEligibleIndices and add to excludedProgressIndexes.
+    public func invalidProgressIndices(for lessonId: String) -> Set<Int> {
+        preload()
+        let itemsList = stepsetsByLessonId[lessonId]?.items.sorted(by: { $0.order < $1.order }) ?? []
+        var invalid = Set<Int>()
+        for (idx, item) in itemsList.enumerated() {
+            switch item.kind {
+            case .word, .phrase, .casual:
+                if !Self.isValidForProgress(item) {
+                    invalid.insert(idx)
+                    #if DEBUG
+                    print("[StepData] invalid step for progress lessonId=\(lessonId) index=\(idx) order=\(item.order) kind=\(item.kind.rawValue)")
+                    #endif
+                }
+            case .tip, .dialog:
+                break
+            }
+        }
+        return invalid
+    }
+
+    /// Total learnable (word+phrase+casual) and lifehack (tip+dialog) counts for a lesson. Source of truth for progress denominator.
+    public func progressCounts(for lessonId: String) -> (learnable: Int, lifehack: Int) {
+        preload()
+        let itemsList = stepsetsByLessonId[lessonId]?.items.sorted(by: { $0.order < $1.order }) ?? []
+        var learnable = 0, lifehack = 0
+        for item in itemsList {
+            switch item.kind {
+            case .word, .phrase, .casual: learnable += 1
+            case .tip, .dialog: lifehack += 1
+            }
+        }
+        return (learnable, lifehack)
     }
 
     // Convenience: Taika FM hints for lesson
@@ -132,8 +187,7 @@ final class StepData {
         switch it.kind {
         case .word, .phrase, .casual:
             let face = face(for: it)
-            // must have both ru + thai for practice UI
-            if face.titleRU.isEmpty || face.subtitleTH.isEmpty { return nil }
+            // Показываем все word/phrase/casual (кроме лайфхаков); пустые ru/thai допустимы — в UI покажем плейсхолдер.
 
             // IMPORTANT: store the canonical steps.json order, not the incoming index
             return SpeakerResolved(
@@ -258,8 +312,21 @@ final class StepData {
         return dailyPicksKeys(count: count).map { ($0.lessonId, $0.item) }
     }
 
-    /// Returns daily picks with exact keys used by ProgressManager (courseId, lessonId, index)
-    @MainActor func dailyPicksKeys(count: Int) -> [(courseId: String, lessonId: String, index: Int, item: StepItem)] {
+    /// Step ref for priority ordering (Smart Discovery contract). Empty = current behavior.
+    public struct StepRef: Hashable {
+        public let courseId: String
+        public let lessonId: String
+        public let index: Int
+        public init(courseId: String, lessonId: String, index: Int) {
+            self.courseId = courseId
+            self.lessonId = lessonId
+            self.index = index
+        }
+    }
+
+    /// Returns daily picks with exact keys used by ProgressManager (courseId, lessonId, index).
+    /// - Parameter priorityStepRefs: optional list of step refs to prioritize (for future Smart Discovery). Empty = current deterministic behavior.
+    @MainActor func dailyPicksKeys(count: Int, priorityStepRefs: [StepRef] = []) -> [(courseId: String, lessonId: String, index: Int, item: StepItem)] {
         preload()
 
         let key = dailyKey()
@@ -450,17 +517,14 @@ final class StepData {
         return "\(dailyPicksKeyPrefix)\(y)-\(String(format: "%02d", m))-\(String(format: "%02d", d))"
     }
 
-    // Only allow items that render properly in daily picks
+    // Only allow items that render properly in daily picks (разминка). Лайфхаки (.tip) не показываем.
     private func isValidForDaily(_ item: StepItem) -> Bool {
         switch item.kind {
         case .word, .phrase, .casual:
             guard let ru = item.ru?.trimmingCharacters(in: .whitespacesAndNewlines), !ru.isEmpty,
                   let th = item.thai?.trimmingCharacters(in: .whitespacesAndNewlines), !th.isEmpty else { return false }
             return true
-        case .tip:
-            let txt = item.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return !txt.isEmpty
-        case .dialog:
+        case .tip, .dialog:
             return false
         }
     }
@@ -517,6 +581,35 @@ final class StepData {
             // dialogs сейчас не идут в подборку дня (isValidForDaily=false), но на всякий — пустой фейс
             return StepFace(kind: .dialog, titleRU: "", subtitleTH: "", phonetic: "")
         }
+    }
+
+    /// Build SpeakerResolved from arbitrary RU/TH/phonetic (например, фразы из Smart Speaker, которых нет в steps.json).
+    /// Используется для персонального словаря: курс user_dict / урок smart_speaker.
+    func speakerResolvedFromCustom(
+        courseId: String,
+        lessonId: String,
+        index: Int,
+        ru: String,
+        thai: String,
+        phonetic: String
+    ) -> SpeakerResolved {
+        let ruTrim = ru.trimmingCharacters(in: .whitespacesAndNewlines)
+        let thTrim = thai.trimmingCharacters(in: .whitespacesAndNewlines)
+        let phTrim = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+        let face = StepFace(
+            kind: .phrase,
+            titleRU: ruTrim,
+            subtitleTH: thTrim,
+            phonetic: phTrim
+        )
+        return SpeakerResolved(
+            courseId: courseId,
+            lessonId: lessonId,
+            index: index,
+            kind: .phrase,
+            face: face,
+            audioKey: nil
+        )
     }
 }
 
@@ -603,10 +696,9 @@ private extension StepData {
         return url
     }
 
-    static func logHead(url: URL, data: Data) {
+    static func logHead(url: URL, data: Data, hash: String? = nil) {
         let head = String(data: data.prefix(180), encoding: .utf8) ?? ""
-        let sha = sha256Hex(data)
-        let short = String(sha.prefix(8))
+        let short = (hash ?? sha256Hex(data)).prefix(8)
         print("[StepsLoader] using: \(url.path) (sha256: \(short))\n[StepsLoader] head: \n\(head)")
     }
 

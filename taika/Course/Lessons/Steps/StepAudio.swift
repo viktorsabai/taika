@@ -9,6 +9,8 @@ final class StepAudio: NSObject {
     private let synth = AVSpeechSynthesizer()
     private var sessionConfigured = false
     private var sessionActive = false
+    private var progressCallback: ((Double) -> Void)?
+    private var currentUtteranceLength: Int = 0
 
     // default voice params
     private let defaultRate: Float = 0.48  // 0.0...1.0 (system maps to AVSpeechUtteranceDefaultSpeechRate scale)
@@ -27,14 +29,25 @@ final class StepAudio: NSObject {
         speak(text: text, language: "th-TH")
     }
 
+    /// Speak Thai and report playback progress 0.0...1.0 (for syncing UI e.g. tone graph). Callback is invoked on main queue.
+    func speakThai(_ text: String, onProgress: @escaping (Double) -> Void) {
+        speak(text: text, language: "th-TH", onProgress: onProgress)
+    }
+
     /// generic speak with BCP-47 language code (e.g., "th-TH", "ru-RU")
-    func speak(text: String, language: String) {
+    func speak(text: String, language: String, onProgress: ((Double) -> Void)? = nil) {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         prepareSessionIfNeeded()
 
         // if already speaking, stop and re-speak fresh
         if synth.isSpeaking {
             synth.stopSpeaking(at: .immediate)
+        }
+
+        progressCallback = onProgress
+        currentUtteranceLength = text.utf16.count
+        if let cb = progressCallback, currentUtteranceLength > 0 {
+            DispatchQueue.main.async { cb(0) }
         }
 
         let utt = AVSpeechUtterance(string: text)
@@ -119,12 +132,34 @@ final class StepAudio: NSObject {
 }
 
 extension StepAudio: AVSpeechSynthesizerDelegate {
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+        if let cb = progressCallback {
+            DispatchQueue.main.async { cb(0) }
+        }
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, willSpeakRangeOfSpeechString characterRange: NSRange, utterance: AVSpeechUtterance) {
+        guard let cb = progressCallback, currentUtteranceLength > 0 else { return }
+        let progress = min(1.0, Double(characterRange.location + characterRange.length) / Double(currentUtteranceLength))
+        DispatchQueue.main.async { cb(progress) }
+    }
+
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        // hook for UI state reset if needed
+        if let cb = progressCallback {
+            DispatchQueue.main.async { cb(1.0) }
+        }
+        progressCallback = nil
+        currentUtteranceLength = 0
         print("[StepAudio] didFinish: \(utterance.speechString.prefix(20))...")
         deactivateSessionIfNeeded()
     }
+
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        if let cb = progressCallback {
+            DispatchQueue.main.async { cb(1.0) }
+        }
+        progressCallback = nil
+        currentUtteranceLength = 0
         print("[StepAudio] didCancel")
         deactivateSessionIfNeeded()
     }

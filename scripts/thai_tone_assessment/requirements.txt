@@ -1,0 +1,14 @@
+# Thai Tone Assessment Engine (Phase C — Pitch Tracker)
+# Python 3.9+
+
+librosa>=0.10.0
+numpy>=1.21.0
+scipy>=1.9.0
+PyThaiNLP>=5.0.0
+python-crfsuite>=0.9.9
+fastdtw>=0.3.4
+
+# API (optional)
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+python-multipart>=0.0.6

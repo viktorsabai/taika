@@ -87,20 +87,18 @@ struct CourseView: View {
         deduplicateByID(all.filter { $0.category != "База от Тайки" })
     }
 
-    // Filters (визуальные, как в DS)
-    @State private var selectedPrimary: Int = -1
-    @State private var selectedSecondary: Int = -1
+    // EPIC 2: filters state in shared object (header opens overlay; CourseView reads from it)
+    @ObservedObject private var courseFilters = CourseFiltersState.shared
     @State private var sortActive: Bool = false
-    @State private var showFilters: Bool = false
     // forces recomputation of progress-dependent UI (used on reset / progress changes)
     @State private var progressReloadToken: UUID = UUID()
     private struct _SelectedCourse: Identifiable { let id: String }
     @State private var selectedCourse: _SelectedCourse? = nil
 
-
-    // Categories UI state
-    @State private var showCategories: Bool = false
-    @State private var selectedCategory: Int = -1
+    // Game mode state for course-level flow
+    @State private var showGameModePicker: Bool = false
+    @State private var selectedGameMode: GameModeType = .match
+    @State private var pendingGameCourseId: String? = nil
 
 
     // Search state (UI only; logic delegated to CourseSearch)
@@ -215,31 +213,40 @@ struct CourseView: View {
         stableUnique(items) { titleSlug($0.title) }
     }
 
+    /// Поиск по курсам и урокам: по названию курса или по названию любого урока в курсе. Ищет во всех курсах (База + остальные).
     private func searchIDs(for query: String) -> Set<String> {
         let q = titleSlug(query)
-        guard !q.isEmpty else { return Set(other.map { $0.id }) }
-        var seenSlugs = Set<String>()
-        var ids: [String] = []
-        for c in other {
-            let t = titleSlug(c.title)
-            if t.contains(q) && seenSlugs.insert(t).inserted {
-                ids.append(c.id)
+        guard !q.isEmpty else { return Set(all.map { $0.id }) }
+        var ids: Set<String> = []
+        let lessonsData = LessonsData.shared
+        for c in all {
+            let courseSlug = titleSlug(c.title)
+            if courseSlug.contains(q) {
+                ids.insert(c.id)
+                continue
+            }
+            for lesson in lessonsData.lessons(for: c.id) {
+                let lessonTitle = LessonsManager.shared.lessonTitle(for: lesson.lessonID)
+                if titleSlug(lessonTitle).contains(q) {
+                    ids.insert(c.id)
+                    break
+                }
             }
         }
-        return Set(ids)
+        return ids
+    }
+
+    /// База без фильтра по поиску (поиск только в оверлее).
+    private var filteredBasa: [Course] {
+        basa
     }
     private var filteredCourses: [Course] {
-        // 1) Поиск с дебаунсом
-        let base: [Course] = {
-            let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !q.isEmpty else { return other }
-            let ids = searchIDs(for: q)
-            return other.filter { ids.contains($0.id) }
-        }()
+        // Поиск только в оверлее; здесь — только фильтры по чипам
+        let base: [Course] = other
 
         // 2) Фильтр по доступу (Free/Pro)
         let accessFiltered: [Course] = {
-            switch selectedSecondary {
+            switch courseFilters.selectedSecondary {
             case 0: // Free
                 return base.filter { !$0.isPro }
             case 1: // Pro
@@ -251,18 +258,17 @@ struct CourseView: View {
 
         // 3) Фильтр по категории (чипы "Категории")
         let catFiltered: [Course] = {
-            guard selectedCategory >= 0, selectedCategory < categoryChips.count else { return accessFiltered }
-            let cat = categoryChips[selectedCategory]
+            guard courseFilters.selectedCategory >= 0, courseFilters.selectedCategory < categoryChips.count else { return accessFiltered }
+            let cat = categoryChips[courseFilters.selectedCategory]
             return accessFiltered.filter { $0.category == cat }
         }()
 
         // 4) Фильтр по статусу курса (Новый / В процессе / Завершено)
         let statusFiltered: [Course] = {
-            // если чип статуса не выбран — возвращаем как есть
-            guard selectedPrimary >= 0 else { return catFiltered }
+            guard courseFilters.selectedPrimary >= 0 else { return catFiltered }
             return catFiltered.filter { c in
                 let (done, total) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
-                switch selectedPrimary {
+                switch courseFilters.selectedPrimary {
                 case 0: // "Новый"
                     return done == 0
                 case 1: // "В процессе"
@@ -287,8 +293,8 @@ struct CourseView: View {
         )
         .frame(maxWidth: .infinity)
     }
-    
 
+    // EPIC 2: search moved to header; no courseSearchHeader in body
 
     // Helper for stable UUID from string
     private func stableUUID(_ s: String) -> UUID {
@@ -305,8 +311,8 @@ struct CourseView: View {
 
 
     private func baseSectionView() -> some View {
-        // Маппим наши Course -> CDCourseItem для DS-компонента
-        let items: [CDCourseItem] = basa.map { c in
+        // Маппим наши Course -> CDCourseItem для DS-компонента (с учётом поиска — filteredBasa)
+        let items: [CDCourseItem] = filteredBasa.map { c in
             let (done, total) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
             let courseProgress = lessonsManager.coursePercent(for: c.id)
             let sanitizedDescription = c.description
@@ -329,6 +335,30 @@ struct CourseView: View {
                 onTap: { handleTapCourse(c) },
                 isFavorite: isFavorite(c),
                 onToggleFavorite: { toggleFavorite(c) },
+                onTapConsole: {
+                    let cards = CourseManager.shared.cardsForGame(courseId: c.id)
+                    guard !cards.isEmpty else {
+                        #if os(iOS)
+                        let gen = UINotificationFeedbackGenerator()
+                        gen.notificationOccurred(.warning)
+                        #endif
+                        return
+                    }
+
+                    // reset mode to default for course-level training
+                    selectedGameMode = .match
+                    pendingGameCourseId = c.id
+                    withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
+                        showGameModePicker = true
+                    }
+                },
+                onTapSpeaker: {
+                    UserSession.shared.markActive(courseId: c.id)
+                    NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+                    SpeakerRequestedCourseId.shared.set(c.id)
+                    nav.requestTab(2)
+                },
+                onTapInfo: { overlay.present(.courseInfoPreview(courseId: c.id)) },
                 key: c.id
             )
         }
@@ -346,8 +376,7 @@ struct CourseView: View {
                 #if DEBUG
                 print("[CourseView] CDBaseSection.onTapStart")
                 #endif
-                // choose the first base course and push LessonsView (with PRO gate)
-                if let course = basa.first {
+                if let course = filteredBasa.first {
                     handleTapCourse(course)
                 }
             }
@@ -356,36 +385,11 @@ struct CourseView: View {
 
     private func coursesSectionView() -> some View {
         VStack(spacing: 0) {
-            // 1. ФИЛЬТРЫ (DS boxed)
-            CDFiltersSection(
-                isExpanded: $showFilters,
-                primary: primaryChips,
-                selectedPrimary: selectedPrimary,
-                onTapPrimary: { i in selectedPrimary = (selectedPrimary == i ? -1 : i) },
-                secondary: secondaryChips,
-                selectedSecondary: selectedSecondary,
-                onTapSecondary: { i in selectedSecondary = (selectedSecondary == i ? -1 : i) }
-            )
-
-            // 2. КАТЕГОРИИ (DS boxed)
-            if !categoryChips.isEmpty {
-                CDCategoriesSection(
-                    isExpanded: $showCategories,
-                    chips: categoryChips,
-                    selected: selectedCategory,
-                    onTap: { i in selectedCategory = (selectedCategory == i ? -1 : i) }
-                )
-            }
-
-
+            // EPIC 2: filters/categories moved to header overlay; only course list here
             // 4. ВСЕ КУРСЫ (DS)
             let visible = deduplicateByTitle(filteredCourses)
-            let isFilteringActive = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                || selectedPrimary != -1 || selectedSecondary != -1 || selectedCategory != -1
+            let isFilteringActive = courseFilters.selectedPrimary != -1 || courseFilters.selectedSecondary != -1 || courseFilters.selectedCategory != -1
             let allItems: [CDCourseItem] = visible.map { c in
-                #if DEBUG
-                _ = { if visible.count < 60 { print("[CourseView] build item courseId=\(c.id)") } }()
-                #endif
                 let (done, total) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
                 let courseProgress = lessonsManager.coursePercent(for: c.id)
                 let sanitizedDescription = c.description
@@ -408,14 +412,38 @@ struct CourseView: View {
                     onTap: { handleTapCourse(c) },
                     isFavorite: isFavorite(c),
                     onToggleFavorite: { toggleFavorite(c) },
+                    onTapConsole: {
+                        let cards = CourseManager.shared.cardsForGame(courseId: c.id)
+                        guard !cards.isEmpty else {
+                            #if os(iOS)
+                            let gen = UINotificationFeedbackGenerator()
+                            gen.notificationOccurred(.warning)
+                            #endif
+                            return
+                        }
+
+                        // reset mode to default for course-level training
+                        selectedGameMode = .match
+                        pendingGameCourseId = c.id
+                        withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
+                            showGameModePicker = true
+                        }
+                    },
+                    onTapSpeaker: {
+                        UserSession.shared.markActive(courseId: c.id)
+                        NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+                        SpeakerRequestedCourseId.shared.set(c.id)
+                        nav.requestTab(2)
+                    },
+                    onTapInfo: { overlay.present(.courseInfoPreview(courseId: c.id)) },
                     key: c.id
                 )
             }
             // NOTE: CDCourseItem does not expose favorite hook yet; use isFavorite/toggleFavorite if needed later.
             CDAllCoursesSection(items: allItems)
 
-            // 5. Пустое состояние (после всех DS секций)
-            if visible.isEmpty && isFilteringActive {
+            // 5. Пустое состояние, когда поиск/фильтры не дали ни курсов из Базы, ни из списка
+            if filteredBasa.isEmpty && visible.isEmpty && isFilteringActive {
                 VStack(spacing: 14) {
                     Image("mascot.profile")
                         .resizable()
@@ -435,9 +463,9 @@ struct CourseView: View {
                     Button {
                         withAnimation(.easeInOut(duration: 0.25)) {
                             searchText = ""
-                            selectedPrimary = -1
-                            selectedSecondary = -1
-                            selectedCategory = -1
+                            courseFilters.selectedPrimary = -1
+                            courseFilters.selectedSecondary = -1
+                            courseFilters.selectedCategory = -1
                         }
                     } label: {
                         Text("Сбросить фильтры")
@@ -482,48 +510,74 @@ struct CourseView: View {
 
     var body: some View {
         ZStack {
-            PD.ColorToken.background.ignoresSafeArea()
+            PD.ColorToken.background
+                .ignoresSafeArea()
 
             let isPaywallPresented: Bool = {
                 if let o = overlay.overlay {
                     if case .proCoursePaywall = o { return true }
+                    if case .courseInfoPreview = o { return true }
                 }
                 return false
             }()
+            /// Локальные blur/scale/opacity только для локального пикера и превью курса; при proCoursePaywall блюр уже на уровне AppShell.
+            let contentBlurred: Bool = showGameModePicker || (overlay.overlay != nil && (overlay.overlay.map { if case .courseInfoPreview = $0 { return true }; return false } ?? false))
 
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: Theme.Layout.sectionGap) {
-                        baseSectionView()
-                        marqueeSectionView
-                        coursesSectionView()
-                    }
-                    .padding(.top, Theme.Layout.pageTopAfterHeader)
-                    .padding(.bottom, bottomContentInset)
-                }
-                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-                .scrollDismissesKeyboard(.immediately)
-                .onChange(of: scrollToCategory) { _, target in
-                    guard let target else { return }
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
-                        proxy.scrollTo(target, anchor: .top)
-                    }
-                    DispatchQueue.main.async { scrollToCategory = nil }
-                }
-                .onChange(of: kbHeight) { _, h in
-                    if h > 0 {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            proxy.scrollTo("searchSection", anchor: .top)
+            VStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: Theme.Layout.sectionGap) {
+                            baseSectionView()
+                            marqueeSectionView
+                            coursesSectionView()
                         }
+                        .padding(.bottom, bottomContentInset)
+                    }
+                    .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+                    .scrollDismissesKeyboard(.immediately)
+                    .onChange(of: scrollToCategory) { _, target in
+                        guard let target else { return }
+                        withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+                            proxy.scrollTo(target, anchor: .top)
+                        }
+                        DispatchQueue.main.async { scrollToCategory = nil }
                     }
                 }
             }
             .id(progressReloadToken)
-            .blur(radius: isPaywallPresented ? 10 : 0)
-            .scaleEffect(isPaywallPresented ? 0.98 : 1)
-            .opacity(isPaywallPresented ? 0.92 : 1)
-            .allowsHitTesting(!isPaywallPresented)
-            .animation(.spring(response: 0.36, dampingFraction: 0.92), value: isPaywallPresented)
+            .blur(radius: contentBlurred ? 10 : 0)
+            .scaleEffect(contentBlurred ? 0.98 : 1)
+            .opacity(contentBlurred ? 0.92 : 1)
+            .allowsHitTesting(!(isPaywallPresented || showGameModePicker))
+            .animation(.spring(response: 0.36, dampingFraction: 0.92), value: isPaywallPresented || showGameModePicker)
+
+            if showGameModePicker {
+                Color.black.opacity(0.28)
+                    .ignoresSafeArea()
+                    .zIndex(2)
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
+                            showGameModePicker = false
+                        }
+                    }
+
+                GameModePickerDS(
+                    selected: $selectedGameMode,
+                    isProUser: pro.isPro,
+                    onStart: { _ in
+                        showGameModePicker = false
+                        if let courseId = pendingGameCourseId {
+                            nav.go(.game(courseId: courseId, lessonId: nil, gameType: selectedGameMode.rawValue))
+                            pendingGameCourseId = nil
+                        }
+                    },
+                    onClose: {
+                        showGameModePicker = false
+                    }
+                )
+                .zIndex(3)
+                .transition(.scale(scale: 0.98).combined(with: .opacity))
+            }
 
             if isPaywallPresented {
                 Color.black.opacity(0.28)
@@ -534,28 +588,11 @@ struct CourseView: View {
                         }
                     }
 
-                ProCoursePaywallGlass(
-                    course: {
-                        guard case let .proCoursePaywall(courseId) = overlay.overlay else { return nil }
-                        return all.first(where: { $0.id == courseId })
-                    }(),
-                    lessons: {
-                        guard case let .proCoursePaywall(courseId) = overlay.overlay else { return [] }
-                        return lessonsManager.paywallPreviewLessons(for: courseId)
-                    }(),
-                    onClose: {
-                        withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
-                            overlay.dismiss()
-                        }
-                    },
-                    onOpenPro: {
-                        // mvp: close only. real navigation to subscription will be wired later.
-                        withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
-                            overlay.dismiss()
-                        }
-                    }
-                )
-                .transition(.scale(scale: 0.98).combined(with: .opacity))
+                // Превью курса только по иконке инфо на карточке; корона открывает PROView в AppShell, здесь ничего не показываем.
+                if case .courseInfoPreview = overlay.overlay {
+                    coursePreviewGlass
+                        .transition(.scale(scale: 0.98).combined(with: .opacity))
+                }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .init("ProgressDidChange"))) { _ in
@@ -572,6 +609,40 @@ struct CourseView: View {
             if !isPreviewEnv { installKeyboardObservers() }
         }
     }
+
+    @ViewBuilder
+    private var coursePreviewGlass: some View {
+        let courseId: String? = {
+            guard let o = overlay.overlay else { return nil }
+            if case let .proCoursePaywall(id) = o { return id }
+            if case let .courseInfoPreview(id) = o { return id }
+            return nil
+        }()
+        let isInfoPreview: Bool = {
+            if case .courseInfoPreview = overlay.overlay { return true }
+            return false
+        }()
+        if let cid = courseId {
+            ProCoursePaywallGlass(
+                course: all.first(where: { $0.id == cid }),
+                lessons: lessonsManager.paywallPreviewLessons(for: cid),
+                onClose: {
+                    withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) { overlay.dismiss() }
+                },
+                onOpenPro: {
+                    withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) { overlay.dismiss() }
+                },
+                onOpenCourse: isInfoPreview ? {
+                    withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
+                        overlay.dismiss()
+                        nav.go(.lessons(courseId: cid))
+                    }
+                } : nil
+            )
+        } else {
+            EmptyView()
+        }
+    }
 }
 
 private struct ProCoursePaywallGlass: View {
@@ -579,6 +650,8 @@ private struct ProCoursePaywallGlass: View {
     var lessons: [LessonBundle]
     var onClose: () -> Void
     var onOpenPro: () -> Void
+    /// Когда задан — показываем «Открыть курс» и переходим в уроки; иначе «открыть pro».
+    var onOpenCourse: (() -> Void)? = nil
 
     var body: some View {
         let title = course?.title ?? "этот курс"
@@ -616,7 +689,7 @@ private struct ProCoursePaywallGlass: View {
             cornerRadius: 26,
             strokeWidth: 0,
             inset: hPad,
-            topLeft: AnyView(AppProChip()),
+            topLeft: AnyView(EmptyView()),
             topRight: AnyView(
                 Button(action: onClose) {
                     Image(systemName: "xmark")
@@ -651,7 +724,7 @@ private struct ProCoursePaywallGlass: View {
                                     wordTitle: l.previewPrimary,
                                     accentSubtitle: l.previewSecondary,
                                     meta: l.outcomes.first ?? "",
-                                    showsProBadge: true
+                                    showsProBadge: false
                                 )
                             }
                         }
@@ -664,17 +737,17 @@ private struct ProCoursePaywallGlass: View {
 
                 Spacer(minLength: minSectionGap)
 
-                Button(action: onOpenPro) {
-                    Text("открыть pro")
+                Button(action: onOpenCourse ?? onOpenPro) {
+                    Text(onOpenCourse != nil ? "Открыть курс" : "открыть pro")
                         .font(PD.FontToken.body(16, weight: .semibold))
-                        .foregroundColor(PD.ColorToken.text)
+                        .foregroundStyle(Color.black.opacity(0.92))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(PD.ColorToken.chip)
+                        .background(ThemeManager.shared.currentAccentFill)
                         .clipShape(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                                .stroke(PD.ColorToken.stroke, lineWidth: 1)
+                                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                         )
                 }
                 .buttonStyle(.plain)
@@ -707,7 +780,7 @@ private struct ProCoursePaywallGlass: View {
                                     wordTitle: l.previewPrimary,
                                     accentSubtitle: l.previewSecondary,
                                     meta: l.outcomes.first ?? "",
-                                    showsProBadge: true
+                                    showsProBadge: false
                                 )
                             }
                         }
@@ -718,17 +791,17 @@ private struct ProCoursePaywallGlass: View {
                     .frame(height: carouselHeight)
                 }
 
-                Button(action: onOpenPro) {
-                    Text("открыть pro")
+                Button(action: onOpenCourse ?? onOpenPro) {
+                    Text(onOpenCourse != nil ? "Открыть курс" : "открыть pro")
                         .font(PD.FontToken.body(16, weight: .semibold))
-                        .foregroundColor(PD.ColorToken.text)
+                        .foregroundStyle(Color.black.opacity(0.92))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(PD.ColorToken.chip)
+                        .background(ThemeManager.shared.currentAccentFill)
                         .clipShape(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                                .stroke(PD.ColorToken.stroke, lineWidth: 1)
+                                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                         )
                 }
                 .buttonStyle(.plain)

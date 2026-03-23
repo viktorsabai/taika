@@ -184,8 +184,8 @@ final class MainManager: ObservableObject {
     private func scheduleWeekSummaryReload() {
         weekSummaryReloadWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
-            Task { @MainActor in
-                guard let self = self else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
                 await self.rebuildWeekSummary()
             }
         }
@@ -241,6 +241,9 @@ final class MainManager: ObservableObject {
                 Task { @MainActor in
                     await self.applyPlannedQuickUpdate(for: day)
                 }
+            }
+            Task { @MainActor in
+                await self.refresh()
             }
             self.scheduleWeekSummaryReload()
         }
@@ -322,8 +325,8 @@ final class MainManager: ObservableObject {
     private func scheduleDailyPicksReload() {
         dailyReloadWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
-            Task { @MainActor in
-                guard let self = self else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
                 await self.reloadDailyPicks()
             }
         }
@@ -335,6 +338,8 @@ final class MainManager: ObservableObject {
     func refresh() async {
         // Derive recent pairs from UserSession snapshot (no recentActivity API)
         let snap = await UserSession.shared.snapshot
+        let nav = CourseNavigator.shared
+        let todayStart = Self.bangkokCal.startOfDay(for: Date())
         var recent: [(courseId: String, lessonId: String?)] = []
 
         // 1) last lesson per course (most precise signal)
@@ -354,41 +359,41 @@ final class MainManager: ObservableObject {
             return lhs.courseId < rhs.courseId
         }
 
-        // Select up to last 2 lessons and last 2 courses
-        let lessonsOnly = recent.filter { $0.lessonId != nil }
-        let coursesOnly = recent.filter { $0.lessonId == nil }
+        // Planned for today first (sync with "План на неделю") — order from UserSession
+        let plannedIds = UserSession.shared.plannedCourseIds(on: todayStart)
+        var ordered: [(courseId: String, lessonId: String?)] = plannedIds.map { cid in
+            (courseId: cid, lessonId: snap.lastLessonByCourse[cid])
+        }
+
+        // Then add recent (up to 2 lessons + 2 courses interleaved), excluding already in planned
+        let plannedSet = Set(plannedIds)
+        let lessonsOnly = recent.filter { $0.lessonId != nil && !plannedSet.contains($0.courseId) }
+        let coursesOnly = recent.filter { $0.lessonId == nil && !plannedSet.contains($0.courseId) }
         let pickLessons = Array(lessonsOnly.prefix(2))
         let pickCourses = Array(coursesOnly.prefix(2))
-
-        // Desired order: course, lesson, course, lesson (fallback gracefully)
-        var ordered: [(courseId: String, lessonId: String?)] = []
         func appendIfAny(_ item: (courseId: String, lessonId: String?)?) { if let it = item { ordered.append(it) } }
         appendIfAny(pickCourses.indices.contains(0) ? pickCourses[0] : nil)
         appendIfAny(pickLessons.indices.contains(0) ? pickLessons[0] : nil)
         appendIfAny(pickCourses.indices.contains(1) ? pickCourses[1] : nil)
         appendIfAny(pickLessons.indices.contains(1) ? pickLessons[1] : nil)
 
-        // If still less than 4, top up from the remaining recent items (keeping order)
         if ordered.count < 4 {
-            for pair in recent where !ordered.contains(where: { $0.courseId == pair.courseId && $0.lessonId == pair.lessonId }) {
+            for pair in recent where !plannedSet.contains(pair.courseId) && !ordered.contains(where: { $0.courseId == pair.courseId && $0.lessonId == pair.lessonId }) {
                 ordered.append(pair)
                 if ordered.count == 4 { break }
             }
         }
 
-        // Map to banner items — use real course progress; for lessons leave 0.0 for now (will add Steps meta next)
+        // Map to banner items — titles via CourseNavigator; real progress from ProgressManager/LessonsManager
         let now = Date()
         var mapped: [(id: String, date: Date, title: String, kind: MainBannerItem.Kind, progress: Double)] = []
         for pair in ordered {
-            let LM = LessonsManager.shared
             let id = pair.lessonId != nil ? "\(pair.courseId):\(pair.lessonId!)" : pair.courseId
             let title: String = {
                 if let lid = pair.lessonId {
-                    // prefer lesson title; fallback to raw id if unavailable
-                    return LM.lessonTitle(for: lid) ?? lid
+                    return nav.lessonTitle(for: lid)
                 } else {
-                    // safe course title via helper
-                    return LM.courseTitle(for: pair.courseId)
+                    return nav.courseTitle(for: pair.courseId)
                 }
             }()
             let kind: MainBannerItem.Kind = (pair.lessonId != nil) ? .lesson : .course
@@ -489,7 +494,7 @@ extension MainManager {
         return clamped
     }
     @MainActor
-    private func shortCourseName(_ courseId: String) -> String {
+    private func shortCourseName(_ courseId: String) async -> String {
         let title = LessonsManager.shared.courseTitle(for: courseId)
             .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
         return title.isEmpty ? courseId : title
@@ -586,13 +591,15 @@ extension MainManager {
         let snap = await UserSession.shared.snapshot
         let startedIds = snap.startedCourses
 
-        let mapped: [CourseCardModel] = all.map { c in
+        var mapped: [CourseCardModel] = []
+        mapped.reserveCapacity(all.count)
+        for c in all {
             let cid = c.id
-            let title = shortCourseName(cid)
+            let title = await shortCourseName(cid)
             let subtitle = courseOutcomePreview(cid) ?? shortCourseSubtitle(cid, course: c)
             let isProCourse = resolveIsProCourse(c)
             let cta: CourseCardModel.CTA = startedIds.contains(cid) ? .continue : .add
-            return CourseCardModel(
+            mapped.append(CourseCardModel(
                 courseId: cid,
                 title: title,
                 subtitle: subtitle,
@@ -600,7 +607,7 @@ extension MainManager {
                 isPro: isProCourse,
                 progress: nil,
                 cta: cta
-            )
+            ))
         }
 
         let free = mapped.filter { !$0.isPro }
@@ -648,7 +655,7 @@ extension MainManager {
         out.reserveCapacity(ids.count)
 
         for cid in ids {
-            let title = shortCourseName(cid)
+            let title = await shortCourseName(cid)
             let subtitle: String = {
                 if let outcome = courseOutcomePreview(cid) {
                     return outcome
@@ -691,7 +698,7 @@ extension MainManager {
     /// public resolver for UI: returns course title (fallbacks to id)
     @MainActor
     func courseTitle(for courseId: String) async -> String {
-        shortCourseName(courseId)
+        await shortCourseName(courseId)
     }
 
     @MainActor
@@ -705,12 +712,13 @@ extension MainManager {
         }
         return lessonId
     }
+    /// Priority step refs for Smart Discovery (empty = current behavior). Reserved for future use.
     @MainActor
-    func reloadDailyPicks(count: Int = 5) async {
+    func reloadDailyPicks(count: Int = 5, priorityStepRefs: [StepData.StepRef] = []) async {
         // keep today's picks stable: rebuild only when cache is empty or day changed or count changes
         invalidateDailyCacheIfDayChanged()
         if dailyKeysCache.isEmpty || dailyKeysCacheCount != count {
-            let keys = await StepData.shared.dailyPicksKeys(count: count)
+            let keys = await StepData.shared.dailyPicksKeys(count: count, priorityStepRefs: priorityStepRefs)
             dailyKeysCache = keys.map { k in
                 let r = DailyPicksPayload.Ref(courseId: k.courseId, lessonId: k.lessonId, index: k.index)
                 return (ref: r, item: k.item)
@@ -729,7 +737,7 @@ extension MainManager {
             refs.append(r)
             visuals.append(sd(from: pair.item))
 
-            let finalCourse = shortCourseName(r.courseId)
+            let finalCourse = await shortCourseName(r.courseId)
             let finalLesson = shortLessonName(r.lessonId)
             courseShort.append(finalCourse)
             lessonShort.append(finalLesson)
@@ -738,7 +746,7 @@ extension MainManager {
 
         // --- PRO gates (visual-only): add before first and after last for Daily Picks.
         // These are not real learning items and must not affect favorites/progress ids.
-        let hasExtra = await hasExtraDailyPicks()
+        let hasExtra = hasExtraDailyPicks()
         if !visuals.isEmpty && !hasExtra {
             let before = SDStepItem(
                 kind: .word,
@@ -832,7 +840,7 @@ extension MainManager {
         let dayStart = cal.startOfDay(for: date)
 
         // activity ids (recorded learning for the day)
-        var activeIds = await courseIds(for: dayStart, limit: Int.max)
+        let activeIds = await courseIds(for: dayStart, limit: Int.max)
 
         // planned ids (explicit planning)
         let plannedIds = UserSession.shared.plannedCourseIds(on: dayStart)

@@ -70,19 +70,21 @@ final class FavoriteManager: ObservableObject {
     @Published private(set) var likedStepIds: Set<String> = []
     @Published private(set) var likedCourses: Set<String> = []
 
-    // DS projection: map stored favorites-cards to view DTOs
+    // DS projection: только учебные карточки (слова/фразы). Лайфхаки не включаем — они только в hacksDTO.
     public var cardsDTO: [FDCardDTO] {
-        cards.map { it in
-            FDCardDTO(
-                sourceId: it.id,
-                title: it.ru,
-                subtitle: it.th,
-                meta: it.phonetic,
-                lessonTitle: it.lessonTitle ?? "",
-                tagText: "",
-                addedAt: it.createdAt
-            )
-        }
+        cards
+            .filter { !isHackItem($0) }
+            .map { it in
+                FDCardDTO(
+                    sourceId: it.id,
+                    title: it.ru,
+                    subtitle: it.th,
+                    meta: it.phonetic,
+                    lessonTitle: it.lessonTitle ?? "",
+                    tagText: "",
+                    addedAt: it.createdAt
+                )
+            }
     }
 
     // DS projection: map stored favorites-courses to view DTOs
@@ -102,14 +104,13 @@ final class FavoriteManager: ObservableObject {
 
     public var hacksDTO: [FDHackDTO] {
         items
-            .filter { it in
-                let fid = normalized(it.id)
-                return fid.hasPrefix("hack:")
-            }
+            .filter { isHackItem($0) }
             .sorted { a, b in a.createdAt > b.createdAt }
             .map { it in
-                FDHackDTO(
-                    sourceId: normalized(it.id),
+                var sid = normalized(it.id)
+                if !sid.hasPrefix("hack:") { sid = "hack:" + sid }
+                return FDHackDTO(
+                    sourceId: sid,
                     title: it.ru,
                     meta: it.phonetic,
                     lessonTitle: it.lessonTitle ?? "",
@@ -120,9 +121,9 @@ final class FavoriteManager: ObservableObject {
 
     @inline(__always)
     private func isCardItem(_ it: FavoriteItem) -> Bool {
+        if isHackItem(it) { return false }
         let fid = normalized(it.id)
         if fid.hasPrefix("course:") { return false }
-        if fid.hasPrefix("hack:") || it.phonetic.lowercased().hasPrefix("hack:") { return false }
         return fid.hasPrefix("card:") || fid.hasPrefix("step:")
     }
 
@@ -575,7 +576,10 @@ final class FavoriteManager: ObservableObject {
     private func isHackItem(_ it: FavoriteItem) -> Bool {
         let fid = normalized(it.id)
         if fid.hasPrefix("hack:") { return true }
-        return it.phonetic.lowercased().hasPrefix("hack:")
+        if it.phonetic.lowercased().hasPrefix("hack:") { return true }
+        // legacy: лайфхаки, сохранённые без префикса, часто имеют ru == "Лайфхак"
+        if it.ru.trimmingCharacters(in: .whitespacesAndNewlines) == "Лайфхак" { return true }
+        return false
     }
 
     private init() {
@@ -673,6 +677,66 @@ final class FavoriteManager: ObservableObject {
         }
 
         return out
+    }
+
+    // MARK: - Smart Speaker dictionary (user_dict)
+
+    /// Add a Smart Speaker phrase into favorites as a personal dictionary card.
+    /// Stored as canonical step-like id so Speaker favorites queue can train it.
+    func addSmartSpeakerCard(ru: String, thai: String, phonetic: String) {
+        let ruTrim = ru.trimmingCharacters(in: .whitespacesAndNewlines)
+        let thTrim = thai.trimmingCharacters(in: .whitespacesAndNewlines)
+        let phTrim = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !thTrim.isEmpty, !phTrim.isEmpty else { return }
+
+        let courseId = "user_dict"
+        let lessonId = "smart_speaker"
+
+        // next idx: max existing idx in this bucket + 1
+        var maxIdx = 0
+        for it in items {
+            let fid = normalized(it.id)
+            guard fid.contains("step:\(courseId):\(lessonId):idx") else { continue }
+            if let last = fid.split(separator: ":").last, last.hasPrefix("idx"),
+               let n = Int(last.dropFirst(3)), n > maxIdx {
+                maxIdx = n
+            }
+        }
+        let nextIdx = maxIdx + 1
+        let favId = canonicalStepFavoriteId(courseId: courseId, lessonId: lessonId, index: nextIdx)
+
+        let stored = FavoriteItem(
+            id: favId,
+            ru: ruTrim.isEmpty ? "Моя фраза" : ruTrim,
+            th: thTrim,
+            phonetic: phTrim,
+            courseId: courseId,
+            lessonId: lessonId,
+            lessonTitle: "мой словарь",
+            createdAt: Date()
+        )
+
+        DispatchQueue.main.async {
+            withAnimation {
+                // de-dup by (thai + phonetic) inside user_dict to avoid spam taps
+                self.items.removeAll { self.normalized($0.courseId) == courseId && self.normalized($0.lessonId) == lessonId && self.normalized($0.th) == self.normalized(thTrim) }
+                self.items.removeAll { self.normalized($0.id) == self.normalized(favId) }
+                self.items.insert(stored, at: 0)
+            }
+            self.sortNewestFirst()
+            self.recomputeLikedCourses()
+            self.syncToUserSession()
+            self.save()
+            self.emit()
+        }
+    }
+
+    /// Resolve a personal-dictionary favorite by its step route.
+    func smartSpeakerItem(index: Int) -> FavoriteItem? {
+        let courseId = "user_dict"
+        let lessonId = "smart_speaker"
+        let fid = canonicalStepFavoriteId(courseId: courseId, lessonId: lessonId, index: index)
+        return items.first { normalized($0.id) == normalized(fid) }
     }
 
     // returns canonical hack step ids only, in the form: hack:step:courseId:lessonId:idxN

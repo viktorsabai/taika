@@ -60,6 +60,13 @@ extension UserSession {
 }
 
 
+enum StepMode: Equatable {
+    case lesson
+    case loading(HomeGameType)
+    case game(HomeGameType)
+    case proGate(HomeGameType)
+}
+
 struct StepView: View {
     let courseId: String?
     let lessonId: String?
@@ -91,7 +98,7 @@ struct StepView: View {
         allowLearning: Bool = true,
         showBottomProgress: Bool = true,
         showInternalHeader: Bool = true,
-        useInternalBackground: Bool = true,
+        useInternalBackground: Bool = false,
         onBack: (() -> Void)? = nil
     ) {
         self.courseId = courseId
@@ -112,14 +119,23 @@ struct StepView: View {
 
     @State private var items: [SDStepItem] = []
 
-    // Navigation state for HomeTask
-    @State private var goHomeTask: Bool = false
+    /// 0 = Лайфхаки, 1 = Карточки — переключатель в хедере Step (две карусели). По умолчанию карточки.
+    @State private var stepSegment: Int = 1
+    @State private var activeIndexTips: Int = 0
+    @State private var activeIndexCards: Int = 0
+
     // Navigation state for Next Lesson
     @State private var goNextLesson: Bool = false
 
     // Overlay state for lesson summary
     @State private var showLessonSummary: Bool = false
-    @State private var didShowSummaryOnce: Bool = false
+    /// Показать короткую «запомнил»-обратную связь на карточке (галочка) перед переходом к следующей.
+    @State private var learnedFeedbackIndex: Int? = nil
+    @State private var learnedFeedbackRevealed: Bool = false
+    @State private var summaryOverlayRevealed: Bool = false
+    @State private var selectedGameType: HomeGameType = .match
+    @State private var showReinforceGamePicker: Bool = false
+    @State private var mode: StepMode = .lesson
 
     @StateObject private var anim = StepAnimator()
     @State private var resetGuardUntil: Date = .distantPast
@@ -127,13 +143,14 @@ struct StepView: View {
     @State private var needsPostResetHydrate: Bool = false
     @State private var progressReady: Bool = false
     @State private var didSetInitialIndex: Bool = false
-    @State private var pendingProgressPost: DispatchWorkItem? = nil
     @State private var pendingIndexPersist: DispatchWorkItem? = nil
     @State private var isMounted: Bool = false
     // live favorites sync
     @ObservedObject private var favManager = FavoriteManager.shared
+    @ObservedObject private var stepManager = StepManager.shared
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var nav: NavigationIntent
 
     @State private var hints: [String] = []
     @State private var itemTips: [Int: String] = [:]
@@ -187,6 +204,13 @@ struct StepView: View {
         }
         return s
     }
+
+    // Разделение на лайфхаки и остальные карточки (для двух каруселей в Step)
+    private var tipIndices: [Int] { items.indices.filter { items[$0].kind == .tip } }
+    private var cardIndices: [Int] { items.indices.filter { items[$0].kind != .tip } }
+    private var tipItems: [SDStepItem] { tipIndices.map { items[$0] } }
+    private var cardItems: [SDStepItem] { cardIndices.map { items[$0] } }
+    private var hasTwoSegments: Bool { !tipItems.isEmpty && !cardItems.isEmpty }
 
     // Original indices for tips, for use with ProgressManager
     private var tipOriginalIndices: Set<Int> {
@@ -262,24 +286,9 @@ struct StepView: View {
 
     private func notifyProgressAfterToggle(stepIndex: Int) {
         let nowLearned = anim.learned.contains(stepIndex)
-        let cid = resolvedCourseId.isEmpty ? {
-            let parts = resolvedLessonId.split(separator: "_")
-            if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
-            return resolvedLessonId
-        }() : resolvedCourseId
-        let lid = resolvedLessonId
-
-        // Persist via ProgressManager and update lesson status (ignoring tips)
-        ProgressManager.shared.setStepLearned(courseId: cid, lessonId: lid, index: stepIndex, isLearned: nowLearned)
-        ProgressManager.shared.markStarted(courseId: cid, lessonId: lid)
-        ProgressManager.shared.markCompletedIfNeeded(
-            courseId: cid,
-            lessonId: lid,
-            totalSteps: learnableCount,
-            tipIndexes: tipOriginalIndices
-        )
-        // Notify upper layers (LessonsManager / LessonsView)
-        scheduleProgressSnapshot()
+        let origIdx = originalIndex(for: stepIndex)
+        StepManager.shared.setLearned(index: origIdx, nowLearned)
+        syncAnimLearnedFromStepManager()
     }
 
     private func hydrateLearnedFromSession() {
@@ -289,12 +298,24 @@ struct StepView: View {
             return resolvedLessonId
         }() : resolvedCourseId
         let saved = ProgressManager.shared.learnedSet(courseId: cid, lessonId: resolvedLessonId)
-        let filtered = saved.filter { idx in
-            idx >= 0 && idx < items.count && {
-                switch items[idx].kind { case .word, .phrase, .casual: true; default: false }
-            }()
-        }
-        anim.learned = filtered
+        let learnableKinds: Set<SDStepItem.Kind> = [.word, .phrase, .casual]
+        let uiIndices = Set(saved.compactMap { origToUI[$0] }.filter { ui in
+            ui >= 0 && ui < items.count && learnableKinds.contains(items[ui].kind)
+        })
+        anim.learned = uiIndices
+    }
+
+    private var resolvedCourseIdOrPlaceholder: String {
+        if !resolvedCourseId.isEmpty { return resolvedCourseId }
+        let parts = resolvedLessonId.split(separator: "_")
+        if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
+        return resolvedLessonId
+    }
+
+    private func syncAnimLearnedFromStepManager() {
+        guard StepManager.shared.courseId == resolvedCourseIdOrPlaceholder && StepManager.shared.lessonId == resolvedLessonId else { return }
+        let learnedOrig = StepManager.shared.learned
+        anim.learned = Set(learnedOrig.compactMap { origToUI[$0] })
     }
 
     private func hydrateFavoritesFromManager() {
@@ -319,54 +340,6 @@ struct StepView: View {
     private func originalIndex(for uiIndex: Int) -> Int {
         guard uiIndex >= 0 && uiIndex < items.count else { return uiIndex }
         return uiToOrig[uiIndex] ?? uiIndex
-    }
-
-    // Debounced progress snapshot to avoid chatty notifications
-    private func scheduleProgressSnapshot(_ delay: TimeInterval = 0.12) {
-        // Do not post while we're under a reset guard window
-        if isUnderResetGuard { return }
-        // Cancel any pending post
-        pendingProgressPost?.cancel()
-        let work = DispatchWorkItem { [resolvedLessonId] in
-            // Double-check lesson is resolved before posting
-            guard !resolvedLessonId.isEmpty else { return }
-            postStepProgressSnapshot()
-        }
-        pendingProgressPost = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
-    }
-
-    // Push a snapshot of the current in-lesson progress to LessonsManager/LessonsView
-    private func postStepProgressSnapshot() {
-        // Compact projection indices for the progress strip
-        let learnedIdx = Array(learnedForProgress).sorted()                  // only learnable
-        let allIdx = Array(0..<max(0, progressTotal))                        // all progress cells including tips
-        let hacksIdx = Array(tipIndicesForProgress).sorted()                 // progress indices that are tips
-
-        // Resolve course id from explicit value or from lesson id prefix
-        let cid: String = {
-            if !resolvedCourseId.isEmpty { return resolvedCourseId }
-            let parts = resolvedLessonId.split(separator: "_")
-            if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
-            return resolvedLessonId
-        }()
-
-        NotificationCenter.default.post(
-            name: .stepProgressDidChange,
-            object: nil,
-            userInfo: [
-                "courseId": cid,
-                "lessonId": resolvedLessonId,
-                // Preferred rich payload with raw indices
-                "learnedContent": learnedIdx,
-                "allCards": allIdx,
-                "lifehacks": hacksIdx,
-                // Aggregates for consumers that only need counts
-                "learnedCount": learnedIdx.count,
-                "totalCount": allIdx.count,
-                "lifehackCount": hacksIdx.count
-            ]
-        )
     }
 
     private func rebuildProgressIndexMaps() {
@@ -526,6 +499,26 @@ struct StepView: View {
         self.uiToOrig = u2o
         self.origToUI = o2u
 
+        // Configure StepManager so it is the single source of truth for progress (same lesson, index alignment)
+        let cid: String = {
+            if !self.resolvedCourseId.isEmpty { return self.resolvedCourseId }
+            let parts = lid.split(separator: "_")
+            if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
+            return String(lid)
+        }()
+        let stepModels: [StepModel] = raw.enumerated().map { idx, it in
+            let kind: StepKind
+            switch it.kind {
+            case .word: kind = .word
+            case .phrase: kind = .phrase
+            case .casual: kind = .word
+            case .tip: kind = .lifehack
+            case .dialog: kind = .lifehack
+            }
+            return StepModel(kind: kind, title: it.ru ?? "", thai: it.thai, transcriptionRu: it.phonetic)
+        }
+        StepManager.shared.configure(courseId: cid, lessonId: lid, steps: stepModels)
+
         // Clear any stale learned state before rebuilding progress index maps
         self.anim.learned.removeAll()
         rebuildProgressIndexMaps()
@@ -570,53 +563,121 @@ struct StepView: View {
 
         self.progressReady = false
         self.progressRenderNonce &+= 1
-        // Post snapshot after the view tree binds to the new index
-        DispatchQueue.main.async { self.scheduleProgressSnapshot() }
+        // StepManager.configure already scheduled notifyProgress(); no duplicate snapshot
         self.progressReady = true
     }
     // (Old hydrateActiveIndexFromActivity() removed and replaced by hydratedActiveStartIndex())
 
 
+    /// Строка заголовка над каруселью (УРОК + название) при двух каруселях; переключатель — в app header.
+    @ViewBuilder
+    private func stepTitleRowOnly() -> some View {
+        let lessonTitleText: String = {
+            if let t = resolvedTitle, !t.isEmpty { return t }
+            if let t = lessonTitle, !t.isEmpty { return t }
+            return "Урок"
+        }()
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text("УРОК")
+                .font(PD.FontToken.caption(12, weight: .medium))
+                .foregroundColor(PD.ColorToken.textSecondary.opacity(0.9))
+            Spacer(minLength: 8)
+            Text(lessonTitleText)
+                .font(PD.FontToken.body(15, weight: .semibold))
+                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                .lineLimit(1)
+        }
+        .padding(.bottom, 2)
+    }
+
     // Split out to reduce type-checking pressure in the main body
     @ViewBuilder
     private func carouselView() -> some View {
-        let activeBinding = Binding<Int>(
-            get: { anim.activeIndex },
-            set: { anim.activeIndex = $0 }
-        )
-
-        // заголовок секции берём из резолвнутого названия урока
-        let sectionTitle: String = {
-            if let t = resolvedTitle, !t.isEmpty {
-                return t.uppercased()
+        if hasTwoSegments {
+            // Две карусели: показываем одну в зависимости от stepSegment (синхр. с app header)
+            if stepSegment == 0 {
+                stepCarouselOne(
+                    items: tipItems,
+                    activeIndex: $activeIndexTips,
+                    learned: [],
+                    favorites: Set(tipIndices.enumerated().filter { anim.favorites.contains(tipIndices[$0.offset]) }.map { $0.offset })
+                )
+            } else {
+                stepCarouselOne(
+                    items: cardItems,
+                    activeIndex: $activeIndexCards,
+                    learned: Set(cardIndices.enumerated().filter { anim.learned.contains(cardIndices[$0.offset]) }.map { $0.offset }),
+                    favorites: Set(cardIndices.enumerated().filter { anim.favorites.contains(cardIndices[$0.offset]) }.map { $0.offset })
+                )
             }
-            if let t = lessonTitle, !t.isEmpty {
-                return t.uppercased()
-            }
-            // fallback: generic lesson label so header всегда рисуется
-            return "УРОК"
-        }()
+        } else {
+            // Одна карусель (как раньше)
+            let activeBinding = Binding<Int>(
+                get: { anim.activeIndex },
+                set: { anim.activeIndex = $0 }
+            )
+            let sectionTitle: String = {
+                if let t = resolvedTitle, !t.isEmpty { return t.uppercased() }
+                if let t = lessonTitle, !t.isEmpty { return t.uppercased() }
+                return "УРОК"
+            }()
+            let sectionSubtitle: String? = items.isEmpty ? nil : "урок • \(items.count) карт"
+            SDStepCarousel(
+                title: sectionTitle,
+                items: items,
+                activeIndex: activeBinding,
+                subtitle: sectionSubtitle,
+                learned: anim.learned,
+                favorites: anim.favorites,
+                onTap: { handleTapItem($0) },
+                onPlay: { handlePlayItem($0) },
+                onFav: { handleFavItem($0) },
+                onDone: { handleDoneItem($0) },
+                onNext: { handleNextItem($0) },
+                isOverlay: isOverlay,
+                loop: true
+            )
+        }
+    }
 
-        // простой сабтайтл по количеству карт; при желании можно потом обогатить
-        let sectionSubtitle: String? = {
-            guard !items.isEmpty else { return nil }
-            return "урок • \(items.count) карт"
-        }()
-
+    @ViewBuilder
+    private func stepCarouselOne(
+        items segmentItems: [SDStepItem],
+        activeIndex: Binding<Int>,
+        learned: Set<Int>,
+        favorites: Set<Int>
+    ) -> some View {
         SDStepCarousel(
-            title: sectionTitle,
-            items: items,
-            activeIndex: activeBinding,
-            subtitle: sectionSubtitle,
-            learned: anim.learned,
-            favorites: anim.favorites,
+            title: "",
+            items: segmentItems,
+            activeIndex: activeIndex,
+            subtitle: nil,
+            learned: learned,
+            favorites: favorites,
             onTap: { handleTapItem($0) },
             onPlay: { handlePlayItem($0) },
             onFav: { handleFavItem($0) },
             onDone: { handleDoneItem($0) },
             onNext: { handleNextItem($0) },
-            isOverlay: isOverlay
+            isOverlay: isOverlay,
+            loop: true,
+            compactSection: true
         )
+    }
+
+    /// Короткая обратная связь «запомнил»: галочка по центру карточки (0.35 с), затем переход.
+    @ViewBuilder
+    private var learnedCheckmarkOverlay: some View {
+        if learnedFeedbackIndex != nil {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 56, weight: .medium))
+                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                .scaleEffect(learnedFeedbackRevealed ? 1.0 : 0.3)
+                .opacity(learnedFeedbackRevealed ? 0.95 : 0)
+                .animation(.spring(response: 0.28, dampingFraction: 0.65), value: learnedFeedbackRevealed)
+                .onAppear { learnedFeedbackRevealed = true }
+                .allowsHitTesting(false)
+        }
     }
 
     // Split out the Next-Lesson link to reduce type-checking in the main body
@@ -635,11 +696,48 @@ struct StepView: View {
         .hidden()
     }
 
+    // MARK: - Taika Mascot Helper (for overlays)
+    @ViewBuilder
+    private var taikaMascotView: some View {
+        Image("mascot.message")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 156, height: 156)
+            .opacity(0.95)
+    }
+
     @ViewBuilder
     private func bottomProgressView(proxy: GeometryProxy) -> some View {
-        if progressTotal > 0 {
+        if hasTwoSegments {
+            // Прогресс только по текущему сегменту (лайфхаки или карточки)
+            let total = stepSegment == 0 ? tipItems.count : cardItems.count
+            let active = stepSegment == 0 ? activeIndexTips : activeIndexCards
+            let indices = stepSegment == 0 ? tipIndices : cardIndices
+            let learnedSeg: Set<Int> = stepSegment == 0 ? [] : Set(indices.enumerated().filter { anim.learned.contains(indices[$0.offset]) }.map { $0.offset })
+            let favoritesSeg: Set<Int> = Set(indices.enumerated().filter { anim.favorites.contains(indices[$0.offset]) }.map { $0.offset })
+            let tipIndicesSeg: Set<Int> = stepSegment == 0 ? Set(0..<total) : []
+            if total > 0 {
+                SDStepProgress(
+                    total: total,
+                    activeIndex: min(active, max(0, total - 1)),
+                    learned: learnedSeg,
+                    favorites: favoritesSeg,
+                    tipIndices: tipIndicesSeg,
+                    onTap: { i in
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        if stepSegment == 0 {
+                            activeIndexTips = min(max(0, i), total - 1)
+                        } else {
+                            activeIndexCards = min(max(0, i), total - 1)
+                        }
+                    }
+                )
+                .id("progress-\(resolvedLessonId)-\(stepSegment)-\(progressRenderNonce)")
+                .padding(.horizontal, PD.Spacing.inner)
+                .padding(.bottom, 4)
+            }
+        } else if progressTotal > 0 {
             let raw = progressActiveIndexForDisplay()
-            // LTR: progress index grows left→right together with carousel
             let p: Int = raw
             let progressView: SDStepProgress = SDStepProgress(
                 total: progressTotal,
@@ -657,11 +755,41 @@ struct StepView: View {
             progressView
                 .id("progress-\(resolvedLessonId)-\(progressRenderNonce)")
                 .padding(.horizontal, PD.Spacing.inner)
-                .padding(.bottom, proxy.safeAreaInsets.bottom + 12)
+                .padding(.bottom, 4)
         }
     }
 
     // MARK: - Subviews to reduce type-checking pressure
+    // MARK: - PRO gating logic
+    private func featureFor(_ type: HomeGameType) -> ProFeature {
+        switch type {
+        case .match: return .recallGame // match is free but feature won't be checked
+        case .recall: return .recallGame
+        case .builder: return .contextGame
+        }
+    }
+
+    private func startSelectedGame() {
+        let type = selectedGameType
+
+        if type == .match {
+            mode = .loading(type)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                mode = .game(type)
+            }
+            return
+        }
+
+        if ProManager.shared.can(featureFor(type)) {
+            mode = .loading(type)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                mode = .game(type)
+            }
+        } else {
+            mode = .proGate(type)
+        }
+    }
+
     @ViewBuilder
     private func summaryOverlayView() -> some View {
         let cid: String = {
@@ -671,65 +799,250 @@ struct StepView: View {
             return resolvedLessonId
         }()
         let advance = CourseNavigator.shared.advance(from: cid, lessonId: resolvedLessonId)
-
-        let config: (title: String, subtitle: String, secondary: String) = {
+        let accent = ThemeManager.shared.currentAccentFill
+        let config: (title: String, subtitle: String, primary: String) = {
             switch advance {
             case .nextLesson:
-                let t = (resolvedTitle ?? "Урок").uppercased()
-                return ("Итоги урока", "\(t) — выучено \(anim.learned.count) из \(learnableCount)", "Следующий урок")
+                return ("Урок пройден", "Выучено \(anim.learned.count) из \(learnableCount)", "Следующий урок")
             case .nextCourse(_, let firstLessonId):
                 let nextTitle = LessonsData.shared.lessonTitle(for: firstLessonId) ?? "Следующий курс"
-                return ("Курс завершён", "Дальше: \(nextTitle)", "Следующий курс")
+                return ("Курс завершён", nextTitle, "Следующий курс")
             case .end:
-                return ("Все курсы пройдены", "Можно повторить материал или выбрать раздел", "К курсам")
+                return ("Все пройдено", "Повтори материал или выбери раздел", "К курсам")
             }
         }()
 
-        LessonSummaryOverlay(
-            title: config.title,
-            subtitle: config.subtitle,
-            primaryTitle: "Закрепить",
-            secondaryTitle: config.secondary,
-            onPrimary: {
-                withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
-                goHomeTask = true
-            },
-            onSecondary: {
-                switch advance {
-                case .end:
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
                     withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
-                case .nextLesson:
-                    // same-course advance (in-place swap)
-                    prepareNextLessonAndNavigate()
-                case .nextCourse(let nextCourseId, let firstLessonId):
-                    // use the already computed target to avoid mismatches
-                    _ = StepData.shared.items(for: firstLessonId) // warm cache
-                    pendingNavCourseId = nextCourseId
-                    pendingNavLessonId = firstLessonId
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) { showLessonSummary = false }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                        presentNextCourse = true
-                    }
+                    scheduleAuthSoftWallIfNeeded()
                 }
-            },
-            onClose: {
-                withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
+
+            VStack(spacing: 0) {
+                // Заголовок
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(config.title)
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.primary)
+                        Text(config.subtitle)
+                            .font(.system(size: 15))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer(minLength: 12)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
+                        scheduleAuthSoftWallIfNeeded()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 26))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 22)
+                .padding(.bottom, 18)
+
+                // Главный CTA — обводка, тёмный текст (в нашей айдентике)
+                Button {
+                    switch advance {
+                    case .end:
+                        withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
+                        scheduleAuthSoftWallIfNeeded()
+                    case .nextLesson:
+                        prepareNextLessonAndNavigate()
+                    case .nextCourse(let nextCourseId, let firstLessonId):
+                        _ = StepData.shared.items(for: firstLessonId)
+                        pendingNavCourseId = nextCourseId
+                        pendingNavLessonId = firstLessonId
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) { showLessonSummary = false }
+                        scheduleAuthSoftWallIfNeeded()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { presentNextCourse = true }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(config.primary)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(
+                        Capsule()
+                            .fill(accent.opacity(0.12))
+                            .overlay(Capsule().strokeBorder(accent, lineWidth: 1.5))
+                    )
+                    .foregroundStyle(accent)
+                    .font(.system(size: 17, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 14)
+
+                // Закрепить: либо одна кнопка (сворачиваемо), либо инлайн-блок выбора игры (без системного dialog)
+                if showReinforceGamePicker {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Закрепить урок")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        VStack(spacing: 8) {
+                            reinforceGameOption(title: "Найди пару", type: .match)
+                            reinforceGameOption(title: "Быстрое повторение", type: .recall)
+                            reinforceGameOption(title: "Фразы в контексте", type: .builder)
+                        }
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
+                            startSelectedGame()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "play.fill")
+                                Text("Начать тренировку")
+                            }
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color(white: 0.14))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Capsule().fill(accent))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 14)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+
+                // Вторичные действия
+                HStack(spacing: 12) {
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                            showReinforceGamePicker.toggle()
+                        }
+                    } label: {
+                        Label(showReinforceGamePicker ? "Свернуть" : "Закрепить", systemImage: "gamecontroller.fill")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(accent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Capsule().strokeBorder(accent.opacity(0.6), lineWidth: 1.2))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
+                        UserSession.shared.markActive(courseId: resolvedCourseIdOrPlaceholder, lessonId: resolvedLessonId, stepIndex: 0)
+                        NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+                        nav.requestTab(2)
+                    } label: {
+                        Label("Произношение", systemImage: "mic.fill")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(accent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Capsule().strokeBorder(accent.opacity(0.6), lineWidth: 1.2))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
             }
-        )
-        .transition(.scale.combined(with: .opacity))
-        .zIndex(1)
+            .frame(maxWidth: 380)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.regularMaterial)
+            )
+            .scaleEffect(summaryOverlayRevealed ? 1 : 0.92)
+            .opacity(summaryOverlayRevealed ? 1 : 0)
+            .animation(.spring(response: 0.35, dampingFraction: 0.82), value: summaryOverlayRevealed)
+            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: showReinforceGamePicker)
+            .onAppear { summaryOverlayRevealed = true }
+        }
+        .transition(.opacity)
+        .zIndex(10)
+    }
+
+    private func reinforceGameOption(title: String, type: HomeGameType) -> some View {
+        let accent = ThemeManager.shared.currentAccentFill
+        let isSelected = selectedGameType == type
+        return Button {
+            selectedGameType = type
+        } label: {
+            HStack(spacing: 10) {
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer(minLength: 8)
+                if type == .match {
+                    Text("FREE")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(accent.opacity(0.4)))
+                } else {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(accent)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isSelected ? AnyShapeStyle(accent.opacity(0.18)) : AnyShapeStyle(Color.primary.opacity(0.06)))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(isSelected ? AnyShapeStyle(accent) : AnyShapeStyle(Color.clear), lineWidth: 1.2)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
     private func stepMainContent(_ proxy: GeometryProxy) -> some View {
-        let idx = clampedActiveIndex
+        let idx: Int = {
+            if hasTwoSegments {
+                if stepSegment == 0, activeIndexTips < tipIndices.count {
+                    return tipIndices[activeIndexTips]
+                }
+                if stepSegment == 1, activeIndexCards < cardIndices.count {
+                    return cardIndices[activeIndexCards]
+                }
+            }
+            return clampedActiveIndex
+        }()
         let currentTipText: String? = itemTips[idx]
+        let baseH = max(CardDS.Metrics.stepWordCardHeight, CardDS.Metrics.stepLifehackCardHeight)
+        let carouselMinHeight: CGFloat = baseH + 36
         let stack = VStack(spacing: 0) {
-            // скрытый линк на следующий урок (логика остаётся общей)
             nextLessonLink()
 
-            // TOP: taika fm bubble (DS) — только если не просили показывать одни карточки и не в overlay
+            if hasTwoSegments {
+                stepTitleRowOnly()
+                    .padding(.horizontal, PD.Spacing.inner)
+                    .padding(.top, 12)
+            }
+
+            Spacer(minLength: 8)
+
+            carouselView()
+                .padding(.horizontal, PD.Spacing.inner)
+                .frame(maxWidth: .infinity, minHeight: carouselMinHeight, alignment: .center)
+                .modifier(StepChrome(isOverlay: isOverlay))
+                .overlay(alignment: .center) { learnedCheckmarkOverlay }
+
+            Spacer(minLength: 8)
+
+            if !isOverlay && showBottomProgress {
+                bottomProgressView(proxy: proxy)
+                    .padding(.top, 4)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 12))
+            }
+
             if !layoutCardsOnly && !isOverlay {
                 TaikaFMBubbleTyping(
                     messages: TaikaFMData.shared
@@ -738,383 +1051,233 @@ struct StepView: View {
                             chunkArray.map { $0.text }.joined()
                         },
                     reactions: TaikaFMData.shared.reactionGroups(for: .step),
-                    repeats: true
+                    repeats: true,
+                    showBubble: false
                 )
                 .padding(.horizontal, PD.Spacing.inner)
-                // чуть ближе к верхнему хедеру, чтобы освободить место для карточек
-                .padding(.top, isOverlay ? 4 : 12)
+                .padding(.top, 16)
             }
 
-            // MIDDLE: Carousel (нативная высота из StepDS)
-            carouselView()
-                // поджимаем к FM‑баблу, чтобы карточка сидела выше
-                .padding(.top, 8)
-                .padding(.horizontal, PD.Spacing.inner)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .modifier(StepChrome(isOverlay: isOverlay))
-
-            // BOTTOM: Progress (DS)
-            if !isOverlay && showBottomProgress {
-                bottomProgressView(proxy: proxy)
-                    // уменьшаем зазор между карточкой и прогрессом
-                    .padding(.top, 12)
-            }
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
         stack
             .blur(radius: showLessonSummary ? 12 : 0)
             .saturation(showLessonSummary ? 0.98 : 1)
             .animation(.easeInOut(duration: 0.18), value: showLessonSummary)
-            .allowsHitTesting(isOverlay ? true : !showLessonSummary)
+            .allowsHitTesting(isOverlay || !showLessonSummary)
     }
 
     var body: some View {
         GeometryReader { proxy in
-            ZStack {
-                stepMainContent(proxy)
-                if showLessonSummary {
-                    summaryOverlayView()
-                }
-            }
-            .sheet(isPresented: $goHomeTask) {
-                let cid: String = {
-                    if !resolvedCourseId.isEmpty { return resolvedCourseId }
-                    let parts = resolvedLessonId.split(separator: "_")
-                    if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
-                    return resolvedLessonId
-                }()
-
-                ZStack {
-                    // glossy blur behind, no black dim, no extra card container
-                    taikaGlassBackground()
-
-                    HomeTaskView(courseId: cid, lessonId: resolvedLessonId, embedBackground: false)
-                        .padding(.top, 8)
-                        .padding(.bottom, 16)
-                        .padding(.horizontal, 16)
-                }
-                .presentationDetents([.fraction(0.92)])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(0)
-                .presentationBackground(.clear)
-            }
-            .fullScreenCover(isPresented: $presentNextCourse) {
-                if let cid = pendingNavCourseId, let lid = pendingNavLessonId {
-                    NavigationStack {
-                        StepView(courseId: cid, lessonId: lid, lessonTitle: guessLessonTitle(for: lid))
+            rootContent(proxy: proxy)
+                .background(
+                    PD.ColorToken.background
+                        .ignoresSafeArea()
+                )
+                .onAppear {
+                    if items.isEmpty {
+                        loadFromStepData()
+                    } else {
+                        hydrateLearnedFromSession()
                     }
-                    .preferredColorScheme(.dark)
-                }
-            }
 
-            .onAppear {
-                isMounted = true
-                // debug print removed
-                loadFromStepData()
-                if !isOverlay && !resolvedCourseId.isEmpty {
-                    UserSession.shared.markActive(courseId: resolvedCourseId, lessonId: resolvedLessonId)
-                }
-                needsPostResetHydrate = false
-                // Hydration now handled inside loadFromStepData()
-                // DispatchQueue.main.async { hydrateLearnedFromSession() }
-                // DispatchQueue.main.async { hydrateFavoritesFromManager() }
-                // Safety net: ensure snapshot after appear
-            }
-            .onChange(of: startIndex) { newStart in
-                // Prevent re-initialization after the first application of startIndex
-                guard !didSetInitialIndex else { return }
-                guard let s = newStart, !items.isEmpty else { return }
-                let clamped = max(0, min(s, max(0, items.count - 1)))
-                if anim.activeIndex != clamped {
-                    anim.jump(to: clamped)
-                    didSetInitialIndex = true
-                }
-            }
-            .onChange(of: anim.activeIndex) { newValue in
-                if !isOverlay {
-                    // Debounce persisting last step index to avoid chatty writes while scrolling
-                    pendingIndexPersist?.cancel()
-                    let clamped = max(0, min(newValue, max(0, items.count - 1)))
-                    let work = DispatchWorkItem {
-                        let cid: String = {
-                            if !resolvedCourseId.isEmpty { return resolvedCourseId }
-                            let parts = resolvedLessonId.split(separator: "_")
-                            if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
-                            return resolvedLessonId
-                        }()
-                        UserSession.shared.setLastStepIndex(courseId: cid, lessonId: resolvedLessonId, index: clamped)
-                    }
-                    pendingIndexPersist = work
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: work)
-                }
-            }
-            .safeAreaInset(edge: .top) {
-                if !isOverlay && showInternalHeader {
-                    AppBackHeader {
-                        if let onBack {
-                            onBack()
-                        } else {
-                            dismiss()
-                        }
-                    }
-                    .padding(.horizontal, PD.Spacing.inner)
-                    .padding(.top, 8)
-                    .frame(maxWidth: .infinity)
-                }
-            }
-            .navigationBarBackButtonHidden(true)
-            .onDisappear { isMounted = false }
-            .toolbar(.hidden, for: .navigationBar)
-            .onReceive(NotificationCenter.default.publisher(for: .lessonProgressDidReset)) { note in
-                // Proactively purge persisted progress for the specific lesson
-                do {
-                    let cidPurge: String = {
-                        if !resolvedCourseId.isEmpty { return resolvedCourseId }
-                        let parts = resolvedLessonId.split(separator: "_")
-                        if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
-                        return resolvedLessonId
-                    }()
-                    let lidPurge = resolvedLessonId
-                    if !cidPurge.isEmpty, !lidPurge.isEmpty {
-                        ProgressManager.shared.resetLesson(courseId: cidPurge, lessonId: lidPurge)
-                    }
-                    // No longer forcibly clear the persisted last index for this lesson
-                }
-                // If the notification carries a lessonId, match it; otherwise clear optimistically.
-                if let userInfo = note.userInfo,
-                   let lid = userInfo["lessonId"] as? String,
-                   !resolvedLessonId.isEmpty,
-                   lid != resolvedLessonId {
-                    return
-                }
-                // Clear local state and rebuild maps. Do NOT rehydrate here.
-                anim.learned.removeAll()
-                anim.favorites.removeAll()
-                let keep = anim.activeIndex; anim.activeIndex = min(keep, max(0, items.count - 1))
-                didSetInitialIndex = true
-                rebuildProgressIndexMaps()
-                forceColdCarousel()
-                progressRenderNonce &+= 1
-                beginResetGuard()
-                needsPostResetHydrate = true
-                schedulePostResetHydrate()
-            }
-            // Listen to namespaced course progress reset notification
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LessonsManager.courseProgressDidReset"))) { note in
-                // Proactively purge persisted progress for the current course
-                do {
-                    let cidPurge: String = {
-                        if !resolvedCourseId.isEmpty { return resolvedCourseId }
-                        let parts = resolvedLessonId.split(separator: "_")
-                        if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
-                        return resolvedLessonId
-                    }()
-                    if !cidPurge.isEmpty {
-                        ProgressManager.shared.resetCourse(courseId: cidPurge)
-                    }
-                    // No longer forcibly clear the persisted last index for this course/lesson
-                }
-                // If the notification carries a courseId, match it; otherwise clear optimistically.
-                if let userInfo = note.userInfo,
-                   let cid = userInfo["courseId"] as? String,
-                   !resolvedCourseId.isEmpty,
-                   cid != resolvedCourseId {
-                    return
-                }
-                // Clear local state immediately and DO NOT rehydrate here to avoid pulling stale snapshot back
-                anim.learned.removeAll()
-                anim.favorites.removeAll()
-                let keep = anim.activeIndex; anim.activeIndex = min(keep, max(0, items.count - 1))
-                didSetInitialIndex = true
-                rebuildProgressIndexMaps()
-                forceColdCarousel()
-                // Intentionally not calling hydrateLearnedFromSession()/hydrateFavoritesFromManager() here.
-                progressRenderNonce &+= 1
-                beginResetGuard()
-                needsPostResetHydrate = true
-                schedulePostResetHydrate()
-            }
-            // Listen to namespaced lesson progress reset notification
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LessonsManager.lessonProgressDidReset"))) { note in
-                // Proactively purge persisted progress for the specific lesson
-                do {
-                    let cidPurge: String = {
-                        if !resolvedCourseId.isEmpty { return resolvedCourseId }
-                        let parts = resolvedLessonId.split(separator: "_")
-                        if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
-                        return resolvedLessonId
-                    }()
-                    let lidPurge = resolvedLessonId
-                    if !cidPurge.isEmpty, !lidPurge.isEmpty {
-                        ProgressManager.shared.resetLesson(courseId: cidPurge, lessonId: lidPurge)
-                    }
-                    // No longer forcibly clear the persisted last index for this lesson
-                }
-                // If the notification carries a lessonId, match it; otherwise clear optimistically.
-                if let userInfo = note.userInfo,
-                   let lid = userInfo["lessonId"] as? String,
-                   !resolvedLessonId.isEmpty,
-                   lid != resolvedLessonId {
-                    return
-                }
-                // Clear local state and rebuild maps. Do NOT rehydrate here.
-                anim.learned.removeAll()
-                anim.favorites.removeAll()
-                let keep = anim.activeIndex; anim.activeIndex = min(keep, max(0, items.count - 1))
-                didSetInitialIndex = true
-                rebuildProgressIndexMaps()
-                forceColdCarousel()
-                progressRenderNonce &+= 1
-                beginResetGuard()
-                needsPostResetHydrate = true
-                schedulePostResetHydrate()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("stepLocalStateShouldReset"))) { note in
-                // scope: "all" | "course" | "lesson"
-                let scope = (note.userInfo?["scope"] as? String) ?? "all"
-                let cid = note.userInfo?["courseId"] as? String
-                let lid = note.userInfo?["lessonId"] as? String
+                    mode = .lesson
 
-                // Filter by scope
-                switch scope {
-                case "lesson":
-                    if let lid, !resolvedLessonId.isEmpty, lid != resolvedLessonId { return }
-                case "course":
-                    if let cid, !resolvedCourseId.isEmpty, cid != resolvedCourseId { return }
-                default:
-                    break
-                }
+                    // if lesson already fully completed → show summary by default
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        let totalLearnable = learnableCount
+                        let learnedNowCount = anim.learned.filter { idx in
+                            idx >= 0 && idx < items.count && {
+                                switch items[idx].kind {
+                                case .word, .phrase, .casual: return true
+                                default: return false
+                                }
+                            }()
+                        }.count
 
-                // Clear ONLY local visual state, do not rehydrate synchronously
-                anim.learned.removeAll()
-                anim.favorites.removeAll()
-                let keep = anim.activeIndex; anim.activeIndex = min(keep, max(0, items.count - 1))
-                didSetInitialIndex = true
-                // Removed: do { ... UserSession.shared.setLastStepIndex ... }
-                rebuildProgressIndexMaps()
-                progressRenderNonce &+= 1
-                beginResetGuard()
-                needsPostResetHydrate = true
-                schedulePostResetHydrate()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("stepProgressDidReset"))) { note in
-                // Unified reset hook from LessonsManager / ProgressManager to fully clear local visuals.
-                // Accept optional scoping via userInfo, but default to clearing optimistically.
-                let cidNote = note.userInfo?["courseId"] as? String
-                let lidNote = note.userInfo?["lessonId"] as? String
-                if let cidNote, !resolvedCourseId.isEmpty, cidNote != resolvedCourseId { return }
-                if let lidNote, !resolvedLessonId.isEmpty, lidNote != resolvedLessonId { return }
-
-                // Clear local state and avoid immediate rehydrate (prevents stale snapshot from popping back visually)
-                anim.learned.removeAll()
-                anim.favorites.removeAll()
-                let keep = anim.activeIndex; anim.activeIndex = min(keep, max(0, items.count - 1))
-                didSetInitialIndex = true
-                // Removed: do { ... UserSession.shared.setLastStepIndex ... }
-                rebuildProgressIndexMaps()
-                progressRenderNonce &+= 1
-                beginResetGuard()
-                needsPostResetHydrate = true
-                schedulePostResetHydrate()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("usCourseProgressDidReset"))) { note in
-                // Mirror the same behavior as non-prefixed reset
-                if let userInfo = note.userInfo,
-                   let cid = userInfo["courseId"] as? String,
-                   !resolvedCourseId.isEmpty,
-                   cid != resolvedCourseId {
-                    return
-                }
-                anim.learned.removeAll()
-                anim.favorites.removeAll()
-                let keep = anim.activeIndex; anim.activeIndex = min(keep, max(0, items.count - 1))
-                didSetInitialIndex = true
-                // Removed: do { ... UserSession.shared.setLastStepIndex ... }
-                rebuildProgressIndexMaps()
-                progressRenderNonce &+= 1
-                beginResetGuard()
-                needsPostResetHydrate = true
-                schedulePostResetHydrate()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("usLessonProgressDidReset"))) { note in
-                if let userInfo = note.userInfo,
-                   let lid = userInfo["lessonId"] as? String,
-                   !resolvedLessonId.isEmpty,
-                   lid != resolvedLessonId {
-                    return
-                }
-                anim.learned.removeAll()
-                anim.favorites.removeAll()
-                let keep = anim.activeIndex; anim.activeIndex = min(keep, max(0, items.count - 1))
-                didSetInitialIndex = true
-                // Removed: do { ... UserSession.shared.setLastStepIndex ... }
-                rebuildProgressIndexMaps()
-                progressRenderNonce &+= 1
-                beginResetGuard()
-                needsPostResetHydrate = true
-                schedulePostResetHydrate()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .progressDidChange)) { _ in
-                // No-op on in-lesson progress changes to avoid resetting the carousel and causing a jump-from-first illusion.
-                // We already keep local `anim.learned` in sync on toggle; progress strip reads from it directly.
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .progressCourseDidReset)) { _ in
-                anim.learned.removeAll()
-                anim.favorites.removeAll()
-                let keep = anim.activeIndex; anim.activeIndex = min(keep, max(0, items.count - 1))
-                didSetInitialIndex = true
-                // Removed: do { ... UserSession.shared.setLastStepIndex ... }
-                rebuildProgressIndexMaps()
-                progressRenderNonce &+= 1
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .progressLessonDidReset)) { _ in
-                anim.learned.removeAll()
-                anim.favorites.removeAll()
-                let keep = anim.activeIndex; anim.activeIndex = min(keep, max(0, items.count - 1))
-                didSetInitialIndex = true
-                // Removed: do { ... UserSession.shared.setLastStepIndex ... }
-                rebuildProgressIndexMaps()
-                progressRenderNonce &+= 1
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .favoritesDidChange)) { _ in
-                if isMounted { hydrateFavoritesFromManager() }
-            }
-            .onReceive(favManager.$items) { _ in
-                if isMounted { hydrateFavoritesFromManager() }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .stepProgressDidChange)) { _ in
-                guard !isOverlay else { return }
-                // If all learnable cards are done, show the canonical summary overlay
-                let totalLearnable = learnableCount
-                if totalLearnable > 0 {
-                    let learnedNowCount = anim.learned.filter { idx in
-                        guard idx >= 0 && idx < items.count else { return false }
-                        switch items[idx].kind {
-                        case .word, .phrase, .casual:
-                            return true
-                        default:
-                            return false
-                        }
-                    }.count
-                    if learnedNowCount >= totalLearnable {
-                        if !didShowSummaryOnce {
-                            didShowSummaryOnce = true
+                        if totalLearnable > 0 && learnedNowCount >= totalLearnable {
+                            summaryOverlayRevealed = false
                             withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
                                 showLessonSummary = true
                             }
                         }
-                    } else {
-                        // Progress is no longer full → allow the summary to appear again on the next completion
-                        didShowSummaryOnce = false
-                        if showLessonSummary {
-                            withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
-                        }
                     }
                 }
+        }
+        .navigationBarBackButtonHidden(true)
+        .onAppear {
+            if hasTwoSegments, !isOverlay {
+                stepManager.stepHeaderShowsSegment = true
+                stepManager.stepHeaderSegment = stepSegment
+                stepManager.stepHeaderTipCount = tipItems.count
+                stepManager.stepHeaderCardCount = cardItems.count
+            }
+        }
+        .onChange(of: hasTwoSegments) { _, show in
+            guard !isOverlay else { return }
+            stepManager.stepHeaderShowsSegment = show
+            if show {
+                stepManager.stepHeaderSegment = stepSegment
+                stepManager.stepHeaderTipCount = tipItems.count
+                stepManager.stepHeaderCardCount = cardItems.count
+            }
+        }
+        .onChange(of: tipItems.count) { _, _ in
+            if hasTwoSegments, !isOverlay { stepManager.stepHeaderTipCount = tipItems.count }
+        }
+        .onChange(of: cardItems.count) { _, _ in
+            if hasTwoSegments, !isOverlay { stepManager.stepHeaderCardCount = cardItems.count }
+        }
+        .onChange(of: stepManager.stepHeaderSegment) { _, newValue in
+            stepSegment = newValue
+        }
+        .onChange(of: stepSegment) { _, newValue in
+            stepManager.stepHeaderSegment = newValue
+        }
+        .onDisappear {
+            stepManager.stepHeaderShowsSegment = false
+            stepManager.stepHeaderTipCount = 0
+            stepManager.stepHeaderCardCount = 0
+        }
+    }
+
+    @ViewBuilder
+    private func rootContent(proxy: GeometryProxy) -> some View {
+        ZStack {
+            modeLayer(proxy: proxy)
+
+            // В overlay (из избранного) не показываем «Итоги урока» — только карусель и лайки
+            if showLessonSummary && mode == .lesson && !isOverlay {
+                summaryOverlayView()
+            }
+        }
+        .fullScreenCover(isPresented: $presentNextCourse) {
+            if let cid = pendingNavCourseId, let lid = pendingNavLessonId {
+                StepView(courseId: cid, lessonId: lid, lessonTitle: guessLessonTitle(for: lid))
             }
         }
     }
+
+    @ViewBuilder
+    private func modeLayer(proxy: GeometryProxy) -> some View {
+        switch mode {
+        case .lesson:
+            ZStack {
+                VStack(spacing: 0) {
+                    stepMainContent(proxy)
+                }
+            }
+
+        case .loading(let type):
+            loadingView(for: type)
+
+        case .game(let type):
+            gameView(for: type)
+
+        case .proGate(let type):
+            PROView(
+                courseId: resolvedCourseId.isEmpty ? resolvedLessonId : resolvedCourseId,
+                initialPage: {
+                    switch type {
+                    case .match: return 0
+                    case .recall: return 0
+                    case .builder: return 1
+                    }
+                }(),
+                onClose: {
+                    summaryOverlayRevealed = false
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        mode = .lesson
+                        showLessonSummary = true
+                    }
+                }
+            )
+            .transition(.opacity)
+        }
+    }
+
+    private func loadingView(for type: HomeGameType) -> some View {
+        ZStack {
+
+            VStack(spacing: 22) {
+
+                ZStack {
+                    Circle()
+                        .fill(ThemeManager.shared.currentAccentFill.opacity(0.15))
+                        .frame(width: 96, height: 96)
+
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(ThemeManager.shared.currentAccentFill)
+                        .scaleEffect(1.4)
+                }
+
+                Text(
+                    type == .match
+                    ? "найди пару"
+                    : type == .recall
+                        ? "быстрое повторение"
+                        : "фразы в контексте"
+                )
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.white)
+
+                Text("taika готовит тренировку")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.6))
+            }
+            .padding(.horizontal, 32)
+        }
+        .transition(.opacity)
+    }
+
+    private func nextGameType(after type: HomeGameType) -> HomeGameType {
+        switch type {
+        case .match: return .recall
+        case .recall: return .builder
+        case .builder: return .match
+        }
+    }
+
+    private func nextGameTitle(after type: HomeGameType) -> String {
+        switch nextGameType(after: type) {
+        case .match: return "Найди пару"
+        case .recall: return "Быстрое повторение"
+        case .builder: return "Фразы в контексте"
+        }
+    }
+
+    private func gameView(for type: HomeGameType) -> some View {
+        HomeTaskView(
+            courseId: resolvedCourseId.isEmpty ? resolvedLessonId : resolvedCourseId,
+            lessonId: resolvedLessonId,
+            embedBackground: false,
+            onClose: {
+                summaryOverlayRevealed = false
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    mode = .lesson
+                    showLessonSummary = true
+                }
+            },
+            onNextGame: {
+                summaryOverlayRevealed = false
+                let next = nextGameType(after: type)
+                DispatchQueue.main.async {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        mode = .game(next)
+                    }
+                }
+            },
+            nextGameTitle: nextGameTitle(after: type),
+            isProUser: ProManager.shared.isPro,
+            gameType: type
+        )
+        .id(type)
+        .transition(.opacity)
+    }
+
 
     private func index(of item: SDStepItem) -> Int? {
         items.firstIndex(where: { $0.id == item.id })
@@ -1142,10 +1305,12 @@ struct StepView: View {
         let wasFavorite = anim.favorites.contains(i)
         let fav = makeStepFav(for: item, index: i)
         // instant local UI feedback to avoid visual lag
-        if wasFavorite {
-            anim.favorites.remove(i)
-        } else {
-            anim.favorites.insert(i)
+        withAnimation(.easeInOut(duration: 0.22)) {
+            if wasFavorite {
+                anim.favorites.remove(i)
+            } else {
+                anim.favorites.insert(i)
+            }
         }
         // toggle asynchronously to prevent re-entrant updates during render
         DispatchQueue.main.async {
@@ -1171,7 +1336,7 @@ struct StepView: View {
             guard allowLearning else { return }
             guard let i = index(of: item) else { return }
             let wasLearned = anim.learned.contains(i)
-            anim.toggleLearned(i)
+            withAnimation(.easeInOut(duration: 0.25)) { anim.toggleLearned(i) }
 #if !DEBUG
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
 #endif
@@ -1182,30 +1347,40 @@ struct StepView: View {
             }
             // If пользователь снял отметку хотя бы с одной карточки → разрешить повторный показ summary при следующем полном завершении
             if wasLearned && !nowLearned {
-                didShowSummaryOnce = false
                 if showLessonSummary {
                     withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
                 }
             }
-            if !wasLearned && nowLearned, i < items.count - 1 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    anim.jump(to: i + 1)
-                }
-            }
-            // Show summary only when user completes ALL learnable cards (transition from not-all to all)
             let totalLearnable = learnableCount
             let learnedNowCount = anim.learned.filter { idx in
                 guard idx >= 0 && idx < items.count else { return false }
                 switch items[idx].kind { case .word, .phrase, .casual: return true; default: return false }
             }.count
-            if !wasLearned && nowLearned && totalLearnable > 0 && learnedNowCount >= totalLearnable && !didShowSummaryOnce {
-                didShowSummaryOnce = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
-                        showLessonSummary = true
+            let shouldShowSummary = !wasLearned && nowLearned && totalLearnable > 0 && learnedNowCount >= totalLearnable
+
+            if !wasLearned && nowLearned {
+                learnedFeedbackRevealed = false
+                learnedFeedbackIndex = i
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    learnedFeedbackIndex = nil
+                    if i < items.count - 1 {
+                        let nextIdx = (i + 1..<items.count).first(where: { isLearnable(items[$0]) }) ?? (i + 1)
+                        let targetIdx = min(nextIdx, items.count - 1)
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                            anim.jump(to: targetIdx)
+                        }
+                        if StepManager.shared.courseId == resolvedCourseIdOrPlaceholder && StepManager.shared.lessonId == resolvedLessonId {
+                            StepManager.shared.setActive(index: originalIndex(for: targetIdx))
+                        }
+                    }
+                    if shouldShowSummary {
+                        summaryOverlayRevealed = false
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+                            showLessonSummary = true
+                        }
                     }
                 }
-            } else {
+            } else if !shouldShowSummary {
                 // If пользователь снял галочку на последней — не показываем оверлей и закрываем, если он вдруг открыт
                 if showLessonSummary {
                     withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
@@ -1239,9 +1414,44 @@ struct StepView: View {
     }
 
     private func handleNextItem(_ item: SDStepItem) {
-        if let i = index(of: item), i + 1 < items.count {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                anim.jump(to: i + 1)
+        guard let i = index(of: item), i + 1 < items.count else { return }
+        switch item.kind {
+        case .word, .phrase, .casual:
+            if allowLearning && !anim.learned.contains(i) {
+                withAnimation(.easeInOut(duration: 0.25)) { anim.toggleLearned(i) }
+#if !DEBUG
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+#endif
+                notifyProgressAfterToggle(stepIndex: i)
+                syncAnimLearnedFromStepManager()
+            }
+            let nextIdx = (i + 1..<items.count).first(where: { isLearnable(items[$0]) }) ?? (i + 1)
+            let targetIdx = min(nextIdx, items.count - 1)
+            DispatchQueue.main.async {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                    anim.jump(to: targetIdx)
+                }
+                if StepManager.shared.courseId == resolvedCourseIdOrPlaceholder && StepManager.shared.lessonId == resolvedLessonId {
+                    StepManager.shared.setActive(index: originalIndex(for: targetIdx))
+                }
+            }
+        case .tip:
+            DispatchQueue.main.async {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                    anim.jump(to: i + 1)
+                }
+                if StepManager.shared.courseId == resolvedCourseIdOrPlaceholder && StepManager.shared.lessonId == resolvedLessonId {
+                    StepManager.shared.setActive(index: originalIndex(for: i + 1))
+                }
+            }
+        default:
+            DispatchQueue.main.async {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                    anim.jump(to: i + 1)
+                }
+                if StepManager.shared.courseId == resolvedCourseIdOrPlaceholder && StepManager.shared.lessonId == resolvedLessonId {
+                    StepManager.shared.setActive(index: originalIndex(for: i + 1))
+                }
             }
         }
     }
@@ -1260,6 +1470,7 @@ struct StepView: View {
             nextLessonPreloadedId = nextId
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) { showLessonSummary = false }
+            scheduleAuthSoftWallIfNeeded()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) {
                 didSetInitialIndex = false
                 overrideLessonId = nextId
@@ -1272,12 +1483,24 @@ struct StepView: View {
             pendingNavLessonId = firstLesson
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) { showLessonSummary = false }
+            scheduleAuthSoftWallIfNeeded()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
                 // Prefer modal present to avoid dependency on NavigationStack presence
                 presentNextCourse = true
             }
         case .end:
             withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
+            scheduleAuthSoftWallIfNeeded()
+        }
+    }
+
+    /// Отложенная проверка и показ мягкого окна «Закрепи результат» (refresh + tryPresentSoftWall через 0.35 с).
+    private func scheduleAuthSoftWallIfNeeded() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            Task { @MainActor in
+                ProgressManager.shared.refreshProfileState()
+                AuthSoftWallState.tryPresentSoftWall()
+            }
         }
     }
 
@@ -1376,33 +1599,29 @@ struct StepView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             // каноничный экран урока через курс → lessons → steps (full)
-            NavigationStack {
+            StepView(
+                courseId: "course_b_1",
+                lessonId: "course_b_1_l1",
+                lessonTitle: "ПРИВЕТСТВИЯ",
+                scope: .full,
+                layoutCardsOnly: false,
+                allowLearning: true,
+                showBottomProgress: true
+            )
+            .previewDisplayName("step · full (canonical)")
+
+            // тот же урок, но в overlay-режиме, как когда тянем секцию из других экранов
+            ZStack {
+                taikaGlassBackground()
                 StepView(
                     courseId: "course_b_1",
                     lessonId: "course_b_1_l1",
                     lessonTitle: "ПРИВЕТСТВИЯ",
-                    scope: .full,
-                    layoutCardsOnly: false,
-                    allowLearning: true,
-                    showBottomProgress: true
+                    scope: .overlay,
+                    layoutCardsOnly: true,
+                    allowLearning: false,
+                    showBottomProgress: false
                 )
-            }
-            .previewDisplayName("step · full (canonical)")
-
-            // тот же урок, но в overlay-режиме, как когда тянем секцию из других экранов
-            NavigationStack {
-                ZStack {
-                    taikaGlassBackground()
-                    StepView(
-                        courseId: "course_b_1",
-                        lessonId: "course_b_1_l1",
-                        lessonTitle: "ПРИВЕТСТВИЯ",
-                        scope: .overlay,
-                        layoutCardsOnly: true,
-                        allowLearning: false,
-                        showBottomProgress: false
-                    )
-                }
             }
             .previewDisplayName("step · overlay (cards section)")
         }
@@ -1423,4 +1642,5 @@ func taikaGlassBackground() -> some View {
         .ignoresSafeArea()
         .zIndex(-1)
 }
+
 

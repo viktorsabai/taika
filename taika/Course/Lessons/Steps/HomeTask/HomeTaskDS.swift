@@ -279,8 +279,8 @@ public struct MPCardBack: View {
                 .stroke(
                     style == .accent
                     ? AnyShapeStyle(theme.currentAccentFill)
-                    : AnyShapeStyle(Color.white.opacity(0.22)),
-                    lineWidth: 1
+                    : AnyShapeStyle(Theme.Strokes.strokeSubtle),
+                    lineWidth: Theme.Strokes.strokeLineWidth
                 )
                 .opacity(style == .accent ? 0.55 : 1.0)
         )

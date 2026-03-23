@@ -527,7 +527,7 @@ public struct USSnapshot: Codable, Equatable {
         snapshot.startedCourses.insert(courseId)
         snapshot.startedLessons[courseId, default: []].insert(lessonId)
         snapshot.lastEventAt = Date()
-        saveDebounced()
+        save()
         NotificationCenter.default.post(
             name: .usStepLearnedSetDidChange,
             object: nil,
@@ -877,6 +877,15 @@ public struct USSnapshot: Codable, Equatable {
         } catch {
             print("[UserSession] load error: \(error)")
         }
+    }
+
+    /// Apply snapshot from cloud sync (e.g. after Sign in with Apple on new device). Call on main actor.
+    public func applySnapshotFromSync(_ snap: USSnapshot) {
+        objectWillChange.send()
+        snapshot = snap
+        touchAndSave()
+        NotificationCenter.default.post(name: .usStepLearnedSetDidChange, object: nil)
+        NotificationCenter.default.post(name: Notification.Name("UserSessionActivityDidChange"), object: nil)
     }
 
     // MARK: - Utils

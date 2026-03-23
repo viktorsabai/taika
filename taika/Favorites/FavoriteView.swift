@@ -17,6 +17,7 @@ struct FavoriteView_Previews: PreviewProvider {
         NavigationStack {
             FavoriteView()
                 .environmentObject(ThemeManager.shared)
+                .environmentObject(NavigationIntent())
         }
         .preferredColorScheme(.dark)
     }
@@ -29,10 +30,19 @@ private extension Notification.Name {
     static let favShowAllHacks   = Notification.Name("fav.showAll.hacks")
 }
 
-struct FavoriteView: View {
-    @StateObject private var manager = FavoriteManager.shared
+/// Состояние фильтра избранного (хедер открывает оверлей; FavoriteView читает)
+@MainActor
+public final class FavoritesFilterState: ObservableObject {
+    public static let shared = FavoritesFilterState()
+    @Published public var selected: FDK = .all
+    private init() {}
+}
 
-    @State private var selected: FDK = .all
+struct FavoriteView: View {
+    @EnvironmentObject private var nav: NavigationIntent
+    @StateObject private var manager = FavoriteManager.shared
+    @ObservedObject private var favFilter = FavoritesFilterState.shared
+    private var selected: FDK { favFilter.selected }
     @State private var isEditing: Bool = false
 
     @State private var goAllCards   = false
@@ -43,9 +53,6 @@ struct FavoriteView: View {
     // Route to open full StepView from mini overlay
     private struct StepRoute: Identifiable, Hashable { let id = UUID(); let courseId: String; let lessonId: String; let index: Int }
     @State private var stepRoute: StepRoute? = nil
-    // Route to open a specific course from favorites
-    private struct CourseRoute: Identifiable, Hashable { let id = UUID(); let courseId: String }
-    @State private var courseRoute: CourseRoute? = nil
     @State private var pendingItems: [FavoriteItem]? = nil
 
     // MARK: - Helpers to reduce type-checker load
@@ -69,6 +76,7 @@ struct FavoriteView: View {
             cards:   visibleCardsList(),
             hacks:   visibleHacksList(),
             isEditing: $isEditing,
+            selectedFilter: $favFilter.selected,
             onUnfavorite: { id in manager.remove(id: id) },
             onReorder: { order in manager.applyOrder(order) },
             onShowAllCards:   { DispatchQueue.main.async { goAllCards = true } },
@@ -76,17 +84,16 @@ struct FavoriteView: View {
             onShowAllHacks:   { DispatchQueue.main.async { goAllHacks = true } },
             onOpenCard: { card in
                 stepRoute = nil
-                // use canonical id (prefer sourceId) to avoid mismatches
+                // карточки — по возможности свежий DTO из менеджера; лайфхаки в cardsDTO нет → используем переданный card
                 let fid = canonicalId(card)
                 let fresh = manager.cardsDTO.first { canonicalId($0) == fid }
-                if let fresh = fresh {
-                    withAnimation(.easeOut(duration: 0.25)) {
-                        openedCard = fresh
-                    }
+                withAnimation(.easeOut(duration: 0.25)) {
+                    openedCard = fresh ?? card
                 }
             },
             onOpenCourse: { course in
-                courseRoute = CourseRoute(courseId: course.id)
+                // Глобальный стек: хедер «назад» и корректный pop (не локальный destination)
+                nav.go(.lessons(courseId: course.id))
             }
         )
         .scrollDisabled(openedCard != nil)
@@ -104,7 +111,7 @@ struct FavoriteView: View {
                     // Content (FavoriteDS renders its own scroll content)
                     buildFavContent()
                 }
-                .padding(.top, Theme.Layout.pageTopAfterHeader)
+                // .padding(.top, Theme.Layout.pageTopAfterHeader) // Removed legacy top padding
                 .allowsHitTesting(openedCard == nil)
                 .disabled(openedCard != nil)
             }
@@ -133,10 +140,7 @@ struct FavoriteView: View {
                 )
                 .toolbar(.hidden, for: .navigationBar)
             }
-            .navigationDestination(item: $courseRoute) { r in
-                LessonsView(courseId: r.courseId)
-                    .toolbar(.hidden, for: .navigationBar)
-            }
+            // Курс из избранного открывается через nav.go(.lessons) в AppShell — хедер «назад» и pop работают
             // Removed system sheet, replaced with custom overlay below
             .onChange(of: openedCard) { _, newValue in
                 if newValue == nil { pendingItems = nil }
@@ -145,26 +149,27 @@ struct FavoriteView: View {
                 // Preload steps so resolve/mini-host have data ready
                 StepData.shared.preload()
             }
-            .overlay(alignment: .bottom) {
-                if let card = openedCard {
-                    CustomFavOverlay(
-                        card: card,
-                        onDismiss: {
-                            openedCard = nil
-                        }
-                    ) {
-                        let fid = canonicalId(card)
-                        let fresh = manager.cardsDTO.first { canonicalId($0) == fid } ?? card
-                        sheetContent(for: fresh)
-                    }
-                    .background(PD.ColorToken.background.opacity(0.001))
-                    .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity), removal: .opacity))
-                    .animation(.easeOut(duration: 0.32), value: openedCard != nil)
-                }
-            }
             .background(PD.ColorToken.background.ignoresSafeArea())
             .scrollContentBackground(.hidden)
         }
+        .allowsHitTesting(openedCard == nil)
+        .overlay(alignment: .bottom) {
+            if let card = openedCard {
+                CustomFavOverlay(
+                    card: card,
+                    onDismiss: {
+                        openedCard = nil
+                    }
+                ) {
+                    let fid = canonicalId(card)
+                    let fresh = manager.cardsDTO.first { canonicalId($0) == fid } ?? card
+                    sheetContent(for: fresh)
+                }
+                .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity), removal: .opacity))
+                .animation(.easeOut(duration: 0.32), value: openedCard != nil)
+            }
+        }
+        // .taikaHeader(.custom(title: "Избранное")) // Removed legacy header usage
     }
     // Sheet content moved inside FavoriteView for access to openedCard and stepRoute
     @MainActor
@@ -206,7 +211,7 @@ private struct FavSheetContent: View {
                     scope: .overlay,
                     showKinds: isHack ? [.tip] : [.word, .phrase, .casual],
                     layoutCardsOnly: true,
-                    allowLearning: false,
+                    allowLearning: true,
                     showBottomProgress: false
                 )
                 .toolbar(.hidden, for: .navigationBar)
@@ -285,6 +290,7 @@ private func parseIdx(from fid: String) -> Int {
 }
 
 
+/// Оверлей из избранного: только блюр + затемнение + контент Step (карусель по своей логике). Без лишних обводок и слоёв — как в StepView при «Итоги урока».
 private struct CustomFavOverlay<Content: View>: View {
     let card: FDCardDTO
     let onDismiss: () -> Void
@@ -300,83 +306,48 @@ private struct CustomFavOverlay<Content: View>: View {
         self.content = content
     }
 
-    @GestureState private var dragY: CGFloat = 0
-    @State private var detent: Detent = .medium
     @State private var appeared: Bool = false
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    private enum Detent { case medium, large }
-
     var body: some View {
-        GeometryReader { geo in
-            let h = geo.size.height
-            let mediumTop = h * 0.35 // raise overlay higher, about mid-screen
-            let largeTop: CGFloat = 0
-            let topBase = (detent == .large ? largeTop : mediumTop) // tie offset to detent
-            let top = max(0, topBase + dragY)
+        ZStack {
+            // 1) Системный материал — размывает то, что реально под окном (список избранного), не зависит от нашего .blur()
+            if !reduceTransparency {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
 
-            ZStack(alignment: .top) {
-                // dark glass overlay (matches LessonsView); respects Reduce Transparency
-                ZStack {
-                    if reduceTransparency {
-                        Color.black.opacity(0.06)
-                    } else {
-                        BlurView(style: .systemChromeMaterialDark)
-                        Color.black.opacity(0.10)
-                    }
-                }
-                .compositingGroup()
-                .saturation(1.1)
-                .contrast(1.0)
-                .brightness(0.0)
+            // 2) Затемнение (как в Step)
+            Color.black.opacity(reduceTransparency ? 0.55 : 0.45)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture { onDismiss() }
-                .transition(.opacity)
 
-                // Handle + content container
-                VStack(spacing: 8) {
-                    HStack {
-                        Spacer()
-                        Button(action: { onDismiss() }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.8))
-                                .padding(.top, 8)
-                                .padding(.trailing, 20)
-                        }
+            // 3) Контент Step: кнопка закрытия + карусель
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    Button(action: { onDismiss() }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.85))
                     }
-                    // Capsule().frame(width: 44, height: 5).opacity(0.2).padding(.top, 8)
-                    content().padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.trailing, 20)
                 }
-                .frame(width: geo.size.width, height: h * 0.50, alignment: .top)
-                .background(Color.clear)
-                .clipped()
-                .opacity(appeared ? 1 : 0)
-                .scaleEffect(appeared ? 1 : 0.995)
-                .offset(y: top)
-                .gesture(
-                    DragGesture()
-                        .updating($dragY) { value, state, _ in
-                            state = max(0, value.translation.height)
-                        }
-                        .onEnded { value in
-                            let dy = value.translation.height
-                            // Only allow downward: dismiss on sufficiently big pull, otherwise snap back
-                            if dy > 200 { onDismiss(); return }
-                            withAnimation(.interactiveSpring(response: 0.38, dampingFraction: 0.88, blendDuration: 0.2)) {
-                                detent = .medium
-                            }
-                        }
-                )
-                .animation(.interactiveSpring(response: 0.38, dampingFraction: 0.88, blendDuration: 0.2), value: detent)
-                .animation(.interactiveSpring(response: 0.38, dampingFraction: 0.88, blendDuration: 0.2), value: dragY == 0)
+                content()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .opacity(appeared ? 1 : 0)
+            .scaleEffect(appeared ? 1 : 0.98)
+            .animation(.easeOut(duration: 0.28), value: appeared)
         }
         .onAppear {
             appeared = false
-            withAnimation(.easeInOut(duration: 0.28)) { appeared = true }
-            detent = .medium
+            withAnimation(.easeOut(duration: 0.28)) { appeared = true }
         }
         .onDisappear { appeared = false }
     }

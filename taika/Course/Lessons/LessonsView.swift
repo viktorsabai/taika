@@ -105,6 +105,15 @@ private extension LessonsView {
         return lessonsManager.headerCounts(for: cid, lessonsTotal: total)
     }
 
+    /// Course-level stats for Итоги курса: learned words (sum over lessons), favorites count.
+    private var courseOverviewStats: (learnedWords: Int, favorites: Int) {
+        guard let cid = currentCourse?.courseID else { return (0, 0) }
+        let ids = lessonsSorted.map(\.lessonID)
+        let words = ids.reduce(0) { acc, lid in acc + ProgressManager.shared.learnedEffectiveCount(courseId: cid, lessonId: lid) }
+        let favs = ids.reduce(0) { acc, lid in acc + lessonsManager.lessonFavoriteCount(courseId: cid, lessonId: lid) }
+        return (words, favs)
+    }
+
     /// Per-lesson completion percentage array (0...1) for the header slots
     func perLessonPercents() -> [Double] {
         guard let cid = currentCourse?.courseID else { return [] }
@@ -149,7 +158,7 @@ private extension LessonsView {
         switch p.status {
         case .completed: return .completed
         case .inProgress: return .inProgress
-        case .locked: return l.isFree ? .inProgress : .locked
+        case .locked: return .locked
         }
     }
 
@@ -158,17 +167,24 @@ private extension LessonsView {
         return lessonsSorted.enumerated().map { (i, l) in
             {
                 let lp = lessonsManager.lessonProgress(courseId: cid, lessonId: l.lessonID)
-                let percent = lp?.percent // Double 0...1 or nil
+                let rawPercent = lp?.percent ?? 0.0
+                let clamped = max(0.0, min(1.0, rawPercent))
+
+                let status = statusForLesson(l)
+
+                // Show progress only if lesson is not locked
+                let progressValue: Double? = (status == .locked) ? nil : clamped
+
                 return LS.Item(
                     id: l.lessonID,
-                    index: i, // zero-based position to match header slots order
+                    index: i,
                     title: l.title,
                     subtitle: l.subtitle,
                     durationMinutes: l.durationMinutes,
                     isPro: !l.isFree,
-                    status: statusForLesson(l),
+                    status: status,
                     tags: l.tags,
-                    progress: percent,
+                    progress: progressValue,
                     cardCount: l.cardCount,
                     favoriteCount: FavoriteManager.shared.countCardsForLesson(courseId: cid, lessonId: l.lessonID)
                 )
@@ -264,31 +280,30 @@ private extension LessonsView {
 public struct LessonsView: View {
     // Keep user on the Courses tab while viewing lessons
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var nav: NavigationIntent
     @ObservedObject private var lessonsStore = LessonsData.shared
     @ObservedObject private var lessonsManager = LessonsManager.shared
     @StateObject private var homeTaskManager = HomeTaskManager()
     @State private var htVersion = UUID()
-    @State private var goHomeTask: Bool = false
-    @State private var goToStep: Bool = false
+    @State private var showGameModePicker: Bool = false
+    @State private var selectedGameType: GameModeType = .match
+    @State private var showGameOverlay: Bool = false
+    @State private var selectedGameLessonId: String? = nil
     @State private var selectedLessonId: String? = nil
     @State private var headerChipResolved: String? = nil
     @State private var headerSubtitleResolved: String = ""
-    @State private var stepSessionKey = UUID()
     @State private var itemsVersion = UUID()
     // forces full rebuild of lesson progress UI on reset / progress changes
     @State private var progressReloadToken: UUID = UUID()
     // Debounce work item for header refreshes
     @State private var headerRefreshWork: DispatchWorkItem? = nil
-    // instagram-like interactive overlay
-    @GestureState private var stepDragY: CGFloat = 0
-    private let stepDismissThreshold: CGFloat = 140
+    @State private var frozenSnapshot: Image? = nil
+    @State private var showResetConfirmation: Bool = false
+    @ObservedObject private var lessonsHeaderStore = LessonsHeaderStore.shared
     @AppStorage("LSLessonActivity.lastActiveLessonId") private var lastActiveLessonId: String = ""
 
     private let courseId: String?
     private let lessonId: String?
-
-    // Snapshot for step overlay
-    @State private var frozenSnapshot: Image? = nil
 
     public init(courseId: String? = nil, lessonId: String? = nil) {
         self.courseId = courseId
@@ -313,12 +328,24 @@ public struct LessonsView: View {
     /// Debounced header and tasks refresh, to avoid redundant rebuilds.
     private func scheduleHeaderRefresh() {
         headerRefreshWork?.cancel()
-        let work = DispatchWorkItem { [weak lessonsStore = self.lessonsStore, weak lessonsManager = self.lessonsManager] in
+        let work = DispatchWorkItem {
             // Recompute header and lightweight IDs
             resolveHeaderMeta()
             if let cid = currentCourse?.courseID {
                 let ids = lessonsSorted.map { $0.lessonID }
-                homeTaskManager.regenerateTasks(for: cid, lessonIds: ids)
+            homeTaskManager.regenerateTasks(
+                for: cid,
+                lessonIds: ids
+            ) { id, triples, index in
+                HTask(
+                    id: id,
+                    courseId: cid,
+                    lessonIndex: index,
+                    gameType: .match,
+                    title: "Практика #\(index + 1)",
+                    status: .locked
+                )
+            }
             }
             itemsVersion = UUID()
             htVersion = UUID()
@@ -334,9 +361,19 @@ public struct LessonsView: View {
                 headerSection
                     .id(itemsVersion) // force re-render when progress changes
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
-                    .padding(.top, Theme.Layout.pageTopAfterHeader)
-                contentReelsSection
+
+                LSSectionTitle("ТАЙКА FM")
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    .padding(.top, Theme.Layout.sectionTop)
+
+                TaikaFMBubbleTyping(
+                    messages: TaikaFMData.shared.messages(for: .lessons),
+                    reactions: TaikaFMData.shared.reactionGroups(for: .lessons),
+                    repeats: false,
+                    showBubble: false
+                )
+                .padding(.horizontal, Theme.Layout.pageHorizontal)
+                .padding(.top, Theme.Layout.sectionTitleToContent)
 
                 lessonsReelsSection
                     .id(itemsVersion)
@@ -348,15 +385,12 @@ public struct LessonsView: View {
                 )
                 .padding(.horizontal, Theme.Layout.pageHorizontal)
 
-                LSSectionTitle("ИТОГИ КУРСА")
-                    .padding(.horizontal, Theme.Layout.pageHorizontal)
-
                 LSCourseOverview(
                     stats: LSCourseStats(
                         completedLessons: headerProgress.completed,
                         totalLessons: headerProgress.total,
-                        learnedWords: 0,
-                        favorites: 0,
+                        learnedWords: courseOverviewStats.learnedWords,
+                        favorites: courseOverviewStats.favorites,
                         streakDays: 0,
                         timeMinutes: 0
                     ),
@@ -364,16 +398,11 @@ public struct LessonsView: View {
                     onCTA: {
                         if let first = lessonsSorted.first {
                             selectedLessonId = first.lessonID
-                            goToStep = true
                         }
                     },
-                    onReset: {
-                        if let cid = currentCourse?.courseID {
-                            lessonsManager.resetCourseProgress(courseId: cid)
-                            resolveHeaderMeta()
-                            stepSessionKey = UUID()
-                        }
-                    }
+                    onReset: {},
+                    onSpeaker: nil,
+                    onReinforce: nil
                 )
                 .padding(.horizontal, Theme.Layout.pageHorizontal)
 
@@ -391,8 +420,6 @@ public struct LessonsView: View {
         .preferredColorScheme(.dark)
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .id(progressReloadToken)
-        .opacity(goToStep ? 0 : 1)
-        .allowsHitTesting(!(goToStep || goHomeTask))
     }
 
     public var body: some View {
@@ -402,19 +429,58 @@ public struct LessonsView: View {
     @ViewBuilder
     private var overlayStackView: some View {
         ZStack(alignment: .bottom) {
-            if goToStep {
-                // When step overlay is open, let stepOverlay manage the glass background.
-                // Keep mainContent in the tree but hidden, so layouts stay consistent.
-                Color.clear.ignoresSafeArea()
-                mainContent.hidden()
-            } else {
-                // Normal screen background + content when overlay is closed
-                PD.ColorToken.background.ignoresSafeArea()
-                mainContent
+            PD.ColorToken.background.ignoresSafeArea()
+
+            mainContent
+
+            if showGameOverlay {
+                GeometryReader { geo in
+                    ZStack(alignment: .bottom) {
+                        Group {
+                            if let frozenSnapshot {
+                                frozenSnapshot
+                                    .resizable()
+                                    .scaledToFill()
+                                    .blur(radius: 18)
+                                    .overlay(Color.black.opacity(0.18))
+                                    .ignoresSafeArea()
+                            } else {
+                                PD.ColorToken.background
+                                    .ignoresSafeArea()
+                            }
+                        }
+                        .allowsHitTesting(false)
+
+                        if showGameModePicker {
+                            GameModePickerDS(
+                                selected: Binding(
+                                    get: { selectedGameType },
+                                    set: { selectedGameType = $0 }
+                                ),
+                                isProUser: ProManager.shared.isPro,
+                                onStart: { _ in
+                                    showGameModePicker = false
+                                    showGameOverlay = false
+                                    nav.go(.game(
+                                        courseId: currentCourse?.courseID ?? "",
+                                        lessonId: selectedGameLessonId,
+                                        gameType: selectedGameType.rawValue
+                                    ))
+                                },
+                                onClose: {
+                                    withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                                        showGameModePicker = false
+                                        showGameOverlay = false
+                                    }
+                                    frozenSnapshot = nil
+                                }
+                            )
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+                    }
+                    .ignoresSafeArea(edges: .all)
+                }
             }
-            // Inline overlay above content (IG-style)
-            stepOverlay
-            homeTaskOverlay
         }
     }
 
@@ -441,7 +507,6 @@ let base = overlayStackView
 let withTasks = base
 
     // Use the global AppShell header (back header for this screen).
-    .shellHeaderHidden(goToStep || goHomeTask)
 
     .task {
 
@@ -455,7 +520,16 @@ let withTasks = base
 
             let ids = lessonsSorted.map { $0.lessonID }
 
-            homeTaskManager.regenerateTasks(for: cid, lessonIds: ids)
+            homeTaskManager.regenerateTasks(for: cid, lessonIds: ids) { id, triples, index in
+                HTask(
+                    id: id,
+                    courseId: cid,
+                    lessonIndex: index,
+                    gameType: .match,
+                    title: "Практика #\(index + 1)",
+                    status: .locked
+                )
+            }
 
         }
 
@@ -471,7 +545,16 @@ let withTasks = base
 
             let ids = lessonsSorted.map { $0.lessonID }
 
-            homeTaskManager.regenerateTasks(for: cid, lessonIds: ids)
+            homeTaskManager.regenerateTasks(for: cid, lessonIds: ids) { id, triples, index in
+                HTask(
+                    id: id,
+                    courseId: cid,
+                    lessonIndex: index,
+                    gameType: .match,
+                    title: "Практика #\(index + 1)",
+                    status: .locked
+                )
+            }
 
         }
 
@@ -556,33 +639,107 @@ let withTasks = base
 
         let withChrome = withTasks
             .navigationBarBackButtonHidden(true)
-            .background(NavSwipeBackDisabler())
+            .toolbar(.hidden, for: .navigationBar)
+            .onAppear {
+                lessonsHeaderStore.setActions(
+                    onSpeaker: {
+                        guard let cid = currentCourse?.courseID else { return }
+                        UserSession.shared.markActive(courseId: cid)
+                        NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+                        SpeakerRequestedCourseId.shared.set(cid)
+                        nav.requestTab(2)
+                    },
+                    onReinforce: {
+                        guard currentCourse?.courseID != nil else { return }
+                        selectedGameLessonId = nil
+                        selectedGameType = .match
+                        frozenSnapshot = captureWindowSnapshot()
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                            showGameOverlay = true
+                            showGameModePicker = true
+                        }
+                    }
+                )
+            }
+            .onDisappear {
+                lessonsHeaderStore.clearActions()
+            }
+            .onChange(of: lessonsHeaderStore.resetRequested) { _, requested in
+                if requested {
+                    showResetConfirmation = true
+                    lessonsHeaderStore.clearResetRequest()
+                }
+            }
+            .overlay {
+                if showResetConfirmation {
+                    resetCourseConfirmOverlay
+                }
+            }
 
-// Animation (explicit type to reduce inference load)
-
-let withAnim = withChrome
-
-    .animation(Animation.spring(response: 0.32, dampingFraction: 0.86, blendDuration: 0.2), value: goHomeTask)
-
-
-return withAnim
+        return withChrome
 }
 }
 
 
-extension HomeTaskManager {
-    /// Convenience shim for views: regenerate with default rule and sampling.
-    /// If a more specific API exists elsewhere, this overload keeps call sites simple.
-    @MainActor
-    func regenerateTasks(for courseId: String, lessonIds: [String]) {
-        // If your manager requires a more detailed regenerate, you can
-        // implement sensible defaults there. For now we trigger observers
-        // to refresh UI; the manager may lazily prepare tasks on access.
-        NotificationCenter.default.post(name: Notification.Name("hometaskShouldRegenerate"), object: nil)
-    }
-}
 
 extension LessonsView {
+    // MARK: - Подтверждение сброса курса (оверлей в айдентике приложения)
+    private var resetCourseConfirmOverlay: some View {
+        let accent = AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+        return ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture { withAnimation(.easeOut(duration: 0.2)) { showResetConfirmation = false } }
+
+            VStack(spacing: 20) {
+                Text("Сбросить прогресс курса?")
+                    .font(PD.FontToken.body(18, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .multilineTextAlignment(.center)
+
+                Text("Весь прогресс по этому курсу будет удалён. Вы уверены?")
+                    .font(PD.FontToken.caption(15, weight: .regular))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .multilineTextAlignment(.center)
+
+                HStack(spacing: 12) {
+                    Button {
+                        withAnimation(.easeOut(duration: 0.2)) { showResetConfirmation = false }
+                    } label: {
+                        Text("Отмена")
+                            .font(PD.FontToken.body(16, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(PD.ColorToken.card))
+                            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        if let cid = currentCourse?.courseID {
+                            lessonsManager.resetCourseProgress(courseId: cid)
+                            resolveHeaderMeta()
+                        }
+                        withAnimation(.easeOut(duration: 0.2)) { showResetConfirmation = false }
+                    } label: {
+                        Text("Сбросить")
+                            .font(PD.FontToken.body(16, weight: .semibold))
+                            .foregroundStyle(Color(white: 0.14))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Capsule().fill(accent))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(24)
+            .frame(maxWidth: 320)
+            .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
+            .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
+        }
+    }
+
     // MARK: - Extracted Sections
     private var headerSection: some View {
         let slots = perLessonPercents()
@@ -605,14 +762,16 @@ extension LessonsView {
                     }
                     DispatchQueue.main.async {
                         selectedLessonId = lid
-                        if !goToStep {
-                            // freeze current screen for the overlay background (prevents black screen)
-                            frozenSnapshot = captureWindowSnapshot()
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                                goToStep = true
-                            }
-                        }
+                        nav.go(.step(
+                            courseId: currentCourse?.courseID ?? "",
+                            lessonId: lid
+                        ))
                     }
+                }
+            },
+            onBack: {
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                    if !nav.path.isEmpty { nav.path.removeLast() }
                 }
             }
         )
@@ -620,7 +779,10 @@ extension LessonsView {
 
     private var contentReelsSection: some View {
         VStack(spacing: Theme.Layout.sectionContentV) {
-            LSContentReels("СОДЕРЖАНИЕ", items: contentItems())
+            LSContentReels(
+                "СОДЕРЖАНИЕ",
+                items: contentItems()
+            )
             LSMarqueeSection(
                 title: "ТАЙКА FM",
                 messages: fmMessages
@@ -642,196 +804,71 @@ extension LessonsView {
                     }
                     DispatchQueue.main.async {
                         selectedLessonId = lid
-                        if !goToStep {
-                            // freeze current screen for the overlay background (prevents black screen)
-                            frozenSnapshot = captureWindowSnapshot()
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                                goToStep = true
-                            }
-                        }
+                        nav.go(.step(
+                            courseId: currentCourse?.courseID ?? "",
+                            lessonId: lid
+                        ))
                     }
                 }
             },
             onTapAccessory: { item in
                 let arr = lessonsSorted
                 guard item.index >= 0 && item.index < arr.count else { return }
+
                 let lid = arr[item.index].lessonID
-                if let cid = currentCourse?.courseID,
-                   let p = lessonsManager.lessonProgress(courseId: cid, lessonId: lid),
-                   p.percent >= 1.0 {
-                    DispatchQueue.main.async {
-                        selectedLessonId = lid
-                        goHomeTask = true
+
+                guard let cid = currentCourse?.courseID,
+                      let progress = lessonsManager.lessonProgress(courseId: cid, lessonId: lid)
+                else { return }
+
+                let percent = progress.percent
+
+                // 1️⃣ Completed → show game picker
+                if percent >= 1.0 {
+
+                    selectedGameLessonId = lid
+                    selectedGameType = .match
+
+                    frozenSnapshot = captureWindowSnapshot()
+
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                        showGameOverlay = true
+                        showGameModePicker = true
                     }
-                } else {
+
+                }
+                // 2️⃣ In progress → redirect user back to lesson (clean UX, no modal spam)
+                else if percent > 0 {
+
+                    selectedLessonId = lid
+                    nav.go(.step(
+                        courseId: currentCourse?.courseID ?? "",
+                        lessonId: lid
+                    ))
+
+                }
+                // 3️⃣ Not started / locked → subtle feedback only
+                else {
                     UINotificationFeedbackGenerator().notificationOccurred(.warning)
                 }
+            },
+            onSpeaker: { item in
+                guard let cid = currentCourse?.courseID else { return }
+                UserSession.shared.markActive(courseId: cid, lessonId: item.id, stepIndex: 0)
+                NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+                nav.requestTab(2)
             },
             selectedIndex: activeLessonIndex
         )
     }
 }
 #Preview("LessonsView – screen") {
-  NavigationStack {
     LessonsView()
-      .task { CourseData.shared.load() } // прогрузи курсовый JSON
-  }
+        .task { CourseData.shared.load() } // прогрузи курсовый JSON
 }
 
 
-extension LessonsView {
-    // MARK: - Step Overlay Helpers
-    @ViewBuilder
-    private var stepOverlay: some View {
-        if goToStep {
-            GeometryReader { geo in
-                ZStack(alignment: .bottom) {
-                    // Фон: размазанный снапшот Lessons (как "стекло" под каноничным степом)
-                    Group {
-                        if let frozenSnapshot {
-                            frozenSnapshot
-                                .resizable()
-                                .scaledToFill()
-                                .blur(radius: 22)
-                                .overlay(Color.black.opacity(0.24))
-                                .ignoresSafeArea()
-                        } else {
-                            // fallback: stable background (avoid depending on hidden/opacity content)
-                            ZStack {
-                                PD.ColorToken.background
-                                    .ignoresSafeArea()
-                                Color.black.opacity(0.24)
-                                    .ignoresSafeArea()
-                            }
-                        }
-                    }
-                    .allowsHitTesting(false)
-
-                    // Прозрачный блокер, чтобы клики не шли в Lessons
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .ignoresSafeArea()
-                        .allowsHitTesting(true)
-
-                    // Контейнер с каноничным StepView в виде полноэкранного overlay
-                    StepView(
-                        courseId: currentCourse?.courseID ?? "",
-                        lessonId: resolvedOverlayLessonId(),
-                        lessonTitle: nil,
-                        startIndex: 0,
-                        scope: .full,
-                        layoutCardsOnly: false,
-                        showInternalHeader: false
-                    )
-                    .id("\(resolvedOverlayLessonId())-\(stepSessionKey)-start0")
-                    .environmentObject(StepManager.shared)
-                    .environmentObject(ProgressManager.shared)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.clear)
-                    // keep Step content below the header area (same feel as other screens)
-                    .padding(.top, geo.safeAreaInsets.top + 84)
-                    .zIndex(1)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.spring(response: 0.32, dampingFraction: 0.9), value: goToStep)
-                    .overlay(alignment: .top) {
-                        AppBackHeader(variant: .transparent) {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                                goToStep = false
-                            }
-                            // release snapshot when closing
-                            frozenSnapshot = nil
-                        }
-                        .padding(.top, geo.safeAreaInsets.top + 6)
-                        .padding(.horizontal, 12)
-                    }
-                }
-                .ignoresSafeArea(edges: .all)
-            }
-        }
-    }
-
-    private var isCurrentLessonComplete: Bool {
-        guard let cid = currentCourse?.courseID, !resolvedOverlayLessonId().isEmpty else { return false }
-        if let p = lessonsManager.lessonProgress(courseId: cid, lessonId: resolvedOverlayLessonId())?.percent {
-            return p >= 1.0
-        }
-        return false
-    }
-
-    private func resolvedOverlayLessonId() -> String {
-        return selectedLessonId ?? currentLesson?.lessonID ?? lessonId ?? ""
-    }
-
-    private func stepOverlayId() -> String {
-        let lid = resolvedOverlayLessonId()
-        return "step-\(lid)-\(stepSessionKey)"
-    }
-}
 
 
-extension LessonsView {
-    // MARK: - HomeTask Overlay (matches stepOverlay style)
-    @ViewBuilder
-    private var homeTaskOverlay: some View {
-        if goHomeTask {
-            GeometryReader { geo in
-                let h = geo.size.height
-                let sheetH = min(h - 64, h * 0.94) // Keep HomeTask overlay at the same higher position as Step overlay.
-                ZStack(alignment: .bottom) {
-                    // Background blur + dim (same as stepOverlay)
-                    Group {
-                        if UIAccessibility.isReduceTransparencyEnabled {
-                            Color.black.opacity(0.06).ignoresSafeArea()
-                        } else {
-                            ZStack {
-                                BlurView(style: .systemChromeMaterialDark)
-                                    .ignoresSafeArea()
-                                    .saturation(1.0)
-                                    .contrast(1.15)
-                                Color.black.opacity(0.10).ignoresSafeArea()
-                            }
-                        }
-                    }
-                    .allowsHitTesting(false)
 
-                    // Transparent blocker to swallow gestures on the backdrop
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .ignoresSafeArea()
-                        .allowsHitTesting(true)
 
-                    // Bottom sheet container
-                    VStack(spacing: 0) {
-                        let cid = currentCourse?.courseID ?? ""
-                        let lid = selectedLessonId ?? currentLesson?.lessonID ?? lessonId ?? lessonsSorted.first?.lessonID ?? ""
-                        HomeTaskView(
-                            courseId: cid,
-                            lessonId: lid,
-                            embedBackground: false,
-                            onClose: {
-                                withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) { goHomeTask = false }
-                            },
-                            onNextGame: {
-                                // Notify host to present next game / paywall
-                                NotificationCenter.default.post(name: Notification.Name("hometaskNextGameRequested"), object: nil)
-                            },
-                            isProUser: true // TODO: wire to real user state, e.g. UserSession.shared.isPro
-                        )
-                        .id("hometask-\(lid)-\(htVersion)")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: sheetH)
-                    .background(Color.clear)
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, max(geo.safeAreaInsets.bottom, 12))
-                    .zIndex(1)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.spring(response: 0.32, dampingFraction: 0.9), value: goHomeTask)
-
-                }
-                .ignoresSafeArea(edges: .all)
-            }
-        }
-    }
-}
- 

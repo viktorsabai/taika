@@ -1,5 +1,5 @@
-
 import SwiftUI
+import UIKit
 
 
 // MARK: - Profile Design System (PD)
@@ -16,6 +16,12 @@ public enum PD {
         public static var textSecondary: SwiftUI.Color { Color.white.opacity(0.6) }              // secondary
         public static var accent: SwiftUI.Color { Color(red: 0.95, green: 0.36, blue: 0.65) }    // accent pink
         public static var chip: SwiftUI.Color { Color.white.opacity(0.06) }                      // soft chip fill
+        /// Разбор по тонам: цвет стрелки «нужно было» (нейтральный).
+        public static var toneExpected: SwiftUI.Color { Color.white.opacity(0.55) }
+        /// Разбор: цвет стрелки «ты сказал», когда тон верный.
+        public static var toneCorrect: SwiftUI.Color { Color(red: 0.30, green: 0.85, blue: 0.45) }
+        /// Разбор: цвет стрелки «ты сказал», когда тон неверный.
+        public static var toneWrong: SwiftUI.Color { Color(red: 0.98, green: 0.35, blue: 0.38) }
     }
 
     public enum Radius {
@@ -356,7 +362,7 @@ public struct PDFMSection: View {
         }
     }
 }
-// MARK: - Section container (title + card)
+// MARK: - Section container (title + content) — ритмика как в CDSection / Theme.Layout
 public struct PDSection<Content: View>: View {
     public var title: String
     public var style: PDStyle = .appDS
@@ -369,18 +375,338 @@ public struct PDSection<Content: View>: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Theme.Layout.sectionTitleToContent) {
             Text(title.uppercased())
                 .font(PD.FontToken.caption(12, weight: .semibold))
                 .kerning(0.6)
                 .foregroundColor(style.textSecondary)
                 .padding(.horizontal, PD.Spacing.screen)
-            
-            // Content itself (e.g., PDListGroup) draws its own card.
+
             content
-                .padding(.horizontal, PD.Spacing.screen)
         }
-        .padding(.top, 16)
+        .padding(.top, Theme.Layout.sectionTop)
+    }
+}
+
+// MARK: - Dashboard: сводка в айдентике приложения (Surfaces.card, метрики-чипы, заголовок)
+public struct PDSummaryCard: View {
+    public var totalStableSteps: Int
+    public var currentStreak: Int
+    public var totalMasteryPercent: Int
+    public var accentFill: AnyShapeStyle
+
+    public init(totalStableSteps: Int, currentStreak: Int, totalMasteryPercent: Int, accentFill: AnyShapeStyle) {
+        self.totalStableSteps = totalStableSteps
+        self.currentStreak = currentStreak
+        self.totalMasteryPercent = totalMasteryPercent
+        self.accentFill = accentFill
+    }
+
+    private let shape = RoundedRectangle(cornerRadius: Theme.Radii.card, style: .continuous)
+
+    public var body: some View {
+        ZStack {
+            Theme.Surfaces.card(shape)
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Твой прогресс")
+                    .font(PD.FontToken.caption(12, weight: .semibold))
+                    .kerning(0.5)
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+
+                HStack(spacing: 12) {
+                    metricBlock(label: "шагов", value: "\(totalStableSteps)", accent: false)
+                    metricBlock(label: "дней", value: "\(currentStreak)", accent: false)
+                    metricBlock(label: "прогресс", value: "\(totalMasteryPercent)%", accent: true)
+                }
+
+                HStack(spacing: 6) {
+                    Text("Слова по курсам")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                    Text("·")
+                        .foregroundStyle(accentFill)
+                    Text("Стрик")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                    Text("·")
+                        .foregroundStyle(accentFill)
+                    Text("Мастерство")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+            }
+            .padding(20)
+        }
+        .overlay(shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+        .clipShape(shape)
+        .padding(.horizontal, PD.Spacing.screen)
+    }
+
+    private func metricBlock(label: String, value: String, accent: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
+            Text(value)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(accent ? accentFill : AnyShapeStyle(PD.ColorToken.text))
+                .monospacedDigit()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Capsule().fill(Color.white.opacity(0.08)))
+        .overlay(Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+    }
+}
+
+// MARK: - Dashboard: карусель «твои цифры»
+public enum PDMasteryKind {
+    case totalMastery
+    case speakingPower
+    case memory
+}
+
+public struct PDMasteryCarouselItem: Identifiable {
+    public let id: String
+    public let kind: PDMasteryKind
+    public init(id: String, kind: PDMasteryKind) { self.id = id; self.kind = kind }
+}
+
+public struct PDMasteryCarousel: View {
+    public var totalMasteryPercent: Int
+    public var averagePronunciationScore: Int?
+    public var completedRecallGamesCount: Int
+    public var accentFill: AnyShapeStyle
+
+    private static let cardWidth: CGFloat = 200
+    private static let cardHeight: CGFloat = 140
+    private static let spacing: CGFloat = CardDS.Metrics.carouselSpacing
+
+    private var items: [PDMasteryCarouselItem] {
+        [
+            PDMasteryCarouselItem(id: "mastery", kind: .totalMastery),
+            PDMasteryCarouselItem(id: "speaking", kind: .speakingPower),
+            PDMasteryCarouselItem(id: "memory", kind: .memory),
+        ]
+    }
+
+    public init(totalMasteryPercent: Int, averagePronunciationScore: Int?, completedRecallGamesCount: Int, accentFill: AnyShapeStyle) {
+        self.totalMasteryPercent = totalMasteryPercent
+        self.averagePronunciationScore = averagePronunciationScore
+        self.completedRecallGamesCount = completedRecallGamesCount
+        self.accentFill = accentFill
+    }
+
+    /// Карусель в стиле календарных карточек в Main: sideInset чтобы ничего не обрезалось, scale/opacity/rotation3D по расстоянию от центра.
+    public var body: some View {
+        GeometryReader { outer in
+            let sideInset = max(0, (outer.size.width - Self.cardWidth) / 2)
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: Self.spacing) {
+                    ForEach(items) { item in
+                        GeometryReader { cellGeo in
+                            let viewportCenterX = outer.size.width / 2
+                            let cellCenterX = cellGeo.frame(in: .named("profileMasteryCarousel")).midX
+                            let dist = abs(cellCenterX - viewportCenterX)
+                            let norm = min(1.0, dist / max(1.0, outer.size.width * 0.65))
+                            let scale = 0.85 + 0.25 * (1.0 - norm)
+                            let opacity = 0.45 + 0.55 * (1.0 - norm)
+
+                            PDMasteryCardView(
+                                item: item,
+                                totalMasteryPercent: totalMasteryPercent,
+                                averagePronunciationScore: averagePronunciationScore ?? 0,
+                                completedRecallGamesCount: completedRecallGamesCount,
+                                accentFill: accentFill
+                            )
+                            .frame(width: Self.cardWidth, height: Self.cardHeight)
+                            .scaleEffect(scale)
+                            .rotation3DEffect(
+                                .degrees(Double((cellCenterX - viewportCenterX) / -10.0)),
+                                axis: (x: 0, y: 1, z: 0),
+                                perspective: 0.8
+                            )
+                            .opacity(opacity)
+                            .shadow(
+                                color: Color.black.opacity(scale >= 1.08 ? 0.28 : 0.10),
+                                radius: scale >= 1.08 ? 8 : 2,
+                                x: 0,
+                                y: scale >= 1.08 ? 3 : 1
+                            )
+                            .zIndex(Double(1.0 - norm))
+                        }
+                        .frame(width: Self.cardWidth, height: Self.cardHeight)
+                        .id(item.id)
+                    }
+                }
+                .padding(.horizontal, sideInset)
+            }
+            .coordinateSpace(name: "profileMasteryCarousel")
+        }
+        .frame(height: Self.cardHeight + 32)
+        .padding(.horizontal, PD.Spacing.screen)
+    }
+}
+
+
+public struct PDMasteryCardView: View {
+    public let item: PDMasteryCarouselItem
+    public var totalMasteryPercent: Int
+    public var averagePronunciationScore: Int
+    public var completedRecallGamesCount: Int
+    public var accentFill: AnyShapeStyle
+
+    private let shape = RoundedRectangle(cornerRadius: Theme.Radii.card, style: .continuous)
+
+    public var body: some View {
+        ZStack {
+            Theme.Surfaces.card(shape)
+            VStack(alignment: .leading, spacing: 8) {
+                iconView
+                Text(cardTitle)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
+                valueView
+                Text(cardSubtitle)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+        }
+        .overlay(shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+        .clipShape(shape)
+    }
+
+    private var cardTitle: String {
+        switch item.kind {
+        case .totalMastery: return "прогресс курса"
+        case .speakingPower: return "произношение"
+        case .memory: return "игры на память"
+        }
+    }
+
+    private var cardSubtitle: String {
+        switch item.kind {
+        case .totalMastery: return "твой прогресс"
+        case .speakingPower: return "как ты звучишь"
+        case .memory: return "игр пройдено"
+        }
+    }
+
+    private var iconView: some View {
+        Group {
+            switch item.kind {
+            case .totalMastery: Image(systemName: "chart.line.uptrend.xyaxis")
+            case .speakingPower: Image(systemName: "waveform")
+            case .memory: Image(systemName: "brain.head.profile")
+            }
+        }
+        .font(.system(size: 22, weight: .medium))
+        .foregroundStyle(accentFill)
+    }
+
+    private var valueView: some View {
+        Group {
+            switch item.kind {
+            case .totalMastery: Text("\(totalMasteryPercent)%")
+            case .speakingPower: Text("\(averagePronunciationScore)%")
+            case .memory: Text("\(completedRecallGamesCount)")
+            }
+        }
+        .font(.system(size: 28, weight: .bold, design: .rounded))
+        .foregroundStyle(accentFill)
+    }
+}
+
+// MARK: - Dashboard: радар готовности к ситуациям
+public struct PDRadarBlock: View {
+    public var values: [Double]
+    public var accentFill: AnyShapeStyle
+
+    public init(values: [Double], accentFill: AnyShapeStyle) {
+        self.values = values
+        self.accentFill = accentFill
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Layout.Section.titleToContentGap) {
+            Text("Рынок, такси, иммиграция, кафе — по твоему прогрессу.")
+                .font(PD.FontToken.caption(13, weight: .regular))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
+            ThaiSurvivalRadarView(values: values, accentFill: accentFill, linesOnly: true)
+        }
+        .padding(.horizontal, PD.Spacing.screen)
+    }
+}
+
+// MARK: - Dashboard: PRO и настройки (ряды кнопок)
+public struct PDUtilityBlock: View {
+    public var isPro: Bool
+    public var onPRO: () -> Void
+    public var onSettings: () -> Void
+    public var onLanguage: () -> Void
+    public var onSupport: () -> Void
+
+    public init(isPro: Bool, onPRO: @escaping () -> Void, onSettings: @escaping () -> Void, onLanguage: @escaping () -> Void, onSupport: @escaping () -> Void) {
+        self.isPro = isPro
+        self.onPRO = onPRO
+        self.onSettings = onSettings
+        self.onLanguage = onLanguage
+        self.onSupport = onSupport
+    }
+
+    public var body: some View {
+        VStack(spacing: Theme.Layout.Section.itemGap) {
+            if !isPro {
+                Button(action: onPRO) {
+                    HStack(spacing: PD.Spacing.inner) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 16))
+                        Text("Upgrade to PRO")
+                            .font(PD.FontToken.body(17, weight: .medium))
+                    }
+                    .foregroundStyle(Theme.Colors.accent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain)
+            }
+            Button(action: onSettings) {
+                HStack(spacing: PD.Spacing.inner) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 16))
+                    Text("Настройки")
+                        .font(PD.FontToken.body(17, weight: .medium))
+                }
+                .foregroundStyle(PD.ColorToken.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            Button(action: onLanguage) {
+                HStack(spacing: PD.Spacing.inner) {
+                    Image(systemName: "globe")
+                        .font(.system(size: 16))
+                    Text("Language Settings")
+                        .font(PD.FontToken.body(17, weight: .medium))
+                }
+                .foregroundStyle(PD.ColorToken.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            Button(action: onSupport) {
+                HStack(spacing: PD.Spacing.inner) {
+                    Image(systemName: "questionmark.circle")
+                        .font(.system(size: 16))
+                    Text("Support")
+                        .font(PD.FontToken.body(17, weight: .medium))
+                }
+                .foregroundStyle(PD.ColorToken.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, PD.Spacing.screen)
     }
 }
 
@@ -1322,6 +1648,757 @@ private struct _PDActivityPanelDemo: View {
             onSelect: { selected = $0 },
             style: .appDS
         )
+    }
+}
+
+// MARK: - Dashboard MVP (Minimalist Analytics)
+
+/// Универсальный контейнер для виджетов прогресса на профиле
+public struct ProfileCardDS<Content: View>: View {
+    let content: Content
+
+    public init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    public var body: some View {
+        content
+            .padding(PD.Spacing.inner)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+                    .fill(PD.ColorToken.card)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+                    .stroke(PD.ColorToken.stroke, lineWidth: 1)
+            )
+    }
+}
+
+// MARK: - Cyber-Nomad: Glass card (Blur 20px, border 0.5 white 10%)
+
+public struct GlassCardDS<Content: View>: View {
+    let content: Content
+    var cornerRadius: CGFloat = PD.Radius.card
+
+    public init(cornerRadius: CGFloat = PD.Radius.card, @ViewBuilder content: () -> Content) {
+        self.cornerRadius = cornerRadius
+        self.content = content()
+    }
+
+    public var body: some View {
+        content
+            .padding(PD.Spacing.inner)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
+            )
+    }
+}
+
+// MARK: - Mastery Card (Glass + living progress bar: Watch-style rings in one row, neon blur)
+/// Data: Mastery % and "Stable" words count. Visual: glass tile, horizontal segments with glow.
+public struct MasteryCardView: View {
+    let masteryPercent: Double
+    let stableWordsCount: Int
+    let recognitionPercent: Int
+    let recallPercent: Int
+    let speakingPercent: Int
+    var accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+    @State private var phase: CGFloat = 0
+
+    public init(
+        masteryPercent: Double,
+        stableWordsCount: Int,
+        recognitionPercent: Int = 0,
+        recallPercent: Int = 0,
+        speakingPercent: Int = 0,
+        accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+    ) {
+        self.masteryPercent = masteryPercent
+        self.stableWordsCount = stableWordsCount
+        self.recognitionPercent = recognitionPercent
+        self.recallPercent = recallPercent
+        self.speakingPercent = speakingPercent
+        self.accentFill = accentFill
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Living progress: 3 segments in one row (Watch-style, neon)
+            HStack(spacing: 12) {
+                ForEach(0..<3, id: \.self) { i in
+                    let p = segmentValue(i)
+                    LivingSegmentBar(value: p, phase: phase, accentFill: accentFill)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(height: 28)
+
+            HStack(alignment: .firstTextBaseline, spacing: 16) {
+                Text(masteryPercentText)
+                    .font(.system(size: 32, weight: .bold, design: .monospaced))
+                    .foregroundStyle(PD.ColorToken.text)
+                Text("Mastery")
+                    .font(PD.FontToken.caption(12, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                Spacer(minLength: 0)
+                Text("\(stableWordsCount)")
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                    .foregroundStyle(PD.ColorToken.text)
+                Text("Stable")
+                    .font(PD.FontToken.caption(11, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+        }
+        .padding(.vertical, 4)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) { phase = 1 }
+        }
+    }
+
+    private func segmentValue(_ i: Int) -> CGFloat {
+        switch i {
+        case 0: return CGFloat(recognitionPercent) / 100
+        case 1: return CGFloat(recallPercent) / 100
+        case 2: return CGFloat(speakingPercent) / 100
+        default: return 0
+        }
+    }
+
+    private var masteryPercentText: String {
+        let v = Int(round(min(100, max(0, masteryPercent))))
+        return "\(v)%"
+    }
+}
+
+private struct LivingSegmentBar: View {
+    let value: CGFloat
+    let phase: CGFloat
+    var accentFill: AnyShapeStyle
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            let v = min(1, max(0, value))
+            let glow = 0.5 + 0.5 * sin(phase * .pi * 2)
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: h / 2, style: .continuous)
+                    .fill(PD.ColorToken.chip.opacity(0.8))
+                    .frame(height: h)
+                RoundedRectangle(cornerRadius: h / 2, style: .continuous)
+                    .fill(accentFill)
+                    .frame(width: max(4, w * v), height: h)
+                    .shadow(color: PD.ColorToken.accent.opacity(0.6), radius: 4, x: 0, y: 0)
+                    .opacity(0.85 + 0.15 * glow)
+            }
+        }
+        .frame(height: 28)
+    }
+}
+
+// MARK: - Skill Stats: two square tiles (Speaker + Games), hairline borders
+public struct ProfileSkillStatsTwoTilesView: View {
+    let pronunciationScore: Int
+    let recallGamesCount: Int
+    var accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+
+    public init(pronunciationScore: Int, recallGamesCount: Int, accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)) {
+        self.pronunciationScore = pronunciationScore
+        self.recallGamesCount = recallGamesCount
+        self.accentFill = accentFill
+    }
+
+    public var body: some View {
+        HStack(spacing: 0.5) {
+            // Speaker tile
+            ProfileSkillTileView(
+                icon: "mic.fill",
+                value: "\(min(100, max(0, pronunciationScore)))%",
+                label: "Speaker",
+                accentFill: accentFill,
+                animated: true
+            )
+            .frame(maxWidth: .infinity)
+
+            Rectangle().fill(Color.white.opacity(0.08)).frame(width: 0.5)
+
+            // Games tile
+            ProfileSkillTileView(
+                icon: "gamecontroller.fill",
+                value: "\(recallGamesCount)",
+                label: "Recall",
+                accentFill: accentFill,
+                animated: false
+            )
+            .frame(maxWidth: .infinity)
+        }
+        .background(PD.ColorToken.card.opacity(0.6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct ProfileSkillTileView: View {
+    let icon: String
+    let value: String
+    let label: String
+    var accentFill: AnyShapeStyle
+    var animated: Bool
+    @State private var pulse: Bool = false
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 22))
+                .foregroundStyle(accentFill)
+                .scaleEffect(animated && pulse ? 1.08 : 1.0)
+            Text(value)
+                .font(.system(size: 24, weight: .bold, design: .monospaced))
+                .foregroundStyle(PD.ColorToken.text)
+            Text(label)
+                .font(PD.FontToken.caption(11, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+        }
+        .padding(.vertical, 16)
+        .onAppear { if animated { withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) { pulse = true } } }
+    }
+}
+
+// MARK: - Achievement Deck (carousel, calendar-card style, parallax)
+public struct PDAchievementItem: Identifiable {
+    public let id: String
+    public let title: String
+    public let subtitle: String?
+    public let iconSF: String
+    public let unlocked: Bool
+
+    public init(id: String, title: String, subtitle: String? = nil, iconSF: String, unlocked: Bool) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.iconSF = iconSF
+        self.unlocked = unlocked
+    }
+}
+
+public struct AchievementDeckCarousel: View {
+    let items: [PDAchievementItem]
+    var accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+    let cardWidth: CGFloat = 100
+    let cardHeight: CGFloat = 120
+
+    public init(items: [PDAchievementItem], accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)) {
+        self.items = items
+        self.accentFill = accentFill
+    }
+
+    public var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: -16) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    AchievementDeckCardView(item: item, accentFill: accentFill)
+                        .frame(width: cardWidth, height: cardHeight)
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+        .frame(height: cardHeight + 8)
+    }
+}
+
+/// Single achievement card — glass tile, calendar-cell style (like Main), icon + title
+public struct AchievementDeckCardView: View {
+    let item: PDAchievementItem
+    var accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+
+    public init(item: PDAchievementItem, accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)) {
+        self.item = item
+        self.accentFill = accentFill
+    }
+
+    public var body: some View {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }) {
+            VStack(spacing: 10) {
+                Image(systemName: item.iconSF)
+                    .font(.system(size: 28))
+                    .foregroundStyle(item.unlocked ? accentFill : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.5)))
+                Text(item.title)
+                    .font(PD.FontToken.caption(11, weight: .semibold))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(item.unlocked ? PD.ColorToken.text : PD.ColorToken.textSecondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Identity Halo: Mastery Ring (дышит, цвет новичок→мастер, моноширин, статус)
+
+public struct MasteryRingHaloView: View {
+    let streakDays: Int
+    let masteryFraction: Double
+    let learnedCount: Int
+    var ringColor: Color { masteryRingColor(masteryFraction) }
+    @State private var breathe: Bool = false
+
+    public init(streakDays: Int, masteryFraction: Double, learnedCount: Int) {
+        self.streakDays = streakDays
+        self.masteryFraction = masteryFraction
+        self.learnedCount = learnedCount
+    }
+
+    private func masteryRingColor(_ f: Double) -> Color {
+        let t = min(1, max(0, f))
+        if t < 0.25 { return Color(red: 0.2, green: 0.5, blue: 0.95) }
+        if t < 0.5 { return Color(red: 0.4, green: 0.75, blue: 0.95) }
+        if t < 0.75 { return Color(red: 0.95, green: 0.65, blue: 0.3) }
+        return Color(red: 0.95, green: 0.75, blue: 0.2)
+    }
+
+    private var statusLabel: String {
+        let p = masteryFraction
+        if p >= 0.7 { return "Speaking Machine" }
+        if p >= 0.4 { return "Stable Learner" }
+        if p >= 0.15 { return "On the way" }
+        return "Starter"
+    }
+
+    public var body: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .stroke(PD.ColorToken.chip.opacity(0.8), lineWidth: 10)
+                    .frame(width: 120, height: 120)
+                Circle()
+                    .trim(from: 0, to: CGFloat(min(1, max(0, masteryFraction))))
+                    .stroke(ringColor, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                    .frame(width: 120, height: 120)
+                    .rotationEffect(.degrees(-90))
+                    .scaleEffect(breathe ? 1.02 : 1.0)
+                    .animation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true), value: breathe)
+
+                VStack(spacing: 2) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(ringColor)
+                    Text("\(streakDays)")
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .foregroundStyle(PD.ColorToken.text)
+                }
+            }
+            .onAppear { breathe = true }
+
+            Text(statusLabel)
+                .font(PD.FontToken.caption(12, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+
+            Text("\(learnedCount)")
+                .font(.system(size: 28, weight: .bold, design: .monospaced))
+                .foregroundStyle(PD.ColorToken.text)
+            Text("фраз")
+                .font(PD.FontToken.caption(11, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+        }
+        .padding(.vertical, 16)
+    }
+}
+
+/// Bento: Speaking card with waveform placeholder
+public struct BentoSpeakingCard: View {
+    let score: Int
+    var accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+
+    public init(score: Int, accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)) {
+        self.score = score
+        self.accentFill = accentFill
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "waveform")
+                    .font(.system(size: 16))
+                    .foregroundStyle(accentFill)
+                Text("Speaking")
+                    .font(PD.FontToken.caption(12, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+            WaveformBarsView(percent: score, accentFill: accentFill)
+            Text("\(min(100, max(0, score)))%")
+                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                .foregroundStyle(PD.ColorToken.text)
+        }
+    }
+}
+
+private struct WaveformBarsView: View {
+    let percent: Int
+    var accentFill: AnyShapeStyle
+    private let barCount = 12
+    @State private var phase: CGFloat = 0
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<barCount, id: \.self) { i in
+                let h = barHeight(index: i)
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(accentFill)
+                    .frame(width: 4, height: max(4, h))
+                    .opacity(0.5 + 0.5 * Double(percent) / 100.0)
+            }
+        }
+        .frame(height: 24)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) { phase = 1 }
+        }
+    }
+
+    private func barHeight(index: Int) -> CGFloat {
+        let p = CGFloat(min(100, max(0, percent))) / 100.0
+        let wave = 0.4 + 0.6 * sin(CGFloat(index) * 0.7 + phase * .pi * 2)
+        return 6 + 18 * p * wave
+    }
+}
+
+/// Bento: Memory card (flip → problem syllables)
+public struct BentoMemoryCard: View {
+    let learnedCount: Int
+    let problemSyllables: [String]
+    var accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+    @State private var isFlipped: Bool = false
+
+    public init(learnedCount: Int, problemSyllables: [String], accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)) {
+        self.learnedCount = learnedCount
+        self.problemSyllables = problemSyllables
+        self.accentFill = accentFill
+    }
+
+    public var body: some View {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { isFlipped.toggle() }
+        }) {
+            ZStack {
+                frontFace
+                    .opacity(isFlipped ? 0 : 1)
+                    .rotation3DEffect(.degrees(isFlipped ? -180 : 0), axis: (x: 0, y: 1, z: 0))
+                backFace
+                    .opacity(isFlipped ? 1 : 0)
+                    .rotation3DEffect(.degrees(isFlipped ? 0 : 180), axis: (x: 0, y: 1, z: 0))
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var frontFace: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: "brain.head.profile")
+                .font(.system(size: 16))
+                .foregroundStyle(accentFill)
+            Text("Memory")
+                .font(PD.FontToken.caption(12, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            Text("\(learnedCount)")
+                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                .foregroundStyle(PD.ColorToken.text)
+            Text("слов")
+                .font(PD.FontToken.caption(11, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var backFace: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Топ путаницы")
+                .font(PD.FontToken.caption(12, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            if problemSyllables.isEmpty {
+                Text("—")
+                    .font(.system(size: 14, design: .monospaced))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            } else {
+                ForEach(problemSyllables.prefix(3), id: \.self) { s in
+                    Text(s)
+                        .font(.system(size: 13, design: .monospaced))
+                        .foregroundStyle(PD.ColorToken.text)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Bento: Consistency — 7-day heat (reuse AppHeatRow style)
+public struct BentoConsistencyCard: View {
+    let heatValues: [CGFloat]
+    var accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+
+    public init(heatValues: [CGFloat], accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)) {
+        self.heatValues = heatValues
+        self.accentFill = accentFill
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Image(systemName: "square.grid.3x3.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(accentFill)
+            Text("Consistency")
+                .font(PD.FontToken.caption(12, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            HStack(spacing: 6) {
+                ForEach(Array((heatValues.count >= 7 ? heatValues : (0..<7).map { _ in CGFloat(0) }).prefix(7).enumerated()), id: \.offset) { _, v in
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(v > 0.01 ? AnyShapeStyle(accentFill) : AnyShapeStyle(PD.ColorToken.chip))
+                        .opacity(v > 0.01 ? (0.35 + 0.65 * Double(v)) : 1)
+                        .frame(width: 20, height: 20)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Thai Survival Radar — 5 axes (Market, Taxi, Immigration, Cafe, General). linesOnly: true = только линии, без заливки.
+public struct ThaiSurvivalRadarView: View {
+    let values: [Double]
+    var accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+    var linesOnly: Bool = false
+    private let labels = ["Рынок", "Такси", "Иммиграция", "Кафе", "Общее"]
+
+    public init(values: [Double], accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent), linesOnly: Bool = false) {
+        self.values = values
+        self.accentFill = accentFill
+        self.linesOnly = linesOnly
+    }
+
+    public var body: some View {
+        GeometryReader { geo in
+            let size = min(geo.size.width, geo.size.height)
+            let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+            let r = size / 2 * 0.72
+            let labelRadius = r + 22
+            let n = 5
+            let vals = (values.count >= n ? values : (0..<n).map { _ in 0.0 }).prefix(n).map { min(1, max(0, $0)) }
+
+            ZStack {
+                ForEach(0..<n, id: \.self) { i in
+                    let angle = angleFor(i, n: n)
+                    let end = pointOnCircle(center: center, radius: r, angle: angle)
+                    Path { p in
+                        p.move(to: center)
+                        p.addLine(to: end)
+                    }
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                }
+                if linesOnly {
+                    PolygonShape(values: Array(vals), center: center, radius: r, count: n)
+                        .stroke(accentFill, lineWidth: 1.5)
+                } else {
+                    PolygonShape(values: Array(vals), center: center, radius: r, count: n)
+                        .fill(accentFill.opacity(0.25))
+                        .overlay(
+                            PolygonShape(values: Array(vals), center: center, radius: r, count: n)
+                                .stroke(accentFill, lineWidth: 1.5)
+                        )
+                }
+                ForEach(0..<n, id: \.self) { i in
+                    let angle = angleFor(i, n: n)
+                    let pt = pointOnCircle(center: center, radius: labelRadius, angle: angle)
+                    Text(labels[i])
+                        .font(PD.FontToken.caption(10, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .position(pt)
+                }
+            }
+        }
+        .frame(height: 200)
+    }
+
+    private func angleFor(_ i: Int, n: Int) -> Double {
+        (.pi / 2) + (Double(i) * 2 * .pi / Double(n))
+    }
+
+    private func pointOnCircle(center: CGPoint, radius: CGFloat, angle: Double) -> CGPoint {
+        CGPoint(x: center.x + radius * CGFloat(cos(angle)), y: center.y - radius * CGFloat(sin(angle)))
+    }
+}
+
+private struct PolygonShape: Shape {
+    let values: [Double]
+    let center: CGPoint
+    let radius: CGFloat
+    let count: Int
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        guard count > 0, values.count >= count else { return p }
+        let n = count
+        for i in 0..<n {
+            let angle = (.pi / 2) + (Double(i) * 2 * .pi / Double(n))
+            let v = min(1, max(0, values[i]))
+            let r = radius * CGFloat(v)
+            let pt = CGPoint(x: center.x + r * CGFloat(cos(angle)), y: center.y - r * CGFloat(sin(angle)))
+            if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+        }
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// Блок A (legacy): Personal Stats — оставлен для совместимости; предпочтительно MasteryRingHaloView
+public struct DashboardPersonalStatsView: View {
+    let streakDays: Int
+    let masteryFraction: Double
+    let learnedCount: Int
+    var accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+
+    public init(streakDays: Int, masteryFraction: Double, learnedCount: Int, accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)) {
+        self.streakDays = streakDays
+        self.masteryFraction = masteryFraction
+        self.learnedCount = learnedCount
+        self.accentFill = accentFill
+    }
+
+    public var body: some View {
+        HStack(spacing: 20) {
+            VStack(spacing: 4) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(accentFill)
+                Text("\(streakDays)")
+                    .font(PD.FontToken.body(20, weight: .bold))
+                    .foregroundStyle(PD.ColorToken.text)
+                Text("дней")
+                    .font(PD.FontToken.caption(11, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+            .frame(width: 64)
+
+            ZStack {
+                Circle()
+                    .stroke(PD.ColorToken.chip, lineWidth: 8)
+                    .frame(width: 88, height: 88)
+                Circle()
+                    .trim(from: 0, to: CGFloat(min(1, max(0, masteryFraction))))
+                    .stroke(accentFill, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .frame(width: 88, height: 88)
+                    .rotationEffect(.degrees(-90))
+                Text("\(Int(round(masteryFraction * 100)))%")
+                    .font(PD.FontToken.caption(14, weight: .bold))
+                    .foregroundStyle(PD.ColorToken.text)
+            }
+
+            VStack(spacing: 4) {
+                Text("\(learnedCount)")
+                    .font(PD.FontToken.body(20, weight: .bold))
+                    .foregroundStyle(PD.ColorToken.text)
+                Text("фраз")
+                    .font(PD.FontToken.caption(11, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+            .frame(width: 64)
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+/// Один скилл-бар (Recognition / Construction / Speaking)
+public struct DashboardSkillBarView: View {
+    let title: String
+    let percent: Int
+    var accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+
+    public init(title: String, percent: Int, accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)) {
+        self.title = title
+        self.percent = percent
+        self.accentFill = accentFill
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                    .font(PD.FontToken.caption(13, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                Spacer(minLength: 8)
+                Text("\(min(100, max(0, percent)))%")
+                    .font(PD.FontToken.caption(13, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(PD.ColorToken.chip)
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(accentFill)
+                        .frame(width: max(0, geo.size.width * CGFloat(min(100, max(0, percent)) / 100)))
+                }
+            }
+            .frame(height: 8)
+        }
+    }
+}
+
+/// Блок C: Expat Health Check — готовность к рынку / иммиграции
+public struct DashboardExpatWidgetView: View {
+    let marketPercent: Int
+    let immigrationPercent: Int
+    var accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)
+
+    public init(marketPercent: Int, immigrationPercent: Int, accentFill: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.accent)) {
+        self.marketPercent = marketPercent
+        self.immigrationPercent = immigrationPercent
+        self.accentFill = accentFill
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Твой уровень выживания в Таиланде")
+                .font(PD.FontToken.caption(12, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            HStack(spacing: 16) {
+                labelCell(title: "поход на рынок", percent: marketPercent)
+                labelCell(title: "иммиграция", percent: immigrationPercent)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func labelCell(title: String, percent: Int) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(PD.FontToken.caption(11, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            Text("\(min(100, max(0, percent)))%")
+                .font(PD.FontToken.body(18, weight: .bold))
+                .foregroundStyle(accentFill)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

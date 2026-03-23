@@ -45,6 +45,24 @@ final class ProfileManager: ObservableObject {
     // backward-compat alias (remove once all views are migrated)
     @Published private(set) var activityDays: [PDActivityDay] = []
 
+    // MARK: - Dashboard aggregates (Minimalist Analytics MVP)
+
+    @Published private(set) var dashboardLearnedCount: Int = 0
+    @Published private(set) var dashboardMasteryFraction: Double = 0
+    @Published private(set) var dashboardStreakDays: Int = 0
+    @Published private(set) var dashboardSpeakingScore: Int? = nil
+    @Published private(set) var dashboardRecognitionPercent: Int = 0
+    @Published private(set) var dashboardRecallPercent: Int = 0
+    @Published private(set) var dashboardExpatMarket: Int = 0
+    @Published private(set) var dashboardExpatImmigration: Int = 0
+    @Published private(set) var dashboardProblemSyllables: [String] = []
+    /// 7-day activity intensity 0...1 for heat row (Bento Consistency)
+    @Published private(set) var dashboardHeatValues: [CGFloat] = []
+    /// 5 axes 0...1: Market, Taxi, Immigration, Nightlife, Cafe (for radar)
+    @Published private(set) var dashboardRadarValues: [Double] = []
+    /// Number of completed Recall (construction) games — for Skill Stats "Games" tile
+    @Published private(set) var dashboardRecallGamesCount: Int = 0
+
     // MARK: - init
 
     private init() {
@@ -115,6 +133,67 @@ final class ProfileManager: ObservableObject {
     private func rebuildAll() async {
         await rebuildActivity()
         await rebuildProgress()
+        await rebuildDashboard()
+    }
+
+    private func rebuildDashboard() async {
+        let pm = ProgressManager.shared
+        let learnedCount = pm.learnedSteps.values.reduce(0) { $0 + $1.count }
+        dashboardLearnedCount = learnedCount
+
+        let courseIds = UserSession.shared.profileAllKnownCourseIds()
+        let mastery = await overallCourseProgress(courseIds: courseIds)
+        dashboardMasteryFraction = min(1, max(0, mastery))
+
+        dashboardStreakDays = computeStreakDays()
+
+        let attempts = SpeakerAttemptsStore.loadAll()
+        if !attempts.isEmpty {
+            let total = attempts.values.reduce(0) { $0 + $1.heardConfidence }
+            dashboardSpeakingScore = total / attempts.count
+        } else {
+            dashboardSpeakingScore = nil
+        }
+
+        dashboardRecognitionPercent = Int(round(mastery * 100))
+        dashboardRecallPercent = Int(round(mastery * 100))
+
+        let (lessonsDone, lessonsTotal) = await overallLessonsDoneTotal(courseIds: courseIds)
+        let lessonBase = lessonsTotal > 0 ? Double(lessonsDone) / Double(lessonsTotal) : 0
+        dashboardExpatMarket = min(100, max(0, Int(round(Double(learnedCount) * 1.2 + lessonBase * 25))))
+        dashboardExpatImmigration = min(100, lessonsTotal > 0 ? Int(round(lessonBase * 80)) : 0)
+
+        dashboardProblemSyllables = []
+
+        dashboardHeatValues = activityWeekDays.map { CGFloat($0.intensity01) }
+        // Recall games: proxy = completed lessons count (real per-step recall count can be added later)
+        let snapshot = ProgressManager.shared.snapshot
+        dashboardRecallGamesCount = snapshot.completed.count
+
+        let m = Double(dashboardExpatMarket) / 100.0
+        let imm = Double(dashboardExpatImmigration) / 100.0
+        let taxi = m * 0.85
+        let nightlife = lessonBase * 0.5
+        let cafe = m * 0.7
+        dashboardRadarValues = [m, taxi, imm, nightlife, cafe]
+    }
+
+    private func computeStreakDays() -> Int {
+        let cal = UserSession.bangkokCal
+        var today = cal.startOfDay(for: Date())
+        var streak = 0
+        for _ in 0..<365 {
+            let key = UserSession.shared.bangkokDayKey(for: today)
+            let hasActivity = !(UserSession.shared.snapshot.activityLog[key]?.isEmpty ?? true)
+                || !(UserSession.shared.snapshot.dayCourses[key]?.isEmpty ?? true)
+            if hasActivity {
+                streak += 1
+            } else {
+                break
+            }
+            today = cal.date(byAdding: .day, value: -1, to: today) ?? today
+        }
+        return streak
     }
 
     private func rebuildProgress() async {

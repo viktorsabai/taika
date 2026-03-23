@@ -1,0 +1,292 @@
+
+
+
+HOME TASK COMPONENT
+PRODUCT + TECHNICAL SPECIFICATION (V2)
+
+====================================================
+1. PRODUCT PURPOSE
+====================================================
+HomeTask is a unified game shell inside the Course → Lesson → Step pipeline.
+It is not a single game. It is a container that can host multiple micro‑games.
+
+Primary goal:
+Reinforce phonetic recognition and transcription assembly.
+
+MVP Game Types:
+- recall (assemble transcription)
+Future:
+- match
+- reorder
+- speaker challenge
+
+HomeTask must be scalable and game‑agnostic.
+
+
+====================================================
+2. ARCHITECTURE CONTRACT
+====================================================
+Strict separation:
+
+Manager:
+- owns business logic
+- owns state machine
+- parses phonetic units
+- validates answers
+- controls round lifecycle
+
+View:
+- binds to Manager
+- routes actions
+- does not compute business logic
+
+DS (Design System layer):
+- pure rendering
+- no logic
+- receives prepared state only
+
+
+====================================================
+3. CORE GAME MODEL (RECALL)
+====================================================
+
+3.1 Phonetic Model (EPIC 2 Discovery)
+
+We do NOT operate on raw String.
+We operate on PhoneticSegment.
+
+Data structure:
+
+struct PhoneticSegment {
+    let syllable: String    // clean syllable for pool (no diacritics, no tone)
+    let toneAfter: String?  // tone displayed in mask (↘ → ↗ ↗? etc.)
+}
+
+Rules:
+- Tone markers (↘ → ↗) are boundaries between syllables, shown in the assembly mask.
+- Pool contains only clean syllables; user selects syllables, not tones.
+- Split by `-` and space; extract tone from end of each chunk.
+- Strip combining diacritics (́ ̂ ̀ ˇ) from syllable for pool.
+- slotCount = segments.count
+
+Assembly mask: [slot₁] tone₁ [slot₂] tone₂ [slot₃] …
+Never derive slot count from assembled array.
+
+
+====================================================
+4. STATE MACHINE
+====================================================
+
+enum HomeTaskGameState {
+    case idle
+    case building
+    case checking
+    case resultCorrect
+    case resultWrong
+}
+
+State transitions:
+
+idle → building (first tap)
+building → checking (assembled.count == slotCount)
+checking → resultCorrect / resultWrong
+resultWrong → building (after user interaction)
+resultCorrect → idle (next round)
+
+
+====================================================
+5. RECALL GAME LOGIC
+====================================================
+
+Manager responsibilities:
+
+- parsePhoneticUnits(from: String)
+- shuffleAvailableUnits()
+- selectUnit(id)
+- removeUnit(id)
+- validate()
+
+Validation:
+assembledUnits == correctUnits (order-sensitive)
+
+No fuzzy match.
+No prefix match.
+Exact structural comparison.
+
+
+====================================================
+6. UI CONTRACT (RECALL)
+====================================================
+
+6.1 Assembly Mask (EPIC 2 Discovery)
+
+- Slots = places for syllables (user taps pool to fill).
+- Tone markers = fixed in mask, rendered after each slot when present.
+- Structure: slot | tone? | — | slot | tone? | …
+- Pool: clean syllables only; no tone markers in selection.
+
+6.2 Layout Rules
+
+- No adaptive GridItem
+- No GeometryReader unless strictly required
+- No minWidth hacks
+- All grids use fixed flexible columns
+
+Example:
+
+LazyVGrid(columns: [
+    GridItem(.flexible()),
+    GridItem(.flexible())
+])
+
+Container must always have:
+.frame(maxWidth: .infinity)
+.padding(.horizontal, 16)
+
+Nothing may overflow screen width.
+
+
+6.3 Slots Area
+
+Slots count = slotCount
+Slots height fixed (e.g. 48)
+Horizontal scroll allowed ONLY if slotCount > 6
+Otherwise static layout.
+
+
+6.4 Available Units
+
+Two-column grid
+Fixed spacing
+No adaptive resizing
+
+
+====================================================
+7. UX REQUIREMENTS
+====================================================
+
+7.1 Audio Trigger
+
+Question card must include playback button (🔊).
+Tap → plays reference audio.
+
+User must always understand:
+- what to assemble
+- what they are hearing
+
+
+7.2 Feedback
+
+Correct:
+- subtle accent background
+- check icon
+- "дальше" button
+
+Wrong:
+- shake animation (light)
+- red inline message
+- allow editing
+
+
+====================================================
+8. HOME TASK VIEW CONTRACT
+====================================================
+
+HomeTaskView responsibilities:
+
+- observe HomeTaskManager
+- render correct GameType
+- pass state into DS
+- disable interaction when state == checking
+
+HomeTaskView must NOT:
+- compute syllables
+- validate answers
+- control shuffle logic
+
+
+====================================================
+9. ROUND FLOW
+====================================================
+
+1. Display question
+2. Play audio automatically (optional)
+3. User builds answer
+4. Auto-enable "Проверить"
+5. Validate
+6. Show result
+7. Continue
+
+
+====================================================
+10. DESIGN PRINCIPLES
+====================================================
+
+- Minimal
+- Stable layout
+- No layout jumps
+- No dynamic resizing on selection
+- No gradient abuse
+
+Premium feel = clarity + spacing + restraint.
+
+
+====================================================
+11. KNOWN PROBLEMS TO AVOID
+====================================================
+
+- Using adaptive GridItem (causes overflow)
+- Using minWidth with flexible grid
+- Computing slotCount from assembled array
+- Parsing string via naive split
+
+
+====================================================
+12. EXTENSIBILITY
+====================================================
+
+HomeTask must support:
+
+protocol HomeTaskGame {
+    var state: HomeTaskGameState { get }
+    func reset()
+}
+
+RecallGame must conform.
+Future games plug into same shell.
+
+
+====================================================
+13. CHANGELOG (EPIC 2)
+====================================================
+
+2026-02-22 (Redesign v2):
+- ThemeManager: all accent colors via ThemeManager.shared.currentAccentFill.
+- Tone arrows: accentually highlighted in mask (accent pill).
+- Wrong answer: show "исправь подсвеченные слоги", highlight wrong slots; tap wrong slot to clear from there; no full correct answer.
+- removeBuilderPiecesFrom(index:), builderWrongSlotIndices.
+- Taika FM: "слушай → собирай. таika рядом."
+- Bottom buttons: labels "назад" / "сбросить".
+
+2026-02-22 (Discovery Redesign):
+- PhoneticSegment model: syllable (clean) + toneAfter; tones in mask, not in pool.
+- parsePhonetic: extract clean syllables; tone markers (↘ → ↗) go to toneAfter.
+- RecallGameDS: assembly mask with slots + tones; CD tokens; structured layout.
+- BuilderRound: segments, syllables (pool), correctPieces (clean).
+- Validation: assembled == correctPieces (clean syllables).
+
+2026-02-22 (initial):
+- Parsing: transcript_ru (ph) single source; split only by `-`; tone markers stay inside syllable.
+- Exclude Steps with >6 syllables from Recall.
+- Validation only on explicit "Проверить" tap; no auto-validation.
+- attemptCount, reinforcementScore on success.
+- RecallGameDS: pure rendering; syllableItems with precomputed isSelectable (logic in View).
+- Question card: 🔊 button for TTS (Thai) when audioText present.
+- Wrong answer (legacy): was correctAnswerDisplay; now wrong-slots UX.
+- Layout: horizontal scroll only when slotCount > 6; PD tokens; no overflow.
+- PRO gating: StepView checks ProManager.can(.recallGame) before entering game.
+
+
+====================================================
+END OF SPEC
+====================================================

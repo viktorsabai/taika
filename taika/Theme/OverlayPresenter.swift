@@ -22,14 +22,39 @@ final class OverlayPresenter: ObservableObject {
         case calendarAdd(Date)
         case calendarSummary(Date)
 
+        /// Подборка курсов «Кун Кру»: приложение само предлагает курсы для ретеншна (без выбора дня)
+        case kunKruSuggestions
+
         // quickstart loading (ui only)
         case randomCourseLoading
 
         // pro gating (data only)
         case proCoursePaywall(courseId: String)
+        /// PRO paywall from Speaker "получить разбор" (сквозной процесс завлечения на разбор)
+        case speakerPaywall
+
+        // game console (ui only – mode picker)
+        case gameConsole(courseId: String, lessonId: String?)
+
+        // concrete game flow (navigation-driven, not overlay-driven)
+        case game(courseId: String, lessonId: String, gameType: HomeGameType)
+
+        // EPIC 2: header-driven overlays
+        case courseFilters
+        case courseSearchAndFilters  // unified: search + filters for Course tab
+        case speakerFilters
+        case voiceSettings
+        case gamePark
+        case gameParkFromFavorites
+        case favoritesFilters
+        /// Превью курса (описание + кнопка «Открыть курс»), открывается по тапу на иконку инфо на карточке.
+        case courseInfoPreview(courseId: String)
 
         // theme / accent (ui only)
         case accentPicker
+
+        /// Мягкое окно «Закрепи результат» — привязка аккаунта (bottom sheet).
+        case authSoftWall(masteryPercent: Int, streakDays: Int)
     }
 
     @Published private(set) var overlay: Overlay? = nil

@@ -69,7 +69,7 @@ public struct CDProBadge: View {
         .padding(.horizontal, 10)
         .background(CD.GradientToken.pro)
         .clipShape(RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous).stroke(Color.white.opacity(0.18), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous).stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
     }
 }
 
@@ -88,7 +88,7 @@ public struct CDInfoPill: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(Capsule().fill(Color.white.opacity(0.14)))
-        .overlay(Capsule().stroke(Color.white.opacity(0.10), lineWidth: 1))
+        .overlay(Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
     }
 }
 
@@ -106,7 +106,7 @@ public struct CDIconPillButton: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .background(Capsule().fill(CD.ColorToken.chip))
-                .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
+                .overlay(Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
         }
         .buttonStyle(.plain)
     }
@@ -131,7 +131,7 @@ public struct CDGradientCTA: View {
             .padding(.horizontal, 14)
             .background(CD.GradientToken.pro)
             .clipShape(RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous).stroke(Color.white.opacity(0.18), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous).stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
         }
         .buttonStyle(.plain)
     }
@@ -158,7 +158,7 @@ public struct CDGhostCTA: View {
                 Capsule().fill(CD.ColorToken.chip)
             )
             .overlay(
-                Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1)
+                Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
             )
             .fixedSize(horizontal: true, vertical: true)
         }
@@ -198,7 +198,7 @@ public struct CDHomeworkButton: View {
                             .fill(CD.ColorToken.chip)
                             .frame(width: 34, height: 34)
                             .overlay(
-                                Circle().stroke(Color.white.opacity(0.12), lineWidth: 1)
+                                Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                             )
                             .overlay(
                                 Image(systemName: "checklist")
@@ -217,7 +217,7 @@ public struct CDHomeworkButton: View {
                                 .clipShape(Capsule())
                                 .overlay(
                                     Capsule()
-                                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                                 )
                                 .scaleEffect(badgeAppear ? 1.0 : 0.6)
                                 .opacity(badgeAppear ? 1.0 : 0.0)
@@ -422,7 +422,7 @@ public struct CDAssistantCard: View {
                     .padding(4)
             }
             .frame(width: 36, height: 36)
-            .overlay(Circle().stroke(Color.white.opacity(0.10), lineWidth: 1))
+            .overlay(Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
 
             // single bubble that contains either typing dots or text
             ZStack(alignment: .leading) {
@@ -525,7 +525,8 @@ public struct CDHeaderCard: View {
                     Text(title)
                         .font(CD.FontToken.title(24, weight: .bold))
                         .foregroundStyle(CD.ColorToken.text)
-                        .lineLimit(1)
+                        .lineLimit(Theme.TextBlock.cardTitleLines)
+                        .minimumScaleFactor(Theme.TextBlock.titleMinimumScale)
 
                     // Soft divider
                     Capsule()
@@ -677,12 +678,7 @@ public struct CDChip: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous)
-                        .stroke(
-                            isSelected
-                            ? Color.white.opacity(0.18)
-                            : Color.white.opacity(0.16),
-                            lineWidth: 1
-                        )
+                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                 )
         }
         .buttonStyle(.plain)
@@ -717,7 +713,7 @@ public struct CDStatusBadge: View {
                     .padding(.horizontal, padH)
                     .overlay(
                         Capsule()
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                            .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                     )
 
             case .inProgress:
@@ -749,7 +745,7 @@ public struct CDStatusBadge: View {
                         Capsule().fill(CD.GradientToken.pro)
                     )
                     .overlay(
-                        Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                        Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                     )
             }
         }
@@ -776,7 +772,7 @@ public struct CDSortControl: View {
             .clipShape(RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous)
-                    .stroke(isActive ? Color.white.opacity(0.18) : Color.white.opacity(0.12), lineWidth: 1)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
             )
         }
         .buttonStyle(.plain)
@@ -811,7 +807,7 @@ public struct CDFiltersCounterPill: View {
             .clipShape(RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
             )
         }
         .buttonStyle(.plain)
@@ -970,11 +966,7 @@ public struct CDMetaTag: View {
     public var body: some View {
         let isGhost = (style == .ghost)
         let bg: AnyShapeStyle = (style == .accent) ? AnyShapeStyle(CD.GradientToken.pro) : AnyShapeStyle(isGhost ? AnyShapeStyle(Color.clear) : AnyShapeStyle(CD.ColorToken.chip))
-        let strokeColor: Color = {
-            if style == .accent { return Color.white.opacity(0.18) }
-            if isGhost { return Color.white.opacity(0.14) }
-            return Color.white.opacity(0.10)
-        }()
+        let strokeColor = Theme.Strokes.strokeSubtle
         HStack(spacing: CDLayout.metaGap) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .semibold))
@@ -992,7 +984,7 @@ public struct CDMetaTag: View {
             RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous).fill(bg)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous).stroke(strokeColor, lineWidth: 1)
+            RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous).stroke(strokeColor, lineWidth: Theme.Strokes.strokeLineWidth)
         )
     }
 }
@@ -1282,6 +1274,7 @@ public struct CDMarqueeSection: View {
     public var typingDuration: TimeInterval
     public var showDuration: TimeInterval
     public var typingCharInterval: TimeInterval
+    public var showBubble: Bool
 
     public init(
         title: String = "ТАЙКА FM",
@@ -1289,7 +1282,8 @@ public struct CDMarqueeSection: View {
         mascot: Image? = Image("mascot.course"),
         typingDuration: TimeInterval = 2.2,
         showDuration: TimeInterval = 3.2,
-        typingCharInterval: TimeInterval = 0.045
+        typingCharInterval: TimeInterval = 0.045,
+        showBubble: Bool = false
     ) {
         self.title = title
         self.messages = messages
@@ -1297,6 +1291,7 @@ public struct CDMarqueeSection: View {
         self.typingDuration = typingDuration
         self.showDuration = showDuration
         self.typingCharInterval = typingCharInterval
+        self.showBubble = showBubble
     }
 
     public var body: some View {
@@ -1312,7 +1307,8 @@ public struct CDMarqueeSection: View {
             TaikaFMBubbleTyping(
                 messages: effectiveMessages,
                 reactions: effectiveReactions,
-                repeats: false
+                repeats: false,
+                showBubble: showBubble
             )
             .padding(.top, 0)
         }
@@ -1338,6 +1334,9 @@ public struct CDCourseItem: Identifiable {
     public var onTap: (() -> Void)?
     public var isFavorite: Bool = false
     public var onToggleFavorite: (() -> Void)? = nil
+    public var onTapConsole: (() -> Void)? = nil
+    public var onTapSpeaker: (() -> Void)? = nil
+    public var onTapInfo: (() -> Void)? = nil
     public var key: String? = nil // optional stable identity (e.g., courseId)
     fileprivate var stableKey: String { key ?? id.uuidString }
 
@@ -1358,6 +1357,9 @@ public struct CDCourseItem: Identifiable {
         onTap: (() -> Void)? = nil,
         isFavorite: Bool = false,
         onToggleFavorite: (() -> Void)? = nil,
+        onTapConsole: (() -> Void)? = nil,
+        onTapSpeaker: (() -> Void)? = nil,
+        onTapInfo: (() -> Void)? = nil,
         key: String? = nil
     ) {
         self.id = id
@@ -1376,6 +1378,9 @@ public struct CDCourseItem: Identifiable {
         self.onTap = onTap
         self.isFavorite = isFavorite
         self.onToggleFavorite = onToggleFavorite
+        self.onTapConsole = onTapConsole
+        self.onTapSpeaker = onTapSpeaker
+        self.onTapInfo = onTapInfo
         self.key = key
     }
 }
@@ -1522,13 +1527,16 @@ public struct CDBaseSection: View {
                     isConsoleEnabled: item.homeworkDone > 0,
                     completionFraction: item.progress,
                     onFavoriteTap: { item.onToggleFavorite?() },
+                    onConsoleTap: { item.onTapConsole?() },
+                    onSpeakerTap: item.onTapSpeaker,
+                    onTapInfo: item.onTapInfo,
                     showsInlineProgress: true
                 )
             }
         }
     }
 }
- 
+
 public struct CDAllCoursesSection: View {
     public var title: String = ""
     public var items: [CDCourseItem]
@@ -1598,6 +1606,9 @@ public struct CDAllCoursesSection: View {
                         isConsoleEnabled: item.homeworkDone > 0,
                         completionFraction: item.progress,
                         onFavoriteTap: { item.onToggleFavorite?() },
+                        onConsoleTap: { item.onTapConsole?() },
+                        onSpeakerTap: item.onTapSpeaker,
+                        onTapInfo: item.onTapInfo,
                         showsInlineProgress: true
                     )
                 }
@@ -1689,6 +1700,7 @@ public struct CDLessonCarousel<Data: RandomAccessCollection, Content: View>: Vie
                             .frame(width: cardW, height: cardHeight)
                         }
                     }
+                    .frame(minHeight: outer.size.height)
                     .padding(.horizontal, sideInset)
                 }
                 .coordinateSpace(name: "cdLessonCarousel")
@@ -1719,8 +1731,10 @@ public struct CDLessonCarousel<Data: RandomAccessCollection, Content: View>: Vie
                         targetRenderIndex = targetBaseIndex
                     }
 
+                    // Без loop первая карточка — по ведущему краю, иначе она уезжает влево и обрезается
+                    let anchor: UnitPoint = (!loop && targetRenderIndex == 0) ? .leading : .center
                     withAnimation(.none) {
-                        proxy.scrollTo(targetRenderIndex, anchor: .center)
+                        proxy.scrollTo(targetRenderIndex, anchor: anchor)
                     }
                 }
             }

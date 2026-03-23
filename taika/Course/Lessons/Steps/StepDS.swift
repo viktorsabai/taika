@@ -4,6 +4,7 @@ public struct SDStepProgressSegment: View {
     public var isActive: Bool
     public var isLearned: Bool
     public var isFavorite: Bool
+    public var isPro: Bool
     public var index: Int?
     public var onTap: ((Int) -> Void)?
 
@@ -11,12 +12,14 @@ public struct SDStepProgressSegment: View {
                 isActive: Bool,
                 isLearned: Bool,
                 isFavorite: Bool,
+                isPro: Bool = false,
                 index: Int? = nil,
                 onTap: ((Int) -> Void)? = nil) {
         self.width = width
         self.isActive = isActive
         self.isLearned = isLearned
         self.isFavorite = isFavorite
+        self.isPro = isPro
         self.index = index
         self.onTap = onTap
     }
@@ -56,6 +59,12 @@ public struct SDStepProgressSegment: View {
                 }
                 .opacity(0.95)
                 .allowsHitTesting(false)
+            }
+            if isPro {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.background)
+                    .allowsHitTesting(false)
             }
         }
         .frame(width: width, height: 36)
@@ -144,24 +153,23 @@ fileprivate var AccentGradient: LinearGradient {
 
 // Gradient helpers for icons/text
 
-// Shared helper to compute *final* visual card size by step kind
+// Shared helper to compute *final* visual card size by step kind. Фиксированная высота 290.
 fileprivate func stepCardSize(for kind: SDStepItem.Kind) -> CGSize {
     switch kind {
     case .tip:
-        // лайфхаки — вертикальные, с отдельной увеличенной высотой
         return CGSize(
             width:  CardDS.Metrics.stepCardWidth,
             height: CardDS.Metrics.stepLifehackCardHeight
         )
 
     case .word, .phrase, .casual, .intro, .summary:
-        // учебные / интро / саммари — квадратные (базовая высота word‑карты)
         return CGSize(
             width:  CardDS.Metrics.stepCardWidth,
             height: CardDS.Metrics.stepWordCardHeight
         )
     }
 }
+
 fileprivate struct GradientIcon: View {
     var systemName: String
     var size: CGFloat = 18
@@ -741,6 +749,10 @@ public struct SDStepCarousel: View {
     public var summaryCTAView: (() -> AnyView)?
     public var isOverlay: Bool
     public var allowLearning: Bool
+    /// When true, carousel scrolls cyclically (triple indices, start in middle block) like CDLessonCarousel — for разминка.
+    public var loop: Bool
+    /// Когда true — без вертикального паддинга секции (как Продолжить/Подборка дня на Main).
+    public var compactSection: Bool
 
     private let carouselID = UUID()
     @State private var didInitialScroll: Bool = false
@@ -766,7 +778,9 @@ public struct SDStepCarousel: View {
         introCTAView: (() -> AnyView)? = nil,
         summaryCTAView: (() -> AnyView)? = nil,
         isOverlay: Bool = false,
-        allowLearning: Bool = true
+        allowLearning: Bool = true,
+        loop: Bool = false,
+        compactSection: Bool = false
     ) {
         self.title = title
         self.items = items
@@ -788,6 +802,8 @@ public struct SDStepCarousel: View {
         self.summaryCTAView = summaryCTAView
         self.isOverlay = isOverlay
         self.allowLearning = allowLearning
+        self.loop = loop
+        self.compactSection = compactSection
     }
 
     // TEMP: Back-compat overloads to keep old call-sites working while we migrate to explicit `isOverlay:`. Remove after rollout.
@@ -829,7 +845,8 @@ public struct SDStepCarousel: View {
             introCTAView: introCTAView,
             summaryCTAView: summaryCTAView,
             isOverlay: false,
-            allowLearning: true
+            allowLearning: true,
+            loop: false
         )
     }
 
@@ -859,7 +876,8 @@ public struct SDStepCarousel: View {
             introCTAView: nil,
             summaryCTAView: nil,
             isOverlay: false,
-            allowLearning: true
+            allowLearning: true,
+            loop: false
         )
     }
 
@@ -902,32 +920,30 @@ public struct SDStepCarousel: View {
             introCTAView: introCTAView,
             summaryCTAView: summaryCTAView,
             isOverlay: false,
-            allowLearning: true
+            allowLearning: true,
+            loop: false
         )
     }
 
     public var body: some View {
-        // высота слота чуть больше самой высокой карты (лайфхак),
-        // чтобы карта оставалась центрированной и не обрезалась, но без лишнего воздуха
         let baseHeight = max(CardDS.Metrics.stepWordCardHeight,
                              CardDS.Metrics.stepLifehackCardHeight)
-        let slotHeight = baseHeight + PD.Spacing.block * 2
-
+        let slotHeight = baseHeight + 36
         return VStack(alignment: .leading, spacing: 0) {
             if !title.isEmpty {
                 header
             }
 
             GeometryReader { geo in
-                // только карусель, без лишнего внутреннего воздуха
                 cardsHStack(geo: geo)
                     .frame(maxWidth: .infinity,
                            maxHeight: .infinity,
                            alignment: .center)
-                    .padding(.top, 2)
-                    .padding(.bottom, PD.Spacing.block * 0.5)
+                    .padding(.top, compactSection ? 0 : 2)
+                    .padding(.bottom, compactSection ? 0 : PD.Spacing.block * 0.5)
             }
-            .frame(height: slotHeight + PD.Spacing.block)
+            .frame(height: slotHeight)
+            .padding(.vertical, compactSection ? 0 : Theme.Layout.carouselVPad)
         }
     }
 
@@ -935,14 +951,18 @@ public struct SDStepCarousel: View {
     private func cardsHStack(geo: GeometryProxy) -> some View {
         let baseSize = stepCardSize(for: .word)
         let cardWidth: CGFloat = baseSize.width
+        let cardHeight: CGFloat = baseSize.height
         let itemSpacing: CGFloat = 8
+        let n = items.count
+        let renderedIndices: [Int] = (loop && n > 1) ? (Array(0..<n) + Array(0..<n) + Array(0..<n)) : Array(0..<n)
+        let middleBlockStart = (loop && n > 1) ? n : 0
 
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: itemSpacing) {
-                    ForEach(items.indices, id: \.self) { idx in
-                        let item = items[idx]
-                        let isFav = favorites.contains(idx)
+                    ForEach(Array(renderedIndices.enumerated()), id: \.0) { (renderIndex, baseIndex) in
+                        let item = items[baseIndex]
+                        let isFav = favorites.contains(baseIndex)
                         let effective = withFavorite(item, fav: isFav)
                         let size = stepCardSize(for: item.visualKind)
 
@@ -950,41 +970,39 @@ public struct SDStepCarousel: View {
                             let frame = itemGeo.frame(in: .named("carousel"))
                             let viewportCenterX = geo.size.width / 2
                             let centerX = frame.midX
-                            let dist = abs(centerX - viewportCenterX)
-                            let denom = max(1.0, geo.size.width * 0.65)
-                            let norm = min(1.0, dist / denom)
-                            let baseScale: CGFloat = 0.86
-                            let extraScale: CGFloat = 0.18
-                            let scale: CGFloat = baseScale + extraScale * (1.0 - norm)
-                            let opacity: CGFloat = 0.55 + 0.45 * (1.0 - norm)
-                            let direction: CGFloat = centerX < viewportCenterX ? 1 : -1
-                            let maxAngle: CGFloat = 26
-                            let angleDeg: Double = Double(maxAngle * norm * direction)
+                            let distance = abs(centerX - viewportCenterX)
+                            let maxDistance = cardWidth + itemSpacing
+                            let t = min(distance / maxDistance, 1)
+                            let scale = 0.9 + (1 - t) * 0.12
+                            let opacity = 0.45 + (1 - t) * 0.55
+                            let yOffset = t * 18
+                            let norm = t
 
                             carouselItemTransformed(
                                 effective: effective,
-                                idx: idx,
+                                idx: baseIndex,
                                 cardWidth: size.width,
                                 cardHeight: size.height,
                                 scale: scale,
                                 opacity: opacity,
-                                angleDeg: angleDeg,
-                                norm: norm,
-                                viewportCenterX: viewportCenterX
+                                yOffset: yOffset,
+                                norm: norm
                             )
                             .frame(width: size.width, height: size.height)
                             .background(
                                 Color.clear.preference(
                                     key: SDStepCarouselCenterPreferenceKey.self,
-                                    value: [SDStepCarouselCenterCandidate(index: idx, norm: norm, carouselID: carouselID)]
+                                    value: [SDStepCarouselCenterCandidate(index: baseIndex, norm: norm, carouselID: carouselID)]
                                 )
                             )
                         }
                         .frame(width: size.width, height: size.height)
-                        .id(idx)
+                        .id(renderIndex)
                     }
                 }
+                .frame(minHeight: geo.size.height)
                 .padding(.horizontal, max(0, (geo.size.width - cardWidth) / 2))
+                .padding(.vertical, compactSection ? 4 : Theme.Layout.carouselVPad)
             }
             .coordinateSpace(name: "carousel")
             .id(isOverlay ? "overlayCarousel" : "stepsCarousel")
@@ -993,20 +1011,22 @@ public struct SDStepCarousel: View {
                 guard items.indices.contains(activeIndex) else { return }
                 didInitialScroll = true
                 isProgrammaticScroll = true
+                let targetRenderIndex = middleBlockStart + activeIndex
+                let anchor: UnitPoint = (loop && n > 1) ? .center : (activeIndex == 0 ? .leading : .center)
                 DispatchQueue.main.async {
-                    proxy.scrollTo(activeIndex, anchor: .center)
+                    proxy.scrollTo(targetRenderIndex, anchor: anchor)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                         isProgrammaticScroll = false
                     }
                 }
             }
             .onChange(of: items) { _, _ in
-                // New dataset -> re-scroll to bound activeIndex (e.g. skip leading PRO gate)
                 guard items.indices.contains(activeIndex) else { return }
                 didInitialScroll = true
                 isProgrammaticScroll = true
+                let targetRenderIndex = middleBlockStart + activeIndex
                 DispatchQueue.main.async {
-                    proxy.scrollTo(activeIndex, anchor: .center)
+                    proxy.scrollTo(targetRenderIndex, anchor: .center)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         isProgrammaticScroll = false
                     }
@@ -1016,10 +1036,9 @@ public struct SDStepCarousel: View {
                 guard items.indices.contains(newValue) else { return }
                 didInitialScroll = true
                 isProgrammaticScroll = true
+                let targetRenderIndex = middleBlockStart + newValue
                 DispatchQueue.main.async {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.92)) {
-                        proxy.scrollTo(newValue, anchor: .center)
-                    }
+                    proxy.scrollTo(targetRenderIndex, anchor: .center)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         isProgrammaticScroll = false
                     }
@@ -1136,7 +1155,7 @@ public struct SDStepCarousel: View {
         )
     }
 
-    // Card-style depth transform driven by normalized scale/opacity from CardDS preview
+    // Card-style depth transform — как в Course/Lesson: scale, opacity, yOffset (единая айдентика каруселей)
     @ViewBuilder
     private func carouselItemTransformed(
         effective: SDStepItem,
@@ -1145,9 +1164,8 @@ public struct SDStepCarousel: View {
         cardHeight: CGFloat,
         scale: CGFloat,
         opacity: CGFloat,
-        angleDeg: Double,
-        norm: CGFloat,
-        viewportCenterX: CGFloat
+        yOffset: CGFloat,
+        norm: CGFloat
     ) -> some View {
         let base = AnyView(
             stepCardBody(for: effective, idx: idx)
@@ -1155,24 +1173,18 @@ public struct SDStepCarousel: View {
                 .frame(minHeight: cardHeight)
         )
 
-        // лайфхаки чуть уменьшаем по базовой шкале, чтобы тень/радиусы
-        // не упирались в границы секции и не казались обрезанными
         let kindBaseScale: CGFloat = (effective.visualKind == .tip) ? 0.94 : 1.0
         let finalScale = scale * kindBaseScale
 
         base
             .scaleEffect(finalScale)
-            .rotation3DEffect(
-                .degrees(angleDeg),
-                axis: (x: 0, y: 1, z: 0),
-                perspective: 0.8
-            )
             .opacity(opacity)
+            .offset(y: yOffset)
             .shadow(
-                color: Color.black.opacity(finalScale >= 1.04 ? 0.26 : 0.10),
-                radius: finalScale >= 1.04 ? 7 : 2,
+                color: Color.black.opacity(finalScale >= 1.0 ? 0.26 : 0.10),
+                radius: finalScale >= 1.0 ? 7 : 2,
                 x: 0,
-                y: finalScale >= 1.04 ? 3 : 1
+                y: finalScale >= 1.0 ? 3 : 1
             )
             .zIndex(Double(1.0 - norm))
             .contentShape(Rectangle())
@@ -1185,24 +1197,20 @@ public struct SDStepCarousel: View {
         cardHeight: CGFloat,
         scale: CGFloat,
         opacity: CGFloat,
-        angleDeg: Double,
+        yOffset: CGFloat,
         norm: CGFloat
     ) -> some View {
         view
             .frame(width: cardWidth)
             .frame(minHeight: cardHeight)
             .scaleEffect(scale)
-            .rotation3DEffect(
-                .degrees(angleDeg),
-                axis: (x: 0, y: 1, z: 0),
-                perspective: 0.8
-            )
             .opacity(opacity)
+            .offset(y: yOffset)
             .shadow(
-                color: Color.black.opacity(scale >= 1.04 ? 0.26 : 0.10),
-                radius: scale >= 1.04 ? 7 : 2,
+                color: Color.black.opacity(scale >= 1.0 ? 0.26 : 0.10),
+                radius: scale >= 1.0 ? 7 : 2,
                 x: 0,
-                y: scale >= 1.04 ? 3 : 1
+                y: scale >= 1.0 ? 3 : 1
             )
             .zIndex(Double(1.0 - norm))
             .contentShape(Rectangle())
@@ -1336,7 +1344,8 @@ public struct SDStepHintsSection: View {
             Text(msg)
                 .font(PD.FontToken.body(15, weight: .regular))
                 .foregroundColor(PD.ColorToken.textSecondary)
-                .lineLimit(1)
+                .lineLimit(Theme.TextBlock.cardBodyLines)
+                .minimumScaleFactor(Theme.TextBlock.bodyMinimumScale)
                 .truncationMode(.tail)
         }
         .padding(.horizontal, 12)
@@ -1404,9 +1413,9 @@ public struct SDStepProgress: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("ПРОГРЕСС")
-                .font(PD.FontToken.caption(13, weight: .semibold))
+                .font(PD.FontToken.caption(12, weight: .semibold))
                 .foregroundColor(PD.ColorToken.textSecondary)
                 .padding(.horizontal, PD.Spacing.screen)
 
@@ -1511,7 +1520,8 @@ struct SDStep_Previews: PreviewProvider {
                 TaikaFMBubbleTyping(
                     messages: TaikaFMData.shared.messages(for: .step),
                     reactions: TaikaFMData.shared.reactionGroups(for: .step),
-                    repeats: false
+                    repeats: false,
+                    showBubble: false
                 )
                 .padding(.horizontal, PD.Spacing.screen)
 

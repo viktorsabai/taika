@@ -12,6 +12,7 @@ struct MainView: View {
     @ObservedObject private var main = MainManager.shared
     @ObservedObject private var pro = ProManager.shared
     @ObservedObject private var session = UserSession.shared
+    @ObservedObject private var progress = ProgressManager.shared
     @State private var dailyIndex: Int = 1
     @State private var doneHaptic = UINotificationFeedbackGenerator()
     @State private var learnedIds: Set<String> = []
@@ -27,23 +28,6 @@ struct MainView: View {
     @FocusState private var isSearchFocused: Bool
     @State private var mainSearchStub: String = ""
 
-    private struct SearchLessonHit: Identifiable, Equatable {
-        let id: String
-        let courseId: String
-        let lessonId: String
-        let courseTitle: String
-        let lessonTitle: String
-        let lessonSubtitle: String
-
-        init(courseId: String, lessonId: String, courseTitle: String, lessonTitle: String, lessonSubtitle: String) {
-            self.courseId = courseId
-            self.lessonId = lessonId
-            self.courseTitle = courseTitle
-            self.lessonTitle = lessonTitle
-            self.lessonSubtitle = lessonSubtitle
-            self.id = "lesson|\(courseId)|\(lessonId)"
-        }
-    }
     private enum CalendarSheet: Equatable {
         case add(Date)
         case summary(Date)
@@ -65,6 +49,11 @@ struct MainView: View {
     @State private var refreshWork: DispatchWorkItem? = nil
     @State private var addOverlayShuffleToken: Int = 0
     @State private var addOverlayReloadToken: Int = 0
+    /// В оверлее «добавить курс»: выбранный день (полоска 7 дней); синхронизируется с sheet.day при появлении.
+    @State private var calendarOverlaySelectedDay: Date = Date()
+    @State private var kunKruCourses: [MainManager.CourseCardModel] = []
+    /// Умная подборка курсов: показывается в секции «ДЛЯ ТЕБЯ» после тапа «Подборка для тебя».
+    @State private var forYouCourses: [MainManager.CourseCardModel] = []
 
     // MARK: - Thailand canonical calendar (match MainManager)
     private static let bangkokTZ: TimeZone = TimeZone(identifier: "Asia/Bangkok") ?? .current
@@ -75,8 +64,6 @@ struct MainView: View {
     }()
 
     // MARK: - Extracted blocks to help the type-checker
-    @State private var continueSelectedIndex: Int = 3
-    @State private var weekRenderToken: Int = 0
     private var dailyPicksBlock: some View {
         let picks = main.dailyPicks
         let items = picks.items
@@ -99,9 +86,9 @@ struct MainView: View {
             indices: refIndices
         )
 
-        return VStack(spacing: Theme.Layout.sectionGap) {
+        return VStack(alignment: .leading, spacing: 4) {
             MDDailyPicksComposite(
-                title: "ПОДБОРКА ДНЯ",
+                title: "Разминка",
                 items: items,
                 courseShortNames: picks.courseShort,
                 lessonShortNames: picks.lessonShort,
@@ -110,16 +97,46 @@ struct MainView: View {
                 activeIndex: $dailyIndex,
                 onTapCourse: { i in
                     guard i >= 0, i < refs.count else { return }
-                    openCourse(refs[i].courseId)
+                    let ref = refs[i]
+                    if ref.courseId == "__pro__" {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                            overlay.present(.proCoursePaywall(courseId: ""))
+                        }
+                        return
+                    }
+                    openCourse(ref.courseId)
                 },
                 onTapLesson: { i in
                     guard i >= 0, i < refs.count else { return }
                     let ref = refs[i]
+                    if ref.courseId == "__pro__" {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                            overlay.present(.proCoursePaywall(courseId: ""))
+                        }
+                        return
+                    }
                     openLesson(courseId: ref.courseId, lessonId: ref.lessonId)
                 },
                 onOpenCourse: { i in
                     guard i >= 0, i < refs.count else { return }
-                    openCourse(refs[i].courseId)
+                    let ref = refs[i]
+                    if ref.courseId == "__pro__" {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                            overlay.present(.proCoursePaywall(courseId: ""))
+                        }
+                        return
+                    }
+                    openCourse(ref.courseId)
+                },
+                onTapItem: { i in
+                    guard i >= 0, i < items.count, i < refs.count else { return }
+                    if items[i].isPro || refs[i].courseId == "__pro__" {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                            overlay.present(.proCoursePaywall(courseId: ""))
+                        }
+                        return
+                    }
+                    // Тап по карточке — только менеджерские действия (прогресс, лайк и т.д.); переход на курс только по тапу на название курса в заголовке (onTapCourse).
                 },
                 onPlay: { i in
                     guard i >= 0, i < items.count else { return }
@@ -153,56 +170,318 @@ struct MainView: View {
                     // keep DS highlights in sync for the newly active card
                     rebuildLearnedState()
                     rebuildFavoritesState()
+                },
+                showProgressRow: false
+            )
+            MDDailyPicksProgressRow(
+                items: items,
+                activeIndex: $dailyIndex,
+                learned: learnedIdx,
+                favorites: favoriteIdx,
+                onIndexChange: { i in
+                    dailyIndex = i
+                    rebuildLearnedState()
+                    rebuildFavoritesState()
                 }
             )
         }
     }
 
+    // MARK: - Секция «Продолжить» — 1-1 как карусель «Курсы» в Favorites: та же карточка (FDFavCourseCard), те же размеры и эффект
+    private let continueSectionLimit = 4
+    private let continueCardW: CGFloat = 268
+    private let continueCardH: CGFloat = 196
+    private let continueSpacing: CGFloat = 14
+    private let continueSlotHeight: CGFloat = 196 + 36
+
+    private func continueDisplayItems() -> [MainBannerItem] {
+        let items = Array(main.resumeItems.prefix(continueSectionLimit))
+        return items.isEmpty
+            ? [MainBannerItem(id: "continue-empty", title: "Начни обучение", kind: .course, progress: 0)]
+            : items
+    }
+
+    private func continueDTOs(from displayItems: [MainBannerItem]) -> [FDCourseDTO] {
+        displayItems.map { item in
+            let isEmpty = item.id == "continue-empty"
+            return FDCourseDTO(
+                courseId: item.id,
+                title: item.title,
+                subtitle: isEmpty ? "выбери курс и начни с первого урока" : "",
+                addedAt: Date()
+            )
+        }
+    }
+
     @ViewBuilder
-    private var continueBlock: some View {
-        if main.weekSummary.isEmpty {
-            // lightweight placeholder to keep layout stable
-            Color.clear
-                .frame(height: 260)
-                .onAppear {
-                    // best-effort: kick a rebuild if needed
-                    Task { @MainActor in
-                        if main.weekSummary.isEmpty {
-                            await main.rebuildWeekSummary()
+    private var continueSingleCardBlock: some View {
+        let displayItems = continueDisplayItems()
+        let continueDTOs = continueDTOs(from: displayItems)
+        let reelItems: [FDCourseDTO] = continueDTOs.isEmpty ? [] : (continueDTOs + continueDTOs + continueDTOs)
+        let centerIndex = continueDTOs.count
+        let sideInset: CGFloat = PD.Spacing.screen
+
+        VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
+            Text("ПРОДОЛЖИТЬ")
+                .font(PD.FontToken.caption(12, weight: .semibold))
+                .kerning(0.6)
+                .foregroundColor(PD.ColorToken.textSecondary)
+                .padding(.horizontal, Theme.Layout.pageHorizontal)
+
+            continueCarouselBody(
+                displayItems: displayItems,
+                continueDTOs: continueDTOs,
+                reelItems: reelItems,
+                centerIndex: centerIndex,
+                sideInset: sideInset
+            )
+            .padding(.top, Theme.Layout.sectionTitleToContent)
+        }
+    }
+
+    @ViewBuilder
+    private func continueCarouselBody(
+        displayItems: [MainBannerItem],
+        continueDTOs: [FDCourseDTO],
+        reelItems: [FDCourseDTO],
+        centerIndex: Int,
+        sideInset: CGFloat
+    ) -> some View {
+        GeometryReader { geo in
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: continueSpacing) {
+                        ForEach(Array(reelItems.enumerated()), id: \.offset) { idx, dto in
+                            continueCarouselCell(
+                                idx: idx,
+                                dto: dto,
+                                displayItems: displayItems,
+                                continueDTOsCount: continueDTOs.count,
+                                geo: geo
+                            )
                         }
                     }
+                    .padding(.horizontal, sideInset)
+                    .padding(.vertical, 4)
+                    .frame(height: continueCardH + 36)
                 }
-        } else {
-            let continueItems: [(String, Double)] = Array(main.resumeItems).map { it in
-                (it.title, Double(it.progress))
-            }
-
-            MDContinueSection(
-                "ПРОДОЛЖИТЬ",
-                items: continueItems,
-                bannerProvider: bannerFor(date:),
-                weekProvider: weekFor(offset:),
-                onTapEmptyDay: { item in
-                    handleTapDayCard(item)
-                },
-                onTapDaySummary: { item in
-                    handleTapDayCard(item)
-                },
-                selectedIndex: $continueSelectedIndex
-            ) { _ in }
-            .id(weekRenderToken)
-            .onAppear {
-                // post-render centering (avoids internal clamping on first mount)
-                let cal = Self.bangkokCal
-                let today = cal.startOfDay(for: Date())
-                if let idx = main.weekSummary.firstIndex(where: { cal.isDate(cal.startOfDay(for: $0.date), inSameDayAs: today) }) {
-                    DispatchQueue.main.async { continueSelectedIndex = idx }
-                } else {
-                    DispatchQueue.main.async { continueSelectedIndex = 3 }
+                .onAppear {
+                    if !reelItems.isEmpty {
+                        proxy.scrollTo(centerIndex, anchor: .center)
+                    }
                 }
             }
         }
+        .frame(height: continueSlotHeight)
+        .frame(maxWidth: .infinity)
     }
+
+    private func continueCarouselCell(
+        idx: Int,
+        dto: FDCourseDTO,
+        displayItems: [MainBannerItem],
+        continueDTOsCount: Int,
+        geo: GeometryProxy
+    ) -> some View {
+        let baseIndex = idx % continueDTOsCount
+        let bannerItem = displayItems[baseIndex]
+        let (courseName, lessonName): (String, String) = {
+            if bannerItem.id == "continue-empty" {
+                return (dto.title, "")
+            }
+            if bannerItem.kind == .lesson, let colonIdx = bannerItem.id.firstIndex(of: ":") {
+                let courseId = String(bannerItem.id[..<colonIdx])
+                return (courseTitle(courseId), bannerItem.title)
+            }
+            return (bannerItem.title, "")
+        }()
+        let progressValue: Double = bannerItem.id == "continue-empty" ? 0 : bannerItem.progress
+        return GeometryReader { itemGeo in
+            let midX = itemGeo.frame(in: .global).midX
+            let containerMidX = geo.frame(in: .global).midX
+            let distance = abs(midX - containerMidX)
+            let maxDistance = continueCardW + continueSpacing
+            let t = min(distance / maxDistance, 1)
+            let scale: CGFloat = 0.9 + (1 - t) * 0.12
+            let opacity: Double = 0.45 + (1 - t) * 0.55
+            let yOffset: CGFloat = t * 18
+
+            FDContinueCourseCard(
+                courseName: courseName,
+                lessonName: lessonName,
+                progress: progressValue,
+                onOpen: {
+                    if bannerItem.id == "continue-empty" {
+                        startRandomCourseQuickstart()
+                    } else {
+                        openResumeItem(bannerItem)
+                    }
+                }
+            )
+            .scaleEffect(scale)
+            .opacity(opacity)
+            .offset(y: yOffset)
+        }
+        .frame(width: continueCardW, height: continueCardH)
+        .id(idx)
+    }
+
+    private func openResumeItem(_ item: MainBannerItem) {
+        if item.kind == .lesson, let colonIdx = item.id.firstIndex(of: ":") {
+            let courseId = String(item.id[..<colonIdx])
+            let lessonId = String(item.id[item.id.index(after: colonIdx)...])
+            openLesson(courseId: courseId, lessonId: lessonId)
+        } else {
+            openCourse(item.id)
+        }
+    }
+
+    // MARK: - Week progress (Profile-style compact indicators)
+    @ViewBuilder
+    private var weekProgressBlock: some View {
+        let state = progress.publishedState
+        let accent = AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+
+        VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
+            Text("ЗА НЕДЕЛЮ")
+                .font(PD.FontToken.caption(12, weight: .semibold))
+                .kerning(0.6)
+                .foregroundColor(PD.ColorToken.textSecondary)
+                .padding(.horizontal, Theme.Layout.pageHorizontal)
+
+            HStack(spacing: PD.Spacing.inner) {
+                weekProgressChip(label: "выучено", value: "\(state.totalStableSteps)", accent: false, progress: nil)
+                weekProgressChip(label: "дней подряд", value: "\(state.currentStreak)", accent: false, progress: nil)
+                weekProgressChip(label: "прогресс", value: "\(state.totalMasteryPercent)%", accent: true, progress: nil)
+            }
+            .padding(.horizontal, PD.Spacing.screen)
+            .padding(.top, Theme.Layout.sectionTitleToContent)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .ProgressDidChange)) { _ in
+            progress.refreshProfileState()
+        }
+    }
+
+    /// Инфографика без рамок: значение + подпись + опциональный прогресс-бар.
+    private func weekProgressChip(label: String, value: String, accent: Bool, progress: Double? = nil) -> some View {
+        let fill = accent ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary)
+        return VStack(spacing: 6) {
+            Text(value)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(fill)
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(PD.ColorToken.textSecondary)
+            if let frac = progress, frac >= 0 {
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(PD.ColorToken.textSecondary.opacity(0.2))
+                            .frame(height: 5)
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(accent ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                            .frame(width: max(0, g.size.width * min(1, frac)), height: 5)
+                    }
+                }
+                .frame(height: 5)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 4)
+    }
+
+    // MARK: - Подборка дня: карусель курсов (мини-карточки с чипом категории), данные грузятся в .task при открытии Main
+    @ViewBuilder
+    private var forYouSection: some View {
+        if forYouCourses.isEmpty {
+            EmptyView()
+        } else {
+            forYouReelContent
+        }
+    }
+
+    private let forYouCardW: CGFloat = 200
+    private let forYouCardH: CGFloat = 286
+    private let forYouSpacing: CGFloat = 14
+    private let forYouSlotHeight: CGFloat = 286 + 36
+
+    @ViewBuilder
+    private var forYouReelContent: some View {
+        let dtos = forYouDTOs()
+        let reelItems = dtos.isEmpty ? [] : (dtos + dtos + dtos)
+        let centerIndex = dtos.count
+        let sideInset: CGFloat = PD.Spacing.screen
+
+        VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
+            Text("ПОДБОРКА ДНЯ")
+                .font(PD.FontToken.caption(12, weight: .semibold))
+                .kerning(0.6)
+                .foregroundColor(PD.ColorToken.textSecondary)
+                .padding(.horizontal, Theme.Layout.pageHorizontal)
+
+            GeometryReader { geo in
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: forYouSpacing) {
+                            ForEach(Array(reelItems.enumerated()), id: \.offset) { idx, dto in
+                                forYouCarouselCell(idx: idx, dto: dto, dtos: dtos, geo: geo)
+                            }
+                        }
+                        .padding(.horizontal, sideInset)
+                        .padding(.vertical, 4)
+                        .frame(height: forYouCardH + 36)
+                    }
+                    .onAppear {
+                        if !reelItems.isEmpty {
+                            proxy.scrollTo(centerIndex, anchor: .center)
+                        }
+                    }
+                }
+            }
+            .frame(height: forYouSlotHeight)
+            .frame(maxWidth: .infinity)
+            .padding(.top, Theme.Layout.sectionTitleToContent)
+        }
+    }
+
+    private func forYouDTOs() -> [FDCourseDTO] {
+        forYouCourses.map { model in
+            FDCourseDTO(
+                courseId: model.courseId,
+                title: model.title,
+                subtitle: model.subtitle,
+                addedAt: Date()
+            )
+        }
+    }
+
+    private func forYouCarouselCell(idx: Int, dto: FDCourseDTO, dtos: [FDCourseDTO], geo: GeometryProxy) -> some View {
+        let baseIndex = idx % max(1, dtos.count)
+        let model = forYouCourses[baseIndex]
+        return GeometryReader { itemGeo in
+            let midX = itemGeo.frame(in: .global).midX
+            let containerMidX = geo.frame(in: .global).midX
+            let distance = abs(midX - containerMidX)
+            let maxDistance = forYouCardW + forYouSpacing
+            let t = min(distance / maxDistance, 1)
+            let scale: CGFloat = 0.9 + (1 - t) * 0.12
+            let opacity: Double = 0.45 + (1 - t) * 0.55
+            let yOffset: CGFloat = t * 18
+
+            FDMiniCourseCard(
+                item: dto,
+                categoryChip: model.categoryChip,
+                onOpen: { openCourse(model.courseId) }
+            )
+            .scaleEffect(scale)
+            .opacity(opacity)
+            .offset(y: yOffset)
+        }
+        .frame(width: forYouCardW, height: forYouCardH)
+        .id(idx)
+    }
+
     private func startRandomCourseQuickstart() {
         // avoid stacking overlays
         withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
@@ -223,9 +502,8 @@ struct MainView: View {
             }
 
             guard let courseId else {
-                // no available courses under current rules → open add overlay instead
                 withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                    overlay.present(.calendarAdd(Self.bangkokCal.startOfDay(for: Date())))
+                    overlay.present(.kunKruSuggestions)
                 }
                 return
             }
@@ -421,12 +699,19 @@ struct MainView: View {
         return ScrollView {
             VStack(spacing: Theme.Layout.sectionGap) {
                 fmSection
+                    .padding(.top, Theme.Layout.sectionTop)
+
+                weekProgressBlock
+                    .padding(.top, Theme.Layout.sectionTop)
+
+                forYouSection
+                    .padding(.top, Theme.Layout.sectionTop)
 
                 dailyPicksBlock
+                    .padding(.top, Theme.Layout.sectionTop)
 
-                searchSection
-
-                continueBlock
+                continueSingleCardBlock
+                    .padding(.top, Theme.Layout.sectionTop)
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .modifier(_ContentMarginsCompat(horizontal: PD.Spacing.screen))
@@ -438,6 +723,9 @@ struct MainView: View {
                     .allowsHitTesting(false)
             )
             .allowsHitTesting(!isModalPresented)
+        }
+        .onAppear {
+            progress.refreshProfileState()
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ProgressDidChange"))) { _ in
             rebuildLearnedState()
@@ -469,19 +757,7 @@ struct MainView: View {
             rebuildLearnedState()
             rebuildFavoritesState()
         }
-        .onChange(of: main.weekSummary) { _ in
-            weekRenderToken &+= 1
-            let cal = Self.bangkokCal
-            let today = cal.startOfDay(for: Date())
-            if let idx = main.weekSummary.firstIndex(where: { cal.isDate(cal.startOfDay(for: $0.date), inSameDayAs: today) }) {
-                continueSelectedIndex = idx
-            } else {
-                continueSelectedIndex = 3
-            }
-        }
         .scrollIndicators(.hidden)
-        .scrollContentBackground(.hidden)
-        .safeAreaPadding(.top, Theme.Layout.pageTopAfterHeader)
         .safeAreaPadding(.bottom, Theme.Layout.pageBottomSafeGap)
         .task {
             StepData.shared.preload()
@@ -489,13 +765,6 @@ struct MainView: View {
             await main.reloadDailyPicks()
             if main.weekSummary.isEmpty {
                 await main.rebuildWeekSummary()
-            }
-            let cal = Self.bangkokCal
-            let today = cal.startOfDay(for: Date())
-            if let idx = main.weekSummary.firstIndex(where: { cal.isDate(cal.startOfDay(for: $0.date), inSameDayAs: today) }) {
-                continueSelectedIndex = idx
-            } else {
-                continueSelectedIndex = 3
             }
 
             let targetIndex: Int = (main.dailyPicks.items.first?.isPro == true && main.dailyPicks.items.count > 1) ? 1 : 0
@@ -506,41 +775,48 @@ struct MainView: View {
 
             rebuildLearnedState()
             rebuildFavoritesState()
+
+            let list = await main.availableCoursesForAdd(isProUser: pro.isPro, proShowcaseLimit: 4)
+            forYouCourses = list
         }
     }
 
-    var body: some View {
-        ZStack {
-            let isModalPresented = overlay.isPresented
-            // themed background from DS
-            PD.ColorToken.background.ignoresSafeArea()
+var body: some View {
+    ZStack {
+        PD.ColorToken.background
+            .ignoresSafeArea()
 
-            mainScrollBlock
+        mainScrollBlock
 
-            if let o = overlay.overlay {
-                switch o {
-                case .search:
-                    searchOverlay
-                case .calendarAdd(let d):
-                    calendarOverlay(sheet: CalendarSheet.add(d))
-                case .calendarSummary(let d):
-                    calendarOverlay(sheet: CalendarSheet.summary(d))
-                case .randomCourseLoading:
-                    randomCourseLoadingOverlay
-                case .proCoursePaywall(let courseId):
-                    PROView(courseId: courseId) {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                            overlay.dismiss()
-                        }
-                    }
-                case .accentPicker:
-                    Color.clear
-                }
+        if let o = overlay.overlay {
+            switch o {
+            case .game:
+                EmptyView()
+            case .search:
+                // Поиск показывается в AppShell поверх любого таба (Course или Main)
+                EmptyView()
+            case .calendarAdd(let d):
+                calendarOverlay(sheet: CalendarSheet.add(d))
+            case .calendarSummary(let d):
+                calendarOverlay(sheet: CalendarSheet.summary(d))
+            case .kunKruSuggestions:
+                kunKruOverlay
+            case .randomCourseLoading:
+                randomCourseLoadingOverlay
+            case .proCoursePaywall(_):
+                // Shown at AppShell level so paywall works from any tab (EPIC 3)
+                EmptyView()
+            case .speakerPaywall:
+                EmptyView()
+            case .accentPicker:
+                Color.clear
+            default:
+                EmptyView()
             }
         }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-        .navigationBarTitleDisplayMode(.inline)
     }
+    .ignoresSafeArea(.keyboard, edges: .bottom)
+}
     // MARK: - Search overlay
 
     private var searchOverlay: some View {
@@ -575,7 +851,7 @@ struct MainView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
         )
         .shadow(color: Color.black.opacity(0.25), radius: 22, y: 10)
         .frame(maxWidth: 420)
@@ -676,11 +952,76 @@ struct MainView: View {
         let isEmptyQuery = q.isEmpty
 
         if isEmptyQuery {
-            // keep it minimal; do not reserve large vertical space when keyboard is hidden
             Color.clear
                 .frame(height: 10)
         } else {
-            searchCoursesUnifiedSection()
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 16) {
+                    if !overlay.searchCourseIds.isEmpty || searchViaLessonCourseIds().count > 0 {
+                        Text("Курсы")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.7))
+                            .kerning(0.5)
+                        searchCoursesUnifiedSection()
+                    }
+                    if !overlay.searchLessonIds.isEmpty {
+                        Text("Уроки")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.7))
+                            .kerning(0.5)
+                        searchLessonsSection()
+                    }
+                    if overlay.searchCourseIds.isEmpty && overlay.searchLessonIds.isEmpty && searchViaLessonCourseIds().isEmpty {
+                        Text("ничего не найдено")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundStyle(Color.white.opacity(0.62))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .frame(maxHeight: 380)
+        }
+    }
+
+    private func searchViaLessonCourseIds() -> [String] {
+        var ids: [String] = []
+        for hitId in overlay.searchLessonIds {
+            if let hit = searchLessonHitById[hitId] {
+                ids.append(hit.courseId)
+            }
+        }
+        return Array(Set(ids))
+    }
+
+    private func searchLessonsSection() -> some View {
+        let hits = overlay.searchLessonIds.compactMap { searchLessonHitById[$0] }
+        return VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(hits.prefix(8)), id: \.id) { hit in
+                Button {
+                    openLesson(courseId: hit.courseId, lessonId: hit.lessonId)
+                    dismissSearchOverlay()
+                } label: {
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(hit.lessonTitle)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(CD.ColorToken.text)
+                            Text(hit.courseTitle)
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(CD.ColorToken.textSecondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Theme.Surfaces.card(RoundedRectangle(cornerRadius: 10, style: .continuous)))
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 
@@ -774,7 +1115,156 @@ struct MainView: View {
         }
     }
 
-    private struct _SearchCourseCard: View {
+    // MARK: - Кун Кру: подборка курсов (без выбора дня)
+    private var kunKruOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.28)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                        overlay.dismiss()
+                        kunKruCourses = []
+                    }
+                }
+
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 10) {
+                    Text("Подборка для тебя")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
+                    Spacer(minLength: 12)
+                    Button {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                            overlay.dismiss()
+                            kunKruCourses = []
+                        }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.9))
+                            .padding(10)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                    }
+                }
+
+                Text("Таика подобрала курсы по твоему прогрессу — выбери и продолжай")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(.white.opacity(0.82))
+
+                kunKruCarousel
+                    .padding(.top, 6)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 26, style: .continuous)
+                            .fill(Color.black.opacity(0.18))
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+            )
+            .shadow(color: Color.black.opacity(0.25), radius: 22, y: 10)
+            .frame(maxWidth: 420)
+            .padding(.horizontal, 16)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task {
+            let isProUser = pro.isPro
+            let list = await main.availableCoursesForAdd(isProUser: isProUser, proShowcaseLimit: 10)
+            kunKruCourses = list
+        }
+        .onDisappear { kunKruCourses = [] }
+        .transition(.scale(scale: 0.98).combined(with: .opacity))
+    }
+
+    /// Единая карусель как в CourseDS: spacing 32, запас по высоте под scale+yOffset.
+    private var kunKruCarousel: some View {
+        let peekMin: CGFloat = 24
+        let cardH: CGFloat = 220
+        let scaleExtra = (Theme.Layout.carouselDepthScaleCenter - 1) * cardH / 2
+        let vPad = Theme.Layout.carouselDepthYOffsetMax + scaleExtra + Theme.Layout.carouselVPad
+        let slotHeight = cardH + 2 * vPad
+        let carouselSpacing: CGFloat = 32
+
+        return GeometryReader { outer in
+            let cardW = min(220, outer.size.width - (peekMin * 2))
+            let sideInset = max(0, (outer.size.width - cardW) / 2)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: carouselSpacing) {
+                        ForEach(Array(kunKruCourses.enumerated()), id: \.element.id) { idx, model in
+                            GeometryReader { cellGeo in
+                                let viewportCenterX = outer.size.width / 2
+                                let cellCenterX = cellGeo.frame(in: .named("kunKruCarousel")).midX
+                                let dist = abs(cellCenterX - viewportCenterX)
+                                let norm = min(1.0, dist / max(1.0, outer.size.width * Theme.Layout.carouselDepthNormWidthFactor))
+                                let scale = Theme.Layout.carouselDepthScaleSide + (Theme.Layout.carouselDepthScaleCenter - Theme.Layout.carouselDepthScaleSide) * (1.0 - norm)
+                                let opacity = Theme.Layout.carouselDepthOpacitySide + (Theme.Layout.carouselDepthOpacityCenter - Theme.Layout.carouselDepthOpacitySide) * (1.0 - norm)
+                                let yOffset = -(1.0 - norm) * Theme.Layout.carouselDepthYOffsetMax
+
+                                kunKruCourseCard(model)
+                                    .frame(width: cardW, height: cardH)
+                                    .scaleEffect(scale)
+                                    .opacity(opacity)
+                                    .offset(y: yOffset)
+                                    .zIndex(Double(1.0 - norm))
+                            }
+                            .frame(width: cardW, height: cardH)
+                            .id(model.id)
+                        }
+
+                        if kunKruCourses.isEmpty {
+                            CardDS.NoteCourseCardV(
+                                label: "заметка",
+                                title: "Загрузка…",
+                                subtitle: "подбираем курсы",
+                                progress: 0,
+                                ctaTitle: nil,
+                                onTap: { },
+                                topRightChip: nil
+                            )
+                            .frame(width: cardW, height: cardH)
+                        }
+                    }
+                    .padding(.horizontal, sideInset)
+                    .padding(.vertical, vPad)
+                }
+                .coordinateSpace(name: "kunKruCarousel")
+                .onAppear {
+                    guard let first = kunKruCourses.first else { return }
+                    withAnimation(.none) { proxy.scrollTo(first.id, anchor: .center) }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: slotHeight)
+    }
+
+    private func kunKruCourseCard(_ model: MainManager.CourseCardModel) -> some View {
+        let progress = courseProgress(model.courseId, isActive: true) ?? 0.0
+        return CardDS.NoteCourseCardV(
+            label: model.categoryChip ?? "курс",
+            title: model.title,
+            subtitle: model.subtitle,
+            progress: progress,
+            ctaTitle: "Открыть",
+            onTap: {
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                    overlay.dismiss()
+                    kunKruCourses = []
+                }
+                openCourse(model.courseId)
+            },
+            topRightChip: model.categoryChip
+        )
+    }
+
+    fileprivate struct _SearchCourseCard: View {
         let course: CourseBundle
         let progress: Double
         let subtitleOverride: String?
@@ -934,7 +1424,7 @@ struct MainView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
             )
             .shadow(color: Color.black.opacity(0.25), radius: 22, y: 10)
             .frame(maxWidth: 280)
@@ -1052,10 +1542,10 @@ struct MainView: View {
             doneHaptic.notificationOccurred(.success)
         }
 
-        // 2) commit progress (slightly deferred to match StepView feel)
+        // 2) commit progress via StepManager (single writer path)
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 220_000_000)
-            ProgressManager.shared.setStepLearned(
+            StepManager.shared.setLearned(
                 courseId: ref.courseId,
                 lessonId: ref.lessonId,
                 index: ref.index,
@@ -1111,7 +1601,8 @@ struct MainView: View {
     @ViewBuilder
     private func calendarOverlay(sheet: CalendarSheet) -> some View {
         let day = sheet.day
-        let taskId = calendarOverlayTaskId(day: day, isAdd: sheet.isAdd, shuffle: addOverlayShuffleToken, reload: addOverlayReloadToken)
+        let effectiveDay = sheet.isAdd ? calendarOverlaySelectedDay : day
+        let taskId = calendarOverlayTaskId(day: effectiveDay, isAdd: sheet.isAdd, shuffle: addOverlayShuffleToken, reload: addOverlayReloadToken)
 
         Color.black.opacity(0.28)
             .ignoresSafeArea()
@@ -1126,19 +1617,23 @@ struct MainView: View {
             VStack(alignment: .leading, spacing: 14) {
                 calendarOverlayHeader(sheet: sheet)
 
-                Text(day.formatted(date: .abbreviated, time: .omitted))
+                if sheet.isAdd {
+                    calendarOverlayWeekStrip(selectedDay: $calendarOverlaySelectedDay, initialDay: day)
+                }
+
+                Text(effectiveDay.formatted(date: .abbreviated, time: .omitted))
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.white.opacity(0.85))
 
                 Text(sheet.isAdd
-                     ? "выбери курс, чтобы добавить его в план на этот день"
+                     ? "выбери курс для этого дня"
                      : (calendarSummaryPlannedOnly
-                        ? "выбери курс и открой его, чтобы начать занятия"
-                        : "выбери курс и продолжай с того места, где остановился"))
+                        ? "открой курс и начни занятия"
+                        : "продолжи с того места, где остановился"))
                     .font(.system(size: 13, weight: .regular))
                     .foregroundColor(.white.opacity(0.82))
 
-                calendarOverlayCarousel(sheet: sheet, day: day)
+                calendarOverlayCarousel(sheet: sheet, day: effectiveDay)
                     .padding(.top, 6)
 
             }
@@ -1153,7 +1648,7 @@ struct MainView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
             )
             .shadow(color: Color.black.opacity(0.25), radius: 22, y: 10)
             .frame(maxWidth: 420)
@@ -1165,7 +1660,7 @@ struct MainView: View {
                 let isProUser = pro.isPro
                 let fetched = await main.availableCoursesForAdd(isProUser: isProUser, proShowcaseLimit: 8)
 
-                let dayStart = Self.bangkokCal.startOfDay(for: day)
+                let dayStart = Self.bangkokCal.startOfDay(for: effectiveDay)
                 let lastId = session.lastPlannedCourseId(on: dayStart)
 
                 // stable sort:
@@ -1187,7 +1682,7 @@ struct MainView: View {
 
                 calendarDayCourses = sorted
             } else {
-                calendarDayCourses = await main.activeCoursesForDay(day, limit: 10)
+                calendarDayCourses = await main.activeCoursesForDay(effectiveDay, limit: 10)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("CoursePlanDidChange"))) { _ in
@@ -1195,7 +1690,44 @@ struct MainView: View {
             // force overlay content refresh (CTA/selected state) without leaving MainView
             addOverlayReloadToken &+= 1
         }
+        .onAppear {
+            if sheet.isAdd { calendarOverlaySelectedDay = sheet.day }
+        }
         .transition(.scale(scale: 0.98).combined(with: .opacity))
+    }
+
+    /// Полоска 7 дней (сегодня −3…+3) для выбора дня в оверлее «План на неделю».
+    private func calendarOverlayWeekStrip(selectedDay: Binding<Date>, initialDay: Date) -> some View {
+        let cal = Self.bangkokCal
+        let today = cal.startOfDay(for: Date())
+        let days: [Date] = (-3...3).compactMap { cal.date(byAdding: .day, value: $0, to: today) }.map { cal.startOfDay(for: $0) }
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(days, id: \.timeIntervalSince1970) { d in
+                    let isSelected = cal.isDate(d, inSameDayAs: selectedDay.wrappedValue)
+                    Button {
+                        selectedDay.wrappedValue = d
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text(cal.shortWeekdaySymbols[cal.component(.weekday, from: d) - 1])
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.7))
+                            Text("\(cal.component(.day, from: d))")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.85))
+                        }
+                        .frame(minWidth: 44)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 10)
+                        .background(isSelected ? Color.white.opacity(0.22) : Color.white.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+        .padding(.vertical, 4)
     }
 
     private func calendarOverlayTaskId(day: Date, isAdd: Bool, shuffle: Int, reload: Int) -> String {
@@ -1310,7 +1842,7 @@ struct MainView: View {
                         ]
                     )
                 } else {
-                    // free-tier: only 1 planned course per day
+                    // feature-gated via ProManager (no inline pro checks)
                     if !pro.isPro {
                         let existing = session.plannedCourseIds(on: dayStart)
                         if !existing.isEmpty {
@@ -1340,33 +1872,73 @@ struct MainView: View {
         )
     }
 
+    /// Единая карусель как в CourseDS: spacing 32, запас по высоте под scale+yOffset.
     private func calendarOverlayCarousel(sheet: CalendarSheet, day: Date) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(calendarDayCourses, id: \.id) { model in
-                    if sheet.isAdd {
-                        addOverlayCourseCard(model, day: day)
-                    } else {
-                        calendarCourseCard(model, sheetDay: day)
-                    }
-                }
+        let peekMin: CGFloat = 24
+        let cardH: CGFloat = 220
+        let scaleExtra = (Theme.Layout.carouselDepthScaleCenter - 1) * cardH / 2
+        let vPad = Theme.Layout.carouselDepthYOffsetMax + scaleExtra + Theme.Layout.carouselVPad
+        let slotHeight = cardH + 2 * vPad
+        let carouselSpacing: CGFloat = 32
 
-                if calendarDayCourses.isEmpty {
-                    CardDS.NoteCourseCardV(
-                        label: "заметка",
-                        categoryChip: nil,
-                        title: sheet.isAdd ? "выбери курс" : "нет активности",
-                        subtitle: sheet.isAdd ? "добавь курс в план" : "в этот день занятий не было",
-                        progress: 0,
-                        ctaTitle: nil,
-                        onTap: { },
-                        topRightChip: nil
-                    )
+        return GeometryReader { outer in
+            let cardW = min(220, outer.size.width - (peekMin * 2))
+            let sideInset = max(0, (outer.size.width - cardW) / 2)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: carouselSpacing) {
+                        ForEach(Array(calendarDayCourses.enumerated()), id: \.element.id) { idx, model in
+                            GeometryReader { cellGeo in
+                                let viewportCenterX = outer.size.width / 2
+                                let cellCenterX = cellGeo.frame(in: .named("calendarOverlayCarousel")).midX
+                                let dist = abs(cellCenterX - viewportCenterX)
+                                let norm = min(1.0, dist / max(1.0, outer.size.width * Theme.Layout.carouselDepthNormWidthFactor))
+                                let scale = Theme.Layout.carouselDepthScaleSide + (Theme.Layout.carouselDepthScaleCenter - Theme.Layout.carouselDepthScaleSide) * (1.0 - norm)
+                                let opacity = Theme.Layout.carouselDepthOpacitySide + (Theme.Layout.carouselDepthOpacityCenter - Theme.Layout.carouselDepthOpacitySide) * (1.0 - norm)
+                                let yOffset = -(1.0 - norm) * Theme.Layout.carouselDepthYOffsetMax
+
+                                Group {
+                                    if sheet.isAdd {
+                                        addOverlayCourseCard(model, day: day)
+                                    } else {
+                                        calendarCourseCard(model, sheetDay: day)
+                                    }
+                                }
+                                .frame(width: cardW, height: cardH)
+                                .scaleEffect(scale)
+                                .opacity(opacity)
+                                .offset(y: yOffset)
+                                .zIndex(Double(1.0 - norm))
+                            }
+                            .frame(width: cardW, height: cardH)
+                            .id(model.id)
+                        }
+
+                        if calendarDayCourses.isEmpty {
+                            CardDS.NoteCourseCardV(
+                                label: "заметка",
+                                title: sheet.isAdd ? "выбери курс" : "нет активности",
+                                subtitle: sheet.isAdd ? "добавь курс в план на этот день" : "в этот день занятий не было",
+                                progress: 0,
+                                ctaTitle: nil,
+                                onTap: { },
+                                topRightChip: nil
+                            )
+                            .frame(width: cardW, height: cardH)
+                        }
+                    }
+                    .padding(.horizontal, sideInset)
+                    .padding(.vertical, vPad)
+                }
+                .coordinateSpace(name: "calendarOverlayCarousel")
+                .onAppear {
+                    guard let first = calendarDayCourses.first else { return }
+                    withAnimation(.none) { proxy.scrollTo(first.id, anchor: .center) }
                 }
             }
-            .padding(.horizontal, 16)
         }
-        .padding(.horizontal, -16)
+        .frame(maxWidth: .infinity)
+        .frame(height: slotHeight)
     }
 }
 
@@ -1425,6 +1997,223 @@ extension MainView {
     }
 }
 
+// MARK: - Search overlay (общий state и view для показа из AppShell с любого таба)
+struct SearchLessonHit: Identifiable, Equatable {
+    let id: String
+    let courseId: String
+    let lessonId: String
+    let courseTitle: String
+    let lessonTitle: String
+    let lessonSubtitle: String
+    init(courseId: String, lessonId: String, courseTitle: String, lessonTitle: String, lessonSubtitle: String) {
+        self.courseId = courseId
+        self.lessonId = lessonId
+        self.courseTitle = courseTitle
+        self.lessonTitle = lessonTitle
+        self.lessonSubtitle = lessonSubtitle
+        self.id = "lesson|\(courseId)|\(lessonId)"
+    }
+}
+
+@MainActor
+final class SearchOverlayState: ObservableObject {
+    static let shared = SearchOverlayState()
+    @Published private(set) var searchCourseById: [String: CourseBundle] = [:]
+    @Published private(set) var searchLessonHitById: [String: SearchLessonHit] = [:]
+    private var didConfigure = false
+
+    func ensureConfigured(overlay: OverlayPresenter) async {
+        if didConfigure, !searchCourseById.isEmpty { return }
+        LessonsData.shared.preload()
+        let allCourses = LessonsData.shared.allCourses()
+        let built = await Task.detached(priority: .userInitiated) { () -> (byCourse: [String: CourseBundle], byLessonHit: [String: SearchLessonHit], courseEntries: [OverlayPresenter.SearchIndex.Entry], lessonEntries: [OverlayPresenter.SearchIndex.Entry]) in
+            func norm(_ s: String) -> String {
+                s.folding(options: [.diacriticInsensitive, .widthInsensitive, .caseInsensitive], locale: .current)
+                    .replacingOccurrences(of: "\u{00A0}", with: " ")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            var byCourse: [String: CourseBundle] = [:]
+            var byLessonHit: [String: SearchLessonHit] = [:]
+            var courseEntries: [OverlayPresenter.SearchIndex.Entry] = []
+            var lessonEntries: [OverlayPresenter.SearchIndex.Entry] = []
+            for c in allCourses {
+                byCourse[c.courseID] = c
+                let courseHay = [norm(c.courseTitle), norm(c.courseDescription ?? "")].joined(separator: " | ")
+                courseEntries.append(.init(id: c.courseID, haystack: courseHay))
+                for l in c.lessons {
+                    let contentText = l.content.map { $0.text }.joined(separator: " ")
+                    let hay = [norm(l.title), norm(l.subtitle), contentText, norm(c.courseTitle)].joined(separator: " | ")
+                    let hit = SearchLessonHit(courseId: c.courseID, lessonId: l.lessonID, courseTitle: c.courseTitle, lessonTitle: l.title, lessonSubtitle: l.subtitle)
+                    byLessonHit[hit.id] = hit
+                    lessonEntries.append(.init(id: hit.id, haystack: hay))
+                }
+            }
+            return (byCourse, byLessonHit, courseEntries, lessonEntries)
+        }.value
+        searchCourseById = built.byCourse
+        searchLessonHitById = built.byLessonHit
+        didConfigure = true
+        overlay.configureSearchIndex(courses: built.courseEntries, lessons: built.lessonEntries)
+    }
+}
+
+struct SearchOverlayView: View {
+    @EnvironmentObject private var overlay: OverlayPresenter
+    @EnvironmentObject private var nav: NavigationIntent
+    @ObservedObject private var searchState = SearchOverlayState.shared
+    @State private var keyboardHeight: CGFloat = 0
+    @FocusState private var isSearchFocused: Bool
+
+    var body: some View {
+        ZStack {
+            OverlayEtalonBackground(onDismiss: { dismissSearch() })
+            OverlayEtalonCard(title: "поиск", onDismiss: { dismissSearch() }) {
+                VStack(spacing: 12) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass").font(.system(size: 14, weight: .semibold)).foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
+                        TextField("введи слово", text: $overlay.searchQuery)
+                            .font(.system(size: 14)).foregroundStyle(CD.ColorToken.text)
+                            .focused($isSearchFocused)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                        if !overlay.searchQuery.isEmpty {
+                            Button { overlay.searchQuery = "" } label: {
+                                Image(systemName: "xmark.circle.fill").font(.system(size: 16)).foregroundStyle(CD.ColorToken.textSecondary.opacity(0.6))
+                            }
+                        }
+                    }
+                    .padding(.vertical, 10).padding(.horizontal, 14)
+                    .background(Theme.Surfaces.card(Capsule(style: .continuous)))
+                    searchResultsView
+                }
+                .padding(.horizontal, CD.Spacing.screen)
+                .padding(.bottom, 16)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .padding(.bottom, keyboardHeight > 0 ? max(18, min(180, keyboardHeight * 0.45)) : 0)
+            .onAppear {
+                Task { await searchState.ensureConfigured(overlay: overlay) }
+                isSearchFocused = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+                guard overlay.overlay == .search else { return }
+                guard let endFrame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+                let h = max(0, UIScreen.main.bounds.height - endFrame.minY)
+                withAnimation(.easeOut(duration: 0.22)) { keyboardHeight = h }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                guard overlay.overlay == .search else { return }
+                withAnimation(.easeOut(duration: 0.18)) { keyboardHeight = 0 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var searchResultsView: some View {
+        let q = overlay.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        if q.isEmpty {
+            Color.clear.frame(height: 10)
+        } else {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 16) {
+                    if !overlay.searchCourseIds.isEmpty || searchViaLessonCourseIds().count > 0 {
+                        Text("Курсы").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.white.opacity(0.7)).kerning(0.5)
+                        searchCoursesSection
+                    }
+                    if !overlay.searchLessonIds.isEmpty {
+                        Text("Уроки").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.white.opacity(0.7)).kerning(0.5)
+                        searchLessonsSection
+                    }
+                    if overlay.searchCourseIds.isEmpty && overlay.searchLessonIds.isEmpty && searchViaLessonCourseIds().isEmpty {
+                        Text("ничего не найдено").font(.system(size: 13)).foregroundStyle(Color.white.opacity(0.62)).frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .frame(maxHeight: 380)
+        }
+    }
+
+    private func searchViaLessonCourseIds() -> [String] {
+        var ids: [String] = []
+        for hitId in overlay.searchLessonIds {
+            if let hit = searchState.searchLessonHitById[hitId] { ids.append(hit.courseId) }
+        }
+        return Array(Set(ids))
+    }
+
+    private var searchLessonsSection: some View {
+        let hits = overlay.searchLessonIds.compactMap { searchState.searchLessonHitById[$0] }
+        return VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(hits.prefix(8)), id: \.id) { hit in
+                Button {
+                    dismissSearch()
+                    nav.popToRoot()
+                    nav.go(.lesson(courseId: hit.courseId, lessonId: hit.lessonId))
+                } label: {
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(hit.lessonTitle).font(.system(size: 14, weight: .medium)).foregroundStyle(CD.ColorToken.text)
+                            Text(hit.courseTitle).font(.system(size: 12)).foregroundStyle(CD.ColorToken.textSecondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    }
+                    .padding(.horizontal, 12).padding(.vertical, 10)
+                    .background(Theme.Surfaces.card(RoundedRectangle(cornerRadius: 10, style: .continuous)))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var searchCoursesSection: some View {
+        let directCourseIds = overlay.searchCourseIds
+        let lessonHitIds = overlay.searchLessonIds
+        var viaLessonCourseIds: [String] = []
+        for hitId in lessonHitIds {
+            if let hit = searchState.searchLessonHitById[hitId] { viaLessonCourseIds.append(hit.courseId) }
+        }
+        var seen: Set<String> = []
+        var combined: [String] = []
+        for id in directCourseIds { if seen.insert(id).inserted { combined.append(id) } }
+        for id in viaLessonCourseIds { if seen.insert(id).inserted { combined.append(id) } }
+        let ids = Array(combined.prefix(8))
+        if ids.isEmpty {
+            return AnyView(Text("ничего не найдено").font(.system(size: 13)).foregroundStyle(Color.white.opacity(0.62)))
+        }
+        return AnyView(
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 12) {
+                    ForEach(ids, id: \.self) { courseId in
+                        if let c = searchState.searchCourseById[courseId] {
+                            let p = ProgressManager.shared.progress(for: c.courseID, lessonId: nil)
+                            let progress = max(0, min(1, p))
+                            MainView._SearchCourseCard(
+                                course: c,
+                                progress: progress,
+                                subtitleOverride: nil,
+                                onTap: {
+                                    dismissSearch()
+                                    nav.popToRoot()
+                                    nav.go(.lessons(courseId: c.courseID))
+                                }
+                            )
+                        }
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
+            .frame(height: 340)
+        )
+    }
+
+    private func dismissSearch() {
+        isSearchFocused = false
+        keyboardHeight = 0
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) { overlay.dismiss() }
+    }
+}
 
 private struct _ContentMarginsCompat: ViewModifier {
     let horizontal: CGFloat

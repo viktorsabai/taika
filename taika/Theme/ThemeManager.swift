@@ -35,18 +35,27 @@ public final class ThemeManager: ObservableObject {
         }
     }
     
-    // app-wide preferred scheme. nil = follow system
-    @Published public var preferredScheme: ColorScheme? = .dark
+    // Persist selected color scheme between launches
+    @AppStorage("preferredSchemeKey") private var storedSchemeKey: String = "dark"
+
+    public var preferredScheme: ColorScheme? {
+        switch storedSchemeKey {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
+    }
 
     public func toggleTheme() {
         switch preferredScheme {
         case .dark:
-            preferredScheme = .light
+            storedSchemeKey = "light"
         case .light:
-            preferredScheme = .dark
+            storedSchemeKey = "dark"
         default:
-            preferredScheme = .dark
+            storedSchemeKey = "dark"
         }
+        objectWillChange.send()
     }
 
     private init() {
@@ -54,6 +63,9 @@ public final class ThemeManager: ObservableObject {
         let key = UserDefaults.standard.string(forKey: "accentKey") ?? Accent.pink.rawValue
         self.accent = Accent(rawValue: key) ?? .pink
         self.storedAccentKey = self.accent.rawValue
+        if UserDefaults.standard.string(forKey: "preferredSchemeKey") == nil {
+            storedSchemeKey = "dark"
+        }
     }
 }
 
@@ -124,7 +136,7 @@ struct AccentPickerPanel: View {
                 .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                 )
         )
         .padding()
@@ -142,7 +154,7 @@ private struct AccentDot: View {
                 .fill(gradient)
                 .frame(width: 34, height: 34)
                 .overlay(
-                    Circle().stroke(Color.white.opacity(0.22), lineWidth: 1)
+                    Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                 )
                 .overlay(
                     Circle()

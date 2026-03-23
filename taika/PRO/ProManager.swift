@@ -14,6 +14,11 @@ enum ProFeature: String, CaseIterable {
     case dailyPicksExtra
     case unlimitedSessions
     case aiAdvanced
+    case speakerAdvanced
+
+    // Games
+    case recallGame
+    case contextGame
 }
 
 // MARK: - Pro Tier
@@ -147,11 +152,16 @@ final class ProManager: ObservableObject {
         guard isPro else { return false }
 
         switch feature {
-        case .dailyPicksExtra:
+        case .dailyPicksExtra,
+             .unlimitedSessions,
+             .recallGame,
+             .contextGame:
             return true
-        case .unlimitedSessions:
-            return true
+
         case .aiAdvanced:
+            return tier == .pro
+
+        case .speakerAdvanced:
             return tier == .pro
         }
     }

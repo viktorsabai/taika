@@ -6,114 +6,33 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ProfileView: View {
+    @ObservedObject private var progress = ProgressManager.shared
     @ObservedObject private var pro = ProManager.shared
-    @StateObject private var profile = ProfileManager.shared
+    @ObservedObject private var auth = AuthService.shared
+    @EnvironmentObject private var theme: ThemeManager
+    @EnvironmentObject private var nav: NavigationIntent
 
     @State private var showResetAllConfirm = false
     @State private var viewReloadToken = UUID()
+    @State private var showPROView = false
+    @State private var showSettingsSheet = false
+    @State private var authInProgress = false
+    @State private var authErrorMessage: String?
 
-    // MARK: - ui bindings (ProfileManager is the single source of truth)
-    private var studySelectedBinding: Binding<PDStudyPanel?> {
-        Binding(
-            get: { profile.studySelected },
-            set: { profile.studySelected = $0 }
-        )
-    }
-
-    private var studySelected: PDStudyPanel? { profile.studySelected }
-
-    private var progressScopeBinding: Binding<PDProgressScope> {
-        Binding(
-            get: {
-                let key = profile.progressScopeKey ?? "courses"
-                return key == "lessons" ? .lessons : .courses
-            },
-            set: { profile.progressScopeKey = ($0 == .lessons ? "lessons" : "courses") }
-        )
-    }
-
-    private var selectedCourseMetricKeyBinding: Binding<String> {
-        Binding(
-            get: { profile.selectedCourseMetricKey ?? "courses_completed" },
-            set: { profile.selectedCourseMetricKey = $0 }
-        )
-    }
-
-    private var selectedLessonMetricKeyBinding: Binding<String> {
-        Binding(
-            get: { profile.selectedLessonMetricKey ?? "lessons_completed" },
-            set: { profile.selectedLessonMetricKey = $0 }
-        )
-    }
-
-    private var activitySelectedDayIndexBinding: Binding<Int?> {
-        Binding(get: { profile.activitySelectedDayIndex }, set: { profile.activitySelectedDayIndex = $0 })
-    }
-
-    // reset per-panel state when switching accordion section
-    private func resetStudyPanelStateIfNeeded(_ newSelection: PDStudyPanel?) {
-        guard newSelection != studySelected else { return }
-        profile.activitySelectedDayIndex = nil
-        profile.selectedCourseMetricKey = "courses_completed"
-        profile.selectedLessonMetricKey = "lessons_completed"
-        profile.progressScopeKey = "courses"
-    }
-
-    private var coursesMetricsSignature: String {
-        coursesMetrics.map { $0.key }.joined(separator: "|")
-    }
-
-    private var lessonsMetricsSignature: String {
-        lessonsMetrics.map { $0.key }.joined(separator: "|")
-    }
-
-    // MARK: - data sources (ProfileManager only, no fallback)
-    private var coursesMetrics: [PDMetric] { profile.coursesMetrics }
-
-    private var lessonsMetrics: [PDMetric] { profile.lessonsMetrics }
-
-    private var weeklyByCourseMetric: [String: [Double]] { profile.weeklyByCourseMetric }
-
-    private var last7ByCourseMetric: [String: [Double]] { profile.last7ByCourseMetric }
-
-    private var weeklyByLessonMetric: [String: [Double]] { profile.weeklyByLessonMetric }
-
-    private var last7ByLessonMetric: [String: [Double]] { profile.last7ByLessonMetric }
-
-    private var activityWeekDays: [PDActivityDay] { profile.activityWeekDays }
-
-
-    private var studyEmptyStateCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("пока нет данных")
-                .font(PD.FontToken.body(17, weight: .semibold))
-                .foregroundColor(PD.ColorToken.text)
-
-            Text("начни урок — и тут появятся прогресс, графики и активность")
-                .font(PD.FontToken.caption(13, weight: .medium))
-                .foregroundColor(PD.ColorToken.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, PD.Spacing.inner)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                .fill(PD.ColorToken.card)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                .stroke(PD.ColorToken.stroke, lineWidth: 1)
-        )
-    }
-
+    private var state: ProfileDashboardState { progress.publishedState }
+    private var pronunciationScore: Int? { state.averagePronunciationScore }
 
     private func performFullReset() {
-        // 1) explicit manager resets (authoritative)
+        // 1) All progress stores in sync (single source of truth chain)
         ProgressManager.shared.resetAll()
+        UserSession.shared.resetAllProgress()  // LessonsManager + UserSession snapshot + FavoriteManager.clearAll()
+        StepManager.shared.resetAll()         // in-memory learned so CourseView/Lesson cards show 0
         FavoriteManager.shared.resetAll()
         StepData.shared.resetDailyPicksCache()
+        SpeakerAttemptsStore.clearAll()      // pronunciation scores so Speaker starts clean
 
         // 2) broadcast changes so views/managers refresh
         NotificationCenter.default.post(name: .init("ProgressDidChange"), object: nil)
@@ -130,177 +49,359 @@ struct ProfileView: View {
 
     var body: some View {
         ZStack {
-            // App background from Design System
             PD.ColorToken.background
                 .ignoresSafeArea()
             VStack(spacing: 0) {
-                // Scrollable content
                 ScrollView {
-                    VStack(spacing: Theme.Layout.sectionGap) {
-                        // DS contract: TAIKA FM (marquee) from Profile DS
-                        PDFMSection()
+                    VStack(alignment: .leading, spacing: 0) {
+                        let accent = AnyShapeStyle(theme.currentAccentFill)
 
-                        // === учёба ===
-                        PDSection("учёба") {
-                            let hasAnyProgressData = !coursesMetrics.isEmpty || !lessonsMetrics.isEmpty
-                            let hasAnySeries = !weeklyByCourseMetric.isEmpty || !last7ByCourseMetric.isEmpty || !weeklyByLessonMetric.isEmpty || !last7ByLessonMetric.isEmpty
-                            let hasAnyActivity = !activityWeekDays.isEmpty
+                        // 1. Аккаунт — вверху
+                        PDSection("Аккаунт") {
+                            accountBlock(accent: accent)
+                        }
 
-                            if !(hasAnyProgressData || hasAnySeries || hasAnyActivity) {
-                                studyEmptyStateCard
-                            } else {
-                                let progressPanel = PDProgressPanel(
-                                    scope: progressScopeBinding.wrappedValue,
-                                    onScopeChange: { progressScopeBinding.wrappedValue = $0 },
-                                    coursesMetrics: coursesMetrics,
-                                    lessonsMetrics: lessonsMetrics,
-                                    selectedCourseMetricKey: selectedCourseMetricKeyBinding,
-                                    selectedLessonMetricKey: selectedLessonMetricKeyBinding,
-                                    onSelectCourseMetric: { selectedCourseMetricKeyBinding.wrappedValue = $0 },
-                                    onSelectLessonMetric: { selectedLessonMetricKeyBinding.wrappedValue = $0 },
-                                    weeklyByCourseMetric: weeklyByCourseMetric,
-                                    last7ByCourseMetric: last7ByCourseMetric,
-                                    weeklyByLessonMetric: weeklyByLessonMetric,
-                                    last7ByLessonMetric: last7ByLessonMetric,
-                                    style: .appDS
-                                )
+                        // 2. Один якорный блок: как ты звучишь
+                        VStack(alignment: .leading, spacing: Theme.Layout.sectionTitleToContent) {
+                            pronunciationCard(accent: accent)
+                        }
+                        .padding(.top, Theme.Layout.sectionTop)
 
-                                let activityPanel = PDActivityPanel(
-                                    days: activityWeekDays,
-                                    selectedIndex: activitySelectedDayIndexBinding,
-                                    onSelect: { activitySelectedDayIndexBinding.wrappedValue = $0 },
-                                    style: .appDS
-                                )
-
-                                PDStudyAccordion(
-                                    selected: studySelected,
-                                    onSelect: {
-                                        resetStudyPanelStateIfNeeded($0)
-                                        studySelectedBinding.wrappedValue = $0
-                                        let gen = UIImpactFeedbackGenerator(style: .soft); gen.impactOccurred()
-                                    },
-                                    progressContent: { progressPanel },
-                                    activityContent: { activityPanel },
-                                    style: .appDS
-                                )
+                        // 3. Кнопка: улучшить произношение → Speaker
+                        Button(action: {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            nav.requestTab(2)
+                        }) {
+                            HStack(spacing: PD.Spacing.inner) {
+                                Image(systemName: "waveform.circle.fill")
+                                    .font(.system(size: 20))
+                                Text("Улучшить произношение")
+                                    .font(PD.FontToken.body(17, weight: .medium))
                             }
+                            .foregroundStyle(PD.ColorToken.text)
+                            .frame(maxWidth: .infinity)
+                            .padding(PD.Spacing.inner)
+                            .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
+                            .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
                         }
-                        PDSection("аккаунт") {
-                            PDListGroup([
-                                .init(icon: "creditcard", title: "оплата и подписка", action: { print("Payments tapped") }),
-                                .init(icon: "rectangle.and.pencil.and.ellipsis", title: "личная информация", action: { print("Personal info tapped") })
-                            ])
-                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, PD.Spacing.screen)
+                        .padding(.top, 8)
 
-                        // === служба ===
-                        PDSection("служба") {
-                            PDListGroup([
-                                .init(icon: "questionmark.circle", title: "помощь и поддержка", action: { print("Help tapped") })
-                            ])
-                        }
-
-                        // === админ ===
-                        PDSection("админ") {
-                            VStack(spacing: 0) {
-                                // iOS-like switch row: obvious free/pro mode
-                                AdminToggleRow(
-                                    icon: "crown.fill",
-                                    title: "pro режим",
-                                    subtitle: "тест: free ↔ pro",
-                                    isOn: Binding(
-                                        get: { pro.isPro },
-                                        set: { newValue in
-                                            pro.setDebugPro(newValue)
-                                            let gen = UINotificationFeedbackGenerator(); gen.notificationOccurred(.success)
-                                        }
-                                    )
-                                )
-
-                                AdminDivider()
-
-                                AdminActionRow(
-                                    icon: "trash",
-                                    title: "сбросить всё",
-                                    subtitle: "прогресс, лайки, daily picks",
-                                    onTap: { showResetAllConfirm = true }
-                                )
-
-                                AdminDivider()
-
-                                AdminActionRow(
-                                    icon: "clock.arrow.circlepath",
-                                    title: "сбросить подборку дня",
-                                    subtitle: "очистить кэш daily picks",
-                                    onTap: {
-                                        StepData.shared.resetDailyPicksCache()
-                                        let gen = UINotificationFeedbackGenerator(); gen.notificationOccurred(.success)
-                                    }
-                                )
+                        // 4. Настройки — в конец, минимально
+                        PDSection("Настройки") {
+                            VStack(spacing: Theme.Layout.Section.itemGap) {
+                                settingsRow(icon: "globe", title: "Язык интерфейса", showChevron: true) { showSettingsSheet = true }
+                                settingsRowTheme()
+                                settingsRow(icon: "questionmark.circle", title: "Поддержка", showChevron: true, action: openSupportURL)
                             }
-                            .background(
-                                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                                    .fill(PD.ColorToken.card)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                                    .stroke(PD.ColorToken.stroke, lineWidth: 1)
-                            )
+                            .padding(.horizontal, PD.Spacing.screen)
                         }
                     }
-                    .padding(.top, Theme.Layout.pageTopAfterHeader)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, Theme.Layout.sectionGap)
-                    .safeAreaPadding(.bottom, ToolBar.recommendedBottomInset)
+                    .safeAreaPadding(.bottom, Theme.Layout.pageBottomSafeGap)
                 }
+                .scrollIndicators(.hidden)
             }
             .id(viewReloadToken)
-            .alert("сбросить всё?", isPresented: $showResetAllConfirm) {
-                Button("отмена", role: .cancel) {}
-                Button("сбросить", role: .destructive) { performFullReset() }
-            } message: {
-                Text("удалим прогресс, лайки, кэш подбора дня и перезапустим ui")
+            .sheet(isPresented: $showSettingsSheet) {
+                ProfileSettingsSheet(
+                    showResetAllConfirm: $showResetAllConfirm,
+                    performFullReset: performFullReset
+                )
             }
         }
         .task {
-            pro.start(session: UserSession.shared)
-            profile.refresh()
+            progress.refreshProfileState()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .init("ProgressDidChange"))) { _ in
-            profile.refresh()
-            viewReloadToken = UUID()
+        .onAppear {
+            if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+               let window = scene.windows.first(where: { $0.isKeyWindow }) {
+                AuthService.presentationWindow = window
+            }
+            progress.refreshProfileState()
+            Task { @MainActor in AuthSoftWallState.tryPresentSoftWall(calledFromProfile: true) }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .init("FavoritesDidChange"))) { _ in
-            profile.refresh()
-            viewReloadToken = UUID()
+        .onReceive(NotificationCenter.default.publisher(for: .progressDidChange)) { _ in
+            progress.refreshProfileState()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .init("UserSessionActivityDidChange"))) { _ in
-            profile.refresh()
-            viewReloadToken = UUID()
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ProgressDidChange"))) { _ in
+            progress.refreshProfileState()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .init("DailyPicksDidReset"))) { _ in
-            profile.refresh()
-            viewReloadToken = UUID()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .init("AppResetAll"))) { _ in
-            profile.refresh()
-            viewReloadToken = UUID()
-        }
-        .onChange(of: coursesMetricsSignature) { _ in
-            let newValue = coursesMetrics
-            guard !newValue.isEmpty else { return }
-            if !newValue.contains(where: { $0.key == profile.selectedCourseMetricKey }) {
-                profile.selectedCourseMetricKey = newValue.first?.key ?? profile.selectedCourseMetricKey
+        .fullScreenCover(isPresented: $showPROView) {
+            PROView(courseId: nil, initialPage: 0) {
+                showPROView = false
             }
         }
-        .onChange(of: lessonsMetricsSignature) { _ in
-            let newValue = lessonsMetrics
-            guard !newValue.isEmpty else { return }
-            if !newValue.contains(where: { $0.key == profile.selectedLessonMetricKey }) {
-                profile.selectedLessonMetricKey = newValue.first?.key ?? profile.selectedLessonMetricKey
+    }
+
+    private func signInWithAppleTapped() {
+        authInProgress = true
+        authErrorMessage = nil
+        Task {
+            do {
+                _ = try await auth.signInWithApple()
+                SyncManager.shared.onUserDidLogin(userId: AuthService.shared.currentUserID ?? "")
+                authInProgress = false
+            } catch AuthService.AuthError.cancelled {
+                authInProgress = false
+            } catch {
+                authErrorMessage = error.localizedDescription
+                authInProgress = false
             }
+        }
+    }
+
+    // MARK: - MVP blocks
+
+    @ViewBuilder
+    private func accountBlock(accent: AnyShapeStyle) -> some View {
+        Group {
+            if auth.isLoggedIn {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let name = auth.displayName, !name.isEmpty {
+                        Text(name)
+                            .font(PD.FontToken.body(18, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.text)
+                    }
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(PD.ColorToken.accent)
+                        Text("Аккаунт привязан")
+                            .font(PD.FontToken.body(17, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.text)
+                    }
+                    HStack(spacing: 6) {
+                        Image(systemName: "icloud.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                        Text("В облаке")
+                            .font(PD.FontToken.caption(15, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                    HStack {
+                        Spacer()
+                        Button("Выйти") {
+                            try? auth.signOut()
+                            ProManager.shared.reset()
+                        }
+                        .font(PD.FontToken.caption(13, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                }
+                .padding(PD.Spacing.inner)
+                .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
+                .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Button(action: signInWithAppleTapped) {
+                        HStack(spacing: PD.Spacing.inner) {
+                            if authInProgress {
+                                ProgressView()
+                                    .tint(PD.ColorToken.text)
+                            } else {
+                                Image(systemName: "apple.logo")
+                                    .font(.system(size: 18, weight: .semibold))
+                                Text("Привязать Apple ID")
+                                    .font(PD.FontToken.body(17, weight: .medium))
+                            }
+                        }
+                        .foregroundStyle(PD.ColorToken.text)
+                        .frame(maxWidth: .infinity)
+                        .padding(PD.Spacing.inner)
+                        .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
+                        .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(authInProgress)
+                    if let msg = authErrorMessage {
+                        Text(msg)
+                            .font(PD.FontToken.caption(13, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, PD.Spacing.screen)
+    }
+
+    private func pronunciationCard(accent: AnyShapeStyle) -> some View {
+        let shape = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+        let scoreText: String = pronunciationScore.map { "\($0)%" } ?? "—"
+        return ZStack {
+            Theme.Surfaces.card(shape)
+            VStack(spacing: 12) {
+                Text(scoreText)
+                    .font(.system(size: 52, weight: .bold, design: .rounded))
+                    .foregroundStyle(accent)
+                    .monospacedDigit()
+                Text("средний балл произношения")
+                    .font(PD.FontToken.caption(13, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                if !pro.isPro {
+                    HStack(spacing: 6) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 12))
+                        Text("разбор произношения в PRO")
+                            .font(PD.FontToken.caption(12, weight: .medium))
+                    }
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+            }
+            .padding(24)
+        }
+        .overlay(shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+        .clipShape(shape)
+        .padding(.horizontal, PD.Spacing.screen)
+    }
+
+    private func settingsRow(icon: String, title: String, showChevron: Bool = true, action: @escaping () -> Void) -> some View {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        }) {
+            HStack(spacing: PD.Spacing.inner) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(PD.ColorToken.text)
+                Text(title)
+                    .font(PD.FontToken.body(17, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.text)
+                Spacer()
+                if showChevron {
+                    Image(systemName: "chevron.forward")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, PD.Spacing.inner)
+            .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
+            .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func settingsRowTheme() -> some View {
+        let isDark = theme.preferredScheme == .dark
+        return Button(action: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            theme.toggleTheme()
+        }) {
+            HStack(spacing: PD.Spacing.inner) {
+                Image(systemName: isDark ? "moon.fill" : "sun.max.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(PD.ColorToken.text)
+                Text("Тема")
+                    .font(PD.FontToken.body(17, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.text)
+                Spacer()
+                Text(isDark ? "Тёмная" : "Светлая")
+                    .font(PD.FontToken.caption(15, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, PD.Spacing.inner)
+            .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
+            .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Поддержка: Telegram (фидбек-канал для фаундера)
+    private func openSupportURL() {
+        if let url = URL(string: "https://t.me/taika_support") {
+            UIApplication.shared.open(url)
+        } else if let fallback = URL(string: "https://taika.app") {
+            UIApplication.shared.open(fallback)
         }
     }
 }
 
+
+// MARK: - Settings sheet (шестерёнка: настройки + админ в DEBUG)
+private struct ProfileSettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var pro = ProManager.shared
+    @Binding var showResetAllConfirm: Bool
+    let performFullReset: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    openSupportURL()
+                }) {
+                    HStack {
+                        Image(systemName: "questionmark.circle")
+                        Text("Поддержка")
+                            .font(PD.FontToken.body(17, weight: .medium))
+                    }
+                    .foregroundStyle(PD.ColorToken.text)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                }
+                .buttonStyle(.plain)
+
+                #if DEBUG
+                VStack(spacing: 0) {
+                    AdminToggleRow(
+                        icon: "crown.fill",
+                        title: "pro режим",
+                        subtitle: "тест: free ↔ pro",
+                        isOn: Binding(
+                            get: { pro.isPro },
+                            set: { newValue in
+                                pro.setDebugPro(newValue)
+                                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                            }
+                        )
+                    )
+                    AdminDivider()
+                    AdminActionRow(icon: "trash", title: "сбросить всё", subtitle: "прогресс, лайки, daily picks", onTap: { showResetAllConfirm = true })
+                    AdminDivider()
+                    AdminActionRow(icon: "clock.arrow.circlepath", title: "сбросить подборку дня", subtitle: "очистить кэш daily picks", onTap: {
+                        StepData.shared.resetDailyPicksCache()
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    })
+                }
+                .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
+                .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
+                .padding(.horizontal)
+                #endif
+            }
+            .padding(.vertical)
+            .navigationTitle("Настройки")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Готово") {
+                        dismiss()
+                    }
+                    .foregroundStyle(PD.ColorToken.text)
+                }
+            }
+        }
+        .alert("сбросить всё?", isPresented: $showResetAllConfirm) {
+            Button("отмена", role: .cancel) {}
+            Button("сбросить", role: .destructive) {
+                performFullReset()
+                showResetAllConfirm = false
+                dismiss()
+            }
+        } message: {
+            Text("удалим прогресс, лайки, кэш подборки дня и перезапустим ui")
+        }
+    }
+
+    private func openSupportURL() {
+        if let url = URL(string: "https://t.me/taika_support") {
+            UIApplication.shared.open(url)
+        }
+    }
+}
 
 // MARK: - Admin rows (ProfileView local)
 private struct AdminToggleRow: View {
@@ -402,6 +503,7 @@ private struct AdminDivider: View {
     NavigationStack {
         ProfileView()
             .environmentObject(ThemeManager.shared)
+            .environmentObject(NavigationIntent())
     }
     .preferredColorScheme(.dark)
 }

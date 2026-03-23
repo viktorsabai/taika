@@ -69,7 +69,7 @@ public struct FDAppFiltersBar: View {
                             )
                         )
                         .overlay(
-                            Capsule().stroke(Color.white.opacity(item.isSelected ? 0.00 : 0.12), lineWidth: 1)
+                            Capsule().stroke(item.isSelected ? Color.clear : Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                         )
                         .foregroundStyle(item.isSelected ? Color.black.opacity(0.9) : Color.white.opacity(0.85))
                     }
@@ -89,13 +89,13 @@ import AVFoundation
 
 // MARK: - Data
 
-enum FDK: String, CaseIterable, Identifiable {
+public enum FDK: String, CaseIterable, Identifiable {
     case all = "Все"
     case courses = "Курсы"
     case hacks = "Лайфхаки"
     case cards = "Карточки"
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
     var icon: String {
         switch self {
@@ -214,7 +214,7 @@ struct FDFiltersBar: View {
                             Capsule().fill(kind == selected ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(Color.white.opacity(0.10)))
                         )
                         .overlay(
-                            Capsule().stroke(Color.white.opacity(kind == selected ? 0.00 : 0.12), lineWidth: 1)
+                            Capsule().stroke(kind == selected ? Color.clear : Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                         )
                         .foregroundStyle(kind == selected ? Color.black.opacity(0.9) : Color.white.opacity(0.85))
                     }
@@ -258,7 +258,7 @@ struct FDSearchField: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                 )
         )
         .padding(.horizontal, PD.Spacing.screen)
@@ -285,7 +285,7 @@ struct FDFavRow: View {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                            .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                     )
                 Image(systemName: item.kind.icon)
                     .font(.system(size: 16, weight: .semibold))
@@ -338,7 +338,7 @@ struct FDFavRow: View {
                     )
                 )
         )
-        .overlay(round.stroke(Color.white.opacity(0.08), lineWidth: 1))
+        .overlay(round.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
     }
 }
 
@@ -395,52 +395,26 @@ struct FDMiniCardV: View {
 
     private var bottomBar: some View {
         HStack {
-            Button(action: {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                onSpeak?()
-            }) {
-                Image(systemName: "speaker.wave.2.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.92))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(
-                        Capsule()
-                            .fill(PD.ColorToken.card)
-                            .overlay(
-                                Capsule().fill(
-                                    LinearGradient(
-                                        colors: [
-                                            Color.white.opacity(0.06),
-                                            .clear,
-                                            .black.opacity(0.10)
-                                        ],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                            )
-                    )
-                    .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
-            }
+            AppCardIconButton(kind: .listen, forceAccent: true, onTap: { onSpeak?() })
             Spacer(minLength: 10)
             if !item.lessonTitle.isEmpty {
-                HStack(spacing: 8) {
+                HStack(spacing: 5) {
                     Image(systemName: "heart.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                     Text(item.lessonTitle)
-                        .font(.footnote.weight(.semibold))
+                        .font(.caption2.weight(.semibold))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+                        .minimumScaleFactor(0.7)
+                        .truncationMode(.tail)
                 }
                 .foregroundStyle(Color.black.opacity(0.9))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
                 .background(
                     Capsule().fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
                 )
-                .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
-                .allowsHitTesting(false) // badge only, не кликается (удаление через long‑press)
+                .overlay(Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+                .allowsHitTesting(false)
             }
         }
         .frame(maxWidth: .infinity)
@@ -564,11 +538,10 @@ struct FDMiniHackCard: View {
             // push content to vertical center between brand and bottom bar
             Spacer(minLength: 0)
 
-            // main text — строго тело лайфхака
+            // main text — тело лайфхака с выделением [[...]] акцентом
             VStack(alignment: .center, spacing: 8) {
-                Text(hackText)
+                taikaFMStyledText(hackText, baseColor: Color.white)
                     .font(.system(.body, design: .rounded, weight: .medium))
-                    .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .lineLimit(7)
                     .fixedSize(horizontal: false, vertical: true)
@@ -578,27 +551,29 @@ struct FDMiniHackCard: View {
 
             Spacer(minLength: 6)
 
-            // bottom: heart pill with lesson title (открывает лайфхак, не удаляет)
+            // bottom: компактная пилюля урока (открывает карусель по тапу)
             HStack {
-                Spacer(minLength: 10)
+                Spacer(minLength: 8)
                 Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onOpen?() }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "heart.fill").font(.system(size: 13, weight: .semibold))
+                    HStack(spacing: 5) {
+                        Image(systemName: "heart.fill").font(.system(size: 11, weight: .semibold))
                         if !item.lessonTitle.isEmpty {
                             Text(item.lessonTitle)
-                                .font(.footnote.weight(.semibold))
+                                .font(.caption2.weight(.semibold))
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.85)
+                                .minimumScaleFactor(0.7)
+                                .truncationMode(.tail)
                         }
                     }
                     .foregroundStyle(Color.black.opacity(0.9))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
                     .background(
                         Capsule().fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
                     )
-                    .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
+                    .overlay(Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding(16)
@@ -635,6 +610,138 @@ struct FDMiniHackCard: View {
                 isJiggling = newValue
             }
         }
+    }
+}
+
+// MARK: - Mini course card (подборка дня): чип категории сверху справа, только иконка play внизу
+struct FDMiniCourseCard: View {
+    let item: FDCourseDTO
+    var categoryChip: String? = nil
+    var onOpen: (() -> Void)? = nil
+
+    var body: some View {
+        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Text("taikA")
+                    .font(Font.custom("ONMARK Trial", size: 14))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 4)
+                if let chip = categoryChip, !chip.isEmpty {
+                    Text(chip)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Color.white.opacity(0.12)))
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(item.title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(3)
+                if !item.subtitle.isEmpty {
+                    Text(item.subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 6)
+
+            HStack {
+                Spacer(minLength: 8)
+                Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onOpen?() }) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(16)
+        .frame(width: 200, height: 286, alignment: .topLeading)
+        .background(Theme.Surfaces.card(round))
+        .contentShape(round)
+        .onTapGesture { onOpen?() }
+    }
+}
+
+// MARK: - Карточка «Продолжить» для Main: курс + урок, прогресс курса, только иконка play
+struct FDContinueCourseCard: View {
+    let courseName: String
+    let lessonName: String
+    let progress: Double
+    var onOpen: (() -> Void)? = nil
+
+    var body: some View {
+        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+        let clamped = max(0, min(1, progress))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text("taikA")
+                    .font(Font.custom("ONMARK Trial", size: 14))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+
+            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 4) {
+                if !lessonName.isEmpty {
+                    Text(lessonName)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                }
+                Text(courseName)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                if clamped > 0 || progress > 0 {
+                    VStack(alignment: .leading, spacing: 4) {
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(Color.white.opacity(0.15))
+                                    .frame(height: 4)
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                                    .frame(width: max(0, g.size.width * clamped), height: 4)
+                            }
+                        }
+                        .frame(height: 4)
+                        Text("\(Int(clamped * 100))% пройдено")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 6)
+                }
+            }
+            .padding(.top, 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Spacer(minLength: 0)
+
+            HStack {
+                Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onOpen?() }) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                }
+                .buttonStyle(.plain)
+                Spacer(minLength: 10)
+            }
+        }
+        .padding(16)
+        .frame(width: 268, height: 196, alignment: .topLeading)
+        .background(Theme.Surfaces.card(round))
+        .contentShape(round)
+        .onTapGesture { onOpen?() }
     }
 }
 
@@ -675,26 +782,9 @@ struct FDFavCourseCard: View {
             Spacer(minLength: 0)
 
             HStack {
-                Button(action: { onOpen?() }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "play.fill").font(.system(size: 13, weight: .semibold))
-                        Text("Открыть").font(.footnote.weight(.semibold))
-                    }
-                    .foregroundStyle(Color.white.opacity(0.92))
-                    .padding(.horizontal, 12).padding(.vertical, 7)
-                    .background(Capsule().fill(Color.white.opacity(0.10)))
-                    .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
-                }
+                AppCardIconButton(kind: .play, forceAccent: true, onTap: { onOpen?() })
                 Spacer(minLength: 10)
-                Button(action: { onUnfavorite?() }) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.black.opacity(0.9))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(Capsule().fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill)))
-                        .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
-                }
+                AppCardIconButton(kind: .favorite, isActive: true, onTap: { onUnfavorite?() })
             }
         }
         .padding(16)
@@ -1110,7 +1200,7 @@ struct FDTaikaFMSection: View {
                                 )
                             )
                     )
-                    .overlay(round.stroke(Color.white.opacity(0.08), lineWidth: 1))
+                    .overlay(round.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
                     .padding(.trailing, PD.Spacing.screen)
             }
         }
@@ -1126,6 +1216,8 @@ public struct FavoriteDS: View {
     public let hacks:   [FDHackDTO]
 
     @Binding public var isEditing: Bool
+    /// Когда передан — фильтр в хедере (оверлей), полосу фильтров в теле не показываем.
+    public var selectedFilter: Binding<FDK>? = nil
 
     // callbacks to parent view
     public var onUnfavorite: ((String) -> Void)? = nil   // id to remove
@@ -1138,13 +1230,14 @@ public struct FavoriteDS: View {
 
     @State private var cardOrder: [String] = []
     @State private var isHacksEditing: Bool = false
-    @State private var selectedFilter: FDK = .all
+    @State private var selectedFilterInternal: FDK = .all
 
     public init(
         courses: [FDCourseDTO] = [],
         cards: [FDCardDTO] = [],
         hacks: [FDHackDTO] = [],
         isEditing: Binding<Bool> = .constant(false),
+        selectedFilter: Binding<FDK>? = nil,
         onUnfavorite: ((String) -> Void)? = nil,
         onReorder: (([String]) -> Void)? = nil,
         onShowAllCards:   (() -> Void)? = nil,
@@ -1157,6 +1250,7 @@ public struct FavoriteDS: View {
         self.cards = cards
         self.hacks = hacks
         self._isEditing = isEditing
+        self.selectedFilter = selectedFilter
         self.onUnfavorite = onUnfavorite
         self.onReorder = onReorder
         self.onShowAllCards = onShowAllCards
@@ -1175,16 +1269,20 @@ public struct FavoriteDS: View {
         cards.filter { !$0.meta.hasPrefix("hack:") && !$0.sourceId.hasPrefix("hack:") }
     }
 
+    private var effectiveFilter: FDK {
+        selectedFilter?.wrappedValue ?? selectedFilterInternal
+    }
+
     // Filtered cards for the "карточки" section (excluding hacks)
     private var filtered: [FDCardDTO] {
-        if selectedFilter != .all {
+        if effectiveFilter != .all {
             // Favorites currently exposes cards only for this section; leave the filter hook in place for future expansion.
         }
         // 0) Sort newest → first
         let sorted = normalCards.sorted { $0.addedAt > $1.addedAt }
 
         let scopeSorted: [FDCardDTO] = {
-            switch selectedFilter {
+            switch effectiveFilter {
             case .all:
                 return sorted
             case .cards:
@@ -1212,6 +1310,70 @@ public struct FavoriteDS: View {
         return extras + ordered
     }
 
+    @ViewBuilder
+    private func favReelsCards(rows: Int) -> some View {
+        let reel = FDFavReels(
+            title: "карточки",
+            items: filtered,
+            order: $cardOrder,
+            isEditing: $isEditing,
+            onUnfavorite: { onUnfavorite?($0.sourceId) },
+            onShowAll: { onShowAllCards?() },
+            onOpen: { onOpenCard?($0) }
+        )
+        if rows >= 2 {
+            VStack(spacing: 16) { reel; reel }
+        } else {
+            reel
+        }
+    }
+
+    @ViewBuilder
+    private func favReelsHacks(items: [FDHackDTO], rows: Int) -> some View {
+        let reel = FDFavHacksReel(
+            title: "лайфхаки",
+            items: items,
+            isEditing: $isHacksEditing,
+            onUnfavorite: { onUnfavorite?($0.sourceId) },
+            onOpen: { it in
+                let text = it.meta.isEmpty ? it.title : it.meta
+                let clean = text.hasPrefix("hack:") ? String(text.dropFirst("hack:".count)) : text
+                let hackId = it.sourceId.hasPrefix("hack:") ? it.sourceId : ("hack:" + it.sourceId)
+                let dto = FDCardDTO(
+                    sourceId: hackId,
+                    title: "Лайфхак",
+                    subtitle: clean,
+                    meta: "hack:" + clean,
+                    lessonTitle: it.lessonTitle,
+                    tagText: nil,
+                    addedAt: it.addedAt
+                )
+                onOpenCard?(dto)
+            },
+            onShowAll: { onShowAllHacks?() }
+        )
+        if rows >= 2 {
+            VStack(spacing: 16) { reel; reel }
+        } else {
+            reel
+        }
+    }
+
+    @ViewBuilder
+    private func favReelsCourses(rows: Int) -> some View {
+        let reel = FDFavCoursesReel(
+            title: "курсы",
+            items: courses,
+            onOpen: { onOpenCourse?($0) },
+            onUnfavorite: { c in onUnfavorite?("course:\(c.courseId)") },
+            onShowAll: { onShowAllCourses?() }
+        )
+        if rows >= 2 {
+            VStack(spacing: 16) { reel; reel }
+        } else {
+            reel
+        }
+    }
 
     public var body: some View {
         // Prepare hacks section: combine original hacks plus hackCards from cards
@@ -1231,84 +1393,42 @@ public struct FavoriteDS: View {
             var seen = Set<String>()
             return combined.filter { if seen.insert($0.sourceId).inserted { return true } else { return false } }
         }()
-        let fmMessages = TaikaFMData.shared.messages(for: .fav)
-        let fmReactions = TaikaFMData.shared.reactionGroups(for: .fav)
         ScrollView {
             VStack(spacing: 24) {
-                // filters
-                FDSectionHeader(title: "фильтры")
-                FDAppFiltersBar(
-                    items: FDK.allCases.map { kind in
-                        FDAppFilterItem(
-                            id: kind.id,
-                            title: kind.rawValue,
-                            systemImage: kind.icon,
-                            isSelected: kind == selectedFilter,
-                            onTap: {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                withAnimation(.easeInOut(duration: 0.15)) {
-                                    selectedFilter = kind
+                if selectedFilter == nil {
+                    FDSectionHeader(title: "фильтры")
+                    FDAppFiltersBar(
+                        items: FDK.allCases.map { kind in
+                            FDAppFilterItem(
+                                id: kind.id,
+                                title: kind.rawValue,
+                                systemImage: kind.icon,
+                                isSelected: kind == selectedFilterInternal,
+                                onTap: {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                        selectedFilterInternal = kind
+                                    }
                                 }
-                            }
-                        )
-                    }
-                )
-                .padding(.horizontal, PD.Spacing.screen)
-                VStack(alignment: .leading, spacing: 12) {
-                    FDSectionHeader(title: "тайка фм")
-                    TaikaFMBubbleTyping(
-                        messages: fmMessages,
-                        reactions: fmReactions,
-                        repeats: false
-                    )
-                }
-
-
-                if (selectedFilter == .all || selectedFilter == .cards), !filtered.isEmpty {
-                    FDFavReels(
-                        title: "карточки",
-                        items: filtered,
-                        order: $cardOrder,
-                        isEditing: $isEditing,
-                        onUnfavorite: { onUnfavorite?($0.sourceId) },
-                        onShowAll: { onShowAllCards?() },
-                        onOpen: { onOpenCard?($0) }
-                    )
-                }
-
-                if (selectedFilter == .all || selectedFilter == .hacks), !allHacks.isEmpty {
-                    FDFavHacksReel(
-                        title: "лайфхаки",
-                        items: allHacks,
-                        isEditing: $isHacksEditing,
-                        onUnfavorite: { onUnfavorite?($0.sourceId) },
-                        onOpen: { it in
-                            let text = it.meta.isEmpty ? it.title : it.meta
-                            let clean = text.hasPrefix("hack:") ? String(text.dropFirst("hack:".count)) : text
-                            let hackId = it.sourceId.hasPrefix("hack:") ? it.sourceId : ("hack:" + it.sourceId)
-                            let dto = FDCardDTO(
-                                sourceId: hackId,
-                                title: "Лайфхак",
-                                subtitle: clean,
-                                meta: "hack:" + clean,
-                                lessonTitle: it.lessonTitle,
-                                tagText: nil,
-                                addedAt: it.addedAt
                             )
-                            onOpenCard?(dto)
-                        },
-                        onShowAll: { onShowAllHacks?() }
+                        }
                     )
+                    .padding(.horizontal, PD.Spacing.screen)
                 }
 
-                if (selectedFilter == .all || selectedFilter == .courses), !courses.isEmpty {
-                    FDFavCoursesReel(
-                        title: "курсы",
-                        items: courses,
-                        onOpen: { onOpenCourse?($0) },
-                        onUnfavorite: { c in onUnfavorite?("course:\(c.courseId)") },
-                        onShowAll: { onShowAllCourses?() }
-                    )
+                if effectiveFilter == .all || effectiveFilter == .cards {
+                    if !filtered.isEmpty {
+                        favReelsCards(rows: effectiveFilter == .all ? 1 : 2)
+                    }
+                }
+                if effectiveFilter == .all || effectiveFilter == .hacks {
+                    if !allHacks.isEmpty {
+                        favReelsHacks(items: allHacks, rows: effectiveFilter == .all ? 1 : 2)
+                    }
+                }
+
+                if (effectiveFilter == .all || effectiveFilter == .courses), !courses.isEmpty {
+                    favReelsCourses(rows: effectiveFilter == .all ? 1 : 2)
                 }
                 Spacer(minLength: 8)
             }

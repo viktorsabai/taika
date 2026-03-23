@@ -1,123 +1,273 @@
 [
-{
-  "id": "course_b_1",
-  "title": "Разговорный старт",
-  "description": "Говори как человек, а не как робот. Простые фразы, приветствия и выживание в первых диалогах.",
-  "category": "База от Тайки",
-  "is_pro": false,
-  "lesson_count": 6,
-  "duration_minutes": 18,
-  "icon_name": "start_point",
-  "is_new": false,
-  "learning_outcomes": [
-    { "type": "Приветствия", "count": 5 },
-    { "type": "Базовые вопросы", "count": 3 },
-    { "type": "Фразы", "count": 10 }
-  ]
-},
-{
-  "id": "course_b_2",
-  "title": "Магия интонации",
-  "description": "Звучать по‑тайски — это не про слова, а про мелодию: ↗ ↘ →. Научись говорить так, как слышат тайцы.",
-  "category": "База от Тайки",
-  "is_pro": false,
-  "lesson_count": 6,
-  "duration_minutes": 15,
-  "icon_name": "tone_magic",
-  "is_new": false,
-  "learning_outcomes": [
-    { "type": "Тоны", "count": 5 },
-    { "type": "Интонация", "count": 20 },
-    { "type": "Фразы", "count": 5 }
-  ]
-},
-{
-  "id": "course_b_3",
-  "title": "Люди вокруг: я, ты, он, семья",
-  "description": "Как говорить о себе, друзьях, семье и людях вокруг. Естественные обращения без учебниковости.",
-  "category": "База от Тайки",
-  "is_pro": false,
-  "lesson_count": 6,
-  "duration_minutes": 12,
-  "icon_name": "pronouns",
-  "is_new": false,
-  "learning_outcomes": [
-    { "type": "Местоимения", "count": 10 },
-    { "type": "Обращения", "count": 6 },
-    { "type": "Фразы", "count": 8 }
-  ]
-},
-{
-  "id": "course_b_4",
-  "title": "Когда? Где? Куда?",
-  "description": "Время, дни, цифры, ориентиры, направления. То, без чего невозможно жить в Таиланде.",
-  "category": "База от Тайки",
-  "is_pro": false,
-  "lesson_count": 5,
-  "duration_minutes": 15,
-  "icon_name": "time_numbers",
-  "is_new": false,
-  "learning_outcomes": [
-    { "type": "Числа", "count": 20 },
-    { "type": "Время", "count": 15 },
-    { "type": "Навигация", "count": 10 }
-  ]
-},
-{
-  "id": "course_b_5",
-  "title": "Главные глаголы: говорить, идти, хотеть",
-  "description": "20 ключевых действий, без которых речь не движется. Строим свои фразы уверенно.",
-  "category": "База от Тайки",
-  "is_pro": false,
-  "lesson_count": 5,
-  "duration_minutes": 20,
-  "icon_name": "verbs",
-  "is_new": false,
-  "learning_outcomes": [
-    { "type": "Глаголы", "count": 30 },
-    { "type": "Фразы", "count": 15 }
-  ]
-},
-{
-  "id": "course_b_6",
-  "title": "Описания и свойства: вкусно, красиво, горячо",
-  "description": "Учимся описывать еду, людей, предметы и ощущения. То, что делает речь живой.",
-  "category": "База от Тайки",
-  "is_pro": false,
-  "lesson_count": 5,
-  "duration_minutes": 10,
-  "icon_name": "colors",
-  "is_new": false,
-  "learning_outcomes": [
-    { "type": "Прилагательные", "count": 15 },
-    { "type": "Фразы", "count": 5 }
-  ]
-},
-{
-  "id": "course_b_7",
-  "title": "Живые диалоги каждый день",
-  "description": "Короткие реальные сценки: в кафе, 7‑элевене, такси, у соседей, на рынке. Говори как местный.",
-  "category": "База от Тайки",
-  "is_pro": false,
-  "lesson_count": 6,
-  "duration_minutes": 16,
-  "icon_name": "questions_answers",
-  "is_new": false,
-  "learning_outcomes": [
-    { "type": "Диалоги", "count": 10 },
-    { "type": "Фразы", "count": 20 }
-  ]
-},
+  {
+    "id": "course_b_1",
+    "title": "Разговорный старт",
+    "description": "Говори как человек: приветствия, знакомство, просьбы, спасибо и извини. Плюс мнемоника — слова, которые уже в твоей голове.",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 8,
+    "duration_minutes": 28,
+    "icon_name": "start_point",
+    "is_new": false,
+    "learning_outcomes": [
+      {
+        "type": "Приветствия",
+        "count": 6
+      },
+      {
+        "type": "Базовые вопросы",
+        "count": 4
+      },
+      {
+        "type": "Фразы",
+        "count": 22
+      },
+      {
+        "type": "Мнемоника",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": "course_b_2",
+    "title": "Магия интонации",
+    "description": "Звучать по-тайски — это мелодия: ↗ ↘ →. Тоны на готовых фразах, эмоции, хвостики.",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 15,
+    "icon_name": "tone_magic",
+    "is_new": false,
+    "learning_outcomes": [
+      {
+        "type": "Тоны",
+        "count": 5
+      },
+      {
+        "type": "Интонация",
+        "count": 20
+      },
+      {
+        "type": "Фразы",
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": "course_b_3",
+    "title": "Я, ты, он, семья",
+    "description": "Как говорить о себе, друзьях, семье и людях вокруг. Местоимения, родня, гости — без учебниковости.",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "icon_name": "pronouns",
+    "is_new": false,
+    "learning_outcomes": [
+      {
+        "type": "Местоимения",
+        "count": 12
+      },
+      {
+        "type": "Обращения",
+        "count": 8
+      },
+      {
+        "type": "Фразы",
+        "count": 18
+      }
+    ]
+  },
+  {
+    "id": "course_b_4",
+    "title": "Время, место, цифры",
+    "description": "Числа 1–100, время, дни недели, направления, счёт людей и раз. То, без чего невозможно жить в Таиланде.",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "icon_name": "time_numbers",
+    "is_new": false,
+    "learning_outcomes": [
+      {
+        "type": "Числа",
+        "count": 25
+      },
+      {
+        "type": "Время",
+        "count": 18
+      },
+      {
+        "type": "Навигация",
+        "count": 12
+      }
+    ]
+  },
+  {
+    "id": "course_b_5",
+    "title": "Главные глаголы",
+    "description": "Ядро глаголов: движение, желание, речь, еда, действие, быт. Не пять слов — база, на которой строится фраза.",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 28,
+    "icon_name": "verbs",
+    "is_new": false,
+    "learning_outcomes": [
+      {
+        "type": "Глаголы",
+        "count": 45
+      },
+      {
+        "type": "Фразы",
+        "count": 25
+      }
+    ]
+  },
+  {
+    "id": "course_b_6",
+    "title": "Вкусно, красиво, горячо",
+    "description": "Ядро прилагательных: еда, вещи, погода, размер, оценка, характер. Описания делают речь живой.",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "icon_name": "colors",
+    "is_new": false,
+    "learning_outcomes": [
+      {
+        "type": "Прилагательные",
+        "count": 35
+      },
+      {
+        "type": "Фразы",
+        "count": 18
+      }
+    ]
+  },
+  {
+    "id": "course_b_7",
+    "title": "Диалоги как у местных",
+    "description": "Сценки в кафе, 7-Eleven, такси, на рынке. Синтез всего в реальных диалогах.",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 16,
+    "icon_name": "questions_answers",
+    "is_new": false,
+    "learning_outcomes": [
+      {
+        "type": "Диалоги",
+        "count": 10
+      },
+      {
+        "type": "Фразы",
+        "count": 20
+      }
+    ]
+  },
   {
     "id": "course_l_1",
     "title": "На посту с полицией",
-    "description": "Улыбка, [[привет]] и правильные [[документы]] — и на [[посту]] всё пройдёт [[сабай]], каа.",
+    "description": "Улыбка, привет и правильные документы — и на посту всё пройдёт сабай, каа.",
     "category": "Тайский для жизни",
-    "is_pro": true,
-    "lesson_count": 6,
-    "duration_minutes": 15,
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 18,
     "icon_name": "police_helmet",
     "is_new": true,
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Словарь",
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": "course_l_2",
+    "title": "Таксист, вези меня домой",
+    "description": "Назови место, обсуди цену — и такси довезёт домой без кружка по храмам, 555.",
+    "category": "Тайский для жизни",
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 12,
+    "icon_name": "taxi",
+    "is_new": false,
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 14
+      },
+      {
+        "type": "Словарь",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_l_3",
+    "title": "Король рынка",
+    "description": "Торгуйся мягко, считай числа, бери лучшее манго — станешь королём рынка, каа.",
+    "category": "Тайский для жизни",
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 13,
+    "icon_name": "market",
+    "is_new": false,
+    "learning_outcomes": [
+      {
+        "type": "Числа",
+        "count": 18
+      },
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": "course_l_4",
+    "title": "Вселенная тайской еды",
+    "description": "Стритфуд, фудкорты и макашницы: вкус, острота и любимые блюда не из туристического меню, каа.",
+    "category": "Тайский для жизни",
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 16,
+    "icon_name": "restaurant",
+    "is_new": false,
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Названия блюд",
+        "count": 12
+      },
+      {
+        "type": "Словарь",
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": "course_l_5",
+    "title": "Доктор Тайка дежурит",
+    "description": "Объясняй симптомы в аптеке и не покупай ненужное. Лекарства и дозировки по-тайски.",
+    "category": "Тайский для жизни",
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 11,
+    "icon_name": "pharmacy",
+    "is_new": false,
     "learning_outcomes": [
       {
         "type": "Фразы",
@@ -125,24 +275,24 @@
       },
       {
         "type": "Словарь",
-        "count": 5
+        "count": 12
       }
     ]
   },
   {
-    "id": "course_l_2",
-    "title": "Таксист, вези меня домой",
-    "description": "Назови [[место]], обсуди [[цену]] — и такси довезёт домой без кружка по храмам, 555.",
+    "id": "course_l_6",
+    "title": "Белый лотос на максималках",
+    "description": "Номер, уборка, полотенце, кондиционер — общайся с ресепшеном отеля без хаоса, каа.",
     "category": "Тайский для жизни",
-    "is_pro": true,
-    "lesson_count": 6,
-    "duration_minutes": 10,
-    "icon_name": "taxi",
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 15,
+    "icon_name": "hotel",
     "is_new": false,
     "learning_outcomes": [
       {
         "type": "Фразы",
-        "count": 12
+        "count": 11
       },
       {
         "type": "Словарь",
@@ -151,85 +301,14 @@
     ]
   },
   {
-    "id": "course_l_3",
-    "title": "Король рынка",
-    "description": "Торгуйся мягко, считай [[числа]], бери лучшее [[манго]] — станешь [[королём рынка]], каа.",
+    "id": "course_l_7",
+    "title": "Пляж как состояние",
+    "description": "Тень, кокос, шезлонг, снорклинг — сабай-день на пляже без приключений, каа.",
     "category": "Тайский для жизни",
     "is_pro": false,
-    "lesson_count": 6,
-    "duration_minutes": 11,
-    "icon_name": "market",
-    "is_new": false,
-    "learning_outcomes": [
-      {
-        "type": "Числа",
-        "count": 15
-      },
-      {
-        "type": "Фразы",
-        "count": 8
-      },
-      {
-        "type": "Словарь",
-        "count": 10
-      }
-    ]
-  },
-  {
-  "id": "course_l_4",
-    "title": "Вселенная тайской еды",
-    "description": "В Тае тема номер один — [[еда]]. Стритфуд, фудкорты и макашницы: говорим про вкус, [[остроту]] и любимые блюда так, чтобы это было интереснее, чем очередной том ям из туристического меню, каа.",
-    "category": "Тайский для жизни",
-    "is_pro": true,
-    "lesson_count": 6,
-    "duration_minutes": 14,
-    "icon_name": "restaurant",
-    "is_new": false,
-    "learning_outcomes": [
-      {
-        "type": "Фразы",
-        "count": 10
-      },
-      {
-        "type": "Названия блюд",
-        "count": 10
-      },
-      {
-        "type": "Словарь",
-        "count": 5
-      }
-    ]
-  },
-  {
-    "id": "course_l_5",
-    "title": "Доктор Тайка дежурит",
-    "description": "Когда до врача далеко, спасает [[аптека]]. Научимся объяснять [[симптомы]], спрашивать про [[лекарства]] и не кивать на всё подряд, что предлагают.",
-    "category": "Тайский для жизни",
-    "is_pro": true,
-    "lesson_count": 6,
-    "duration_minutes": 9,
-    "icon_name": "pharmacy",
-    "is_new": false,
-    "learning_outcomes": [
-      {
-        "type": "Фразы",
-        "count": 8
-      },
-      {
-        "type": "Словарь",
-        "count": 10
-      }
-    ]
-  },
-  {
-  "id": "course_l_6",
-    "title": "Белый лотос на максималках",
-    "description": "тропический [[отель]] как в большом сериале: чуть роскоши, чуть хаоса. говорим про [[номер]], [[уборку]], [[полотенце]] и ресепшен так, будто это твой сезон белого лотоса на максималках, каа.",
-    "category": "Тайский для жизни",
-    "is_pro": true,
-    "lesson_count": 6,
-    "duration_minutes": 13,
-    "icon_name": "hotel",
+    "lesson_count": 7,
+    "duration_minutes": 10,
+    "icon_name": "beach",
     "is_new": false,
     "learning_outcomes": [
       {
@@ -243,53 +322,32 @@
     ]
   },
   {
-    "id": "course_l_7",
-    "title": "Пляж как состояние",
-    "description": "тайский [[пляж]] — это состояние ума: выбрать место, спросить про [[тень]], взять [[кокос]], уточнить про [[снорклинг]] и раствориться в сабай-дне без приключений, каа.",
-    "category": "Тайский для жизни",
-    "is_pro": false,
-    "lesson_count": 6,
-    "duration_minutes": 8,
-    "icon_name": "beach",
-    "is_new": false,
-    "learning_outcomes": [
-      {
-        "type": "Фразы",
-        "count": 7
-      },
-      {
-        "type": "Словарь",
-        "count": 5
-      }
-    ]
-  },
-  {
     "id": "course_l_8",
     "title": "Магазинные приключения",
-    "description": "Найди [[товар]], спроси [[цену]], плати на [[кассе]] — без драм и очередей, каа.",
+    "description": "Big C, Tesco, Boots: найти товар, спросить цену, касса, пакет — без стресса, каа.",
     "category": "Тайский для жизни",
     "is_pro": false,
-    "lesson_count": 6,
-    "duration_minutes": 10,
+    "lesson_count": 7,
+    "duration_minutes": 12,
     "icon_name": "shop",
     "is_new": false,
     "learning_outcomes": [
       {
         "type": "Фразы",
-        "count": 8
+        "count": 10
       },
       {
         "type": "Словарь",
-        "count": 10
+        "count": 11
       }
     ]
   },
   {
     "id": "course_l_9",
     "title": "Срочная помощь",
-    "description": "Когда не до шуток: зови [[помощь]] в [[экстренной ситуации]] чётко и быстро.",
+    "description": "Полиция, скорая, пожарные. Помогите, больница, украли — чётко и быстро, каа.",
     "category": "Тайский для жизни",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 7,
     "duration_minutes": 14,
     "icon_name": "emergency",
@@ -297,7 +355,7 @@
     "learning_outcomes": [
       {
         "type": "Фразы",
-        "count": 10
+        "count": 12
       },
       {
         "type": "Словарь",
@@ -306,19 +364,19 @@
     ]
   },
   {
-  "id": "course_l_10",
+    "id": "course_l_10",
     "title": "Между подходами",
-    "description": "тайский в твоём [[зале]]: говорим про абонементы, [[тренировки]], веса и тренеров так, как общаются настоящие джим‑бро в таиланде, каа.",
+    "description": "Зал по-тайски: абонемент, тренировка, веса, тренер. Джим-бро вайб, каа.",
     "category": "Тайский для жизни",
-    "is_pro": true,
-    "lesson_count": 6,
-    "duration_minutes": 12,
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 14,
     "icon_name": "fitness",
     "is_new": false,
     "learning_outcomes": [
       {
         "type": "Фразы",
-        "count": 10
+        "count": 12
       },
       {
         "type": "Словарь",
@@ -329,17 +387,17 @@
   {
     "id": "course_l_11",
     "title": "Сезон Сонгкрана и не только",
-    "description": "тайская жизнь течёт по своему календарю: сонгкран, лой кратонг, местные фестивали, ярмарки и праздники, которые тайцы любят всем сердцем. говорим про [[праздники]], поздравления, фестивальный вайб и традиции так, чтобы чувствовать ритм страны, каа.",
+    "description": "Сонгкран, Лой Кратонг, Йи Пенг — поздравления и традиции. Чувствуй ритм страны, каа.",
     "category": "Тайский для жизни",
-    "is_pro": true,
-    "lesson_count": 6,
-    "duration_minutes": 16,
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 18,
     "icon_name": "festival",
     "is_new": false,
     "learning_outcomes": [
       {
         "type": "Фразы",
-        "count": 15
+        "count": 18
       },
       {
         "type": "Словарь",
@@ -348,19 +406,19 @@
     ]
   },
   {
-  "id": "course_l_12",
+    "id": "course_l_12",
     "title": "Новый тайский образ",
-    "description": "тайский салон — это не просто [[стрижка]]: моют голову, делают [[массаж]], приводят в порядок бороду и помогают найти новый образ. говорим про длину, форму и детали так, чтобы выйти обновлённым, каа.",
+    "description": "Салон: стрижка, массаж головы, борода. Длина, форма — выйди обновлённым, каа.",
     "category": "Тайский для жизни",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 6,
-    "duration_minutes": 9,
+    "duration_minutes": 11,
     "icon_name": "barbershop",
     "is_new": false,
     "learning_outcomes": [
       {
         "type": "Фразы",
-        "count": 8
+        "count": 10
       },
       {
         "type": "Словарь",
@@ -370,18 +428,18 @@
   },
   {
     "id": "course_l_13",
-    "title": "Хозяин дома - почти сосед",
-    "description": "протечка, [[оплата]], сломанный [[кондиционер]] — всё это решается через чат с [[арендодателем]]. говорим так, чтобы и проблемы решались, и отношения оставались тёплыми, каа.",
+    "title": "Хозяин дома — почти сосед",
+    "description": "Протечка, оплата, кондиционер — решай с арендодателем в чате мягко и по делу, каа.",
     "category": "Тайский для жизни",
-    "is_pro": true,
-    "lesson_count": 6,
-    "duration_minutes": 14,
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 16,
     "icon_name": "landlord",
     "is_new": false,
     "learning_outcomes": [
       {
         "type": "Фразы",
-        "count": 12
+        "count": 14
       },
       {
         "type": "Словарь",
@@ -392,38 +450,38 @@
   {
     "id": "course_l_14",
     "title": "Таиланд доставляет",
-    "description": "таиланд доставляет не только вайб, но и [[посылки]]: lazada, shopee, 7‑элевен и обычная [[почта]]. учимся назвать [[адрес]], поймать [[курьера]], спросить про [[трек‑номер]] и [[сколько стоит]] так, чтобы ничего не потерялось, каа.",
+    "description": "Lazada, Shopee, курьер: адрес, трек-номер, когда привезёт. Чтобы ничего не потерялось, каа.",
     "category": "Тайский для жизни",
-    "is_pro": true,
-    "lesson_count": 6,
-    "duration_minutes": 8,
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 10,
     "icon_name": "post_office",
     "is_new": false,
     "learning_outcomes": [
       {
         "type": "Фразы",
-        "count": 7
+        "count": 9
       },
       {
         "type": "Словарь",
-        "count": 8
+        "count": 9
       }
     ]
   },
   {
-  "id": "course_l_15",
+    "id": "course_l_15",
     "title": "После заката всё интереснее",
-    "description": "тайланд после заката — это отдельная вселенная: пляжные бары, караоке, регги‑точки, пинг‑понг шоу, ледибои, уличные тусовки и случайные знакомства. учимся заказывать [[напитки]], поддерживать [[small talk]], знакомиться, говорить про [[музыку]] и ориентироваться в ночном колорите без кринжа, каа.",
+    "description": "Бары, караоке, small talk, напитки. Заказывай, знакомься, ориентируйся в ночной жизни без кринжа, каа.",
     "category": "Тайский для жизни",
-    "is_pro": true,
-    "lesson_count": 6,
-    "duration_minutes": 16,
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 18,
     "icon_name": "party",
     "is_new": false,
     "learning_outcomes": [
       {
         "type": "Фразы",
-        "count": 12
+        "count": 14
       },
       {
         "type": "Словарь",
@@ -434,9 +492,9 @@
   {
     "id": "course_e_1",
     "title": "Понятный тайский",
-    "description": "тайцы ценят [[ясность]], [[мягкость]] и простой [[ритм речи]]. учимся строить [[фразы]] так, чтобы тебя понимали с первого раза — без перегруза, без резкости и без недопонимания, каа.",
+    "description": "Ясность и мягкость, правильный ритм речи. Строим фразы так, чтобы понимали с первого раза без напряжения, каа.",
     "category": "На одной волне",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 6,
     "duration_minutes": 10,
     "icon_name": "thank_you_hand",
@@ -455,9 +513,9 @@
   {
     "id": "course_e_2",
     "title": "Работа с тайцами",
-    "description": "ставим [[задачи]], уточняем [[статус]], просим помочь и ведём рабочий [[small talk]] по‑тайски. учимся общаться с [[коллегами]] и подрядчиками так, чтобы всё делалось вовремя и без конфликта, каа.",
+    "description": "Задачи, статус, напоминания. Рабочий small talk с коллегами и подрядчиками без конфликта, каа.",
     "category": "На одной волне",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 6,
     "duration_minutes": 11,
     "icon_name": "open_door",
@@ -476,9 +534,9 @@
   {
     "id": "course_e_3",
     "title": "Сервис и персонал",
-    "description": "[[уборка]], [[ремонт]], [[ресепшен]], [[доставка]], мастера — тайский [[сервис]] работает отлично, если правильно говорить. учимся объяснять [[просьбы]], уточнять детали и добиваться результата мягко и понятно, каа.",
+    "description": "Уборка, ремонт, доставка. Объясняем просьбы мягко — результат быстрый и без раздражения, каа.",
     "category": "На одной волне",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 6,
     "duration_minutes": 12,
     "icon_name": "body_language",
@@ -497,9 +555,9 @@
   {
     "id": "course_e_4",
     "title": "Разговоры без конфликта",
-    "description": "в тае важно сохранять мирный [[вайб]] даже при [[проблемах]]. учимся мягко решать [[недопонимания]], извиняться, уточнять, [[спорить]] корректно и выходить из неловких ситуаций без давления, каа.",
+    "description": "Недопонимания и проблемы решаем мягко. Извинения, уточнения, выход из неловких ситуаций без давления, каа.",
     "category": "На одной волне",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 6,
     "duration_minutes": 9,
     "icon_name": "apologize",
@@ -518,9 +576,9 @@
   {
     "id": "course_e_5",
     "title": "Коды Таиланда",
-    "description": "[[крэнг‑джай]], [[джай‑йен]], [[сабай]] — три ключа к тайскому общению. разбираем, как тайцы избегают давления, почему говорят обходно и как понимать [[скрытые смыслы]], каа.",
+    "description": "Крэнг-джай, джай-йен, сабай. Как тайцы избегают давления и что значит читать между строк, каа.",
     "category": "На одной волне",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 6,
     "duration_minutes": 11,
     "icon_name": "thai_humor",
@@ -539,9 +597,9 @@
   {
     "id": "course_e_6",
     "title": "Мягкий тайский твой",
-    "description": "фаранг часто звучит для тайцев слишком резко. учимся [[смягчать речь]], выбирать правильный [[тон]], добавлять [[вежливые маркеры]] и говорить так, чтобы тебя слушали с удовольствием, каа.",
+    "description": "Смягчать речь, тон, маркеры на/каа/кхрап. Чтобы тайцы слушали с удовольствием, а не напрягались, каа.",
     "category": "На одной волне",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 6,
     "duration_minutes": 12,
     "icon_name": "feelings",
@@ -558,11 +616,11 @@
     ]
   },
   {
-  "id": "course_s_1",
+    "id": "course_s_1",
     "title": "Тайский для блогинга",
-    "description": "тайский [[блогинг]]: [[сторис]], [[подписи]], [[комментарии]] и личные [[впечатления]]. учимся звучать живо по‑тайски, общаться с подписчиками и не зависеть от гугл‑переводчика, каа.",
+    "description": "Сторис, подписи и комментарии на тайском. Живые фразы и эмодзи-сленг без гугл-переводчика, каа.",
     "category": "Тайский для души",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 6,
     "duration_minutes": 14,
     "icon_name": "social_media",
@@ -580,10 +638,10 @@
   },
   {
     "id": "course_s_2",
-    "title": "Хобби и движ по‑тайски",
-    "description": "от [[муай‑тай]] и йоги до керамики и серфинга: учимся говорить про свои [[хобби]], спрашивать про [[зал]], расписание, тренеров и находить свой движ по‑тайски, каа.",
+    "title": "Хобби и движ по-тайски",
+    "description": "Муай-тай, йога, серфинг, керамика. Где зал, расписание, тренер — находи свой движ, каа.",
     "category": "Тайский для души",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 6,
     "duration_minutes": 13,
     "icon_name": "hobbies",
@@ -602,10 +660,10 @@
   {
     "id": "course_s_3",
     "title": "О чём говорят на самом деле",
-    "description": "о чём говорят тайцы на самом деле: популярные [[идиомы]], разговорный [[сленг]], мемные фразы и выражения для неформального общения — от чата до бара, каа.",
+    "description": "Сленг, идиомы, мемы. 555, джин, джай-рай — понимать шутки и участвовать без ощущения фаранга, каа.",
     "category": "Тайский для души",
-    "is_pro": true,
-    "lesson_count": 7,
+    "is_pro": false,
+    "lesson_count": 6,
     "duration_minutes": 16,
     "icon_name": "thai_slang",
     "is_new": false,
@@ -623,9 +681,9 @@
   {
     "id": "course_s_4",
     "title": "Ретрит и внутренний сабай",
-    "description": "тайские [[ретриты]], [[храмы]], практики [[тишины]] и общения с [[монахами]]. учимся спрашивать про правила, расписание и свои границы так, чтобы чувствовать себя уверенно и уважительно, каа.",
+    "description": "Ретриты, храмы, монахи. Правила, расписание, границы — уверенно и уважительно, каа.",
     "category": "Тайский для души",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 6,
     "duration_minutes": 14,
     "icon_name": "retreat",
@@ -642,11 +700,11 @@
     ]
   },
   {
-  "id": "course_s_5",
+    "id": "course_s_5",
     "title": "Романтика по-тайски",
-    "description": "лёгкий [[флирт]], взаимная [[симпатия]], забота, шутки, байк, кафе и вечерний сабай. проживаем день от [[утра]] до [[ночи]] так, чтобы уметь говорить про интерес, намёки, комфорт и [[границы]] без кринжа и неуверенности, каа.",
+    "description": "Флирт, забота, намёки, границы. Говорить про интерес и чувства без кринжа, каа.",
     "category": "Тайский для души",
-    "is_pro": true,
+    "is_pro": false,
     "lesson_count": 6,
     "duration_minutes": 18,
     "icon_name": "day_with_taika",
@@ -665,10 +723,10 @@
   {
     "id": "course_s_6",
     "title": "Тай кидс",
-    "description": "тайцы обожают [[детей]]: на пляже, в кафе, у соседей и в школе. учимся говорить с [[малышами]], понимать их [[речь]], играть, хвалить и мягко обозначать [[границы]] так, чтобы всем было сабай, каа.",
+    "description": "Игры, похвала, границы. Общаться с детьми и родителями на пляже и в кафе — всем сабай, каа.",
     "category": "Тайский для души",
-    "is_pro": true,
-    "lesson_count": 5,
+    "is_pro": false,
+    "lesson_count": 6,
     "duration_minutes": 15,
     "icon_name": "kids",
     "is_new": false,
@@ -680,6 +738,153 @@
       {
         "type": "Словарь",
         "count": 12
+      }
+    ]
+  },
+  {
+    "id": "course_long_1",
+    "title": "Виза, продление, иммиграция",
+    "description": "90-day report, продление визы, TM.30, фото 4×6. Без паники и агентов — сам в иммигрейшене, каа.",
+    "category": "Тайский для долгожителей",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 16,
+    "icon_name": "visa",
+    "is_new": true,
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Формы",
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": "course_long_2",
+    "title": "Банки, деньги, крипта",
+    "description": "Открыть счёт, Wise, PromptPay, крипто-обменники. Перевод не пришёл, карта заблокирована — решаем по-тайски.",
+    "category": "Тайский для долгожителей",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 14,
+    "icon_name": "bank",
+    "is_new": true,
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_long_3",
+    "title": "Полная медицина и страховка",
+    "description": "Врач, анализы, УЗИ, аллергия на пенициллин, страховка покрывает? Ассистанс без паники, каа.",
+    "category": "Тайский для долгожителей",
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 18,
+    "icon_name": "hospital",
+    "is_new": true,
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 15
+      },
+      {
+        "type": "Симптомы",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": "course_long_4",
+    "title": "Транспорт для своих",
+    "description": "Мототакси, GrabBike, аренда байка, шлем, страховка. Сонгтео: останови здесь. Как местный, каа.",
+    "category": "Тайский для долгожителей",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 14,
+    "icon_name": "motorbike",
+    "is_new": true,
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Словарь",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_long_5",
+    "title": "Соседи, кондо, правила дома",
+    "description": "Шум, курение на балконе, общие зоны. Кто-то оставил мусор, собрание жильцов. Жить без конфликтов, каа.",
+    "category": "Тайский для долгожителей",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 12,
+    "icon_name": "condo",
+    "is_new": true,
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": "course_long_6",
+    "title": "Питомцы в Таиланде",
+    "description": "Ветеринар, прививки, пёс кашляет, груминг. Можно в отель с животным? Дог-френдли по-тайски, каа.",
+    "category": "Тайский для долгожителей",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 12,
+    "icon_name": "pets",
+    "is_new": true,
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_long_7",
+    "title": "Тайский юмор, мемы, поп-культура",
+    "description": "555, แซ่บ, нонг. Фразы из дорам и тиктока 2025–2026. Шутить по-тайски и быть в теме, каа.",
+    "category": "Тайский для долгожителей",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 16,
+    "icon_name": "thai_humor",
+    "is_new": true,
+    "learning_outcomes": [
+      {
+        "type": "Выражения",
+        "count": 15
+      },
+      {
+        "type": "Мемы",
+        "count": 10
       }
     ]
   }

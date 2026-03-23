@@ -176,6 +176,7 @@ final class StepManager: ObservableObject {
         self.courseId = courseId
         self.lessonId = lessonId
         self.steps = steps
+        reloadFromProgressStore()
         restoreLastActiveIndex()
         // ensure an immediate sync to LessonsManager
         scheduleEmitProgress()
@@ -209,14 +210,23 @@ final class StepManager: ObservableObject {
     }
 
     // MARK: - Progress domain (exclude non-learning items from totals)
+    /// Indices that are learnable (word/phrase) but invalid per atomic contract (missing transcript/audio).
+    private var invalidProgressIndexes: Set<Int> {
+        guard !lessonId.isEmpty else { return [] }
+        let fromData = StepData.shared.invalidProgressIndices(for: lessonId)
+        return fromData.intersection(steps.indices)
+    }
+    /// Indices that count toward completion (learnable: word/phrase, valid per StepData).
     private var progressEligibleIndices: Set<Int> {
-        Set(steps.enumerated().compactMap { (i, s) in
+        let learnable = Set(steps.enumerated().compactMap { (i, s) in
             switch s.kind { case .word, .phrase: return i; case .lifehack: return nil }
         })
+        return learnable.subtracting(invalidProgressIndexes)
     }
-    /// Indices to exclude from completion/percent logic (e.g. lifehacks)
+    /// Indices excluded from completion/percent (lifehacks + invalid learnable steps).
     private var excludedProgressIndexes: Set<Int> {
-        Set(steps.enumerated().compactMap { (i, s) in s.kind == .lifehack ? i : nil })
+        let lifehacks = Set(steps.enumerated().compactMap { (i, s) in s.kind == .lifehack ? i : nil })
+        return lifehacks.union(invalidProgressIndexes)
     }
     private var progressTotal: Int { progressEligibleIndices.count }
     private var learnedProgressCount: Int { learned.intersection(progressEligibleIndices).count }
@@ -241,6 +251,8 @@ final class StepManager: ObservableObject {
             totalSteps: progressTotal,
             excludedIndexes: excludedProgressIndexes
         )
+        // Flush to LessonsManager immediately so games/course see completed lesson right away
+        notifyProgress()
     }
 
     /// Current lesson progress snapshot
@@ -284,13 +296,14 @@ final class StepManager: ObservableObject {
                 "lifehackCount": hacksIdx.count
             ]
         )
-        // Pass full total (including lifehacks) + lifehackCount so LessonsManager can compute effective totals
+        // Use StepData as source of truth for denominator so % is learned / all learnable steps in lesson
+        let (totalLearnable, totalLifehack) = StepData.shared.progressCounts(for: lessonId)
         LessonsManager.shared.updateLessonProgress(
             courseId: courseId,
             lessonId: lessonId,
             learnedCount: learnedProgressCount,
-            total: progressTotal,
-            lifehackCount: lifehackCount
+            total: totalLearnable + totalLifehack,
+            lifehackCount: totalLifehack
         )
         // Also keep completion flag in sync when counts change not from a direct toggle
         ProgressManager.shared.markCompletedIfNeeded(
@@ -302,6 +315,14 @@ final class StepManager: ObservableObject {
     }
     /// Preview-only mirror; source of truth lives in FavoriteManager
     @Published var favorites: Set<Int> = []
+
+    /// Показывать переключатель Лайфхаки/Карточки в app header (только когда урок имеет оба типа).
+    @Published var stepHeaderShowsSegment: Bool = false
+    /// 0 = Лайфхаки, 1 = Карточки; синхронизируется с StepView и с иконками в хедере. По умолчанию карточки.
+    @Published var stepHeaderSegment: Int = 1
+    /// Количество лайфхаков / карточек для отображения в хедере (например «Лайфхаки 3», «Карточки 5»).
+    @Published var stepHeaderTipCount: Int = 0
+    @Published var stepHeaderCardCount: Int = 0
 
     // MARK: - External resets (used by LessonsManager)
     /// Ensure persistent storage is cleared too (ProgressManager) — defensive, even if upper layer resets as well
@@ -335,11 +356,11 @@ final class StepManager: ObservableObject {
         scheduleEmitProgress()
     }
 
-    // Ensure state is in sync when context/steps change
+    // Ensure state is in sync when context/steps change.
+    // Must use ProgressManager.learnedSet (canonicalizes keys); raw LessonKey would miss stored data.
     private func reloadFromProgressStore() {
         guard !courseId.isEmpty, !lessonId.isEmpty else { return }
-        let key = "\(courseId)|\(lessonId)"
-        let indices = ProgressManager.shared.snapshot.learned[LessonKey(courseId: courseId, lessonId: lessonId)] ?? []
+        let indices = ProgressManager.shared.learnedSet(courseId: courseId, lessonId: lessonId)
         let eligible = progressEligibleIndices
         let filtered = Set(indices.filter { eligible.contains($0) })
         if filtered != learned {
@@ -675,14 +696,90 @@ public func resolveRoute(fromFavoriteId fid: String) -> (courseId: String, lesso
         scheduleEmitProgress()
     }
 
-    /// Explicit setter used by DS (e.g., long-press or menu actions)
+    /// Explicit setter used by DS (e.g., long-press or menu actions). Uses current lesson context.
     func setLearned(index: Int, _ isLearned: Bool) {
         guard steps.indices.contains(index) else { return }
         if isLearned { learned.insert(index) } else { learned.remove(index) }
         let nowLearned = learned.contains(index)
         persistLastActiveIndex()
         notifyProgressStoreStep(index: index, isLearned: nowLearned)
+        if nowLearned, !courseId.isEmpty, !lessonId.isEmpty {
+            NotificationCenter.default.post(
+                name: .masteryUpdate,
+                object: nil,
+                userInfo: [
+                    "courseId": courseId,
+                    "lessonId": lessonId,
+                    "index": index,
+                    "gameType": "step"
+                ]
+            )
+        }
         scheduleEmitProgress()
+    }
+
+    /// Set learned for an arbitrary lesson (e.g. from MainView daily pick). Single writer path; does not change current context.
+    public func setLearned(courseId: String, lessonId: String, index: Int, isLearned: Bool) {
+        guard !courseId.isEmpty, !lessonId.isEmpty else { return }
+        let raw = StepData.shared.items(for: lessonId)
+        guard index >= 0, index < raw.count else { return }
+        let invalid = StepData.shared.invalidProgressIndices(for: lessonId)
+        let lifehacks = Set(raw.enumerated().compactMap { i, it in
+            switch it.kind { case .tip, .dialog: return i; default: return nil }
+        })
+        let excluded = lifehacks.union(invalid)
+        let eligible = Set(raw.indices).subtracting(excluded)
+        guard eligible.contains(index) else { return }
+        ProgressManager.shared.setStepLearned(
+            courseId: courseId,
+            lessonId: lessonId,
+            index: index,
+            isLearned: isLearned,
+            excludedIndexes: excluded
+        )
+        ProgressManager.shared.markStarted(courseId: courseId, lessonId: lessonId)
+        ProgressManager.shared.markCompletedIfNeeded(
+            courseId: courseId,
+            lessonId: lessonId,
+            totalSteps: eligible.count,
+            excludedIndexes: excluded
+        )
+        let learnedSet = ProgressManager.shared.learnedSet(courseId: courseId, lessonId: lessonId)
+        let learnedCount = learnedSet.intersection(eligible).count
+        let lifehackCount = lifehacks.count
+        LessonsManager.shared.updateLessonProgress(
+            courseId: courseId,
+            lessonId: lessonId,
+            learnedCount: learnedCount,
+            total: eligible.count,
+            lifehackCount: lifehackCount
+        )
+        NotificationCenter.default.post(
+            name: .stepProgressDidChange,
+            object: nil,
+            userInfo: [
+                "courseId": courseId,
+                "lessonId": lessonId,
+                "learnedContent": Array(learnedSet.intersection(eligible)).sorted(),
+                "allCards": Array(eligible).sorted(),
+                "lifehacks": Array(excluded).sorted(),
+                "learnedCount": learnedCount,
+                "totalCount": eligible.count,
+                "lifehackCount": lifehackCount
+            ]
+        )
+        if isLearned {
+            NotificationCenter.default.post(
+                name: .masteryUpdate,
+                object: nil,
+                userInfo: [
+                    "courseId": courseId,
+                    "lessonId": lessonId,
+                    "index": index,
+                    "gameType": "step"
+                ]
+            )
+        }
     }
 
     // MARK: - Aggregates (preview-friendly)

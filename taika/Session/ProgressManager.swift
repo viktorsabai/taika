@@ -28,6 +28,9 @@ public extension Notification.Name {
     static let progressCourseDidReset = Notification.Name("progressCourseDidReset")
     static let stepLocalStateShouldReset = Notification.Name("stepLocalStateShouldReset")
 
+    /// Fired when a step is marked learned (e.g. after Recall/Match or from Step view). userInfo: courseId, lessonId, index, gameType ("step" | "recall" | "match"). For Smart Discovery / analytics.
+    static let masteryUpdate = Notification.Name("MasteryUpdate")
+
     // legacy aliases for backward compatibility with existing listeners
     static let lessonProgressDidReset = Notification.Name("lessonProgressDidReset")
     static let courseProgressDidReset = Notification.Name("courseProgressDidReset")
@@ -60,13 +63,15 @@ public final class ProgressManager: ObservableObject {
     // yyyy-mm-dd -> set(courseId)
     @Published private(set) var dayCourses: [String: Set<String>] = [:]
     @Published public private(set) var revision: Int = 0
+    /// Profile dashboard: Total Stable Steps, Streak, Mastery %, Speaking, Radar. Пересобирается в emitChange() и load().
+    @Published public private(set) var publishedState: ProfileDashboardState = .empty
 
     public var snapshot: (learned: [LessonKey: Set<Int>], started: Set<LessonKey>, completed: Set<LessonKey>) {
         (learnedSteps, startedLessons, completedLessons)
     }
 
-    // MARK: Key canonicalization
-    private func canonicalize(_ raw: String) -> String {
+    // MARK: Key canonicalization (internal for ProgressManager+Profile)
+    func canonicalize(_ raw: String) -> String {
         if let cached = canonCache[raw] { return cached }
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if s.isEmpty { canonCache[raw] = s; return s }
@@ -102,12 +107,18 @@ public final class ProgressManager: ObservableObject {
         // deprecated: calendar history is tracked in UserSession
     }
 
+    /// Обновить publishedState после готовности синглтонов (напр. из ProfileView.task). Присвоение только здесь — setter private(set).
+    public func refreshProfileState() {
+        publishedState = rebuildProfileDashboardState()
+    }
+
     private var emitWorkItem: DispatchWorkItem?
     private func emitChange() {
         emitWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             self.revision &+= 1
+            self.publishedState = self.rebuildProfileDashboardState()
             NotificationCenter.default.post(name: .progressDidChange, object: self)
             NotificationCenter.default.post(name: .ProgressDidChange, object: self)
         }
@@ -150,6 +161,23 @@ public final class ProgressManager: ObservableObject {
 
     private init() {
         load()
+        // EPIC 4: single source for course progress — compute from learnedSteps + LessonsData/StepData meta
+        lessonMetaProvider = { courseId in
+            let lessons = LessonsData.shared.lessons(for: courseId)
+            return lessons.map { lesson in
+                let items = StepData.shared.items(for: lesson.lessonID)
+                var tipIndexes = Set<Int>()
+                for (idx, item) in items.enumerated() {
+                    if item.kind == .tip || item.kind == .dialog {
+                        tipIndexes.insert(idx)
+                    }
+                }
+                let excludedIndexes = StepData.shared.invalidProgressIndices(for: lesson.lessonID)
+                return (id: lesson.lessonID, totalSteps: items.count, tipIndexes: tipIndexes, excludedIndexes: excludedIndexes)
+            }
+        }
+        // Не вызываем rebuildProfileDashboardState() здесь: UserSession.shared в цепочке → возможный цикл при старте.
+        // Первый пересчёт — из ProfileView.task или при первом emitChange().
     }
 
     // MARK: Read
@@ -222,7 +250,7 @@ public final class ProgressManager: ObservableObject {
         )
         learnedSteps[key] = set
         startedLessons.insert(key)
-        scheduleSave()
+        scheduleSave(immediate: true)
         emitChange()
         NotificationCenter.default.post(
             name: Notification.Name("stepProgressDidChange"),
@@ -419,17 +447,43 @@ public final class ProgressManager: ObservableObject {
         )
     }
 
+    /// Apply progress from cloud sync (USSnapshot). Call after UserSession.applySnapshotFromSync.
+    public func applyFromUSSnapshot(_ snap: USSnapshot) {
+        var learned: [LessonKey: Set<Int>] = [:]
+        let sep = "|"
+        for (compound, set) in snap.learnedSteps {
+            guard let idx = compound.firstIndex(of: "|") else { continue }
+            let courseId = String(compound[..<idx])
+            let lessonId = String(compound[compound.index(after: idx)...])
+            let key = makeKey(courseId: courseId, lessonId: lessonId)
+            learned[key] = set
+        }
+        learnedSteps = learned
+        startedLessons = Set(learned.keys)
+        var completed: Set<LessonKey> = []
+        for (courseId, lessonIds) in snap.completedLessons {
+            for lessonId in lessonIds {
+                completed.insert(makeKey(courseId: courseId, lessonId: lessonId))
+            }
+        }
+        completedLessons = completed
+        dayCourses = snap.dayCourses
+        scheduleSave(immediate: true)
+        emitChange()
+        NotificationCenter.default.post(name: .progressDidChange, object: self)
+    }
+
     // MARK: Persistence
+    /// When immediate: true, save synchronously so progress is persisted before app can background (same as FavoriteManager).
     private func scheduleSave(immediate: Bool = false) {
         saveWorkItem?.cancel()
+        if immediate {
+            save()
+            return
+        }
         let work = DispatchWorkItem { [weak self] in self?.save() }
         saveWorkItem = work
-        let q = DispatchQueue.global(qos: .utility)
-        if immediate {
-            q.async(execute: work)
-        } else {
-            q.asyncAfter(deadline: .now() + 0.25, execute: work)
-        }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 0.25, execute: work)
     }
 
     private func save() {
@@ -463,6 +517,7 @@ public final class ProgressManager: ObservableObject {
             self.startedLessons = Set(store.started.map { LessonKey(courseId: canonicalize($0.courseId), lessonId: canonicalize($0.lessonId)) })
             self.completedLessons = Set(store.completed.map { LessonKey(courseId: canonicalize($0.courseId), lessonId: canonicalize($0.lessonId)) })
             self.dayCourses = store.dayCourses
+            // publishedState не пересобираем в load() — избегаем обращения к UserSession.shared до конца инициализации синглтонов.
         } catch {
             // corrupted -> start clean
             self.learnedSteps = [:]
@@ -511,9 +566,11 @@ public extension ProgressManager {
     ///   - lessonId: Optional lesson identifier. If nil, returns averaged course progress.
     ///   - totalSteps: Total steps for the lesson (excluding tips/excluded). If 0 and lessonId is provided, returns 0 until meta is supplied.
     /// - Returns: Fraction in [0, 1].
+    /// Returns progress fraction in [0, 1]. EPIC 4: all callers can rely on this range.
     func progress(for courseId: String, lessonId: String? = nil, totalSteps: Int = 0) -> Double {
         if let lessonId = lessonId {
-            return lessonProgressFraction(courseId: courseId, lessonId: lessonId, totalSteps: totalSteps)
+            let f = lessonProgressFraction(courseId: courseId, lessonId: lessonId, totalSteps: totalSteps)
+            return min(1.0, max(0.0, f))
         } else {
             // Course progress must be consistent everywhere.
             // Use weighted progress by effective step counts (excluding tips/excluded), not a plain average by lessons.
@@ -529,11 +586,10 @@ public extension ProgressManager {
                     effectiveTotal += effTotal
                 }
                 guard effectiveTotal > 0 else { return 0 }
-                return min(1.0, Double(learnedTotal) / Double(effectiveTotal))
+                return min(1.0, max(0.0, Double(learnedTotal) / Double(effectiveTotal)))
             }
 
             // Fallback: if no meta is available, use LessonsManager's course percent (already weighted).
-            // This prevents returning 0 when lessonMetaProvider is not wired yet.
             let v = LessonsManager.shared.coursePercent(for: courseId)
             return min(1.0, max(0.0, v))
         }

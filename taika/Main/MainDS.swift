@@ -69,7 +69,7 @@ private struct MDCTAPill: View {
             label
                 .foregroundStyle(Color.black)
                 .background(Capsule().fill(BrandGradient.linear))
-                .overlay(Capsule().stroke(Color.white.opacity(0.06), lineWidth: 1))
+                .overlay(Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
                 .shadow(color: shadowed ? Color.black.opacity(0.15) : .clear, radius: 10, y: shadowed ? 6 : 0)
                 .frame(height: 36)
                 .frame(maxWidth: wide ? .infinity : nil, alignment: .center)
@@ -323,15 +323,37 @@ public struct MDTwoRowCourseCarousel<Item: Identifiable, Card: View>: View {
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
             }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: cardSpacing) {
-                    ForEach(items) { it in
-                        card(it)
+            GeometryReader { outer in
+                let sideInset = max(0, (outer.size.width - cardWidth) / 2)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: cardSpacing) {
+                        ForEach(items) { it in
+                            GeometryReader { cellGeo in
+                                let viewportCenterX = outer.size.width / 2
+                                let cellCenterX = cellGeo.frame(in: .named("mdRowCarousel")).midX
+                                let dist = abs(cellCenterX - viewportCenterX)
+                                let norm = min(1.0, dist / max(1.0, outer.size.width * Theme.Layout.carouselDepthNormWidthFactor))
+                                let scale = Theme.Layout.carouselDepthScaleSide + (Theme.Layout.carouselDepthScaleCenter - Theme.Layout.carouselDepthScaleSide) * (1.0 - norm)
+                                let opacity = Theme.Layout.carouselDepthOpacitySide + (Theme.Layout.carouselDepthOpacityCenter - Theme.Layout.carouselDepthOpacitySide) * (1.0 - norm)
+                                let yOffset = -(1.0 - norm) * Theme.Layout.carouselDepthYOffsetMax
+
+                                card(it)
+                                    .frame(width: cardWidth)
+                                    .scaleEffect(scale)
+                                    .opacity(opacity)
+                                    .offset(y: yOffset)
+                                    .zIndex(Double(1.0 - norm))
+                            }
                             .frame(width: cardWidth)
+                            .id(it.id)
+                        }
                     }
+                    .padding(.horizontal, sideInset)
+                    .padding(.vertical, Theme.Layout.carouselVPad)
                 }
-                .padding(.horizontal, Theme.Layout.pageHorizontal)
+                .coordinateSpace(name: "mdRowCarousel")
             }
+            .frame(height: 220)
         }
         .padding(.top, title.topPadding)
         .padding(.bottom, title.bottomPadding)
@@ -580,10 +602,13 @@ public struct MDDailyPicksComposite: View {
     public var onTapCourse: (Int) -> Void
     public var onTapLesson: (Int) -> Void
     public var onOpenCourse: (Int) -> Void
+    public var onTapItem: ((Int) -> Void)?
     public var onPlay: ((Int) -> Void)?
     public var onDone: ((Int) -> Bool)?
     public var onFav: ((Int) -> Bool)?
     public var onIndexChange: ((Int) -> Void)?
+    /// Когда false — не рисовать мини-прогресс (точки) внутри секции; вынести в MainView за рамки секции.
+    public var showProgressRow: Bool = true
 
     public init(
         title: String = "ПОДБОРКА ДНЯ",
@@ -596,10 +621,12 @@ public struct MDDailyPicksComposite: View {
         onTapCourse: @escaping (Int) -> Void = { _ in },
         onTapLesson: @escaping (Int) -> Void = { _ in },
         onOpenCourse: @escaping (Int) -> Void = { _ in },
+        onTapItem: ((Int) -> Void)? = nil,
         onPlay: ((Int) -> Void)? = nil,
         onDone: ((Int) -> Bool)? = nil,
         onFav: ((Int) -> Bool)? = nil,
-        onIndexChange: ((Int) -> Void)? = nil
+        onIndexChange: ((Int) -> Void)? = nil,
+        showProgressRow: Bool = true
     ) {
         self.title = title
         self.items = items
@@ -611,10 +638,12 @@ public struct MDDailyPicksComposite: View {
         self.onTapCourse = onTapCourse
         self.onTapLesson = onTapLesson
         self.onOpenCourse = onOpenCourse
+        self.onTapItem = onTapItem
         self.onPlay = onPlay
         self.onDone = onDone
         self.onFav = onFav
         self.onIndexChange = onIndexChange
+        self.showProgressRow = showProgressRow
     }
 
     public init(
@@ -628,6 +657,7 @@ public struct MDDailyPicksComposite: View {
         onTapCourse: @escaping (Int) -> Void = { _ in },
         onTapLesson: @escaping (Int) -> Void = { _ in },
         onOpenCourse: @escaping (Int) -> Void = { _ in },
+        onTapItem: ((Int) -> Void)? = nil,
         onPlay: ((Int) -> Void)? = nil,
         onDone: ((Int) -> Bool)? = nil,
         onFav: ((Int) -> Bool)? = nil,
@@ -650,6 +680,7 @@ public struct MDDailyPicksComposite: View {
         self.onTapCourse = onTapCourse
         self.onTapLesson = onTapLesson
         self.onOpenCourse = onOpenCourse
+        self.onTapItem = onTapItem
         self.onPlay = onPlay
         self.onDone = onDone
         self.onFav = onFav
@@ -670,6 +701,7 @@ public struct MDDailyPicksComposite: View {
         self.onTapCourse = { _ in }
         self.onTapLesson = { _ in }
         self.onOpenCourse = { _ in }
+        self.onTapItem = nil
         self.onPlay = nil
         self.onDone = nil
         self.onFav = nil
@@ -692,143 +724,168 @@ public struct MDDailyPicksComposite: View {
     private func prevIndex(from i: Int) -> Int { max(0, min(items.count - 1, i - 1)) }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            // header: title (left) + mini-progress (right)
+        // Единая сетка с Course (БАЗА): sectionContentV между заголовком и контентом, sectionTitleToContent — отступ контента сверху
+        VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
+            // Заголовок: «РАЗМИНКА» слева, название курса справа (тап → курс)
             HStack(alignment: .center, spacing: 12) {
                 Text(title.uppercased())
                     .font(PD.FontToken.caption(12, weight: Font.Weight.semibold))
                     .kerning(0.6)
                     .foregroundColor(PD.ColorToken.textSecondary)
-                    .padding(.top, 1)
-
-                Spacer(minLength: 0)
-
+                Spacer(minLength: 8)
                 if !items.isEmpty {
-                    HStack(spacing: 4) {
-                        ForEach(Array(items.indices), id: \.self) { idx in
-                            let isActive = (idx == activeIndex)
-                            let isPro = items[idx].isPro
-                            let isLearned = isPro ? true : learned.contains(idx)
-                            let isFavorite = isPro ? false : favorites.contains(idx)
-
-                            ZStack {
-                                // PRO gates: filled segment without heart; crown overlay indicates PRO.
-                                SDStepProgressSegment(
-                                    width: 22,
-                                    isActive: isActive,
-                                    isLearned: isLearned,
-                                    isFavorite: isFavorite,
-                                    index: idx,
-                                    onTap: { tapped in
-                                        guard tapped >= 0, tapped < items.count else { return }
-                                        activeIndex = tapped
-                                        onIndexChange?(activeIndex)
-                                    }
-                                )
-
-                                if isPro {
-                                    Image(systemName: "crown.fill")
-                                        .font(.system(size: 9, weight: .semibold))
-                                        .foregroundStyle(Color.black.opacity(0.9))
-                                        .offset(y: -0.5)
-                                }
-                            }
-                            .accessibilityLabel(isPro ? "pro" : "")
+                    let courseTitle = courseNameDerived(at: activeIndex)
+                    if !courseTitle.isEmpty {
+                        Button {
+                            onTapCourse(activeIndex)
+                        } label: {
+                            Text(courseTitle.uppercased())
+                                .font(PD.FontToken.caption(12, weight: Font.Weight.semibold))
+                                .kerning(0.6)
+                                .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .multilineTextAlignment(.trailing)
                         }
+                        .buttonStyle(.plain)
                     }
-                    .padding(.top, 1)
                 }
             }
             .padding(.horizontal, Theme.Layout.pageHorizontal)
 
-            // Carousel
-            VStack(spacing: 0) {
-                ZStack(alignment: .center) {
-                    SDStepCarousel(
-                        title: "",
-                        items: items,
-                        activeIndex: $activeIndex,
-                        learned: learned,
-                        favorites: favorites,
-                        onPlay: { item in
-                            if let idx = items.firstIndex(where: { $0.id == item.id }) { onPlay?(idx) }
-                        },
-                        onFav: { item in
-                            if let idx = items.firstIndex(where: { $0.id == item.id }) {
-                                let isNowLiked = onFav?(idx) ?? false
-                                if isNowLiked {
-                                    let delay: TimeInterval = 0.45
-                                    let next = min(max(0, activeIndex + 1), max(0, items.count - 1))
-                                    if next != activeIndex {
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
-                                                activeIndex = next
-                                            }
-                                            onIndexChange?(activeIndex)
+            // Карусель + прогресс-ряд: отступ сверху как в CDSectionWithAction (sectionTitleToContent)
+            VStack(alignment: .leading, spacing: 4) {
+            ZStack(alignment: .center) {
+                SDStepCarousel(
+                    title: "",
+                    items: items,
+                    activeIndex: $activeIndex,
+                    learned: learned,
+                    favorites: favorites,
+                    onTap: { item in
+                        if let idx = items.firstIndex(where: { $0.id == item.id }) {
+                            onTapItem?(idx)
+                        }
+                    },
+                    onPlay: { item in
+                        if let idx = items.firstIndex(where: { $0.id == item.id }) { onPlay?(idx) }
+                    },
+                    onFav: { item in
+                        if let idx = items.firstIndex(where: { $0.id == item.id }) {
+                            let isNowLiked = onFav?(idx) ?? false
+                            if isNowLiked {
+                                let delay: TimeInterval = 0.45
+                                let next = min(max(0, activeIndex + 1), max(0, items.count - 1))
+                                if next != activeIndex {
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                                        withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+                                            activeIndex = next
                                         }
+                                        onIndexChange?(activeIndex)
                                     }
                                 }
                             }
-                        },
-                        onDone: { item in
-                            if let idx = items.firstIndex(where: { $0.id == item.id }) {
-                                let shouldAdvance = onDone?(idx) ?? true
-                                if shouldAdvance {
-                                    let delay: TimeInterval = 0.45
-                                    let next = min(max(0, activeIndex + 1), max(0, items.count - 1))
-                                    if next != activeIndex {
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
-                                                activeIndex = next
-                                            }
-                                            onIndexChange?(activeIndex)
+                        }
+                    },
+                    onDone: { item in
+                        if let idx = items.firstIndex(where: { $0.id == item.id }) {
+                            let shouldAdvance = onDone?(idx) ?? true
+                            if shouldAdvance {
+                                let delay: TimeInterval = 0.45
+                                let next = min(max(0, activeIndex + 1), max(0, items.count - 1))
+                                if next != activeIndex {
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                                        withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+                                            activeIndex = next
                                         }
+                                        onIndexChange?(activeIndex)
                                     }
                                 }
                             }
-                        },
-                        isOverlay: false
-                    )
-                    .onChange(of: activeIndex) { newValue in
-                        onIndexChange?(newValue)
+                        }
+                    },
+                    isOverlay: false,
+                    loop: true,
+                    compactSection: true
+                )
+                .onChange(of: activeIndex) { newValue in
+                    onIndexChange?(newValue)
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            if showProgressRow, !items.isEmpty {
+                HStack(spacing: 4) {
+                    ForEach(Array(items.indices), id: \.self) { idx in
+                        let isActive = (idx == activeIndex)
+                        let isPro = items[idx].isPro
+                        let isLearned = isPro ? true : learned.contains(idx)
+                        let isFavorite = isPro ? false : favorites.contains(idx)
+                        SDStepProgressSegment(
+                            width: 22,
+                            isActive: isActive,
+                            isLearned: isLearned,
+                            isFavorite: isFavorite,
+                            isPro: isPro,
+                            index: idx,
+                            onTap: { tapped in
+                                guard tapped >= 0, tapped < items.count else { return }
+                                activeIndex = tapped
+                                onIndexChange?(activeIndex)
+                            }
+                        )
+                        .accessibilityLabel(isPro ? "pro" : "")
                     }
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 4)
             }
-
-            // course title + CTA under the cards (stable layout)
-            if !items.isEmpty {
-                let courseTitle = courseNameDerived(at: activeIndex)
-
-                HStack(alignment: .center, spacing: 12) {
-                    Text(courseTitle.uppercased())
-                        .font(PD.FontToken.caption(13, weight: Font.Weight.semibold))
-                        .kerning(0.6)
-                        .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    AppCTAButtons(
-                        primaryTitle: "открыть курс",
-                        secondaryTitle: "",
-                        onPrimary: { onOpenCourse(activeIndex) },
-                        onSecondary: { },
-                        scale: .xs,
-                        unifiedWidth: false,
-                        visual: .brandOutline
-                    )
-                }
-                .frame(height: 40)
-                .padding(.horizontal, Theme.Layout.pageHorizontal)
-                .padding(.top, Theme.Layout.Section.itemGap)
             }
+            .padding(.top, Theme.Layout.sectionTitleToContent)
         }
-        .padding(.top, Theme.Layout.Section.contentTop)
-        .padding(.bottom, Theme.Layout.Section.contentBottom)
     }
 }
 
+// MARK: - Разминка: мини-прогресс (точки) вынесен за рамки секции — визуально секция = только заголовок + карусель
+public struct MDDailyPicksProgressRow: View {
+    public let items: [SDStepItem]
+    @Binding public var activeIndex: Int
+    public let learned: Set<Int>
+    public let favorites: Set<Int>
+    public var onIndexChange: (Int) -> Void
 
+    @ViewBuilder
+    public var body: some View {
+        if items.isEmpty {
+            EmptyView()
+        } else {
+            HStack(spacing: 4) {
+                ForEach(Array(items.indices), id: \.self) { idx in
+                    let isActive = (idx == activeIndex)
+                    let isPro = items[idx].isPro
+                    let isLearned = isPro ? true : learned.contains(idx)
+                    let isFavorite = isPro ? false : favorites.contains(idx)
+                    SDStepProgressSegment(
+                        width: 22,
+                        isActive: isActive,
+                        isLearned: isLearned,
+                        isFavorite: isFavorite,
+                        isPro: isPro,
+                        index: idx,
+                        onTap: { tapped in
+                            guard tapped >= 0, tapped < items.count else { return }
+                            activeIndex = tapped
+                            onIndexChange(tapped)
+                        }
+                    )
+                    .accessibilityLabel(isPro ? "pro" : "")
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 4)
+        }
+    }
+}
 
 // MARK: Vertical "reels" style card for horizontal carousel
 
@@ -836,6 +893,91 @@ public struct MDDailyPicksComposite: View {
 // MARK: Vertical list section (editorial picks)
 
 
+
+// MARK: - DS: Continue (Main) — компактная карточка «Продолжить» в шаблоне секций Main
+
+/// Карточка последнего урока/курса: заголовок, прогресс, одна кнопка CTA. Без «тап — продолжить».
+public struct MDContinueCard: View {
+    public var title: String
+    public var progress: Double
+    public var isEmpty: Bool
+    /// Текст чипа: nil = по умолчанию (старт/курс), иначе «урок»/«курс»
+    public var chipTitle: String?
+    public var onTap: () -> Void
+
+    public init(
+        title: String,
+        progress: Double = 0,
+        isEmpty: Bool = false,
+        chipTitle: String? = nil,
+        onTap: @escaping () -> Void
+    ) {
+        self.title = title
+        self.progress = progress
+        self.isEmpty = isEmpty
+        self.chipTitle = chipTitle
+        self.onTap = onTap
+    }
+
+    public var body: some View {
+        let accent = ThemeManager.shared.currentAccentFill
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: Theme.Layout.Section.itemGap) {
+                HStack(alignment: .top) {
+                    Text(title)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.text)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    AppMiniChip(title: chipTitle ?? (isEmpty ? "старт" : "курс"), style: .neutral) { }
+                        .allowsHitTesting(false)
+                }
+
+                if !isEmpty && progress >= 0 {
+                    VStack(alignment: .leading, spacing: 4) {
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(PD.ColorToken.textSecondary.opacity(0.2))
+                                    .frame(height: 6)
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(AnyShapeStyle(accent))
+                                    .frame(width: max(0, g.size.width * progress), height: 6)
+                            }
+                        }
+                        .frame(height: 6)
+                        Text("\(Int(round(progress * 100)))% пройдено")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                }
+
+                HStack {
+                    Spacer(minLength: 0)
+                    Text(isEmpty ? "Начать" : "Продолжить")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule(style: .continuous)
+                                .stroke(accent, lineWidth: 1.5)
+                        )
+                }
+            }
+            .padding(Theme.Layout.Section.contentHorizontal)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: 100)
+            .background(Theme.Surfaces.card(RoundedRectangle(cornerRadius: Theme.Radii.card, style: .continuous)))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radii.card, style: .continuous)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
 
 // MARK: - DS: Search (Main)
 
@@ -893,7 +1035,7 @@ public struct MDFMSection: View {
         let effectiveMessages = messages.isEmpty ? configMessages : messages
         let effectiveReactions = configReactions
 
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
             Text(title.uppercased())
                 .font(PD.FontToken.caption(12, weight: Font.Weight.semibold))
                 .kerning(0.6)
@@ -903,10 +1045,11 @@ public struct MDFMSection: View {
             TaikaFMBubbleTyping(
                 messages: effectiveMessages,
                 reactions: effectiveReactions,
-                repeats: false
+                repeats: false,
+                showBubble: false
             )
+            .padding(.top, Theme.Layout.sectionTitleToContent)
         }
-        .padding(.top, Theme.Layout.Section.contentTop)
     }
 }
 

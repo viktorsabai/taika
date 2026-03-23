@@ -70,9 +70,9 @@ protocol SpeakerAssessmentProviding {
 
 // MARK: - api entry
 
-/// single entry point for speaker integrations.
-///
-/// current mvp: provider is optional. if not configured, it throws `notConfigured`.
+/// Single entry point for speaker assessment (e.g. Azure Pronunciation).
+/// EPIC 3: Not called in production yet; SpeakerManager uses on-device STT + local score.
+/// When ready for prod: configure(provider: AzurePronunciationAssessor(...)) and call assess from SpeakerManager.stopAttemptAndAnalyze.
 final class SpeakerAPI {
     static let shared = SpeakerAPI()
 
@@ -121,12 +121,62 @@ final class AzurePronunciationAssessor: SpeakerAssessmentProviding {
     }
 
     func assess(audioURL: URL, expectedThai: String) async throws -> SpeakerAssessmentResult {
-        // mvp: request/response mapping will be implemented once endpoint + contract are confirmed.
-        // keep compile-safe: perform a minimal guard and throw until wired.
-        _ = audioURL
-        _ = expectedThai
 
-        // once wired, return a fully populated result.
-        throw SpeakerAPIError.notConfigured
+        // TODO: replace with real Azure call.
+        // MVP phase: deterministic mock scoring based on simple text similarity.
+        // This keeps pipeline stable before wiring real endpoint.
+
+        // basic guard
+        guard FileManager.default.fileExists(atPath: audioURL.path) else {
+            throw SpeakerAPIError.invalidRequest
+        }
+
+        // ---- MOCK LOGIC (temporary) ----
+        // simulate heard text as expected text (we don't have real STT yet)
+        let heardThai = expectedThai
+
+        // simple deterministic score based on text length (placeholder logic)
+        // guarantees stable 60...95 range for UI testing
+        let base = Double(min(max(expectedThai.count, 1), 20))
+        let score = min(95.0, max(60.0, 60.0 + base))
+
+        // basic feedback tiers
+        let feedback: [String]
+        if score >= 85 {
+            feedback = [
+                "отличное произношение",
+                "интонация звучит естественно"
+            ]
+        } else if score >= 70 {
+            feedback = [
+                "почти получилось",
+                "обрати внимание на темп речи"
+            ]
+        } else {
+            feedback = [
+                "есть заметные неточности",
+                "попробуй произнести медленнее"
+            ]
+        }
+
+        // minimal structured issue example for future UI highlighting
+        let issues: [SpeakerIssue] =
+            score < 75
+            ? [
+                SpeakerIssue(
+                    id: "timing-1",
+                    kind: .timing,
+                    message: "речь слишком быстрая"
+                )
+            ]
+            : []
+
+        return SpeakerAssessmentResult(
+            score: score,
+            heardThai: heardThai,
+            heardTranslit: nil,
+            feedback: feedback,
+            issues: issues
+        )
     }
 }

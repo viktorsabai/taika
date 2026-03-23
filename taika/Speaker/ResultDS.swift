@@ -98,140 +98,32 @@ private struct ResultSketchOverlayV: View {
     }
 
     var body: some View {
-        GeometryReader { _ in
-            ZStack {
-                // glass layer (telegram-ish): material + subtle dark tint
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        Color.black.opacity(dimAlpha)
-                    )
-                    .opacity(fade)
-                    .ignoresSafeArea()
+        ZStack {
 
-                // spotlight cutout + glow (card stays bright)
-                if let r0 = focusRect, r0.width > 10, r0.height > 10 {
-                    let inset: CGFloat = 12
-                    let r = r0.insetBy(dx: -inset, dy: -inset)
-                    let radius: CGFloat = 32
+            // subtle dim layer
+            Color.black
+                .opacity(dimAlpha)
+                .ignoresSafeArea()
 
-                    // cutout
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .fill(Color.black)
-                        .frame(width: r.width, height: r.height)
-                        .position(x: r.midX, y: r.midY)
-                        .blendMode(.destinationOut)
-                        .opacity(fade)
-
-                    // glow (base)
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .stroke(tint.opacity(kind == .mismatch ? 0.18 : 0.32), lineWidth: 1.25)
-                        .frame(width: r.width, height: r.height)
-                        .position(x: r.midX, y: r.midY)
-                        .shadow(color: tint.opacity(kind == .mismatch ? 0.06 : 0.12), radius: 18)
-                        .shadow(color: tint.opacity(kind == .mismatch ? 0.04 : 0.08), radius: 36)
-                        .opacity(fade)
-                        .allowsHitTesting(false)
-
-                    // win cue (pulse)
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .stroke(tint.opacity(kind == .mismatch ? 0.10 : 0.20), lineWidth: 2)
-                        .frame(width: r.width, height: r.height)
-                        .position(x: r.midX, y: r.midY)
-                        .scaleEffect(1 + (kind == .mismatch ? 0.010 : 0.018) * pulse)
-                        .opacity(fade * pulse * (kind == .mismatch ? 0.65 : 0.90))
-                        .shadow(color: tint.opacity((kind == .mismatch ? 0.06 : 0.12) * pulse), radius: 22)
-                        .shadow(color: tint.opacity((kind == .mismatch ? 0.04 : 0.08) * pulse), radius: 44)
-                        .allowsHitTesting(false)
-                    
-                    // card-attached micro pill (game feedback)
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(tint.opacity(kind == .mismatch ? 0.22 : 0.34))
-                            .frame(width: 8, height: 8)
-
-                        Text(pillText)
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Color.white.opacity(0.92))
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
+            // centered badge
+            VStack(spacing: 8) {
+                Text(pillText)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.white.opacity(0.92))
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 18)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(.ultraThinMaterial)
+                            .fill(tint.opacity(0.18))
                             .overlay(
                                 Capsule(style: .continuous)
-                                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                             )
                     )
-                    .shadow(color: Color.black.opacity(0.16), radius: 12)
-                    .opacity(fade)
-                    .position(x: r.maxX - 74, y: r.maxY - 18)
-                    .allowsHitTesting(false)
-
-                    if kind == .success {
-                        Text("+1")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(Color.white.opacity(0.92))
-                            .padding(.vertical, 5)
-                            .padding(.horizontal, 8)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(tint.opacity(0.16))
-                                    .overlay(
-                                        Capsule(style: .continuous)
-                                            .stroke(Color.white.opacity(0.10), lineWidth: 1)
-                                    )
-                            )
-                            .shadow(color: Color.black.opacity(0.14), radius: 10)
-                            .opacity(fade)
-                            .position(x: r.maxX - 22, y: r.minY + 18)
-                            .allowsHitTesting(false)
-                    }
-
-                    if kind == .mismatch, let h = hintText {
-                        Text(h)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.white.opacity(0.70))
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 10)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(Color.black.opacity(0.18))
-                                    .overlay(
-                                        Capsule(style: .continuous)
-                                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                                    )
-                            )
-                            .opacity(fade)
-                            .position(x: r.maxX - 86, y: r.maxY - 48)
-                            .allowsHitTesting(false)
-                    }
-                }
-            }
-            .compositingGroup()
-            .allowsHitTesting(false)
-            .onAppear {
-                fade = 1
-                pulse = 0
-                withAnimation(.easeOut(duration: 0.28)) {
-                    pulse = 1
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
-                    withAnimation(.easeInOut(duration: 0.18)) {
-                        pulse = 0
-                    }
-                }
-
-                guard !isLooping else { return }
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.62) {
-                    withAnimation(.easeOut(duration: 0.22)) {
-                        fade = 0
-                    }
-                }
             }
         }
+        .transition(.opacity)
+        .allowsHitTesting(false)
     }
 }
 
@@ -248,7 +140,7 @@ private struct ResultSketchOverlayV: View {
             .fill(Color.white.opacity(0.04))
             .overlay(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -284,7 +176,7 @@ private struct ResultSketchOverlayV: View {
             .fill(Color.white.opacity(0.04))
             .overlay(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)

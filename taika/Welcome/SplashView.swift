@@ -2,8 +2,9 @@
 //  SplashView.swift
 //  taika
 //
-//  Created by product on 16.09.2025.
+//  Загрузочный экран: название приложения как в хедере + анимация появления.
 //
+
 import SwiftUI
 
 // MARK: - Split‑Flap Letter (masked split, readable + divider)
@@ -174,150 +175,67 @@ private struct GradientSpinner: View {
 struct SplashTaikaView: View {
     let onFinished: (() -> Void)?
 
-    @State private var show = false
+    @ObservedObject private var theme = ThemeManager.shared
+    @State private var logoVisible = false
+    @State private var taglineVisible = false
+    @State private var spinnerVisible = false
     @State private var fadeOut = false
-    @State private var t: Double = 0
-    @State private var scanX: CGFloat = -220
-
-    private let logo = ["t", "a", "i", "k", "a"]
+    @State private var logoPulse: CGFloat = 1.0
 
     init(onFinished: (() -> Void)? = nil) {
         self.onFinished = onFinished
     }
 
-    private var accentGradient: LinearGradient {
-        LinearGradient(
-            colors: [Color(red: 0.98, green: 0.52, blue: 0.80),
-                     Color(red: 0.91, green: 0.62, blue: 0.98)],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
-    }
-
-    private var bgGradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                Color(red: 0.08, green: 0.08, blue: 0.10),
-                Color(red: 0.05, green: 0.05, blue: 0.07),
-                Color(red: 0.10, green: 0.06, blue: 0.10)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
     var body: some View {
         ZStack {
-            // background: minimal, alive, but not noisy
-            ZStack {
-                bgGradient
-                    .ignoresSafeArea()
-
-                Circle()
-                    .fill(accentGradient)
-                    .frame(width: 520, height: 520)
-                    .blur(radius: 140)
-                    .opacity(0.16)
-                    .offset(x: -140 + 90 * CGFloat(sin(t * .pi * 2)), y: -170 + 70 * CGFloat(cos(t * .pi * 2)))
-
-                Circle()
-                    .fill(accentGradient)
-                    .frame(width: 420, height: 420)
-                    .blur(radius: 140)
-                    .opacity(0.10)
-                    .offset(x: 170 + 90 * CGFloat(cos(t * .pi * 2)), y: 190 + 70 * CGFloat(sin(t * .pi * 2)))
-
-                RadialGradient(
-                    colors: [Color.black.opacity(0.0), Color.black.opacity(0.60)],
-                    center: .center,
-                    startRadius: 80,
-                    endRadius: 560
-                )
+            PD.ColorToken.background
                 .ignoresSafeArea()
-            }
 
-            VStack(spacing: 14) {
-                Spacer(minLength: 160)
+            VStack(spacing: 0) {
+                Spacer(minLength: 140)
 
-                // wordmark
-                ZStack {
-                    HStack(spacing: 8) {
-                        ForEach(Array(logo.enumerated()), id: \.offset) { idx, ch in
-                            Text(ch)
-                                .font(.custom("ONMARK Trial", size: 72))
-                                .kerning(1.2)
-                                .foregroundStyle(idx == 0 || idx == 4 ? AnyShapeStyle(accentGradient) : AnyShapeStyle(Color.white.opacity(0.92)))
-                                .opacity(show ? 1 : 0)
-                                .offset(y: show ? 0 : 10)
-                                .blur(radius: show ? 0 : 2)
-                                .animation(.spring(response: 0.55, dampingFraction: 0.85).delay(0.05 * Double(idx)), value: show)
-                        }
-                    }
-                    .padding(.horizontal, 18)
-
-                    // subtle scanning highlight (mubert-ish)
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.0), Color.white.opacity(0.16), Color.white.opacity(0.0)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 90, height: 92)
-                        .blendMode(.screen)
-                        .offset(x: scanX)
-                        .opacity(show ? 1 : 0)
-                        .mask(
-                            HStack(spacing: 8) {
-                                ForEach(Array(logo.enumerated()), id: \.offset) { _, ch in
-                                    Text(ch)
-                                        .font(.custom("ONMARK Trial", size: 72))
-                                        .kerning(1.2)
-                                }
-                            }
-                            .padding(.horizontal, 18)
-                        )
+                // Название как в хедере: tai + kAAA с лёгкой пульсацией
+                HStack(spacing: 6) {
+                    Text("tai")
+                        .font(.custom("Onmark Trial", size: 52))
+                        .foregroundStyle(PD.ColorToken.text)
+                    Text("kAAA")
+                        .font(.custom("Onmark Trial", size: 52))
+                        .foregroundStyle(AnyShapeStyle(theme.currentAccentFill))
                 }
+                .opacity(logoVisible ? 1 : 0)
+                .scaleEffect((logoVisible ? logoPulse : 0.92))
+                .animation(.spring(response: 0.6, dampingFraction: 0.82), value: logoVisible)
+                .animation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true), value: logoPulse)
 
-                Text("thai lessons · taika fm")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.62))
-                    .opacity(show ? 1 : 0)
-                    .animation(.easeIn(duration: 0.30).delay(0.20), value: show)
+                Text("твоя персональная кун кру")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .padding(.top, 14)
+                    .opacity(taglineVisible ? 1 : 0)
+                    .animation(.easeOut(duration: 0.4).delay(0.2), value: taglineVisible)
 
-                Spacer(minLength: 150)
+                Spacer(minLength: 60)
 
-                HStack(spacing: 8) {
-                    GradientSpinner(size: 18)
-                    Text("загружаем уроки")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.55))
-                }
-                .opacity(show ? 1 : 0)
-                .animation(.easeIn(duration: 0.30).delay(0.25), value: show)
+                GradientSpinner(size: 44)
+                    .opacity(spinnerVisible ? 1 : 0)
+                    .animation(.easeOut(duration: 0.35).delay(0.4), value: spinnerVisible)
 
-                Spacer(minLength: 40)
+                Spacer(minLength: 80)
             }
             .opacity(fadeOut ? 0 : 1)
             .animation(.easeOut(duration: 0.35), value: fadeOut)
         }
         .onAppear {
-            show = true
-            withAnimation(.linear(duration: 3.8).repeatForever(autoreverses: true)) { t = 1 }
-
-            // scanning shimmer
-            withAnimation(.linear(duration: 1.6).repeatForever(autoreverses: false)) {
-                scanX = 220
-            }
-
-            // safety timeout: never hang on splash
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
+            logoVisible = true
+            logoPulse = 1.03
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { taglineVisible = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { spinnerVisible = true }
+            // Загрузочный экран без кнопки: авто-закрытие через 2.5 с
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                 guard !fadeOut else { return }
                 withAnimation(.easeOut(duration: 0.35)) { fadeOut = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                    onFinished?()
-                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onFinished?() }
             }
         }
     }

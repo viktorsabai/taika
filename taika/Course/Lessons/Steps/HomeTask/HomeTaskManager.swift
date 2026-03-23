@@ -184,6 +184,61 @@ public final class HomeTaskManager: ObservableObject {
     }
 
     // MARK: - Data collection from progress / steps
+
+    /// Parse step ref from FavoriteManager (step:courseId:lessonId:idxN) for favorites triples.
+    private func parseStepRefId(_ ref: String) -> (courseId: String, lessonId: String, index: Int)? {
+        let parts = ref.split(separator: ":").map(String.init)
+        guard parts.count >= 4, parts[0] == "step" else { return nil }
+        let courseId = parts[1]
+        let lessonId = parts[2]
+        let digits = parts[3].filter { $0.isNumber }
+        guard let index = Int(digits) else { return nil }
+        return (courseId, lessonId, index)
+    }
+
+    @MainActor
+    private func favoritesTriples() -> [LearnedTriple] {
+        let refIds = FavoriteManager.shared.speakerStepIds()
+        guard !refIds.isEmpty else { return [] }
+        let stepData = StepData.shared
+        var result: [LearnedTriple] = []
+        var seen = Set<String>()
+        for ref in refIds {
+            guard let key = parseStepRefId(ref) else { continue }
+            let lessonIdCandidates = lessonIdCandidatesForResolve(key.lessonId, stepData: stepData)
+            var r: StepData.SpeakerResolved?
+            for lessonId in lessonIdCandidates {
+                r = stepData.speakerResolved(courseId: key.courseId, lessonId: lessonId, index: key.index)
+                if r != nil { break }
+            }
+            guard let r = r else { continue }
+            let ru = r.face.titleRU.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !ru.isEmpty else { continue }
+            let th = r.face.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines)
+            let phRaw = r.face.phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+            let ph = phRaw.isEmpty ? ru : phRaw
+            if seen.insert(ru.lowercased()).inserted {
+                result.append(.init(ru: ru, th: th, ph: ph))
+            }
+        }
+        return result
+    }
+
+    /// Варианты lessonId для резолва (case-insensitive + underscore/dash), чтобы избранное работало при разном формате ключей в steps.json.
+    private func lessonIdCandidatesForResolve(_ normalizedLessonId: String, stepData: StepData) -> [String] {
+        var seen = Set<String>()
+        var candidates: [String] = []
+        func add(_ s: String) {
+            guard !s.isEmpty, seen.insert(s).inserted else { return }
+            candidates.append(s)
+        }
+        if let exact = stepData.lessonIdForCaseInsensitiveLookup(normalizedLessonId) { add(exact) }
+        add(normalizedLessonId)
+        add(normalizedLessonId.replacingOccurrences(of: "_", with: "-"))
+        add(normalizedLessonId.replacingOccurrences(of: "-", with: "_"))
+        return candidates
+    }
+
     @MainActor
     private func learnedTriples(courseId: String, lessonId: String) -> [LearnedTriple] {
         // Pull steps for the lesson and select only learned indices
@@ -245,7 +300,15 @@ public final class HomeTaskManager: ObservableObject {
                 guard !pool.isEmpty else { i += n; continue }
                 let picked = sample(pool, count: samplePerTask)
                 let title = "Практика #\(taskIndex)"
-                let task = makeTask(title, picked, taskIndex)
+                let gameType: HomeGameType
+                switch taskIndex % 3 {
+                case 1: gameType = .match
+                case 2: gameType = .recall
+                default: gameType = .builder
+                }
+
+                var task = makeTask(title, picked, taskIndex)
+                task.gameType = gameType
                 produced.append(task)
                 triplesByTask[task.id] = picked
                 taskIndex += 1
@@ -261,7 +324,8 @@ public final class HomeTaskManager: ObservableObject {
             guard !pool.isEmpty else { return }
             let picked = sample(pool, count: max(samplePerTask, 12))
             let title = "Итоговая практика"
-            let task = makeTask(title, picked, (produced.count + 1))
+            var task = makeTask(title, picked, (produced.count + 1))
+            task.gameType = .builder
             produced.append(task)
             triplesByTask[task.id] = picked
         }
@@ -306,13 +370,383 @@ public final class HomeTaskManager: ObservableObject {
         }
     }
     // MARK: - Normalization & Game Availability
-    public enum HTGameMode: String, CaseIterable {
-        case quiz, matching, audio, transcription
+
+    // MARK: - Phonetic Model (EPIC 2 Discovery)
+
+    /// Syllable + optional tone marker after it. Tone markers (↘ → ↗) live in the mask, not in the selection pool.
+    public struct PhoneticSegment: Equatable {
+        public let syllable: String   // clean syllable for pool/validation (no diacritics, no tone)
+        public let toneAfter: String? // tone displayed in mask after slot (e.g. "↘", "→", "↗", "↗?")
+
+        public init(syllable: String, toneAfter: String?) {
+            self.syllable = syllable
+            self.toneAfter = toneAfter
+        }
+    }
+
+    /// Tone arrow characters used in content (↘ → ↗). Optional ? suffix for questions.
+    private static let toneArrows = CharacterSet(charactersIn: "↘→↗")
+    /// Combining diacritics to strip from syllable (stress/vowel quality).
+    private static let combiningDiacritics = CharacterSet(charactersIn: "\u{0301}\u{0300}\u{0302}\u{030C}\u{0304}\u{0308}")
+
+    /// Parse phonetic string into segments. Syllables are clean; tone markers go into toneAfter.
+    public func parsePhonetic(_ ph: String) -> [PhoneticSegment] {
+        let trimmed = ph.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+
+        let parts = trimmed
+            .components(separatedBy: CharacterSet(charactersIn: "- "))
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        return parts.map { raw -> PhoneticSegment in
+            var toneAfter: String? = nil
+            var tail = raw
+            // Trailing ? (question intonation)
+            if tail.hasSuffix("?") {
+                tail = String(tail.dropLast())
+                if let last = tail.last, let scalar = String(last).unicodeScalars.first, Self.toneArrows.contains(scalar) {
+                    toneAfter = String(last) + "?"
+                    tail = String(tail.dropLast())
+                } else {
+                    toneAfter = "?"
+                }
+            }
+            // Trailing tone arrow
+            if toneAfter == nil, let last = tail.last, let scalar = String(last).unicodeScalars.first, Self.toneArrows.contains(scalar) {
+                toneAfter = String(last)
+                tail = String(tail.dropLast())
+            }
+            // Strip combining diacritics from syllable
+            let clean = tail.unicodeScalars
+                .filter { !Self.combiningDiacritics.contains($0) }
+                .map { Character($0) }
+            return PhoneticSegment(syllable: String(clean), toneAfter: toneAfter)
+        }
+    }
+
+    /// Syllable count for a phonetic string (uses parsePhonetic; EPIC 2 Discovery).
+    private func syllableCount(fromPhonetic ph: String) -> Int {
+        parsePhonetic(ph).count
+    }
+
+    // MARK: - Builder Game (Tap-to-build word)
+
+    public enum BuilderState {
+        case idle
+        case assembling
+        case correct
+        case wrong
+        case finished
+    }
+
+    public struct BuilderRound: Identifiable {
+        public let id = UUID()
+        public let question: String
+        public let target: String
+        /// Full mask: segments with syllable + toneAfter for assembly zone
+        public let segments: [PhoneticSegment]
+        /// Clean syllables for pool (shuffled, may include distractors)
+        public let syllables: [String]
+        /// Correct clean syllables in order (for validation)
+        public let correctPieces: [String]
+        public let audioText: String?
+        public var slotCount: Int { segments.count }
+    }
+
+    @Published public private(set) var currentBuilderRound: BuilderRound?
+    @Published public private(set) var builderAttemptCount: Int = 0
+    @Published public private(set) var builderReinforcementScore: Int = 0
+    @Published public private(set) var builderState: BuilderState = .idle
+    @Published public var assembledBuilder: [String] = []
+    /// При тапе по красному слоту — индекс слота на замену; тап по слогу в пуле заменяет этот слот.
+    @Published public var builderSelectedSlotForReplacement: Int? = nil
+
+    // Multi-round builder state
+    @Published public private(set) var builderQueue: [LearnedTriple] = []
+    @Published public private(set) var builderIndex: Int = 0
+    @Published public private(set) var builderScore: Int = 0
+
+    public var builderTotalRounds: Int {
+        builderQueue.count
+    }
+
+    /// Display info for each round (for carousel). Question, phonetic target, thai.
+    public struct BuilderRoundDisplay: Identifiable {
+        public let id: Int
+        public let question: String
+        public let target: String
+        public let thai: String
+    }
+
+    public var builderRoundDisplays: [BuilderRoundDisplay] {
+        builderQueue.enumerated().map { index, triple in
+            BuilderRoundDisplay(
+                id: index,
+                question: triple.ru.trimmingCharacters(in: .whitespacesAndNewlines),
+                target: triple.ph.trimmingCharacters(in: .whitespacesAndNewlines),
+                thai: triple.th.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        }
+    }
+
+    /// Switch to round at index (rebuilds current round, clears assembled). For carousel tap.
+    @MainActor
+    public func selectBuilderRound(at index: Int) {
+        guard index >= 0, index < builderQueue.count else { return }
+        builderIndex = index
+        startNextBuilderRound()
+        assembledBuilder = []
+        builderState = .idle
+    }
+
+    public var builderProgressText: String {
+        guard builderTotalRounds > 0 else { return "0/0" }
+        return "\(min(builderIndex + 1, builderTotalRounds))/\(builderTotalRounds)"
+    }
+
+    public var builderScoreText: String {
+        "\(builderScore)"
+    }
+
+    public var builderRequiredPiecesCount: Int {
+        currentBuilderRound?.slotCount ?? 0
+    }
+
+    public var builderCanCheck: Bool {
+        guard let round = currentBuilderRound else { return false }
+        return assembledBuilder.count == round.correctPieces.count
+    }
+
+    /// Start multi-round builder game from triples pool (до 20 раундов за сессию; все карточки в карусели).
+    /// Excludes triples with >6 syllables per EPIC 2.
+    @MainActor
+    public func startBuilderRound(from triples: [LearnedTriple]) {
+        let valid = triples.filter { syllableCount(fromPhonetic: $0.ph) <= 6 && !$0.ph.trimmingCharacters(in: .whitespaces).isEmpty }
+        guard !valid.isEmpty else { return }
+
+        builderQueue = Array(valid.shuffled().prefix(min(20, valid.count)))
+        builderIndex = 0
+        builderScore = 0
+        builderAttemptCount = 0
+        assembledBuilder = []
+        builderState = .idle
+
+        startNextBuilderRound()
+    }
+
+    /// Advance to the next builder round in the queue
+    private func startNextBuilderRound() {
+        guard builderIndex < builderQueue.count else {
+            builderState = .finished
+            currentBuilderRound = nil
+            return
+        }
+
+        let triple = builderQueue[builderIndex]
+        let target = triple.ph.trimmingCharacters(in: .whitespacesAndNewlines)
+        let segments = parsePhonetic(target)
+        let correctPieces = segments.map(\.syllable)
+
+        var distractorPool: [String] = []
+        for t in builderQueue where t.ph != triple.ph {
+            distractorPool.append(contentsOf: parsePhonetic(t.ph).map(\.syllable))
+        }
+
+        distractorPool = Array(Set(distractorPool))
+            .filter { !correctPieces.contains($0) }
+
+        let maxTotal = 8
+        let allowedDistractors = max(0, maxTotal - correctPieces.count)
+        let distractors = distractorPool.shuffled().prefix(allowedDistractors)
+
+        let finalPool = (correctPieces + distractors).shuffled()
+
+        currentBuilderRound = BuilderRound(
+            question: triple.ru,
+            target: target,
+            segments: segments,
+            syllables: finalPool,
+            correctPieces: correctPieces,
+            audioText: triple.th.trimmingCharacters(in: .whitespaces).isEmpty ? nil : triple.th
+        )
+
+        assembledBuilder = []
+        builderState = .idle
+    }
+
+    /// Append tapped syllable; если выбран слот на замену — заменяем его и снимаем выбор.
+    @MainActor
+    public func appendBuilderPiece(_ piece: String) {
+        guard let round = currentBuilderRound else { return }
+
+        if let idx = builderSelectedSlotForReplacement, idx >= 0, idx < assembledBuilder.count {
+            assembledBuilder[idx] = piece
+            builderSelectedSlotForReplacement = nil
+            if assembledBuilder.count == round.correctPieces.count {
+                let isCorrect = assembledBuilder == round.correctPieces
+                if isCorrect {
+                    builderState = .correct
+                    builderScore += 1
+                    builderReinforcementScore += 1
+                } else {
+                    builderState = .wrong
+                }
+            } else {
+                builderState = .assembling
+            }
+            return
+        }
+
+        guard assembledBuilder.count < round.correctPieces.count else { return }
+        assembledBuilder.append(piece)
+        builderState = .assembling
+    }
+
+    /// Explicit check triggered by UI (button "Проверить"). No auto-validation; EPIC 2.
+    @MainActor
+    public func checkBuilderAnswer() {
+        guard let round = currentBuilderRound else { return }
+        guard assembledBuilder.count == round.correctPieces.count else { return }
+
+        builderSelectedSlotForReplacement = nil
+        builderAttemptCount += 1
+        let isCorrect = assembledBuilder == round.correctPieces
+
+        if isCorrect {
+            builderState = .correct
+            builderScore += 1
+            builderReinforcementScore += 1
+            // do NOT advance index here — wait for explicit advanceBuilderRound()
+        } else {
+            builderState = .wrong
+            // keep assembled pieces so UI can highlight mismatch,
+            // reset will be handled explicitly by UI or next attempt
+        }
+    }
+
+    /// Remove last syllable (в режиме «неверно» сбрасываем в .assembling, чтобы не показывать красные слоты при неполной сборке).
+    @MainActor
+    public func removeLastBuilderPiece() {
+        if !assembledBuilder.isEmpty {
+            assembledBuilder.removeLast()
+            if builderState == .wrong {
+                builderState = .assembling
+            }
+        }
+    }
+
+    /// Выбор слота для замены: при тапе по красному слоту запоминаем индекс; следующий тап по слогу в пуле заменит этот слот.
+    @MainActor
+    public func selectSlotForReplacement(_ index: Int?) {
+        guard builderState == .wrong else { return }
+        builderSelectedSlotForReplacement = index
+    }
+
+    /// Снять выбор слота на замену.
+    @MainActor
+    public func clearSlotForReplacement() {
+        builderSelectedSlotForReplacement = nil
+    }
+
+    /// Indices of wrong slots when state == .wrong (for highlighting; user can tap to clear from there)
+    public var builderWrongSlotIndices: Set<Int> {
+        guard builderState == .wrong,
+              let round = currentBuilderRound,
+              assembledBuilder.count == round.correctPieces.count else { return [] }
+        return Set(assembledBuilder.indices.filter { assembledBuilder[$0] != round.correctPieces[$0] })
+    }
+
+    /// Reset builder state (очистить сборку и начать раунд заново).
+    @MainActor
+    public func resetBuilder() {
+        assembledBuilder = []
+        builderSelectedSlotForReplacement = nil
+        builderState = .idle
+    }
+
+    /// Explicit transition to next round (called from View after feedback)
+    @MainActor
+    public func advanceBuilderRound() {
+        guard builderState == .correct else { return }
+
+        builderIndex += 1
+
+        if builderIndex >= builderQueue.count {
+            builderState = .finished
+            currentBuilderRound = nil
+            return
+        }
+
+        startNextBuilderRound()
+        assembledBuilder = []
+        builderState = .idle
+    }
+
+
+    // MARK: - Game Engine (v1)
+    // Basic scoring & result calculation for gamification layer
+
+    public struct HGameSessionState {
+        public var total: Int
+        public var correct: Int
+        public var totalResponseTime: Double
+        public var currentStreak: Int
+        public var maxStreak: Int
+
+        public init(total: Int) {
+            self.total = total
+            self.correct = 0
+            self.totalResponseTime = 0
+            self.currentStreak = 0
+            self.maxStreak = 0
+        }
+    }
+
+    @MainActor
+    public func registerAnswer(
+        isCorrect: Bool,
+        responseTime: Double,
+        state: inout HGameSessionState
+    ) {
+        state.totalResponseTime += responseTime
+
+        if isCorrect {
+            state.correct += 1
+            state.currentStreak += 1
+            state.maxStreak = max(state.maxStreak, state.currentStreak)
+        } else {
+            state.currentStreak = 0
+        }
+    }
+
+    @MainActor
+    public func finalizeResult(from state: HGameSessionState) -> HGameResult {
+        let accuracy = state.total == 0 ? 0 : Double(state.correct) / Double(state.total)
+        let avgTime = state.total == 0 ? 0 : state.totalResponseTime / Double(state.total)
+
+        // simple scoring formula v1:
+        // base = correct * 10
+        // streak bonus = maxStreak * 5
+        // speed bonus = inverse of avg time (capped)
+        let base = state.correct * 10
+        let streakBonus = state.maxStreak * 5
+        let speedBonus = max(0, Int((5.0 - min(avgTime, 5.0)) * 5.0))
+
+        let score = base + streakBonus + speedBonus
+
+        return HGameResult(
+            accuracy: accuracy,
+            averageResponseTime: avgTime,
+            maxStreak: state.maxStreak,
+            score: score
+        )
     }
 
     /// Clean user-facing triples: remove duplicates and fallback phonetic to RU if missing
     @MainActor
     public func userTriples(for courseId: String, lessonId: String) -> [LearnedTriple] {
+        if courseId == "__favorites__" { return favoritesTriples() }
         let raw = learnedTriples(courseId: courseId, lessonId: lessonId)
         var seen = Set<String>()
         var result: [LearnedTriple] = []
@@ -329,26 +763,36 @@ public final class HomeTaskManager: ObservableObject {
         return result
     }
 
-    /// Determine which game modes are feasible based on data
+    /// Aggregate learned triples across multiple lessons (course-level console flow)
     @MainActor
-    public func availableModes(for courseId: String, lessonId: String) -> [HTGameMode] {
-        let triples = userTriples(for: courseId, lessonId: lessonId)
-        var modes: [HTGameMode] = []
-        let uniqueRU = Set(triples.map { $0.ru }).count
-        let nonEmptyPH = triples.filter { !$0.ph.isEmpty }.count
+    public func userTriplesForCourse(
+        courseId: String,
+        lessonIds: [String]
+    ) -> [LearnedTriple] {
+        if courseId == "__favorites__" { return favoritesTriples() }
+        var raw: [LearnedTriple] = []
+        for lid in lessonIds {
+            raw.append(contentsOf: learnedTriples(courseId: courseId, lessonId: lid))
+        }
 
-        if uniqueRU >= 4 { modes.append(.quiz) }
-        if triples.count >= 3 { modes.append(.matching) }
-        if nonEmptyPH >= 3 { modes.append(.transcription) }
-        // audio temporarily disabled until audio sources ready
-        // if audioAvailable(for: courseId, lessonId: lessonId) { modes.append(.audio) }
+        var seen = Set<String>()
+        var result: [LearnedTriple] = []
 
-        return modes
+        for t in raw {
+            let ru = t.ru.trimmingCharacters(in: .whitespacesAndNewlines)
+            let th = t.th.trimmingCharacters(in: .whitespacesAndNewlines)
+            let phRaw = t.ph.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !ru.isEmpty else { continue }
+            let ph = phRaw.isEmpty ? ru : phRaw
+            if seen.insert(ru.lowercased()).inserted {
+                result.append(.init(ru: ru, th: th, ph: ph))
+            }
+        }
+
+        return result
     }
 
-    private func audioAvailable(for courseId: String, lessonId: String) -> Bool {
-        return false
-    }
+    
     // MARK: - Flow helper
     @MainActor
     public func firstAvailableTask(for courseId: String) -> HTask? {

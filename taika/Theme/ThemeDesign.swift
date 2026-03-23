@@ -60,6 +60,17 @@ public enum Theme {
         /// vertical padding for carousels inside sections (top+bottom)
         public static let carouselVPad: CGFloat = 4
 
+        // MARK: - horizontal carousel depth (Course / Lesson / Main / Step — единая айдентика)
+        /// visible peek per side (pt) so neighbors are visible
+        public static let carouselDepthPeekMin: CGFloat = 24
+        /// influence width factor for norm (0.6 = wider zone → stronger effect)
+        public static let carouselDepthNormWidthFactor: CGFloat = 0.60
+        public static let carouselDepthScaleSide: CGFloat = 0.85
+        public static let carouselDepthScaleCenter: CGFloat = 1.06
+        public static let carouselDepthOpacitySide: CGFloat = 0.45
+        public static let carouselDepthOpacityCenter: CGFloat = 1.00
+        public static let carouselDepthYOffsetMax: CGFloat = 10
+
         // MARK: - intra-section (course ds)
         public static let rowV: CGFloat = 10
         public static let rowH: CGFloat = 10
@@ -109,6 +120,55 @@ public enum Theme {
         public static let card: CGFloat = 16
         public static let chip: CGFloat = 12
     }
+
+    /// EPIC 5 identity: icon-only buttons; sizes for tap targets and visual weight.
+    public enum IconButton {
+        public static let cornerRadius: CGFloat = 10
+        public static let sizeHeader: CGFloat = 36
+        public static let sizeCard: CGFloat = 34
+        /// Иконки на карточках крупнее — лучше видно и легче попасть (Ed Tech).
+        public static let iconSizeCard: CGFloat = 18
+        /// Минимальная зона нажатия для карточных иконок (доступность + «присутствие»).
+        public static let tapMinCard: CGFloat = 48
+    }
+
+    /// EPIC 5: unified stroke tokens for buttons/chips — no heavy outlines; subtle only.
+    public enum Strokes {
+        /// Light outline for icon buttons and chips (reference: Lessons heartBadge 0.12).
+        public static let strokeSubtle = Color.white.opacity(0.12)
+        /// Line width for subtle strokes (buttons, chips).
+        public static let strokeLineWidth: CGFloat = 1
+    }
+
+    /// EPIC 5: text block rules — avoid single-line ellipsis for user content; allow wrap + scale.
+    public enum TextBlock {
+        /// Max lines for card/lesson titles (user-facing content).
+        public static let cardTitleLines: Int = 2
+        /// Max lines for body/description text.
+        public static let cardBodyLines: Int = 3
+        /// Minimum scale factor for title text (readability).
+        public static let titleMinimumScale: CGFloat = 0.72
+        /// Minimum scale factor for body text.
+        public static let bodyMinimumScale: CGFloat = 0.80
+    }
+
+    /// EPIC 5: step cards — фиксированная высота 290pt, текст за счёт вёрстки внутри (шрифты + лимиты строк).
+    public enum StepCardText {
+        public static let titleLines: Int = 4
+        public static let phoneticLines: Int = 3
+        public static let thaiLines: Int = 4
+        public static let lifehackLines: Int = 8
+        public static let titleScale: CGFloat = 0.72
+        public static let phoneticScale: CGFloat = 0.72
+        public static let thaiScale: CGFloat = 0.78
+        public static let lifehackScale: CGFloat = 0.76
+        public static let blockSpacing: CGFloat = 8
+        /// Размеры шрифтов под высоту 290pt (без увеличения карточки).
+        public static let titleFontSize: CGFloat = 21
+        public static let phoneticFontSize: CGFloat = 15
+        public static let thaiFontSize: CGFloat = 14
+    }
+
     public enum Spacing {
         public static let outer: CGFloat = 16
     }

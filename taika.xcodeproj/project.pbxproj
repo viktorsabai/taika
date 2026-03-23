@@ -10,6 +10,9 @@
 		15194D332E6C6B5B00F57D9B /* lessons.json in Resources */ = {isa = PBXBuildFile; fileRef = 15194D322E6C6B5B00F57D9B /* lessons.json */; };
 		151AE3CF2E6DCCCB00746E8E /* steps.json in Resources */ = {isa = PBXBuildFile; fileRef = 151AE3CE2E6DCCCB00746E8E /* steps.json */; };
 		158E96752EDDD24F00C4E831 /* taikafm.json in Resources */ = {isa = PBXBuildFile; fileRef = 158E96742EDDD24F00C4E831 /* taikafm.json */; };
+		159EBA352F5814A800D6906D /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 15FB00002E59B31600EBEA0E /* FirebaseCore */; };
+		159EBA362F5814A800D6906D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 15FB00022E59B31600EBEA0E /* FirebaseAuth */; };
+		159EBA372F5814A800D6906D /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 15FB00032E59B31600EBEA0E /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -44,6 +47,8 @@
 		158B022B2E59B31900EBEA0E /* Exceptions for "taika" folder in "taika" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				CONTENT_README.md,
+				"Course/Lessons/Steps/STEP(README).txt",
 				Info.plist,
 			);
 			target = 158B02042E59B31600EBEA0E /* taika */;
@@ -76,6 +81,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				159EBA372F5814A800D6906D /* FirebaseFirestore in Frameworks */,
+				159EBA362F5814A800D6906D /* FirebaseAuth in Frameworks */,
+				159EBA352F5814A800D6906D /* FirebaseCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -141,6 +149,9 @@
 			);
 			name = taika;
 			packageProductDependencies = (
+				15FB00002E59B31600EBEA0E /* FirebaseCore */,
+				15FB00022E59B31600EBEA0E /* FirebaseAuth */,
+				15FB00032E59B31600EBEA0E /* FirebaseFirestore */,
 			);
 			productName = taika;
 			productReference = 158B02052E59B31600EBEA0E /* taika.app */;
@@ -224,6 +235,9 @@
 			);
 			mainGroup = 158B01FC2E59B31600EBEA0E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				15FB00012E59B31600EBEA0E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 158B02062E59B31600EBEA0E /* Products */;
 			projectDirPath = "";
@@ -306,6 +320,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = taika/taika.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -348,6 +363,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = taika/taika.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -629,6 +645,35 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		15FB00012E59B31600EBEA0E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		15FB00002E59B31600EBEA0E /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 15FB00012E59B31600EBEA0E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		15FB00022E59B31600EBEA0E /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 15FB00012E59B31600EBEA0E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		15FB00032E59B31600EBEA0E /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 15FB00012E59B31600EBEA0E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 158B01FD2E59B31600EBEA0E /* Project object */;
 }

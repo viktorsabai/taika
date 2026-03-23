@@ -166,7 +166,7 @@ private struct CardsFiltersBar: View {
                             Capsule().fill(isActive ? AnyShapeStyle(CD.GradientToken.pro) : AnyShapeStyle(Color.white.opacity(0.10)))
                         )
                         .overlay(
-                            Capsule().stroke(Color.white.opacity(isActive ? 0.00 : 0.12), lineWidth: 1)
+                            Capsule().stroke(isActive ? Color.clear : Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                         )
                         .foregroundStyle(isActive ? Color.black.opacity(0.9) : Color.white.opacity(0.85))
                     }

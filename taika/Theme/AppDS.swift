@@ -4,8 +4,50 @@
 //  Created by product on 17.09.2025.
 //
 
+
 import SwiftUI
 import UIKit
+
+// MARK: - Unified App Header Style
+public enum AppHeaderStyle {
+    /// Root header; tab 0=Main, 1=Course, 2=Speaker, 3=Favorites, 4=Profile. onBack: when set (e.g. Speaker from Favorites), show back button left of logo.
+    case main(tab: Int, onBack: (() -> Void)?)
+    /// Back + optional Step segment (Лайфхаки/Карточки) с счётчиками, когда stepSegmentBinding != nil и stepShowsSegment == true.
+    case back(onBack: () -> Void, stepSegmentBinding: Binding<Int>?, stepShowsSegment: Bool, stepTipCount: Int, stepCardCount: Int)
+    /// Экран списка уроков курса: back + иконки Спикер, Закрепить, Сбросить.
+    case lessons(onBack: () -> Void, onSpeaker: () -> Void, onReinforce: () -> Void, onReset: () -> Void)
+    case game(GameHeaderConfig)
+}
+
+public struct GameHeaderConfig {
+    public var timeText: String
+    public var score: Int
+    public var mistakes: Int
+    public var streak: Int
+    /// Прогресс в стиле «X из Y пар» — показывается в хедере одной пилюлей (игра «подобрать пару»).
+    public var progressText: String?
+    /// Название урока/источника — вторая строка под основным рядом (опционально).
+    public var sourceTitle: String?
+    public var onBack: () -> Void
+
+    public init(
+        timeText: String = "00:00",
+        score: Int = 0,
+        mistakes: Int = 0,
+        streak: Int = 0,
+        progressText: String? = nil,
+        sourceTitle: String? = nil,
+        onBack: @escaping () -> Void = {}
+    ) {
+        self.timeText = timeText
+        self.score = score
+        self.mistakes = mistakes
+        self.streak = streak
+        self.progressText = progressText
+        self.sourceTitle = sourceTitle
+        self.onBack = onBack
+    }
+}
 
 // UIKit-backed full-screen system blur with no extra tint and hardened against accessibility/system tints
 struct SystemBlur: UIViewRepresentable {
@@ -50,6 +92,36 @@ public struct AppHeader: View {
     public var onTapHeart: () -> Void
     public var onTapProfile: () -> Void
 
+    // Unified header style (EPIC 2: .main(tab:) for context slots)
+    public var style: AppHeaderStyle = .main(tab: 0, onBack: nil)
+
+    /// EPIC 2: optional actions for context slots (used when style is .main(tab:))
+    public var onTapVoice: () -> Void
+    public var onTapGamePark: () -> Void
+    public var onTapCourseSearch: () -> Void
+    public var onTapCourseFilters: () -> Void
+    public var onTapSpeakerFilters: () -> Void
+    public var speakerDailyAttemptsRemaining: Int
+    /// When true, Game Park button looks active (accent); only false when user has no completed lessons.
+    public var gameParkActive: Bool
+    public var onTapFavoritesFilters: () -> Void
+    public var favoritesTotalCount: Int
+    /// Когда true, иконки спикера и геймпада во вкладке Избранное показываются активными (акцент).
+    public var favoritesHasCards: Bool
+    /// При тапе на радугу (Profile): открыть оверлей выбора акцента. Если nil — используется onTapAccent.
+    public var onTapAccentPicker: (() -> Void)?
+
+    /// Speaker tab (tab 2): mode toggle in header. When non-nil, show Тренировка | Разговор.
+    public var speakerUIMode: SpeakerManager.SpeakerUIMode? = nil
+    public var onSpeakerUIModeChange: ((SpeakerManager.SpeakerUIMode) -> Void)? = nil
+    /// Speaker tab: shuffle queue on/off. When non-nil, show По порядку | Вразброс switch.
+    public var speakerShuffleOn: Bool? = nil
+    public var onSpeakerShuffleChange: ((Bool) -> Void)? = nil
+    /// Favorites tab (tab 3): open Speaker with favorites queue.
+    public var onTapFavoritesSpeaker: (() -> Void)? = nil
+    /// Favorites tab: open game park with favorites as card source.
+    public var onTapFavoritesGamePark: (() -> Void)? = nil
+
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var theme: ThemeManager
 
@@ -62,7 +134,25 @@ public struct AppHeader: View {
         onTapHeart: @escaping () -> Void = {},
         onTapProfile: @escaping () -> Void = {},
         onTapPro: @escaping () -> Void = {},
-        isPro: Bool = false
+        onTapVoice: @escaping () -> Void = {},
+        onTapGamePark: @escaping () -> Void = {},
+        onTapCourseSearch: @escaping () -> Void = {},
+        onTapCourseFilters: @escaping () -> Void = {},
+        onTapSpeakerFilters: @escaping () -> Void = {},
+        speakerDailyAttemptsRemaining: Int = 0,
+        gameParkActive: Bool = false,
+        onTapFavoritesFilters: @escaping () -> Void = {},
+        favoritesTotalCount: Int = 0,
+        favoritesHasCards: Bool = false,
+        onTapAccentPicker: (() -> Void)? = nil,
+        isPro: Bool = false,
+        style: AppHeaderStyle = .main(tab: 0, onBack: nil),
+        speakerUIMode: SpeakerManager.SpeakerUIMode? = nil,
+        onSpeakerUIModeChange: ((SpeakerManager.SpeakerUIMode) -> Void)? = nil,
+        speakerShuffleOn: Bool? = nil,
+        onSpeakerShuffleChange: ((Bool) -> Void)? = nil,
+        onTapFavoritesSpeaker: (() -> Void)? = nil,
+        onTapFavoritesGamePark: (() -> Void)? = nil
     ) {
         // legacy flags kept for call-site compatibility
         self.showSearch = showSearch
@@ -75,6 +165,24 @@ public struct AppHeader: View {
         self.onTapTheme = onTapProfile
         self.onTapPro = onTapPro
         self.isPro = isPro
+        self.onTapVoice = onTapVoice
+        self.onTapGamePark = onTapGamePark
+        self.onTapCourseSearch = onTapCourseSearch
+        self.onTapCourseFilters = onTapCourseFilters
+        self.onTapSpeakerFilters = onTapSpeakerFilters
+        self.speakerDailyAttemptsRemaining = speakerDailyAttemptsRemaining
+        self.gameParkActive = gameParkActive
+        self.onTapFavoritesFilters = onTapFavoritesFilters
+        self.favoritesTotalCount = favoritesTotalCount
+        self.favoritesHasCards = favoritesHasCards
+        self.onTapAccentPicker = onTapAccentPicker
+        self.style = style
+        self.speakerUIMode = speakerUIMode
+        self.onSpeakerUIModeChange = onSpeakerUIModeChange
+        self.speakerShuffleOn = speakerShuffleOn
+        self.onSpeakerShuffleChange = onSpeakerShuffleChange
+        self.onTapFavoritesSpeaker = onTapFavoritesSpeaker
+        self.onTapFavoritesGamePark = onTapFavoritesGamePark
 
         // legacy actions retained but unused
         self.onTapSearch = onTapSearch
@@ -82,7 +190,7 @@ public struct AppHeader: View {
         self.onTapProfile = onTapProfile
     }
 
-    // MARK: Logo (taik + A with gradient)
+    // MARK: Logo (taik + A with gradient) — keep visible, don't shrink
     private var logo: some View {
         HStack(spacing: 6) {
             Text("tai")
@@ -92,102 +200,307 @@ public struct AppHeader: View {
                 .font(.custom("Onmark Trial", size: 36))
                 .foregroundStyle(theme.currentAccentFill)
         }
+        .fixedSize(horizontal: true, vertical: false)
         .accessibilityLabel("taikAAA")
     }
 
-    // MARK: Rounded icon chip
-    private func roundIcon(_ system: String, filled: Bool = false) -> some View {
-        let outline = Color.white.opacity(0.18)
-        let idleFill = CD.ColorToken.card.opacity(0.80)
-        let iconSize: CGFloat = 14
+    // MARK: Header icon — только иконка, активное = акцентный цвет. compact: меньше размер (для Favorites, чтобы название было читаемо).
+    private func headerIcon(_ system: String, isAccent: Bool = false, compact: Bool = false) -> some View {
+        let size: CGFloat = compact ? 16 : 18
+        let frameSize: CGFloat = compact ? 36 : 44
+        return Image(systemName: system)
+            .font(.system(size: size, weight: .medium))
+            .foregroundStyle(isAccent ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
+            .frame(minWidth: frameSize, minHeight: frameSize)
+            .contentShape(Rectangle())
+    }
 
-        return ZStack {
-            if filled {
-                // Active/filled state — same family as Card Icon Buttons
-                theme.currentAccentFill
-                    .blur(radius: 2.5)
-                    .opacity(0.55)
-                    .mask(Circle())
-                Circle()
-                    .fill(theme.currentAccentFill)
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.06), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .blendMode(.plusLighter)
-                Circle()
-                    .strokeBorder(outline, lineWidth: 1.2)
-
-                Image(systemName: system)
-                    .font(.system(size: iconSize, weight: .semibold))
-                    .foregroundStyle(Color.black.opacity(0.90))
-            } else {
-                // Idle state — subtle card fill + gloss + hairline
-                ZStack {
-                    Circle().fill(idleFill)
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.06), .clear],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .blendMode(.plusLighter)
-                    Circle().strokeBorder(outline, lineWidth: 1.2)
-                }
-
-                Image(systemName: system)
-                    .font(.system(size: iconSize, weight: .semibold))
-                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.90))
-            }
+    /// Иконка умного спикера (мозг): только иконка, тап → переход во второй режим.
+    private func speakerSmartIconButton(onTap: @escaping () -> Void) -> some View {
+        Button(action: onTap) {
+            Image(systemName: "brain.head.profile")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.92))
         }
-        .frame(width: 36, height: 36)
-        .contentShape(Circle())
+        .buttonStyle(.plain)
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+    }
+
+    /// Иконка микрофона без счётчика: тап → возврат в стандартный спикер (режим 2).
+    private func speakerMicIconButton(onTap: @escaping () -> Void) -> some View {
+        Button(action: onTap) {
+            Image(systemName: "mic.fill")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.92))
+        }
+        .buttonStyle(.plain)
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+    }
+
+    /// Режим микрофон: иконка микрофона + счётчик (стандартный спикер).
+    private var speakerAttemptsBadge: some View {
+        let active = isPro || speakerDailyAttemptsRemaining > 0
+        return HStack(spacing: 4) {
+            Image(systemName: "mic.fill")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
+            Text(isPro ? "∞" : "\(speakerDailyAttemptsRemaining)")
+                .font(.system(size: 15, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.text))
+        }
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+    }
+
+    /// Режим умный спикер (мозг): счётчик умного спикера вместо микрофона.
+    private var speakerSmartCounterBadge: some View {
+        let active = isPro || speakerDailyAttemptsRemaining > 0
+        return HStack(spacing: 4) {
+            Image(systemName: "brain.head.profile")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
+            Text(isPro ? "∞" : "\(speakerDailyAttemptsRemaining)")
+                .font(.system(size: 15, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.text))
+        }
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+    }
+
+    /// Favorites tab: heart + total likes count (как счётчик на карточке урока)
+    private var favoritesCountBadge: some View {
+        let active = favoritesTotalCount > 0
+        return HStack(spacing: 4) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
+            Text("\(favoritesTotalCount)")
+                .font(.system(size: 15, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.text))
+        }
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+    }
+
+    /// Step header: иконка + счётчик в стиле хедера (как speakerAttemptsBadge / favoritesCountBadge).
+    private func stepSegmentIconBadge(icon: String, count: Int, isSelected: Bool) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .medium))
+            Text("\(count)")
+                .font(.system(size: 15, weight: .semibold))
+                .monospacedDigit()
+        }
+        .foregroundStyle(isSelected ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+    }
+
+    // MARK: Game HUD Pill
+    private func hudPill(icon: String, text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(theme.currentAccentFill)
+
+            Text(text)
+                .font(.system(size: 13, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(CD.ColorToken.text)
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 28)
+        .background(
+            Capsule(style: .continuous)
+                .fill(CD.ColorToken.card.opacity(0.82))
+        )
+    }
+
+    /// Два читаемых чипа в игровом хедере: время и счёт (нормальный игровой UX).
+    private func gameHeaderBadge(icon: String, text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(theme.currentAccentFill)
+            Text(text)
+                .font(.system(size: 16, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(CD.ColorToken.text)
+        }
+        .frame(minHeight: 40)
+        .contentShape(Rectangle())
     }
 
     public var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            logo
-            Spacer(minLength: 0)
-            // Accent button (rainbow)
-            if showHeart {
-                Button(action: onTapAccent) {
-                    roundIcon("rainbow", filled: true)
-                }
-                .buttonStyle(.plain)
-            }
-            // Theme toggle (moon/sun)
-            if showProfile {
-                let themeGlyph = (colorScheme == .dark) ? "sun.max" : "moon"
-                Button(action: onTapTheme) { roundIcon(themeGlyph) }
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: 14) {
+
+            switch style {
+
+            case .main(let tab, let onBack):
+                if let onBack = onBack {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(theme.currentAccentFill)
+                    }
                     .buttonStyle(.plain)
-            }
-            // PRO button (crown)
-            if showPro {
-                let proGlyph = isPro ? "crown.fill" : "crown"
-                Button(action: onTapPro) {
-                    roundIcon(proGlyph, filled: !isPro ? false : true)
+                }
+                logo
+                Spacer(minLength: 0)
+                // Context slots by tab; crown always last (EPIC 2)
+                switch tab {
+                case 0: // Main: voice (speaking person), game park (active when has learned lessons), crown
+                    Button(action: onTapVoice) { headerIcon("person.wave.2.fill") }
+                    .buttonStyle(.plain)
+                    Button(action: onTapGamePark) { headerIcon("gamecontroller.fill", isAccent: gameParkActive) }
+                    .buttonStyle(.plain)
+                case 1: // Course: фильтр, поиск, crown (иконки поменяны местами)
+                    Button(action: onTapCourseFilters) { headerIcon("slider.horizontal.3") }
+                    .buttonStyle(.plain)
+                    Button(action: onTapCourseSearch) { headerIcon("magnifyingglass") }
+                    .buttonStyle(.plain)
+                case 2: // Speaker: название ___ одна иконка умного спикера (тап → режим 2) или счётчик; микрофон с счётчиком или тап назад
+                    if speakerUIMode == .conversation {
+                        // Режим умного спикера: мозг со счётчиком, микрофон без счётчика (тап → назад в стандартный)
+                        speakerSmartCounterBadge
+                        if let onModeChange = onSpeakerUIModeChange {
+                            speakerMicIconButton(onTap: { onModeChange(.training) })
+                        }
+                    } else {
+                        // Стандартный спикер: иконка мозга (тап → режим умного спикера), микрофон со счётчиком
+                        if let onModeChange = onSpeakerUIModeChange {
+                            speakerSmartIconButton(onTap: { onModeChange(.conversation) })
+                        }
+                        speakerAttemptsBadge
+                    }
+                case 3: // Favorites: mic, game park (активны когда есть избранные карточки), count badge
+                    if let onSpeaker = onTapFavoritesSpeaker {
+                        Button(action: onSpeaker) { headerIcon("mic.fill", isAccent: favoritesHasCards, compact: true) }
+                        .buttonStyle(.plain)
+                    }
+                    if let onGamePark = onTapFavoritesGamePark {
+                        Button(action: onGamePark) { headerIcon("gamecontroller.fill", isAccent: favoritesHasCards, compact: true) }
+                        .buttonStyle(.plain)
+                    }
+                    favoritesCountBadge
+                case 4: // Profile: радуга → оверлей выбора акцента, theme, crown
+                    Button(action: { (onTapAccentPicker ?? onTapAccent)() }) { headerIcon("rainbow", isAccent: true) }
+                    .buttonStyle(.plain)
+                    let themeGlyph = (colorScheme == .dark) ? "sun.max" : "moon"
+                    Button(action: onTapTheme) { headerIcon(themeGlyph) }
+                    .buttonStyle(.plain)
+                default:
+                    Button(action: onTapAccent) { headerIcon("rainbow", isAccent: true) }
+                    .buttonStyle(.plain)
+                    let themeGlyph = (colorScheme == .dark) ? "sun.max" : "moon"
+                    Button(action: onTapTheme) { headerIcon(themeGlyph) }
+                    .buttonStyle(.plain)
+                }
+                if showPro {
+                    let proGlyph = isPro ? "crown.fill" : "crown"
+                    Button(action: onTapPro) {
+                        headerIcon(proGlyph, isAccent: isPro)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+            case .back(let onBack, let stepSegmentBinding, let stepShowsSegment, let stepTipCount, let stepCardCount):
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(theme.currentAccentFill)
                 }
                 .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
+
+                if stepShowsSegment, let binding = stepSegmentBinding {
+                    HStack(spacing: 4) {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            binding.wrappedValue = 0
+                        } label: {
+                            stepSegmentIconBadge(icon: "sparkles", count: stepTipCount, isSelected: binding.wrappedValue == 0)
+                        }
+                        .buttonStyle(.plain)
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            binding.wrappedValue = 1
+                        } label: {
+                            stepSegmentIconBadge(icon: "rectangle.stack.fill", count: stepCardCount, isSelected: binding.wrappedValue == 1)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                logo
+
+            case .lessons(_, let onSpeaker, let onReinforce, let onReset):
+                logo
+
+                Spacer(minLength: 0)
+
+                HStack(spacing: 0) {
+                    Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onSpeaker() }) {
+                        headerIcon("mic.fill", isAccent: true, compact: true)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Спикер")
+                    Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onReinforce() }) {
+                        headerIcon("gamecontroller.fill", isAccent: true, compact: true)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Закрепить")
+                    Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onReset() }) {
+                        headerIcon("trash", isAccent: false, compact: true)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Сбросить прогресс курса")
+                }
+
+                if showPro {
+                    let proGlyph = isPro ? "crown.fill" : "crown"
+                    Button(action: onTapPro) {
+                        headerIcon(proGlyph, isAccent: isPro)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+            case .game(let config):
+                Button(action: config.onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(theme.currentAccentFill)
+                }
+                .buttonStyle(.plain)
+
+                // Только два чипа: время и счёт (читаемые, нормальный игровой UX)
+                HStack(spacing: 16) {
+                    gameHeaderBadge(icon: "timer", text: config.timeText)
+                    gameHeaderBadge(icon: "star.fill", text: config.progressText ?? "\(config.score)")
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
+
+                Spacer(minLength: 8)
+                logo
             }
+            }
+
+            // Название урока не в хедере — показывается в секции контента (как в Main)
         }
         .padding(.horizontal, CD.Spacing.screen)
-        .frame(height: 56)
+        .frame(minHeight: 56)
         .background(
-            ZStack {
-                BackdropBlur(style: .systemChromeMaterialDark)
-                Theme.Colors.backgroundPrimary
-                    .opacity(0.65)
-            }
-            .saturation(1.5)
-            .contrast(1.05)
+            Theme.Colors.backgroundPrimary
+                .ignoresSafeArea(edges: .top)
         )
-        .accessibilityElement(children: .contain)
     }
 
 }
@@ -231,30 +544,134 @@ public struct AppBackHeader: View {
 
             logo
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, CD.Spacing.screen)
         .frame(height: 56)
         .background(
-            Group {
-                switch variant {
-                case .transparent:
-                    Color.clear
-                case .solid:
-                    ZStack {
-                        BackdropBlur(style: .systemChromeMaterialDark)
-                        Theme.Colors.backgroundPrimary
-                            .opacity(0.85)
-                    }
-                    .saturation(1.5)
-                    .contrast(1.05)
-                }
-            }
-            .ignoresSafeArea(edges: .top)
+            Theme.Colors.backgroundPrimary
+                .ignoresSafeArea(edges: .top)
         )
-        .compositingGroup()
-        .zIndex(999)
     }
 }
+// MARK: - Game Header (console mode, aligned with App identity)
 
+public struct AppGameHeader: View {
+
+    public var timeText: String
+    public var score: Int
+    public var mistakes: Int
+    public var streak: Int
+    public var onBack: () -> Void
+
+    public init(
+        timeText: String = "00:00",
+        score: Int = 0,
+        mistakes: Int = 0,
+        streak: Int = 0,
+        onBack: @escaping () -> Void = {}
+    ) {
+        self.timeText = timeText
+        self.score = score
+        self.mistakes = mistakes
+        self.streak = streak
+        self.onBack = onBack
+    }
+
+    private var logo: some View {
+        HStack(spacing: 6) {
+            Text("tai")
+                .font(.custom("Onmark Trial", size: 36))
+                .foregroundColor(CD.ColorToken.text)
+            Text("kAAA")
+                .font(.custom("Onmark Trial", size: 36))
+                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+        }
+        .accessibilityLabel("taikAAA")
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func hudPill(icon: String, text: String, tint: some ShapeStyle) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(tint)
+            Text(text)
+                .font(.system(size: 13, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(CD.ColorToken.text)
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 30)
+        .background(
+            Capsule(style: .continuous)
+                .fill(CD.ColorToken.card.opacity(0.82))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+        )
+    }
+
+    public var body: some View {
+        HStack(spacing: 14) {
+
+            // Back button (same visual language as AppBackHeader)
+            Button(action: onBack) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 0)
+
+            logo
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 8) {
+
+                hudPill(
+                    icon: "timer",
+                    text: timeText,
+                    tint: ThemeManager.shared.currentAccentFill
+                )
+
+                hudPill(
+                    icon: "checkmark",
+                    text: "\(score)",
+                    tint: Color.green.opacity(0.9)
+                )
+
+                hudPill(
+                    icon: "xmark",
+                    text: "\(mistakes)",
+                    tint: Color.red.opacity(0.9)
+                )
+
+                if streak > 1 {
+                    hudPill(
+                        icon: "flame.fill",
+                        text: "x\(streak)",
+                        tint: ThemeManager.shared.currentAccentFill
+                    )
+                }
+            }
+        }
+        .padding(.horizontal, CD.Spacing.screen)
+        .frame(height: 56)
+        .background(
+            ZStack {
+                BackdropBlur(style: .systemChromeMaterialDark)
+                Theme.Colors.backgroundPrimary
+                    .opacity(0.85)
+            }
+            .saturation(1.5)
+            .contrast(1.05)
+        )
+        .ignoresSafeArea(edges: .top)
+    }
+}
 // MARK: - Summary CTA style enum
 
 public enum SummaryCTAStyle { case brandChips }
@@ -349,10 +766,14 @@ public struct AppStatusChip: View {
     }
 
     public var body: some View {
-        AppMiniChip(
-            title: labelText,
-            style: .neutral
-        ) { }
+        let c = colors(for: kind)
+        Text(labelText)
+            .font(.system(size: scale == .xs ? 11 : 12, weight: .semibold))
+            .foregroundStyle(c.text)
+            .padding(.horizontal, hPad)
+            .frame(height: height)
+            .background(Capsule(style: .continuous).fill(c.fill))
+            .overlay(Capsule(style: .continuous).strokeBorder(c.stroke, lineWidth: 1))
     }
 }
 
@@ -502,142 +923,137 @@ public struct AppConsoleIconButton: View {
         let isActiveStatic = (state == .active) || isActive
         let isSubtleInfo = (act == .info)
         let showGradient = isAction && !isDisabled && !isSubtleInfo
-        let outline = Color.white.opacity(isDisabled ? 0.10 : (isPressedStatic ? 0.24 : 0.18))
-        let idleFill = CD.ColorToken.card.opacity(isDisabled ? 0.55 : 0.80)
         let iconOpacity: Double = isDisabled ? 0.45 : (isPressedStatic ? 1.0 : 0.90)
         let iconInk: some ShapeStyle = showGradient
             ? AnyShapeStyle(Color.black.opacity(0.90))
             : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(iconOpacity))
 
+        let accentInk: some ShapeStyle = AnyShapeStyle(theme.currentAccentFill)
+        let idleInk: some ShapeStyle = AnyShapeStyle(CD.ColorToken.textSecondary.opacity(isDisabled ? 0.5 : 0.92))
         Button(action: onTap) {
-            ZStack {
-                if showGradient {
-                    theme.currentAccentFill
-                        .blur(radius: 2.5)
-                        .opacity(isPressedStatic ? 0.72 : 0.55)
-                        .mask(Circle())
-                    Circle()
-                        .fill(theme.currentAccentFill)
-                    Circle()
-                        .fill(LinearGradient(colors: [Color.white.opacity(0.06), .clear],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .blendMode(.plusLighter)
-                    Circle().strokeBorder(outline, lineWidth: 1.0).opacity(0.8)
-                } else {
-                    ZStack {
-                        let baseFill = isSubtleInfo ? CD.ColorToken.card.opacity(0.70)
-                                                    : CD.ColorToken.card.opacity(0.80)
-                        Circle().fill(baseFill)
-                        Circle()
-                            .fill(LinearGradient(colors: [Color.white.opacity(0.06), .clear],
-                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .blendMode(.plusLighter)
-                            .opacity(isPressedStatic ? 0.85 : 1.0)
-                        if !isSubtleInfo {
-                            Circle().strokeBorder(outline, lineWidth: 1.2)
-                        }
-                    }
-                }
-                Image(systemName: iconName)
-                    .font(.system(size: iconSize, weight: .semibold))
-                    .foregroundStyle(iconInk)
-            }
-            .frame(width: size, height: size)
-            .contentShape(Circle())
+            Image(systemName: iconName)
+                .font(.system(size: iconSize, weight: .semibold))
+                .foregroundStyle(showGradient ? accentInk : idleInk)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(PressDownStyle(scale: 0.94, fade: 0.96))
         .disabled(isDisabled)
     }
 }
 // MARK: - Card Icon Buttons (like / console) — compact, unified
-public enum AppIconActionKind { case favorite, console, play, info }
+public enum AppIconActionKind { case favorite, console, play, info, speaker, listen }
 
 public struct AppCardIconButton: View {
     public var kind: AppIconActionKind
     public var isActive: Bool = false   // for .favorite (filled heart). Ignored for .console
     public var isEnabled: Bool = true   // when false, shows locked/disabled visual
+    /// Для .play — всегда показывать акцентом (главная CTA «запустить урок»).
+    public var forceAccent: Bool = false
     public var onTap: () -> Void
 
     public init(kind: AppIconActionKind,
                 isActive: Bool = false,
                 isEnabled: Bool = true,
+                forceAccent: Bool = false,
                 onTap: @escaping () -> Void = {}) {
         self.kind = kind
         self.isActive = isActive
         self.isEnabled = isEnabled
+        self.forceAccent = forceAccent
         self.onTap = onTap
     }
 
-    // Unified metrics
-    private let size: CGFloat = 34
-    private let iconSize: CGFloat = 13
-    private let corner: CGFloat = 14
+    // Только иконка: активное = акцент; крупнее + отскок при нажатии (EPIC 5 UI приколы)
+    private let iconSize: CGFloat = Theme.IconButton.iconSizeCard
+    private let minTapSize: CGFloat = Theme.IconButton.tapMinCard
 
     public var body: some View {
         let isOn = (kind == .favorite) ? isActive : false
-        let showGradient = isOn || (kind == .console && isEnabled)
-
-        let outline = Color.white.opacity(0.18)          // subtle ring, not bright
-        let idleFill = CD.ColorToken.card.opacity(0.80)  // same family as dark CTAs
+        let isAccent = forceAccent || isOn || (kind == .console && isEnabled) || (kind == .speaker && isEnabled) || (kind == .listen && isEnabled)
 
         let iconName: String = {
             switch kind {
             case .favorite:
                 return isOn ? "heart.fill" : "heart"
             case .console:
-                return showGradient ? "gamecontroller.fill" : "gamecontroller"
+                return isAccent ? "gamecontroller.fill" : "gamecontroller"
             case .play:
                 return "play.fill"
             case .info:
                 return "info.circle"
+            case .speaker:
+                return "mic.fill"
+            case .listen:
+                return "speaker.wave.2.fill"
             }
         }()
 
-        // Icon ink: dark on gradient, subtle secondary on idle
-        let iconInk: some ShapeStyle = showGradient ? AnyShapeStyle(Color.black.opacity(0.9))
-                                                    : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.90))
+        let iconInk: some ShapeStyle = isAccent
+            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+            : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92))
 
         Button(action: onTap) {
-            ZStack {
-                // Base with status-chip gradient treatment
-                ZStack {
-                    if showGradient {
-                        // Single bloom masked by circle (perf)
-                        ThemeManager.shared.currentAccentFill
-                            .blur(radius: 2.5)
-                            .opacity(0.55)
-                            .mask(Circle())
-                        // Ink
-                        Circle()
-                            .fill(ThemeManager.shared.currentAccentFill)
-                    } else {
-                        ZStack {
-                            Circle().fill(idleFill)
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.white.opacity(0.06), .clear],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .blendMode(.plusLighter)
-                            Circle().strokeBorder(outline, lineWidth: 1.2)
-                        }
-                    }
-                }
-
-                Image(systemName: iconName)
-                    .font(.system(size: iconSize, weight: .semibold))
-                    .foregroundStyle(iconInk)
-            }
-            .frame(width: size, height: size)
-            .contentShape(Circle())
+            Image(systemName: iconName)
+                .font(.system(size: iconSize, weight: .semibold))
+                .foregroundStyle(iconInk)
+                .scaleEffect(kind == .favorite && isOn ? 1.06 : 1.0)
+                .animation(.spring(response: 0.32, dampingFraction: 0.72), value: isOn)
+                .frame(minWidth: minTapSize, minHeight: minTapSize)
+                .contentShape(Rectangle())
         }
-        .buttonStyle(PressDownStyle(scale: 0.94, fade: 0.96))
+        .buttonStyle(PressDownStyle(scale: 0.88, fade: 0.92, useBouncySpring: true, flashOpacity: 0.16))
         .disabled(!isEnabled)
-        .accessibilityLabel(kind == .favorite ? (isOn ? "В избранном" : "Добавить в избранное")
-                                              : (isEnabled ? "Домашка" : "Домашка недоступна"))
+        .accessibilityLabel(accessibilityLabelForKind)
+    }
+
+    private var accessibilityLabelForKind: String {
+        switch kind {
+        case .favorite: return isActive ? "В избранном" : "Добавить в избранное"
+        case .console:  return isEnabled ? "Домашка" : "Домашка недоступна"
+        case .play:     return "Запустить урок"
+        case .info:     return "Подробнее"
+        case .speaker:  return "Потренировать произношение"
+        case .listen:   return "Прослушать"
+        }
+    }
+}
+
+// MARK: - Lesson Favorite Counter — минимальный вариант (только сердечко + число, без капсулы)
+public struct AppFavCounterMinimal: View {
+    public var count: Int
+    public var isEnabled: Bool = true
+    public var onTap: () -> Void
+
+    public init(count: Int, isEnabled: Bool = true, onTap: @escaping () -> Void = {}) {
+        self.count = count
+        self.isEnabled = isEnabled
+        self.onTap = onTap
+    }
+
+    private let iconSize: CGFloat = Theme.IconButton.iconSizeCard
+    private let minTapSize: CGFloat = Theme.IconButton.tapMinCard
+
+    public var body: some View {
+        let hasAny = count > 0
+        let accent = AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+        Button(action: onTap) {
+            HStack(spacing: 6) {
+                Image(systemName: hasAny ? "heart.fill" : "heart")
+                    .font(.system(size: iconSize, weight: .semibold))
+                    .foregroundStyle(hasAny ? accent : accent)
+                    .opacity(hasAny ? 1 : 0.85)
+                Text("\(count)")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(hasAny ? accent : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
+                    .monospacedDigit()
+            }
+            .frame(minWidth: minTapSize, minHeight: minTapSize)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressDownStyle(scale: 0.88, fade: 0.92, useBouncySpring: true, flashOpacity: 0.16))
+        .disabled(!isEnabled)
+        .accessibilityLabel("В избранном: \(count)")
     }
 }
 
@@ -658,15 +1074,14 @@ public struct AppFavCounterButton: View {
 
     public var body: some View {
         let hasAny = count > 0
-        let outline = Color.white.opacity(0.18)
-        let idleFill = CD.ColorToken.card.opacity(0.80)
+        let idleFill = CD.ColorToken.card.opacity(0.82)
 
         Button(action: onTap) {
             HStack(spacing: 8) {
                 Image(systemName: hasAny ? "heart.fill" : "heart")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(hasAny ? AnyShapeStyle(Color.black.opacity(0.90))
-                                             : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.90)))
+                                             : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
                 Text("\(count)")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(hasAny ? AnyShapeStyle(Color.black.opacity(0.92))
@@ -678,26 +1093,22 @@ public struct AppFavCounterButton: View {
             .background(
                 ZStack {
                     if hasAny {
-                        // Make it visually identical to active icon buttons: gradient fill + soft bloom + gloss
                         ThemeManager.shared.currentAccentFill
                             .blur(radius: 2.5)
-                            .opacity(0.55)
+                            .opacity(0.5)
                             .mask(Capsule(style: .continuous))
                         Capsule(style: .continuous)
                             .fill(ThemeManager.shared.currentAccentFill)
                         Capsule(style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.06), .clear],
+                                    colors: [Color.white.opacity(0.08), .clear],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                             .blendMode(.plusLighter)
-                        Capsule(style: .continuous)
-                            .strokeBorder(outline, lineWidth: 0.8)
                     } else {
-                        // Idle matches icon family: subtle card fill + hairline stroke + gloss
                         ZStack {
                             Capsule(style: .continuous)
                                 .fill(idleFill)
@@ -710,8 +1121,6 @@ public struct AppFavCounterButton: View {
                                     )
                                 )
                                 .blendMode(.plusLighter)
-                            Capsule(style: .continuous)
-                                .strokeBorder(outline, lineWidth: 0.8)
                         }
                     }
                 }
@@ -724,15 +1133,33 @@ public struct AppFavCounterButton: View {
     }
 }
 
-// Reusable press feedback for icon buttons
+// Reusable press feedback for icon buttons (лёгкий «отскок» — не плоский отклик)
 public struct PressDownStyle: ButtonStyle {
     var scale: CGFloat = 0.96
     var fade: CGFloat = 0.98
+    /// Более выраженный отскок для карточных иконок (dampingFraction ниже = заметнее).
+    var useBouncySpring: Bool = false
+    /// Короткая accent-вспышка при нажатии (например 0.16–0.2).
+    var flashOpacity: CGFloat? = nil
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? scale : 1)
             .opacity(configuration.isPressed ? fade : 1)
-            .animation(.spring(response: 0.25, dampingFraction: 0.9), value: configuration.isPressed)
+            .overlay(
+                Group {
+                    if let flash = flashOpacity, configuration.isPressed {
+                        Color.white.opacity(flash)
+                    }
+                }
+                .allowsHitTesting(false)
+            )
+            .animation(
+                .spring(
+                    response: 0.28,
+                    dampingFraction: useBouncySpring ? 0.72 : 0.88
+                ),
+                value: configuration.isPressed
+            )
     }
 }
 
@@ -917,7 +1344,7 @@ public struct AppCTAButtons: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: corner, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1.2)
+                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                 )
                 .contentShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
             }
@@ -972,7 +1399,7 @@ public struct AppCTAButtons: View {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: corner, style: .continuous)
-                            .stroke(Color.white.opacity(0.18), lineWidth: 1.2)
+                            .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
                     )
                     .contentShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
                 }
@@ -1035,12 +1462,13 @@ public struct AppProgressBar: View {
                 shape
                     .fill(CD.ColorToken.card.opacity(0.75))
                 shape
-                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
 
                 if filledWidth > 0 {
                     shape
                         .fill(ThemeManager.shared.currentAccentFill)
                         .frame(width: filledWidth)
+                        .animation(.easeInOut(duration: 0.28), value: value)
                 }
             }
         }
@@ -2170,7 +2598,7 @@ public struct AppActivityDayNoteCard: View {
                     .foregroundStyle(CD.ColorToken.textSecondary)
                     .frame(width: 26, height: 26)
                     .background(Circle().fill(CD.ColorToken.card.opacity(0.75)))
-                    .overlay(Circle().stroke(Color.white.opacity(0.10), lineWidth: 1))
+                    .overlay(Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
             }
             .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
             .zIndex(2)
@@ -2190,7 +2618,7 @@ public struct AppActivityDayNoteCard: View {
                     )
                     .blendMode(.plusLighter)
 
-                shape.stroke(Color.white.opacity(0.10), lineWidth: 1)
+                shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
             }
         )
         .clipShape(shape)
@@ -2224,7 +2652,7 @@ public struct AppActivityDaySquare: View {
                 }
 
                 shape
-                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
 
                 if isSelected {
                     shape
@@ -2487,7 +2915,7 @@ public struct AppStatsMiniCard: View {
                         )
                     )
                     .blendMode(.plusLighter)
-                shape.stroke(Color.white.opacity(0.10), lineWidth: 1)
+                shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
             }
         )
         .clipShape(shape)
@@ -2610,7 +3038,7 @@ public struct AppMetricDeltaChip: View {
                         )
                     )
                     .blendMode(.plusLighter)
-                shape.stroke(Color.white.opacity(0.10), lineWidth: 1)
+                shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
             }
         }
     }
@@ -2809,7 +3237,7 @@ public struct AppSpeakerIconPill: View {
             )
             .overlay(
                 Capsule(style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
             )
             .contentShape(Capsule(style: .continuous))
         }

@@ -1,17 +1,47 @@
-//
-//  taikaApp.swift
-//  taika
-//
-//  Created by product on 23.08.2025.
-//
-
 import SwiftUI
+import FirebaseCore
 
 @main
 struct taikaApp: App {
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var nav = NavigationIntent()
+    @StateObject private var theme = ThemeManager.shared
+
+    init() {
+        if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
+            FirebaseApp.configure()
+        }
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = UIColor.clear
+        appearance.titleTextAttributes = [.foregroundColor: UIColor.label]
+        appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.label]
+        appearance.shadowColor = .clear
+
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
+        UINavigationBar.appearance().tintColor = UIColor.systemPink
+    }
+
     var body: some Scene {
         WindowGroup {
             AppShell()
+                .environmentObject(nav)
+                .environmentObject(theme)
+                .preferredColorScheme(theme.preferredScheme)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .active:
+                if let uid = AuthService.shared.currentUserID {
+                    SyncManager.shared.restoreIfNeeded(userId: uid)
+                }
+            case .background:
+                SyncManager.shared.schedulePush()
+            default:
+                break
+            }
         }
     }
 }

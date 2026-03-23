@@ -43,20 +43,14 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
     @Published var status: Status = .idle
     @Published var lastErrorMessage: String? = nil
 
-    private var audioEngine: AVAudioEngine?
-    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
-    private var recognitionTask: SFSpeechRecognitionTask?
-    private var speechRecognizer: SFSpeechRecognizer? = SFSpeechRecognizer(locale: Locale(identifier: "th-TH"))
-    private var speechAuthorized: Bool = false
-
-    static let shared = SpeakerRecorder()
-
     private var recorder: AVAudioRecorder?
     private var leveltimer: Timer?
     private let filename = "speaker_attempt.m4a"
     private var currentURL: URL {
         FileManager.default.temporaryDirectory.appendingPathComponent(filename)
     }
+
+    static let shared = SpeakerRecorder()
 
     func requestPermission(completion: @escaping (Bool) -> Void) {
         status = .requestingPermission
@@ -104,40 +98,35 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
                 return
             }
 
-            self.requestSpeechAuthorization { speechOk in
-                let settings: [String: Any] = [
-                    AVFormatIDKey: kAudioFormatMPEG4AAC,
-                    AVSampleRateKey: 44100.0,
-                    AVNumberOfChannelsKey: 1,
-                    AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-                ]
+            let settings: [String: Any] = [
+                AVFormatIDKey: kAudioFormatMPEG4AAC,
+                AVSampleRateKey: 44100.0,
+                AVNumberOfChannelsKey: 1,
+                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+            ]
 
-                do {
-                    try FileManager.default.removeItem(at: self.currentURL)
-                } catch {}
+            do { try FileManager.default.removeItem(at: self.currentURL) } catch {}
 
-                do {
-                    let r = try AVAudioRecorder(url: self.currentURL, settings: settings)
-                    r.isMeteringEnabled = true
-                    r.prepareToRecord()
-                    r.record()
-                    NotificationCenter.default.post(name: .speakerRecorderDidStart, object: nil)
+            do {
+                let r = try AVAudioRecorder(url: self.currentURL, settings: settings)
+                r.isMeteringEnabled = true
+                r.prepareToRecord()
+                r.record()
 
-                    self.recorder = r
-                    self.isRecording = true
-                    self.status = .recording
-                    self.startLevelMeter()
-                    self.partialText = ""
-                    if speechOk {
-                        self.startLiveTranscription()
-                    }
-                    completion(self.currentURL)
-                } catch {
-                    self.isRecording = false
-                    self.status = .startFailed
-                    self.lastErrorMessage = "recorder start failed"
-                    completion(nil)
-                }
+                NotificationCenter.default.post(name: .speakerRecorderDidStart, object: nil)
+
+                self.recorder = r
+                self.isRecording = true
+                self.status = .recording
+                self.startLevelMeter()
+                self.partialText = ""
+
+                completion(self.currentURL)
+            } catch {
+                self.isRecording = false
+                self.status = .startFailed
+                self.lastErrorMessage = "recorder start failed"
+                completion(nil)
             }
         }
     }
@@ -150,20 +139,18 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
         status = .stopping
         lastErrorMessage = nil
 
-        // B1: idempotent: safe to call multiple times
-        guard isRecording else {
-            // B1: explicit contract: if not recording, return nil with clear status
-            status = .stopFailed
-            lastErrorMessage = "stop called while not recording"
-            NotificationCenter.default.post(name: .speakerRecorderDidStop, object: lastAttemptSummary())
-            return nil
+        // idempotent stop: just return existing file if any
+        if !isRecording {
+            let url = currentAudioURL()
+            status = .idle
+            NotificationCenter.default.post(name: .speakerRecorderDidStop, object: "recording stopped")
+            return url
         }
 
         recorder?.stop()
         let recorderWasValid = (recorder != nil)
         recorder = nil
 
-        stopLiveTranscription()
         partialText = ""
 
         stopLevelMeter()
@@ -172,9 +159,8 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
         // B1: explicit contract: validate audio file exists and has content
         let url = currentAudioURL()
         if url == nil {
-            status = .stopFailed
-            lastErrorMessage = recorderWasValid ? "no audio file created" : "recorder was nil"
-            NotificationCenter.default.post(name: .speakerRecorderDidStop, object: lastAttemptSummary())
+            status = .idle
+            NotificationCenter.default.post(name: .speakerRecorderDidStop, object: "recording stopped (no file)")
             
             do {
                 try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
@@ -232,78 +218,6 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
             return "recording stopped (failed): \(lastErrorMessage ?? "unknown")"
         default:
             return "recording stopped"
-        }
-    }
-
-    private func startLiveTranscription() {
-        stopLiveTranscription()
-
-        guard speechAuthorized, let recognizer = speechRecognizer, recognizer.isAvailable else {
-            return
-        }
-
-        let engine = AVAudioEngine()
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        request.shouldReportPartialResults = true
-
-        let input = engine.inputNode
-        let format = input.outputFormat(forBus: 0)
-        input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            self?.recognitionRequest?.append(buffer)
-        }
-
-        audioEngine = engine
-        recognitionRequest = request
-
-        do {
-            engine.prepare()
-            try engine.start()
-        } catch {
-            stopLiveTranscription()
-            return
-        }
-
-        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            guard let self else { return }
-            if let r = result {
-                self.partialText = r.bestTranscription.formattedString
-            }
-            if error != nil || (result?.isFinal == true) {
-                // keep partialText as last known
-                self.stopLiveTranscription()
-            }
-        }
-    }
-
-    private func stopLiveTranscription() {
-        recognitionTask?.cancel()
-        recognitionTask = nil
-
-        recognitionRequest?.endAudio()
-        recognitionRequest = nil
-
-        if let engine = audioEngine {
-            // removeTap may throw if not installed; keep it safe
-            engine.inputNode.removeTap(onBus: 0)
-            engine.stop()
-            engine.reset()
-        }
-        audioEngine = nil
-    }
-    private func requestSpeechAuthorization(completion: @escaping (Bool) -> Void) {
-        SFSpeechRecognizer.requestAuthorization { [weak self] auth in
-            DispatchQueue.main.async {
-                let ok: Bool
-                switch auth {
-                case .authorized:
-                    ok = true
-                default:
-                    ok = false
-                }
-                self?.speechAuthorized = ok
-                completion(ok)
-            }
         }
     }
 }

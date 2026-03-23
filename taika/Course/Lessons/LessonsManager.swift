@@ -6,6 +6,7 @@
 
 import Foundation
 import Combine
+import UIKit
 
 /// Статус урока в рамках курса
 public enum LessonStatus: String, Codable, Equatable {
@@ -136,6 +137,14 @@ extension LessonProgress {
                 self?.forceRefresh()
             }
             .store(in: &cancellables)
+        // Save on app background so progress never lost (safety net; we also save immediately on change)
+        NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.save()
+        }
+        // При возврате в приложение — пересобрать агрегаты из ProgressManager, чтобы выученные уроки не «пропадали»
+        NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.refreshFromProgressManager()
+        }
     }
 
     private func tick() {
@@ -153,6 +162,11 @@ extension LessonProgress {
     /// Силовой рефреш подписчиков (дергает objectWillChange и версию)
     public func forceRefresh() {
         scheduleEmit()
+    }
+
+    /// Синхронизировать progress с ProgressManager (источник истины для выученных шагов). Вызывается при возврате в приложение.
+    public func refreshFromProgressManager() {
+        rebuildAggregatesFromProgressManager()
     }
 
     /// Применить снапшот прогресса по конкретному уроку (используется из Step/ProgressManager)
@@ -210,7 +224,7 @@ extension LessonProgress {
         if byLesson[lessonId] != next {
             byLesson[lessonId] = next
             progress[courseId] = byLesson
-            saveDebounced()
+            save()  // immediate save so progress persists before app exit/background (same as ProgressManager)
             objectWillChange.send()
             tick()
         }
@@ -233,15 +247,15 @@ extension LessonProgress {
         allCards: Set<Int>,
         lifehacks: Set<Int> = []
     ) {
-        // Контентные = все минус лайфхаки
         let effectiveSet = allCards.subtracting(lifehacks)
         let learned = learnedContent.intersection(effectiveSet).count
-        _ = max(0, effectiveSet.count)
+        // Use StepData as source of truth for denominator (same as StepManager path), so set-based notification doesn't overwrite with wrong total
+        let (totalLearnable, totalLifehack) = StepData.shared.progressCounts(for: lessonId)
         self.updateLessonProgress(courseId: courseId,
                                   lessonId: lessonId,
                                   learnedCount: learned,
-                                  total: allCards.count,
-                                  lifehackCount: lifehacks.count)
+                                  total: totalLearnable + totalLifehack,
+                                  lifehackCount: totalLifehack)
         // Print percent for debug
         if let prog = lessonProgress(courseId: courseId, lessonId: lessonId) {
             #if DEBUG
@@ -323,20 +337,17 @@ extension LessonProgress {
         return .locked
     }
 
-    /// Общий процент прогресса по курсу (0.0 ... 1.0) на основе прогресса всех уроков
+    /// Общий процент прогресса по курсу (0.0 ... 1.0): выученные карточки / все карточки всех уроков курса
     public func coursePercent(for courseId: String) -> Double {
+        let lessonIds = lessonsData.lessons(for: courseId).map { $0.lessonID }
+        guard !lessonIds.isEmpty else { return 0.0 }
+
+        let totalCards = lessonIds.reduce(0) { acc, lid in acc + StepData.shared.progressCounts(for: lid).learnable }
+        guard totalCards > 0 else { return 0.0 }
+
         let byLesson = progress[courseId] ?? [:]
-        guard !byLesson.isEmpty else { return 0.0 }
-
-        // Weighted by effective totals (lp.total already excludes lifehacks in updateLessonProgress)
-        let valid = byLesson.values.filter { $0.total > 0 }
-        guard !valid.isEmpty else { return 0.0 }
-
-        let learnedTotal = valid.reduce(0) { $0 + max(0, $1.learned) }
-        let total = valid.reduce(0) { $0 + max(0, $1.total) }
-        guard total > 0 else { return 0.0 }
-
-        let value = Double(min(learnedTotal, total)) / Double(total)
+        let learnedTotal = lessonIds.reduce(0) { acc, lid in acc + max(0, byLesson[lid]?.learned ?? 0) }
+        let value = Double(min(learnedTotal, totalCards)) / Double(totalCards)
         return min(max(value, 0.0), 1.0)
     }
     /// Кол-во завершённых уроков для хэдера курса
@@ -505,7 +516,6 @@ extension LessonProgress {
         let byLesson = progress[courseId] ?? [:]
         return lessonIds.map { lid in
             guard let lp = byLesson[lid] else { return 0.0 }
-            // percent уже считается на основе effective total (без лайфхаков)
             let value = lp.percent
             return min(max(value, 0.0), 1.0)
         }
@@ -540,7 +550,10 @@ extension LessonProgress {
     }
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: storeKey) else { return }
+        guard let data = UserDefaults.standard.data(forKey: storeKey) else {
+            rebuildAggregatesFromProgressManager()
+            return
+        }
         do {
             let decoded = try JSONDecoder().decode([String: [String: LessonProgress]].self, from: data)
             progress = decoded
@@ -554,6 +567,54 @@ extension LessonProgress {
             // восстановим множества
             self.started = decoded.mapValues { Set($0) }
         }
+        // EPIC 4: align aggregates with ProgressManager (single source of truth for learned)
+        rebuildAggregatesFromProgressManager()
+    }
+
+    /// Пересобрать агрегаты из ProgressManager (при старте и при возврате в приложение). Публичный вызов — refreshFromProgressManager().
+    private func rebuildAggregatesFromProgressManager() {
+        var didChange = false
+        for course in lessonsData.allCourses() {
+            let courseId = course.courseID
+            for lesson in course.lessons {
+                let lessonId = lesson.lessonID
+                let learned = ProgressManager.shared.learnedEffectiveCount(courseId: courseId, lessonId: lessonId)
+                let (learnable, lifehack) = StepData.shared.progressCounts(for: lessonId)
+                let total = learnable + lifehack
+                if applyLessonProgressInMemory(courseId: courseId, lessonId: lessonId, learnedCount: learned, total: total, lifehackCount: lifehack) {
+                    didChange = true
+                }
+            }
+        }
+        if didChange {
+            save()
+            objectWillChange.send()
+            tick()
+        }
+    }
+
+    /// Updates progress dictionary only (no save/emit). Returns true if value changed. Used by rebuildAggregatesFromProgressManager.
+    private func applyLessonProgressInMemory(courseId: String, lessonId: String, learnedCount: Int, total: Int, lifehackCount: Int) -> Bool {
+        let hacks = max(0, lifehackCount)
+        let rawTotal = max(0, total)
+        let effectiveTotal = max(0, rawTotal - hacks)
+        let learned = max(0, learnedCount)
+        let status: LessonStatus
+        if effectiveTotal == 0 {
+            status = learned > 0 ? .inProgress : .locked
+        } else if learned >= effectiveTotal {
+            status = .completed
+        } else if learned > 0 {
+            status = .inProgress
+        } else {
+            status = .locked
+        }
+        var byLesson = progress[courseId] ?? [:]
+        let next = LessonProgress(learned: learned, total: effectiveTotal, status: status)
+        guard byLesson[lessonId] != next else { return false }
+        byLesson[lessonId] = next
+        progress[courseId] = byLesson
+        return true
     }
     // MARK: - Navigation (forwarded to CourseNavigator)
     /// Compute next destination from a given course/lesson.
