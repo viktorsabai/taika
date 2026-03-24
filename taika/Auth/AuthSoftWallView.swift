@@ -127,13 +127,8 @@ struct AuthSoftWallView: View {
                 }
 
                 if authInProgress {
-                    HStack(spacing: 8) {
-                        ProgressView().tint(PD.ColorToken.text)
-                        Text("Вход…")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity)
+                    TaikaLoadingView(label: "Вход…", compact: true)
+                        .frame(maxWidth: .infinity)
                 }
 
                 if let msg = authErrorMessage {

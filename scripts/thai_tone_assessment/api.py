@@ -219,18 +219,34 @@ def _has_thai_script(s: str) -> bool:
     return bool(_THAI_SCRIPT_RE.search(s))
 
 
+def _collapse_letter_space_arrow(phonetic: str) -> str:
+    """LLM часто пишет «э ↗ п ↘» — схлопываем в «э↗ п↘» (как в Taika: буква сразу перед стрелкой)."""
+    prev = None
+    while prev != phonetic:
+        prev = phonetic
+        phonetic = re.sub(
+            r"([а-яёА-ЯЁ·'\-])\s+([→↓↘↑↗])",
+            r"\1\2",
+            phonetic,
+        )
+    return phonetic
+
+
 def _normalize_phonetic(phonetic: str) -> str:
-    """Убирает IPA-символы (ū ē ʰ и т.п.), тайский скрипт, оставляет только кириллицу и стрелки →↓↘↑↗."""
+    """Убирает IPA, латиницу в фонетике, тайский скрипт; оставляет кириллицу и стрелки →↓↘↑↗."""
     replacements = [
         ("ū", "у"), ("ē", "е"), ("ā", "а"), ("ī", "и"), ("ō", "о"),
         ("í", "и"), ("ú", "у"), ("é", "е"), ("ó", "о"), ("á", "а"),
-        ("ʰ", ""), ("ʹ", ""), ("ʿ", ""), ("ʻ", ""),
+        ("ɛ", "е"), ("ɪ", "и"), ("ɔ", "о"), ("ʌ", "а"), ("ə", "э"),
+        ("ʃ", "ш"), ("ʒ", "ж"), ("ŋ", "нг"), ("ɲ", "нь"),
+        ("dʒ", "дж"), ("tʃ", "ч"),
+        ("ʰ", ""), ("ʹ", ""), ("ʿ", ""), ("ʻ", ""), ("ˈ", ""), ("ˌ", ""),
     ]
     out = _strip_thai_from_phonetic(phonetic)
     for old, new in replacements:
         out = out.replace(old, new)
-    # схлопнуть лишние пробелы (после удаления тайского могли остаться)
     out = re.sub(r"\s+", " ", out).strip()
+    out = _collapse_letter_space_arrow(out)
     return out
 
 
@@ -328,15 +344,18 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] 
 
     system = (
         "You are a Thai teacher for Russian speakers. "
-        "Task: translate short everyday Russian phrases into Thai and produce a Cyrillic phonetic transcription.\n\n"
-        "Phonetic RULES (strict — phonetic field must contain ONLY):\n"
-        "- Russian Cyrillic letters (а-я, ё). NO Thai script. NO Latin. NO IPA.\n"
-        "- Syllables separated by spaces. Each syllable ends with one tone arrow: → ↓ ↘ ↑ ↗\n"
-        "- Examples: 'са→ ват→ ди↘ май↗', 'ныа↘ яй↘ ма↗к↘' (tired), 'чан→ мыа↘'.\n"
-        "- Do NOT add ครับ/ค่ะ or кхрап/кха — we add it separately.\n\n"
+        "Translate Russian into Thai and a Cyrillic phonetic line matching the Taika app (same style as phrase cards).\n\n"
+        "Phonetic field — STRICT format (violations break the UI):\n"
+        "- ONLY Russian Cyrillic (а-я, ё), hyphen '-', middle dot '·', optional apostrophe for glottal stops. "
+        "NO Thai script. NO Latin letters. NO IPA symbols (no ɛ ɪ ʃ ʔ etc).\n"
+        "- ONE Thai syllable = ONE Cyrillic chunk + exactly ONE tone arrow immediately after that chunk (no space before arrow).\n"
+        "- WRONG: 'э ↗ п ↘' or 'кх↗у↘а↘' (arrow between letters). "
+        "RIGHT: 'эп-ли-кэ-ше-н↘' or 'са-ват-ди↘' — hyphens join letters inside a syllable; arrow only after the full syllable.\n"
+        "- Separate words with a single space. Typical pattern: 'чан→ дым→ ка-фэ↘ лэ→ кам-лан↘ джа→ пай→ йим↗' (example rhythm).\n"
+        "- Roughly as many syllable+arrow groups as in the Thai phrase (not one arrow per Latin/Cyrillic letter).\n"
+        "- Do NOT add ครับ/ค่ะ or кхрап/кха — we append politeness separately.\n\n"
         "Phrase types:\n"
-        "- Statements: direct translation.\n"
-        "- Questions (Russian ends with ?): use Thai question structure (ไหม, อะไร, ที่ไหน, กี่โมง, etc.).\n\n"
+        "- Questions (? in Russian): natural Thai question phrasing.\n\n"
         "Return JSON: {\"thai\": \"...\", \"phonetic\": \"...\"}."
     )
 
@@ -397,8 +416,10 @@ def _llm_translate_ru_to_th_retry(original_thai: str) -> tuple[str, str] | None:
     if not OPENAI_API_KEY:
         return None
     user = (
-        f"Phonetic for Thai '{original_thai}' — MUST be Cyrillic only (no Thai script). "
-        "Example for 'เหนื่อยมาก': 'ныа↘ яй↘ ма↗к↘'. Syllables with arrows, space-separated."
+        f"Thai sentence: {original_thai!r}. Write phonetic ONLY in Cyrillic. "
+        "Format: each Thai syllable = one Cyrillic group + one tone arrow glued (no space before arrow). "
+        "Use hyphens inside syllables. Example 'เหนื่อยมาก': 'ныа↘ яй↘ ма↗к↘'. "
+        "Never put tone arrows between single letters."
     )
     try:
         resp = requests.post(

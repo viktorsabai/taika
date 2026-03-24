@@ -1406,68 +1406,26 @@ var body: some View {
             Color.black.opacity(0.28)
                 .ignoresSafeArea()
 
-            VStack(spacing: 14) {
-                _DiceLoadingV()
-                Text("случайный курс…")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.9))
-            }
-            .padding(.vertical, 18)
-            .padding(.horizontal, 18)
-            .background(
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 26, style: .continuous)
-                            .fill(Color.black.opacity(0.18))
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-            )
-            .shadow(color: Color.black.opacity(0.25), radius: 22, y: 10)
-            .frame(maxWidth: 280)
-            .padding(.horizontal, 16)
+            TaikaLoadingView(label: "случайный курс…")
+                .padding(.vertical, 18)
+                .padding(.horizontal, 18)
+                .background(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                .fill(Color.black.opacity(0.18))
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                )
+                .shadow(color: Color.black.opacity(0.25), radius: 22, y: 10)
+                .frame(maxWidth: 280)
+                .padding(.horizontal, 16)
         }
         .transition(.scale(scale: 0.98).combined(with: .opacity))
-    }
-
-    private struct _DiceLoadingV: View {
-        @State private var spin: Double = 0
-        @State private var pulse: CGFloat = 1
-
-        var body: some View {
-            ZStack {
-                Image(systemName: "die.face.5.fill")
-                    .font(.system(size: 34, weight: .semibold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.95),
-                                Color.white.opacity(0.65)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .rotation3DEffect(
-                        .degrees(spin),
-                        axis: (x: 0.7, y: 0.4, z: 0.2)
-                    )
-                    .scaleEffect(pulse)
-                    .shadow(color: Color.black.opacity(0.35), radius: 12, y: 6)
-            }
-            .frame(width: 56, height: 56)
-            .onAppear {
-                withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
-                    spin = 360
-                }
-                withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
-                    pulse = 1.08
-                }
-            }
-        }
     }
 
     // MARK: - Step handlers (mirror StepView)

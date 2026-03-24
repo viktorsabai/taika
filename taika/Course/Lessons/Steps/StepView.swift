@@ -1199,37 +1199,15 @@ struct StepView: View {
     }
 
     private func loadingView(for type: HomeGameType) -> some View {
-        ZStack {
-
-            VStack(spacing: 22) {
-
-                ZStack {
-                    Circle()
-                        .fill(ThemeManager.shared.currentAccentFill.opacity(0.15))
-                        .frame(width: 96, height: 96)
-
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .tint(ThemeManager.shared.currentAccentFill)
-                        .scaleEffect(1.4)
-                }
-
-                Text(
-                    type == .match
-                    ? "найди пару"
-                    : type == .recall
-                        ? "быстрое повторение"
-                        : "фразы в контексте"
-                )
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white)
-
-                Text("taika готовит тренировку")
-                    .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.6))
-            }
-            .padding(.horizontal, 32)
-        }
+        let typeLabel = type == .match
+            ? "найди пару"
+            : type == .recall
+                ? "быстрое повторение"
+                : "фразы в контексте"
+        return TaikaLoadingView(
+            label: typeLabel,
+            hint: "taika готовит тренировку"
+        )
         .transition(.opacity)
     }
 

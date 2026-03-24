@@ -450,11 +450,8 @@ public struct HomeTaskView: View {
                         lessonTitle: displayTitle ?? gameContextSourceTitle()
                     )
                 } else {
-                    VStack {
-                        ProgressView()
-                            .tint(theme.currentAccentFill)
-                    }
-                    .onAppear { startRecallGame() }
+                    TaikaLoadingView(label: "подготовка…", compact: true)
+                        .onAppear { startRecallGame() }
                 }
                     }
                     .padding(.top, Theme.Layout.sectionTitleToContent)

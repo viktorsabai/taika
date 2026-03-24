@@ -1279,7 +1279,10 @@ public final class SpeakerManager: ObservableObject {
                     if let t = token, self.activeAttemptToken != nil && self.activeAttemptToken != t { return }
 
                     self.heardThai = nil
-                    self.heardTranslit = spoken.isEmpty ? "распознавание не вернуло текст" : formattedSpoken
+                    let expectedTranslit = self.conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    self.heardTranslit = spoken.isEmpty
+                        ? "распознавание не вернуло текст"
+                        : (expectedTranslit.isEmpty ? formattedSpoken : expectedTranslit)
                     self.heardConfidence = score
                     self.taikaHints = ["оценка: \(score)", hint]
 
@@ -2030,22 +2033,35 @@ public final class SpeakerManager: ObservableObject {
         } else if let url = lastAttempt, !FileManager.default.fileExists(atPath: url.path) {
             print("[speaker] tone API: не вызываем — файл записи не найден: \(url.path)")
         }
-        if current == nil {
-            print("[speaker] tone API: не вызываем — current=nil")
+        if current == nil && conversationExpectedThai == nil {
+            print("[speaker] tone API: не вызываем — current=nil и conversationExpectedThai=nil")
         }
         #endif
         guard let base = Self.toneAssessmentBaseURL?.trimmingCharacters(in: .whitespacesAndNewlines),
               !base.isEmpty,
               let audioURL = lastAttempt,
-              FileManager.default.fileExists(atPath: audioURL.path),
-              let cur = current else {
+              FileManager.default.fileExists(atPath: audioURL.path) else {
             syllableFeedback = []
             breakdownHybridScore = nil
             breakdownRequestFailed = false
             completion()
             return
         }
-        let thaiText = cur.face.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines)
+        let thaiText: String
+        let phoneticForTones: String
+        if let convThai = conversationExpectedThai?.trimmingCharacters(in: .whitespacesAndNewlines), !convThai.isEmpty {
+            thaiText = convThai
+            phoneticForTones = conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        } else if let cur = current {
+            thaiText = cur.face.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines)
+            phoneticForTones = cur.face.phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            syllableFeedback = []
+            breakdownHybridScore = nil
+            breakdownRequestFailed = false
+            completion()
+            return
+        }
         guard !thaiText.isEmpty else {
             #if DEBUG
             print("[speaker] tone API: не вызываем — эталонный тайский текст пустой")
@@ -2074,7 +2090,7 @@ public final class SpeakerManager: ObservableObject {
         append("Content-Disposition: form-data; name=\"text\"\r\n\r\n")
         body.append(Data(thaiText.utf8))
         append("\r\n")
-        if let expectedTones = Self.expectedTonesFromPhonetic(cur.face.phonetic), !expectedTones.isEmpty {
+        if let expectedTones = Self.expectedTonesFromPhonetic(phoneticForTones), !expectedTones.isEmpty {
             append("--\(boundary)\r\n")
             append("Content-Disposition: form-data; name=\"expected_tones\"\r\n\r\n")
             body.append(Data(expectedTones.utf8))

@@ -198,8 +198,7 @@ struct ProfileView: View {
                     Button(action: signInWithAppleTapped) {
                         HStack(spacing: PD.Spacing.inner) {
                             if authInProgress {
-                                ProgressView()
-                                    .tint(PD.ColorToken.text)
+                                TaikaLoadingView(label: "", compact: true)
                             } else {
                                 Image(systemName: "apple.logo")
                                     .font(.system(size: 18, weight: .semibold))

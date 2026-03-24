@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>TaikaAPIBaseURL</key>
-	<string></string>
+	<string>https://taika-production.up.railway.app</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

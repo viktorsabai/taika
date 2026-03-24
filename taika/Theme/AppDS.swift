@@ -71,6 +71,42 @@ struct SystemBlur: UIViewRepresentable {
     }
 }
 
+// MARK: - Unified Loading View (единый UI загрузок по всему приложению)
+public struct TaikaLoadingView: View {
+    public var label: String
+    public var hint: String?
+    public var compact: Bool
+
+    public init(label: String, hint: String? = nil, compact: Bool = false) {
+        self.label = label
+        self.hint = hint
+        self.compact = compact
+    }
+
+    public var body: some View {
+        VStack(spacing: compact ? 8 : 14) {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(ThemeManager.shared.currentAccentFill)
+                .scaleEffect(compact ? 1.0 : 1.15)
+
+            if !label.isEmpty {
+                Text(label)
+                    .font(.system(size: compact ? 14 : 16, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+
+            if let h = hint, !h.isEmpty {
+                Text(h)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.75))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: compact ? nil : .infinity)
+        .padding(compact ? 12 : 24)
+    }
+}
+
 // MARK: - Global App Header (reusable across views)
 public struct AppHeader: View {
     // Visibility toggles

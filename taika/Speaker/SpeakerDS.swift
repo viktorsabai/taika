@@ -625,7 +625,16 @@ public struct SpeakerDSRoot: View {
     /// Умный спикер: распознавание сверху (спиннер + текст), перевод снизу. Один стиль — разное расположение.
     @ViewBuilder private var conversationTopContent: some View {
         if case .feedback = phase {
-            conversationFeedbackTopPlaceholder
+            let ru = (external?.heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !ru.isEmpty {
+                Text(ru)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            } else {
+                conversationFeedbackTopPlaceholder
+            }
         } else if phase == .analyzing {
             // Распознавание: спиннер + «распознаю» сверху
             if external?.heardRU?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
@@ -658,15 +667,9 @@ public struct SpeakerDSRoot: View {
 
     /// Индикатор загрузки (спиннер + текст). Один стиль: сверху при распознавании, снизу при переводе.
     @ViewBuilder private func conversationLoadingBlock(label: String) -> some View {
-        HStack(spacing: 10) {
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: Theme.Colors.accent))
-            Text(label)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
+        TaikaLoadingView(label: label, compact: true)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
     }
 
     @ViewBuilder private var conversationFeedbackTopPlaceholder: some View {
@@ -685,6 +688,25 @@ public struct SpeakerDSRoot: View {
         } else if conversationHasResult {
             conversationResultButtonsOnly
                 .transition(.opacity)
+        } else if phase == .hint,
+                  !(external?.heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  (external?.heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  !taikaHints.isEmpty {
+            VStack(spacing: 12) {
+                Text(taikaHints.joined(separator: " "))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                Button("Попробовать ещё раз") {
+                    external?.onClearConversationResult?()
+                }
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
+            .transition(.opacity)
         } else {
             EmptyView()
         }
@@ -1515,8 +1537,16 @@ public struct SpeakerDSRoot: View {
         snapshotScore: Binding<Int?>
     ) -> some View {
         let userText = heardTranslitText.isEmpty ? "—" : heardTranslitText
-        let liveTranslit = (currentItem?.translit ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let livePhrase = (currentItem?.hint ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let (liveTranslit, livePhrase): (String, String) = {
+            if let convTranslit = external?.conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines), !convTranslit.isEmpty {
+                let convPhrase = (external?.heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                return (convTranslit, convPhrase)
+            }
+            return (
+                (currentItem?.translit ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+                (currentItem?.hint ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        }()
         let liveScore: Int? = {
             guard case .feedback(let score, _) = phase else { return nil }
             return score
@@ -1747,18 +1777,16 @@ public struct SpeakerDSRoot: View {
                                 .padding(.bottom, 2)
                         }
                     } else if breakdownRequestInFlight {
-                        HStack(spacing: 8) {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: Theme.Colors.accent))
-                            Text("Загружаю разбор…")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(PD.ColorToken.textSecondary)
-                        }
+                        TaikaLoadingView(
+                            label: "Загружаю разбор…",
+                            hint: "может занять 15–30 сек",
+                            compact: true
+                        )
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                     } else {
                         let noToneMessage = breakdownRequestFailed
-                            ? "Не удалось загрузить разбор по тонам. Убедись, что сервер запущен (README в thai_tone_assessment)."
+                            ? "Не удалось загрузить разбор. Проверь интернет и Railway: сервис /assess может требовать больше памяти."
                             : "Пока здесь только сравнение «ты сказал» и «нужно было». Разбор по тонам по слогам появится, когда будет подключён."
                         Text(noToneMessage)
                             .font(.subheadline.weight(.medium))
@@ -2936,52 +2964,106 @@ public struct SpeakerDSRoot: View {
 }
 
 
+// MARK: - Smart Speaker / LLM phonetic: нормализация + отрисовка как в CardDS (каждая стрелка — accent)
+/// LLM часто даёт «буква пробел стрелка» или стрелки между буквами; парсер по пробелам ломал подсветку стрелок.
+private enum TaikaSmartSpeakerPhonetic {
+    private static let toneArrows: Set<Character> = ["→", "↓", "↘", "↑", "↗"]
+
+    /// Схлопывание «буква пробел стрелка», затем «стрелка-дефис» → «стрелка пробел» (как phoneticDisplayWithoutHyphens).
+    static func normalize(_ raw: String) -> String {
+        var t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        var changed = true
+        while changed {
+            changed = false
+            let chars = Array(t)
+            let n = chars.count
+            if n < 3 { break }
+            for i in 0..<(n - 2) {
+                let a = chars[i], b = chars[i + 1], c = chars[i + 2]
+                guard b.isWhitespace, Self.toneArrows.contains(c) else { continue }
+                guard Self.isPhoneticBodyScalar(a) else { continue }
+                let start = t.index(t.startIndex, offsetBy: i)
+                let end = t.index(start, offsetBy: 3)
+                t.replaceSubrange(start..<end, with: String([a, c]))
+                changed = true
+                break
+            }
+        }
+        for arrow in Self.toneArrows {
+            t = t.replacingOccurrences(of: String(arrow) + "-", with: String(arrow) + " ")
+        }
+        return t
+    }
+
+    private static func isPhoneticBodyScalar(_ ch: Character) -> Bool {
+        if "-·'ʼ".contains(ch) { return true }
+        guard let s = ch.unicodeScalars.first else { return false }
+        let v = s.value
+        if (0x0400...0x04FF).contains(v) { return true }
+        if v == 0x0451 || v == 0x0401 { return true }
+        return false
+    }
+
+    /// Как `phoneticStyledText` в CardDS: слоги/пробелы — базовый текст, каждая стрелка — accent (всегда).
+    static func styledText(_ raw: String, font: Font) -> Text {
+        let norm = normalize(raw)
+        guard !norm.isEmpty else {
+            return Text("").font(font)
+        }
+        let separators: Set<Character> = [" ", "-", "·"]
+        var result = Text("")
+        var chunk = ""
+        func flushChunk() {
+            guard !chunk.isEmpty else { return }
+            result = result + Text(chunk).foregroundStyle(PD.ColorToken.text)
+            chunk = ""
+        }
+        for ch in norm {
+            if Self.toneArrows.contains(ch) {
+                flushChunk()
+                result = result + Text(String(ch)).foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+            } else if separators.contains(ch) {
+                flushChunk()
+                result = result + Text(String(ch)).foregroundStyle(PD.ColorToken.text)
+            } else {
+                chunk.append(ch)
+            }
+        }
+        flushChunk()
+        return result.font(font)
+    }
+
+    /// Слоги для анимации: накапливаем до стрелки, затем сброс (без разбиения по пробелам как «слоги»).
+    static func syllableArrowSegments(_ raw: String) -> [(syllable: String, arrow: String)] {
+        let norm = normalize(raw)
+        var out: [(String, String)] = []
+        var buf = ""
+        for ch in norm {
+            if Self.toneArrows.contains(ch) {
+                let syl = buf.trimmingCharacters(in: .whitespacesAndNewlines)
+                out.append((syl, String(ch)))
+                buf = ""
+            } else {
+                if ch.isWhitespace && buf.isEmpty { continue }
+                buf.append(ch)
+            }
+        }
+        let tail = buf.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !tail.isEmpty {
+            out.append((tail, "→"))
+        }
+        return out
+    }
+}
+
 // MARK: - Транслит со стрелками тонов (цвет по accent, как в спикере и степе)
 private struct PhoneticWithColoredArrowsView: View {
     let phonetic: String
     var font: Font = .system(size: 22, weight: .semibold)
 
-    private static let toneArrows = Set("→↓↘↑↗")
-
-    private var segments: [(syllable: String, arrow: String)] {
-        let raw = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return [] }
-        let words = raw.split(separator: " ").map { String($0) }
-        var out: [(String, String)] = []
-        for word in words {
-            let parts = word.split(omittingEmptySubsequences: true) { "-·".contains($0) }
-                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-            for chunk in parts {
-                guard let last = chunk.last, Self.toneArrows.contains(last) else {
-                    out.append((chunk, "→"))
-                    continue
-                }
-                out.append((String(chunk.dropLast()), String(last)))
-            }
-        }
-        return out
-    }
-
     var body: some View {
-        let segs = segments
-        if segs.isEmpty {
-            Text(phonetic)
-                .foregroundStyle(PD.ColorToken.text)
-                .font(font)
-        } else {
-            Self.buildText(segments: segs, font: font)
-        }
-    }
-
-    static func buildText(segments: [(syllable: String, arrow: String)], font: Font) -> Text {
-        var result = Text("")
-        for (i, seg) in segments.enumerated() {
-            if i > 0 { result = result + Text(" ") }
-            result = result + Text(seg.syllable).foregroundStyle(PD.ColorToken.text)
-            result = result + Text(seg.arrow).foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-        }
-        return result.font(font)
+        TaikaSmartSpeakerPhonetic.styledText(phonetic, font: font)
+            .multilineTextAlignment(.center)
     }
 }
 
@@ -2991,26 +3073,8 @@ private struct PhoneticToneAnimationView: View {
     let phonetic: String
     let playbackProgress: Double
 
-    private static let toneArrows = Set("→↓↘↑↗")
-
     private var segments: [(syllable: String, arrow: String)] {
-        let raw = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return [] }
-        let words = raw.split(separator: " ").map { String($0) }
-        var out: [(String, String)] = []
-        for word in words {
-            let parts = word.split(omittingEmptySubsequences: true) { "-·".contains($0) }
-                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-            for chunk in parts {
-                guard let last = chunk.last, Self.toneArrows.contains(last) else {
-                    out.append((chunk, "→"))
-                    continue
-                }
-                out.append((String(chunk.dropLast()), String(last)))
-            }
-        }
-        return out
+        TaikaSmartSpeakerPhonetic.syllableArrowSegments(phonetic)
     }
 
     var body: some View {
@@ -3487,18 +3551,8 @@ private struct SpeakerTopCard: View {
             // center block (FavoriteDS-like typography rhythm)
             Group {
                 if isAnalyzingActive {
-                    VStack(spacing: 10) {
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .tint(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                            .scaleEffect(1.05)
-
-                        Text("анализирую…")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(AnyShapeStyle(PD.ColorToken.textSecondary))
-                            .opacity(0.88)
-                    }
-                    .frame(maxWidth: .infinity)
+                    TaikaLoadingView(label: "анализирую…", compact: true)
+                        .frame(maxWidth: .infinity)
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
                         // line 1 (accent): translit с анимацией направления тона при воспроизведении эталона

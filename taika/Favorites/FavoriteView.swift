@@ -216,13 +216,8 @@ private struct FavSheetContent: View {
                 )
                 .toolbar(.hidden, for: .navigationBar)
             } else {
-                VStack(spacing: 16) {
-                    ProgressView().progressViewStyle(.circular)
-                    Text("Готовим карточку…")
-                        .font(.footnote)
-                        .opacity(0.7)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                TaikaLoadingView(label: "Готовим карточку…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
         }
         // chrome handled by CustomFavOverlay

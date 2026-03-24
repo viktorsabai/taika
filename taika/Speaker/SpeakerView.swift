@@ -178,11 +178,19 @@ struct SpeakerView: View {
             },
             onRecordAgainFromBreakdown: {
                 isRecordingFromBreakdown = true
-                speaker.startAttempt()
+                if speaker.conversationExpectedThai != nil {
+                    speaker.startConversationPronunciationCheck()
+                } else {
+                    speaker.startAttempt()
+                }
             },
             isRecordingFromBreakdown: isRecordingFromBreakdown,
             onStopRecordingFromBreakdown: {
-                speaker.stopAttemptAndAnalyze()
+                if speaker.conversationExpectedThai != nil {
+                    speaker.stopConversationPronunciationCheck()
+                } else {
+                    speaker.stopAttemptAndAnalyze()
+                }
             },
             onClearAttempt: { speaker.clearAttemptsInCurrentQueue() },
             onClearConversationResult: { speaker.clearConversationResult() },
