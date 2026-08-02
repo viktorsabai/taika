@@ -5,9 +5,10 @@ import FirebaseCore
 struct taikaApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var nav = NavigationIntent()
-    @StateObject private var theme = ThemeManager.shared
+    @ObservedObject private var theme = ThemeManager.shared
 
     init() {
+        RevenueCatBootstrap.configureIfNeeded()
         if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
             FirebaseApp.configure()
         }

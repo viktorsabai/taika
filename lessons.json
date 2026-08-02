@@ -2,6 +2,116 @@
   "version": 1,
   "courses": [
     {
+      "course_id": "course_b_0",
+      "course_title": "Тайский без паники",
+      "lessons": [
+        {
+          "lesson_id": "course_b_0_l1",
+          "order": 1,
+          "title": "Как устроен язык",
+          "subtitle": "Простые правила, которые снимают страх",
+          "duration_minutes": 6,
+          "card_count": 7,
+          "is_free": true,
+          "tags": [],
+          "preview_phrase": "логика;лайфхаки",
+          "content": [
+            {
+              "kind": "intro",
+              "text": ""
+            },
+            {
+              "kind": "outline",
+              "text": ""
+            },
+            {
+              "kind": "apply",
+              "text": ""
+            }
+          ],
+          "outcomes": [],
+          "prerequisites": [],
+          "links": {
+            "steps_ref": "course_b_0_l1_steps",
+            "hometask_ref": "course_b_0_l1_home"
+          },
+          "assistant_tips": []
+        },
+        {
+          "lesson_id": "course_b_0_l2",
+          "order": 2,
+          "title": "Как работают тоны",
+          "subtitle": "Как перестать их бояться",
+          "duration_minutes": 7,
+          "card_count": 9,
+          "is_free": true,
+          "tags": [],
+          "preview_phrase": "тоны;стрелки",
+          "content": [
+            {
+              "kind": "intro",
+              "text": ""
+            },
+            {
+              "kind": "outline",
+              "text": ""
+            },
+            {
+              "kind": "apply",
+              "text": ""
+            }
+          ],
+          "outcomes": [],
+          "prerequisites": [
+            "course_b_0_l1"
+          ],
+          "links": {
+            "steps_ref": "course_b_0_l2_steps",
+            "hometask_ref": "course_b_0_l2_home"
+          },
+          "assistant_tips": []
+        },
+        {
+          "lesson_id": "course_b_0_l3",
+          "order": 3,
+          "title": "Как думают тайцы",
+          "subtitle": "Почему они говорят именно так",
+          "duration_minutes": 7,
+          "card_count": 8,
+          "is_free": true,
+          "tags": [],
+          "preview_phrase": "общение;уверенность",
+          "content": [
+            {
+              "kind": "intro",
+              "text": ""
+            },
+            {
+              "kind": "outline",
+              "text": ""
+            },
+            {
+              "kind": "apply",
+              "text": ""
+            }
+          ],
+          "outcomes": [],
+          "prerequisites": [
+            "course_b_0_l2"
+          ],
+          "links": {
+            "steps_ref": "course_b_0_l3_steps",
+            "hometask_ref": "course_b_0_l3_home"
+          },
+          "assistant_tips": []
+        }
+      ],
+      "summary": {
+        "total_lessons": 3,
+        "total_duration_minutes": 20
+      }
+    },
+    {
       "course_id": "course_b_1",
       "course_title": "Разговорный старт",
       "lessons": [
@@ -9,9 +119,9 @@
           "lesson_id": "course_b_1_l1",
           "order": 1,
           "title": "Приветствие",
-          "subtitle": "Улыбка и саватди — твой пропуск в 7-Eleven и кафе",
+          "subtitle": "Саватди и улыбка — твой пропуск в любой 7-Eleven",
           "duration_minutes": 3,
-          "card_count": 8,
+          "card_count": 5,
           "is_free": true,
           "tags": [],
           "preview_phrase": "здравствуйте;са-ват-ди↘",
@@ -41,9 +151,9 @@
           "lesson_id": "course_b_1_l2",
           "order": 2,
           "title": "Знакомство",
-          "subtitle": "Имя, откуда ты, очень приятно — без визиток",
+          "subtitle": "Имя и откуда — без допроса и грамматики",
           "duration_minutes": 3,
-          "card_count": 12,
+          "card_count": 6,
           "is_free": true,
           "tags": [],
           "preview_phrase": "как тебя зовут?;кун чыу а-рай↗",
@@ -75,12 +185,12 @@
           "lesson_id": "course_b_1_l3",
           "order": 3,
           "title": "Как дела?",
-          "subtitle": "Сабай ди май и короткие ответы — small talk по-тайски",
-          "duration_minutes": 4,
-          "card_count": 8,
+          "subtitle": "Сабай ди май и короткие ответы",
+          "duration_minutes": 3,
+          "card_count": 7,
           "is_free": false,
           "tags": [],
-          "preview_phrase": "как дела?;са-бай ди май↗",
+          "preview_phrase": "как дела?;са-бай-ди май↗",
           "content": [
             {
               "kind": "intro",
@@ -106,15 +216,15 @@
           "assistant_tips": []
         },
         {
-          "lesson_id": "course_b_1_l3b",
+          "lesson_id": "course_b_1_l4",
           "order": 4,
-          "title": "Союзы и связки",
-          "subtitle": "И, но, потому что, если — чтобы собирать фразы",
-          "duration_minutes": 2,
-          "card_count": 5,
+          "title": "Просьбы",
+          "subtitle": "Вода, счёт, без острого — формулы на кассе и в кафе",
+          "duration_minutes": 4,
+          "card_count": 9,
           "is_free": false,
           "tags": [],
-          "preview_phrase": "и;лэ→",
+          "preview_phrase": "можно воды?;кхо нам ной→",
           "content": [
             {
               "kind": "intro",
@@ -134,40 +244,6 @@
             "course_b_1_l3"
           ],
           "links": {
-            "steps_ref": "course_b_1_l3b_steps",
-            "hometask_ref": "course_b_1_l3b_home"
-          },
-          "assistant_tips": []
-        },
-        {
-          "lesson_id": "course_b_1_l4",
-          "order": 5,
-          "title": "Хочу и могу",
-          "subtitle": "Кхо, дай май, просьбы: вода, счёт, без острого",
-          "duration_minutes": 4,
-          "card_count": 17,
-          "is_free": false,
-          "tags": [],
-          "preview_phrase": "можно?;дай май↗",
-          "content": [
-            {
-              "kind": "intro",
-              "text": ""
-            },
-            {
-              "kind": "outline",
-              "text": ""
-            },
-            {
-              "kind": "apply",
-              "text": ""
-            }
-          ],
-          "outcomes": [],
-          "prerequisites": [
-            "course_b_1_l3b"
-          ],
-          "links": {
             "steps_ref": "course_b_1_l4_steps",
             "hometask_ref": "course_b_1_l4_home"
           },
@@ -175,14 +251,14 @@
         },
         {
           "lesson_id": "course_b_1_l5",
-          "order": 6,
-          "title": "Где, здесь, туда",
-          "subtitle": "Ти-най, ти-ни, налево, прямо — навигация и туалет",
-          "duration_minutes": 4,
-          "card_count": 16,
+          "order": 5,
+          "title": "Где тут?",
+          "subtitle": "Туалет, здесь, останови — без полной навигации",
+          "duration_minutes": 3,
+          "card_count": 5,
           "is_free": false,
           "tags": [],
-          "preview_phrase": "где?;ти най↗",
+          "preview_phrase": "где туалет?;хонг-нам ю ти-най↗",
           "content": [
             {
               "kind": "intro",
@@ -209,11 +285,11 @@
         },
         {
           "lesson_id": "course_b_1_l6",
-          "order": 7,
-          "title": "Цена и торг",
-          "subtitle": "Сколько стоит, дорого, скидка, чек, карта",
-          "duration_minutes": 4,
-          "card_count": 12,
+          "order": 6,
+          "title": "Цена",
+          "subtitle": "Сколько, дорого, скидка, карта — день на рынке",
+          "duration_minutes": 3,
+          "card_count": 6,
           "is_free": false,
           "tags": [],
           "preview_phrase": "сколько стоит?;тао-рай↗",
@@ -243,11 +319,11 @@
         },
         {
           "lesson_id": "course_b_1_l7",
-          "order": 8,
+          "order": 7,
           "title": "Спасибо и извини",
-          "subtitle": "Кхоп-кхун, кхотхот — благодарность и извинения",
-          "duration_minutes": 4,
-          "card_count": 9,
+          "subtitle": "Вежливый минимум, без которого не обойтись",
+          "duration_minutes": 3,
+          "card_count": 6,
           "is_free": false,
           "tags": [],
           "preview_phrase": "спасибо;кхоп-кхун→",
@@ -274,45 +350,11 @@
             "hometask_ref": "course_b_1_l7_home"
           },
           "assistant_tips": []
-        },
-        {
-          "lesson_id": "course_b_1_l8",
-          "order": 9,
-          "title": "Мнемоника",
-          "subtitle": "Тайские слова, которые созвучны с русскими — запомнишь с первого раза",
-          "duration_minutes": 4,
-          "card_count": 10,
-          "is_free": false,
-          "tags": [],
-          "preview_phrase": "сумка;кра-пау↘",
-          "content": [
-            {
-              "kind": "intro",
-              "text": ""
-            },
-            {
-              "kind": "outline",
-              "text": ""
-            },
-            {
-              "kind": "apply",
-              "text": ""
-            }
-          ],
-          "outcomes": [],
-          "prerequisites": [
-            "course_b_1_l7"
-          ],
-          "links": {
-            "steps_ref": "course_b_1_l8_steps",
-            "hometask_ref": "course_b_1_l8_home"
-          },
-          "assistant_tips": []
         }
       ],
       "summary": {
-        "total_lessons": 9,
-        "total_duration_minutes": 32
+        "total_lessons": 7,
+        "total_duration_minutes": 22
       }
     },
     {
@@ -537,7 +579,7 @@
           "title": "Я и ты",
           "subtitle": "Пхом, чхан, кхун — кто говорит и к кому",
           "duration_minutes": 3,
-          "card_count": 8,
+          "card_count": 7,
           "is_free": true,
           "tags": [],
           "preview_phrase": "я;пхом→",
@@ -705,7 +747,7 @@
           "title": "Мини-диалог знакомства",
           "subtitle": "Соберём всё: привет, имя, откуда, семья",
           "duration_minutes": 4,
-          "card_count": 9,
+          "card_count": 8,
           "is_free": false,
           "tags": [],
           "preview_phrase": "очень приятно;йин-ди ти-дай-ру-джак↘",
@@ -917,7 +959,7 @@
           "title": "Прямо, налево, 100 метров",
           "subtitle": "Тронг пай, лиао сай, рой метер",
           "duration_minutes": 4,
-          "card_count": 10,
+          "card_count": 9,
           "is_free": false,
           "tags": [],
           "preview_phrase": "прямо;тронг пай→",
@@ -1241,7 +1283,7 @@
           "title": "Вкусно и остро",
           "subtitle": "А-рой, пхет, май пхет — про еду",
           "duration_minutes": 3,
-          "card_count": 11,
+          "card_count": 9,
           "is_free": true,
           "tags": [],
           "preview_phrase": "вкусно;а-рой→",
@@ -1273,7 +1315,7 @@
           "title": "Красиво и дорого",
           "subtitle": "Суай, пхэнг, тук — про вещи и цены",
           "duration_minutes": 3,
-          "card_count": 10,
+          "card_count": 8,
           "is_free": true,
           "tags": [],
           "preview_phrase": "красиво;суай→",
@@ -1450,13 +1492,13 @@
         {
           "lesson_id": "course_b_7_l1",
           "order": 1,
-          "title": "В 7-Eleven",
-          "subtitle": "Привет, вода, счёт, пакет — одна сценка",
-          "duration_minutes": 3,
-          "card_count": 8,
+          "title": "7-Eleven",
+          "subtitle": "Собери привет + просьбу + спасибо из старта в один заход",
+          "duration_minutes": 4,
+          "card_count": 4,
           "is_free": true,
           "tags": [],
-          "preview_phrase": "здравствуйте;са-ват-ди кхрап↘",
+          "preview_phrase": "воды пожалуйста;кхо нам ной→",
           "content": [
             {
               "kind": "intro",
@@ -1482,13 +1524,13 @@
         {
           "lesson_id": "course_b_7_l2",
           "order": 2,
-          "title": "В кафе",
-          "subtitle": "Заказ, без острого, чек-бин",
-          "duration_minutes": 3,
-          "card_count": 8,
+          "title": "Кафе",
+          "subtitle": "Заказ напитка: старт + новые реплики заказа",
+          "duration_minutes": 4,
+          "card_count": 4,
           "is_free": true,
           "tags": [],
-          "preview_phrase": "счёт пожалуйста;чек-бин кхрап↘",
+          "preview_phrase": "ещё один кофе;ка-фэ ик кэу→",
           "content": [
             {
               "kind": "intro",
@@ -1516,13 +1558,13 @@
         {
           "lesson_id": "course_b_7_l3",
           "order": 3,
-          "title": "В такси",
-          "subtitle": "Пай + место, прямо, налево",
+          "title": "Такси",
+          "subtitle": "Место + повороты из курса цифр + «останови» из старта",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 5,
           "is_free": false,
           "tags": [],
-          "preview_phrase": "ехать в аэропорт;пай са-нам-бин→",
+          "preview_phrase": "в аэропорт;пай санам-бин→",
           "content": [
             {
               "kind": "intro",
@@ -1550,13 +1592,13 @@
         {
           "lesson_id": "course_b_7_l4",
           "order": 4,
-          "title": "На рынке",
-          "subtitle": "Сколько стоит, дорого, скидка, два штуки",
+          "title": "Рынок",
+          "subtitle": "Торг из старта + упаковка и количество",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 3,
           "is_free": false,
           "tags": [],
-          "preview_phrase": "сколько за это?;ан ни тао-рай↗",
+          "preview_phrase": "упакуйте;хо хай ной→",
           "content": [
             {
               "kind": "intro",
@@ -1584,13 +1626,13 @@
         {
           "lesson_id": "course_b_7_l5",
           "order": 5,
-          "title": "Знакомство с соседом",
-          "subtitle": "Имя, откуда, как дела, семья",
+          "title": "Сосед",
+          "subtitle": "Знакомство из старта + люди из «Я, ты, он»",
           "duration_minutes": 4,
-          "card_count": 9,
+          "card_count": 4,
           "is_free": false,
           "tags": [],
-          "preview_phrase": "меня зовут …;чхан чыу …",
+          "preview_phrase": "семья;кхроп-кхруа→",
           "content": [
             {
               "kind": "intro",
@@ -1618,13 +1660,13 @@
         {
           "lesson_id": "course_b_7_l6",
           "order": 6,
-          "title": "Сборный диалог",
-          "subtitle": "Время, куда идёшь, вкусно, спасибо",
+          "title": "Сборный день",
+          "subtitle": "Время + куда + до встречи — финальная склейка базы",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 5,
           "is_free": false,
           "tags": [],
-          "preview_phrase": "куда идёшь?;пай най↗",
+          "preview_phrase": "до встречи;лэу джё кан→",
           "content": [
             {
               "kind": "intro",
@@ -1652,7 +1694,7 @@
       ],
       "summary": {
         "total_lessons": 6,
-        "total_duration_minutes": 22
+        "total_duration_minutes": 24
       }
     },
     {

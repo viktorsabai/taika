@@ -296,6 +296,13 @@ this document defines the technical contract.
 
 ## 15. changelog
 
+**2026-03-31 (March Epic — UX/Architecture Consolidation)**  
+- Header/navigation contract tightened: `AppHeaderStyle.lessons` now supports optional actions; theory-only flows do not render speaker/game affordances.  
+- Carousel return-state persistence added for course and lessons reels (`CarouselScrollPersistence`), restoring previous visible position on back navigation.  
+- Card system unified across Course/Lesson/Favorites; lesson cards now support dedicated back-face reminders (`lessonReminders`) distinct from course grade-sheet semantics.  
+- Bonus theory course contract formalized (`course_b_0`): no contradictory practice affordances (speaker/console/game/progress expectations) in Course/Lessons UI.  
+- Profile metrics contract aligned to canonical pipeline: Profile layer reads `ProgressManager.publishedState` to avoid formula drift.  
+
 **2026-02-21 (EPIC 4 — Progress Consistency Layer)**  
 - ProgressManager.lessonMetaProvider wired at init from LessonsData/StepData; course progress is computed from learnedSteps (single formula).  
 - LessonsManager.rebuildAggregatesFromProgressManager() runs on load so persisted LM state matches ProgressManager after relaunch.  

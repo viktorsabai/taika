@@ -17,6 +17,8 @@ extension Notification.Name {
     static let favoritesDidUpdate = Notification.Name("favoritesDidUpdate")
     // Alias for listeners using capitalized name
     static let FavoritesDidChange = Notification.Name("FavoritesDidChange")
+    /// Shell header → открыть sheet словаря умного спикера.
+    static let taikaOpenSmartSpeakerDictionary = Notification.Name("taika.openSmartSpeakerDictionary")
 }
 
 // private global: isBootstrapping flag (do nothing, no global needed)
@@ -127,10 +129,36 @@ final class FavoriteManager: ObservableObject {
         return fid.hasPrefix("card:") || fid.hasPrefix("step:")
     }
 
+    /// Карточки персонального словаря умного спикера (курс `user_dict`). Не смешиваем с вкладкой «Карточки» — отдельный таб «Словарь».
+    func isUserDictionaryItem(_ it: FavoriteItem) -> Bool {
+        normalized(it.courseId) == "user_dict" && normalized(it.lessonId) == "smart_speaker"
+    }
+
+    /// Для карусели в режиме умного спикера (не источник истины — производное от `items`).
+    public var smartSpeakerDictionaryCardsDTO: [FDCardDTO] {
+        items
+            .filter { isUserDictionaryItem($0) }
+            .sorted { a, b in
+                if a.createdAt != b.createdAt { return a.createdAt > b.createdAt }
+                return a.id > b.id
+            }
+            .map { it in
+                FDCardDTO(
+                    sourceId: it.id,
+                    title: it.ru,
+                    subtitle: it.th,
+                    meta: it.phonetic,
+                    lessonTitle: "словарь",
+                    tagText: nil,
+                    addedAt: it.createdAt
+                )
+            }
+    }
+
     /// recompute lightweight caches derived from `items`
     private func recomputeCaches() {
         self.cards = self.items
-            .filter { isCardItem($0) }
+            .filter { isCardItem($0) && !isUserDictionaryItem($0) }
             .sorted { a, b in
                 if a.createdAt != b.createdAt { return a.createdAt > b.createdAt }
                 return a.id > b.id
@@ -180,7 +208,7 @@ final class FavoriteManager: ObservableObject {
             // base normalization of the raw id
             var nid = normalized(it.id)
             // preserve hack namespace if present in id or phonetic
-            let wasHack = nid.hasPrefix("hack:") || it.phonetic.hasPrefix("hack:")
+            var wasHack = nid.hasPrefix("hack:") || it.phonetic.hasPrefix("hack:")
             // if id has no separators at all, treat it as a bare course id and prefix with course:
             if !nid.contains(".") && !nid.contains(":") {
                 nid = "course:" + nid
@@ -232,6 +260,28 @@ final class FavoriteManager: ObservableObject {
                 }
                 let idxVal = stepIndex(courseId: course, lessonId: lesson, composedId: body) ?? 0
                 nid = canonicalHackFavoriteId(courseId: course, lessonId: lesson, index: idxVal)
+            }
+
+            // Repair: tip сохранён как step:/card:step: (старый баг срезал hack:) → вернуть во вкладку лайфхаков.
+            if !wasHack, nid.contains(":idx") {
+                var body = nid
+                if body.hasPrefix("card:") { body.removeFirst("card:".count) }
+                if body.hasPrefix("step:") { body.removeFirst("step:".count) }
+                if let idxRange = body.range(of: ":idx", options: [.backwards, .caseInsensitive]),
+                   let idxVal = Int(body[idxRange.upperBound...]) {
+                    let head = String(body[..<idxRange.lowerBound])
+                    let parts = head.split(separator: ":").map(String.init)
+                    if parts.count >= 2 {
+                        if course.isEmpty { course = normalized(parts[0]) }
+                        if lesson.isEmpty { lesson = normalized(parts[1]) }
+                    }
+                    let lessonItems = steps(courseId: course, lessonId: lesson)
+                    if lessonItems.indices.contains(idxVal), lessonItems[idxVal].kind == .tip {
+                        wasHack = true
+                        nid = canonicalHackFavoriteId(courseId: course, lessonId: lesson, index: idxVal)
+                        changed = true
+                    }
+                }
             }
 
             // fill missing title from lessonId
@@ -404,7 +454,8 @@ final class FavoriteManager: ObservableObject {
         }
         let counts = (courses: courses.count, cards: cards.count, hacks: hacks.count)
 #if DEBUG
-        if lastSyncCounts == nil || lastSyncCounts! != counts {
+        let syncLogsEnabled = UserDefaults.standard.bool(forKey: "taika.debug.favoriteSyncLogs")
+        if syncLogsEnabled, (lastSyncCounts == nil || lastSyncCounts! != counts) {
             print("[FM.sync] courses=\(counts.courses) cards=\(counts.cards) hacks=\(counts.hacks)")
         }
 #endif
@@ -498,6 +549,12 @@ final class FavoriteManager: ObservableObject {
     /// canonical favorite id for a hack (tip) step
     func idForHack(courseId: String, lessonId: String, index: Int) -> String {
         return "hack:step:\(normalized(courseId)):\(normalized(lessonId)):idx\(index)"
+    }
+
+    /// Быстрая проверка «лайфхак в избранном» для UI (итоги урока и т.п.).
+    public func containsHack(courseId: String, lessonId: String, index: Int) -> Bool {
+        let hid = normalized(idForHack(courseId: courseId, lessonId: lessonId, index: index))
+        return likedStepIds.contains(hid)
     }
 
     /// Resolve a canonical bare step-id for a UI step, using optional explicit order
@@ -653,30 +710,65 @@ final class FavoriteManager: ObservableObject {
 
         // `items` is kept newest-first; preserve that ordering for speaker queue
         for it in items {
-            let fid = normalized(it.id)
-            let phon = it.phonetic.lowercased()
-
-            // exclude courses
-            if fid.hasPrefix("course:") { continue }
-
-            // exclude hacks
-            let isHack = fid.hasPrefix("hack:") || phon.hasPrefix("hack:")
-            if isHack { continue }
-
-            // accept step/card favorites only
-            if !(fid.hasPrefix("step:") || fid.hasPrefix("card:")) { continue }
-
-            var key = fid
-            if key.hasPrefix("card:") { key.removeFirst("card:".count) }
-            if !key.hasPrefix("step:") { key = "step:" + key }
-            key = normalized(key)
-
-            if seen.insert(key).inserted {
-                out.append(key)
-            }
+            guard let key = canonicalSpeakerStepRef(from: it) else { continue }
+            if seen.insert(key).inserted { out.append(key) }
         }
 
         return out
+    }
+
+    /// Canonical step ref for Speaker/Game queues from mixed favorite id formats.
+    /// Supports:
+    /// - step:course:lesson:idxN
+    /// - card:step:course:lesson:idxN
+    /// - legacy dot ids: course.lesson.stepSlug
+    private func canonicalSpeakerStepRef(from item: FavoriteItem) -> String? {
+        let fid = normalized(item.id)
+        let phon = item.phonetic.lowercased()
+
+        // exclude courses and hacks
+        if fid.hasPrefix("course:") { return nil }
+        if fid.hasPrefix("hack:") || phon.hasPrefix("hack:") { return nil }
+
+        var base = fid
+        if base.hasPrefix("card:") { base.removeFirst("card:".count) }
+
+        // Already canonical step route
+        if base.hasPrefix("step:") && base.contains(":idx") {
+            return normalized(base)
+        }
+
+        // Legacy namespaced step with dot body: step:course.lesson.slug
+        if base.hasPrefix("step:") {
+            let dotted = String(base.dropFirst("step:".count))
+            let parts = dotted.split(separator: ".").map(String.init)
+            if parts.count >= 3 {
+                var course = normalized(item.courseId)
+                var lesson = normalized(item.lessonId)
+                if course.isEmpty { course = normalized(parts[0]) }
+                if lesson.isEmpty { lesson = normalized(parts[1]) }
+                guard !course.isEmpty, !lesson.isEmpty else { return nil }
+                let idx = stepIndex(courseId: course, lessonId: lesson, composedId: dotted) ?? 0
+                return canonicalStepFavoriteId(courseId: course, lessonId: lesson, index: idx)
+            }
+            return nil
+        }
+
+        // Raw legacy dot id: course.lesson.slug
+        if base.contains(".") {
+            let parts = base.split(separator: ".").map(String.init)
+            if parts.count >= 3 {
+                var course = normalized(item.courseId)
+                var lesson = normalized(item.lessonId)
+                if course.isEmpty { course = normalized(parts[0]) }
+                if lesson.isEmpty { lesson = normalized(parts[1]) }
+                guard !course.isEmpty, !lesson.isEmpty else { return nil }
+                let idx = stepIndex(courseId: course, lessonId: lesson, composedId: base) ?? 0
+                return canonicalStepFavoriteId(courseId: course, lessonId: lesson, index: idx)
+            }
+        }
+
+        return nil
     }
 
     // MARK: - Smart Speaker dictionary (user_dict)
@@ -729,6 +821,14 @@ final class FavoriteManager: ObservableObject {
             self.save()
             self.emit()
         }
+    }
+
+    /// Совпадает с дедупликацией в `addSmartSpeakerCard` (нормализованный тайский).
+    func hasSmartSpeakerDictionaryEntry(thai: String) -> Bool {
+        let thTrim = thai.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !thTrim.isEmpty else { return false }
+        let key = normalized(thTrim)
+        return items.contains { isUserDictionaryItem($0) && normalized($0.th) == key }
     }
 
     /// Resolve a personal-dictionary favorite by its step route.
@@ -817,6 +917,15 @@ final class FavoriteManager: ObservableObject {
         }
     }
 
+    /// На main — сразу (иначе hydrate сердца гоняет с async и сбрасывает UI).
+    private func applyFavoritesMutation(_ work: @escaping () -> Void) {
+        if Thread.isMainThread {
+            work()
+        } else {
+            DispatchQueue.main.async(execute: work)
+        }
+    }
+
     /// Toggle a generic favoritable entity
     func toggle(item: Favoritable) {
         // Base normalization of incoming id
@@ -834,43 +943,61 @@ final class FavoriteManager: ObservableObject {
             // Try to derive course/lesson from Favoritable context first, else from id
             var course = normalized(item.favoriteCourseId)
             var lesson = normalized(item.favoriteLessonId)
+            let colonParts = body.split(separator: ":").map(String.init)
+            // body forms: "course:lesson:idxN" or legacy "course.lesson.slug"
+            if course.isEmpty, colonParts.count >= 2 { course = normalized(colonParts[0]) }
+            if lesson.isEmpty, colonParts.count >= 2 { lesson = normalized(colonParts[1]) }
             let dot = body.split(separator: ".").map(String.init)
             if course.isEmpty, let c = dot.first { course = normalized(c) }
             if lesson.isEmpty, dot.count >= 2, let l = dot.dropFirst().first { lesson = normalized(l) }
 
-            // Resolve index by matching trailing slug
-            let idx = stepIndex(courseId: course, lessonId: lesson, composedId: body) ?? 0
+            // Index: prefer explicit :idxN in id (канон из StepView), иначе slug-match.
+            let idx: Int = {
+                if let r = body.range(of: ":idx", options: [.backwards, .caseInsensitive]),
+                   let n = Int(body[r.upperBound...]) {
+                    return n
+                }
+                return stepIndex(courseId: course, lessonId: lesson, composedId: body) ?? 0
+            }()
             let fid = canonicalHackFavoriteId(courseId: course, lessonId: lesson, index: idx)
+            let legacyTwin = canonicalStepFavoriteId(courseId: course, lessonId: lesson, index: idx)
 #if DEBUG
             print("[FM.toggle(item)] (hack) in=\(rawId) -> fid=\(fid)")
 #endif
             if let i = items.firstIndex(where: { normalized($0.id) == fid }) {
-                DispatchQueue.main.async {
+                applyFavoritesMutation {
                     _ = withAnimation { self.items.remove(at: i) }
                     self.sortNewestFirst()
-                    // 6️⃣: Refresh likedCourses after mutation
                     self.recomputeLikedCourses()
+                    self.recomputeCaches()
                     self.syncToUserSession()
                     self.save()
                     self.emit()
                 }
             } else {
-                let body = item.favoriteSubtitle.isEmpty ? item.favoriteTitle : item.favoriteSubtitle
+                let bodyText = item.favoriteSubtitle.isEmpty ? item.favoriteTitle : item.favoriteSubtitle
                 let stored = FavoriteItem(
                     id: fid,
                     ru: "Лайфхак",
-                    th: body,
-                    phonetic: "hack:" + body,
+                    th: bodyText,
+                    phonetic: "hack:" + bodyText,
                     courseId: course,
                     lessonId: lesson,
                     lessonTitle: resolveLessonTitle(courseId: course, lessonId: lesson),
                     createdAt: Date()
                 )
-                DispatchQueue.main.async {
-                    withAnimation { self.items.insert(stored, at: 0) }
+                applyFavoritesMutation {
+                    withAnimation {
+                        // Убрать ошибочный twin step:… (старый баг срезал hack:).
+                        self.items.removeAll {
+                            let nid = self.normalized($0.id)
+                            return nid == legacyTwin || nid == "card:" + legacyTwin
+                        }
+                        self.items.insert(stored, at: 0)
+                    }
                     self.sortNewestFirst()
-                    // 6️⃣: Refresh likedCourses after mutation
                     self.recomputeLikedCourses()
+                    self.recomputeCaches()
                     self.syncToUserSession()
                     self.save()
                     self.emit()
@@ -918,20 +1045,19 @@ final class FavoriteManager: ObservableObject {
 
         // Toggle by canonical id
         if let idx = items.firstIndex(where: { normalized($0.id) == fid }) {
-            DispatchQueue.main.async {
+            applyFavoritesMutation {
                 _ = withAnimation { self.items.remove(at: idx) }
                 self.sortNewestFirst()
-                // 6️⃣: Refresh likedCourses after mutation
                 self.recomputeLikedCourses()
+                self.recomputeCaches()
                 self.syncToUserSession()
                 self.save()
                 self.emit()
             }
         } else {
-            DispatchQueue.main.async {
+            applyFavoritesMutation {
                 withAnimation {
                     self.items.removeAll { self.normalized($0.id) == fid }
-                    // Build stored item
                     let title = self.resolveLessonTitle(courseId: item.favoriteCourseId, lessonId: item.favoriteLessonId)
                     let stored = FavoriteItem(
                         id: fid,
@@ -946,8 +1072,8 @@ final class FavoriteManager: ObservableObject {
                     self.items.insert(stored, at: 0)
                 }
                 self.sortNewestFirst()
-                // 6️⃣: Refresh likedCourses after mutation
                 self.recomputeLikedCourses()
+                self.recomputeCaches()
                 self.syncToUserSession()
                 self.save()
                 self.emit()

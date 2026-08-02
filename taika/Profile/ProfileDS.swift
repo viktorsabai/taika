@@ -9,15 +9,22 @@ import UIKit
 public enum PD {
     // MARK: Tokens
     public enum ColorToken {
-        public static var background: SwiftUI.Color { Color(red: 0.06, green: 0.06, blue: 0.07) } // near-black
-        public static var card: SwiftUI.Color { Color(red: 0.10, green: 0.10, blue: 0.12) }      // dark card
-        public static var stroke: SwiftUI.Color { Color.white.opacity(0.08) }                    // subtle outline
-        public static var text: SwiftUI.Color { Color.white }                                    // primary text
-        public static var textSecondary: SwiftUI.Color { Color.white.opacity(0.6) }              // secondary
-        public static var accent: SwiftUI.Color { Color(red: 0.95, green: 0.36, blue: 0.65) }    // accent pink
-        public static var chip: SwiftUI.Color { Color.white.opacity(0.06) }                      // soft chip fill
+        public static var background: SwiftUI.Color { TaikaDynamicColors.background }
+        public static var card: SwiftUI.Color { TaikaDynamicColors.card }
+        public static var stroke: SwiftUI.Color { TaikaDynamicColors.stroke }
+        public static var text: SwiftUI.Color { TaikaDynamicColors.text }
+        public static var textSecondary: SwiftUI.Color { TaikaDynamicColors.textSecondary }
+        public static var accent: SwiftUI.Color { TaikaDynamicColors.accent }
+        public static var chip: SwiftUI.Color { TaikaDynamicColors.chip }
         /// Разбор по тонам: цвет стрелки «нужно было» (нейтральный).
-        public static var toneExpected: SwiftUI.Color { Color.white.opacity(0.55) }
+        public static var toneExpected: SwiftUI.Color {
+            Color(uiColor: UIColor { tc in
+                switch tc.userInterfaceStyle {
+                case .dark: return UIColor(white: 1, alpha: 0.55)
+                default: return UIColor(white: 0, alpha: 0.45)
+                }
+            })
+        }
         /// Разбор: цвет стрелки «ты сказал», когда тон верный.
         public static var toneCorrect: SwiftUI.Color { Color(red: 0.30, green: 0.85, blue: 0.45) }
         /// Разбор: цвет стрелки «ты сказал», когда тон неверный.
@@ -58,8 +65,8 @@ public enum PD {
         public static var pro: LinearGradient {
             LinearGradient(
                 colors: [
-                    Color(red: 0.98, green: 0.52, blue: 0.80),
-                    Color(red: 0.91, green: 0.62, blue: 0.98)
+                    Color(red: 0.95, green: 0.36, blue: 0.65),
+                    Color(red: 0.98, green: 0.48, blue: 0.72)
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
@@ -120,80 +127,6 @@ public struct PDStyle: Sendable {
     }
 }
 
-// MARK: - Header Card
-@available(*, deprecated, message: "Use AppHeader/AppBackHeader from AppDS instead of PDHeaderCard")
-public struct PDHeaderCard: View {
-    public var title: String
-    public var subtitle: String
-    public var cta: String
-public var mascot: Image? = Image("mascot.profile")
-    public var onTapCTA: () -> Void
-
-    public init(title: String, subtitle: String, cta: String, mascot: Image? = Image("mascot.profile"), onTapCTA: @escaping () -> Void) {
-        self.title = title
-        self.subtitle = subtitle
-        self.cta = cta
-        self.mascot = mascot
-        self.onTapCTA = onTapCTA
-    }
-
-    public var body: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 10) {
-                // App logo in brand font
-                Text("taikA")
-                    .font(PD.BrandFont.appTitle(32))
-                    .foregroundColor(PD.ColorToken.text)
-                    .kerning(0.0)
-                
-                VStack(alignment: .leading, spacing: PD.Spacing.tiny) {
-                    Text(title)
-                        .font(PD.FontToken.title(20, weight: .bold))
-                        .foregroundColor(PD.ColorToken.text)
-                    Text(subtitle)
-                        .font(PD.FontToken.body(16, weight: .regular))
-                        .foregroundColor(PD.ColorToken.textSecondary)
-                }
-                
-                Button(action: onTapCTA) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "sparkles")
-                        Text(cta)
-                    }
-                    .font(PD.FontToken.caption())
-                    .foregroundColor(PD.ColorToken.text)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 14)
-                    .background(PD.ColorToken.chip)
-                    .clipShape(RoundedRectangle(cornerRadius: PD.Radius.chip, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: PD.Radius.chip, style: .continuous)
-                            .stroke(PD.ColorToken.stroke, lineWidth: 1)
-                    )
-                }
-                .padding(.top, 6)
-            }
-            Spacer(minLength: PD.Spacing.inner)
-            mascot?
-                .resizable()
-                .renderingMode(.original)
-                .scaledToFit()
-                .frame(width: 96, height: 96)
-                .opacity(0.9)
-        }
-        .padding(PD.Spacing.inner)
-        .background(
-            RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                .fill(PD.ColorToken.card)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                .stroke(PD.ColorToken.stroke, lineWidth: 1)
-        )
-        .padding(.horizontal, PD.Spacing.screen)
-    }
-}
-
 // MARK: - Typing dots (inline, subtle)
 struct PDTypingDots: View {
     @State private var phase: CGFloat = 0
@@ -244,6 +177,7 @@ public struct PDProfileMarquee: View {
                 .scaledToFit()
                 .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .taikaMascotChrome()
 
             ZStack(alignment: .leading) {
                 // Fixed bubble to avoid height jumps
@@ -357,8 +291,12 @@ public struct PDFMSection: View {
     
     public var body: some View {
         PDSection(title, style: style) {
-            // canonical taika fm bubble (from cardds)
-            TaikaFMBubbleTyping(messages: messages)
+            TaikaFMRow(
+                scope: .profile,
+                mode: .typing,
+                showBubble: true,
+                repeats: true
+            )
         }
     }
 }
@@ -377,9 +315,7 @@ public struct PDSection<Content: View>: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: Theme.Layout.sectionTitleToContent) {
             Text(title.uppercased())
-                .font(PD.FontToken.caption(12, weight: .semibold))
-                .kerning(0.6)
-                .foregroundColor(style.textSecondary)
+                .taikaSectionTitleStyle()
                 .padding(.horizontal, PD.Spacing.screen)
 
             content
@@ -407,33 +343,25 @@ public struct PDSummaryCard: View {
     public var body: some View {
         ZStack {
             Theme.Surfaces.card(shape)
-            VStack(alignment: .leading, spacing: 16) {
+
+            VStack(alignment: .leading, spacing: 18) {
                 Text("Твой прогресс")
                     .font(PD.FontToken.caption(12, weight: .semibold))
                     .kerning(0.5)
                     .foregroundStyle(PD.ColorToken.textSecondary)
 
-                HStack(spacing: 12) {
+                HStack(spacing: 0) {
                     metricBlock(label: "шагов", value: "\(totalStableSteps)", accent: false)
+                    divider
                     metricBlock(label: "дней", value: "\(currentStreak)", accent: false)
-                    metricBlock(label: "прогресс", value: "\(totalMasteryPercent)%", accent: true)
+                    divider
+                    metricBlock(label: "мастерство", value: "\(totalMasteryPercent)%", accent: true)
                 }
+                .frame(maxWidth: .infinity)
 
-                HStack(spacing: 6) {
-                    Text("Слова по курсам")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                    Text("·")
-                        .foregroundStyle(accentFill)
-                    Text("Стрик")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                    Text("·")
-                        .foregroundStyle(accentFill)
-                    Text("Мастерство")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                }
+                Text("слова по курсам • стрик • мастерство")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.82))
             }
             .padding(20)
         }
@@ -442,21 +370,25 @@ public struct PDSummaryCard: View {
         .padding(.horizontal, PD.Spacing.screen)
     }
 
+    private var divider: some View {
+        Rectangle()
+            .fill(Theme.Strokes.strokeSubtle)
+            .frame(width: 1, height: 42)
+            .padding(.horizontal, 14)
+    }
+
     private func metricBlock(label: String, value: String, accent: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
+
             Text(value)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: 26, weight: .bold, design: .rounded))
                 .foregroundStyle(accent ? accentFill : AnyShapeStyle(PD.ColorToken.text))
                 .monospacedDigit()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Capsule().fill(Color.white.opacity(0.08)))
-        .overlay(Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
     }
 }
 
@@ -502,7 +434,7 @@ public struct PDMasteryCarousel: View {
     public var body: some View {
         GeometryReader { outer in
             let sideInset = max(0, (outer.size.width - Self.cardWidth) / 2)
-            ScrollView(.horizontal, showsIndicators: false) {
+            TaikaCarouselScroll {
                 LazyHStack(spacing: Self.spacing) {
                     ForEach(items) { item in
                         GeometryReader { cellGeo in
@@ -510,8 +442,8 @@ public struct PDMasteryCarousel: View {
                             let cellCenterX = cellGeo.frame(in: .named("profileMasteryCarousel")).midX
                             let dist = abs(cellCenterX - viewportCenterX)
                             let norm = min(1.0, dist / max(1.0, outer.size.width * 0.65))
-                            let scale = 0.85 + 0.25 * (1.0 - norm)
-                            let opacity = 0.45 + 0.55 * (1.0 - norm)
+                            let scale = 0.94 + 0.06 * (1.0 - norm)
+                            let opacity = 0.72 + 0.28 * (1.0 - norm)
 
                             PDMasteryCardView(
                                 item: item,
@@ -522,17 +454,12 @@ public struct PDMasteryCarousel: View {
                             )
                             .frame(width: Self.cardWidth, height: Self.cardHeight)
                             .scaleEffect(scale)
-                            .rotation3DEffect(
-                                .degrees(Double((cellCenterX - viewportCenterX) / -10.0)),
-                                axis: (x: 0, y: 1, z: 0),
-                                perspective: 0.8
-                            )
                             .opacity(opacity)
                             .shadow(
-                                color: Color.black.opacity(scale >= 1.08 ? 0.28 : 0.10),
-                                radius: scale >= 1.08 ? 8 : 2,
+                                color: Color.black.opacity(0.12),
+                                radius: 4,
                                 x: 0,
-                                y: scale >= 1.08 ? 3 : 1
+                                y: 2
                             )
                             .zIndex(Double(1.0 - norm))
                         }
@@ -561,22 +488,24 @@ public struct PDMasteryCardView: View {
 
     public var body: some View {
         ZStack {
-            Theme.Surfaces.card(shape)
-            VStack(alignment: .leading, spacing: 8) {
+            Color.clear
+            VStack(alignment: .leading, spacing: 10) {
                 iconView
+
                 Text(cardTitle)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
+
                 valueView
+
                 Text(cardSubtitle)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundStyle(PD.ColorToken.textSecondary)
+                    .lineLimit(2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
         }
-        .overlay(shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
-        .clipShape(shape)
     }
 
     private var cardTitle: String {
@@ -837,14 +766,6 @@ public struct PDListGroup: View {
                 }
             }
         }
-        .background(
-            RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                .fill(style.card)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                .stroke(style.stroke, lineWidth: 1)
-        )
     }
 }
 
@@ -1231,7 +1152,7 @@ public struct PDProgressPanel: View {
             .padding(.bottom, 2)
 
             if scope == .courses {
-                ScrollView(.horizontal, showsIndicators: false) {
+                TaikaCarouselScroll {
                     HStack(spacing: 10) {
                         ForEach(coursesMetrics, id: \.key) { m in
                             AppMetricDeltaChip(
@@ -1258,7 +1179,7 @@ public struct PDProgressPanel: View {
                     style: style
                 )
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
+                TaikaCarouselScroll {
                     HStack(spacing: 10) {
                         ForEach(lessonsMetrics, id: \.key) { m in
                             AppMetricDeltaChip(
@@ -1598,7 +1519,7 @@ public struct PDStudyAccordion: View {
 #Preview("Profile DS") {
     ZStack {
         PDStyle.appDS.background.ignoresSafeArea()
-        ScrollView {
+        TaikaRootVerticalScroll {
             VStack(spacing: 0) {
                 PDFMSection()
 
@@ -1665,14 +1586,7 @@ public struct ProfileCardDS<Content: View>: View {
         content
             .padding(PD.Spacing.inner)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                    .fill(PD.ColorToken.card)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                    .stroke(PD.ColorToken.stroke, lineWidth: 1)
-            )
+            .background(Color.clear)
     }
 }
 
@@ -1694,10 +1608,23 @@ public struct GlassCardDS<Content: View>: View {
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(Color.black.opacity(0.72))
+                    )
+                    .overlay(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.12), Color.clear],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                        .blendMode(.plusLighter)
+                    )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
     }
 }
@@ -1904,7 +1831,7 @@ public struct AchievementDeckCarousel: View {
     }
 
     public var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        TaikaCarouselScroll {
             HStack(spacing: -16) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                     AchievementDeckCardView(item: item, accentFill: accentFill)

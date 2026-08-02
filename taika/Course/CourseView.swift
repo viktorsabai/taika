@@ -24,6 +24,12 @@ private enum _JSONLoader {
     }
 }
 
+private enum PersistedCourseCarousel {
+    case none
+    case base
+    case all([Course])
+}
+
 // MARK: - View
 struct CourseView: View {
 
@@ -32,9 +38,10 @@ struct CourseView: View {
     @EnvironmentObject private var overlay: OverlayPresenter
     @EnvironmentObject private var nav: NavigationIntent
     @StateObject private var favs = FavoriteManager.shared
-    @ObservedObject private var session = UserSession.shared
-    @ObservedObject private var lessonsManager = LessonsManager.shared
-    @ObservedObject private var pro = ProManager.shared
+    @StateObject private var personalPack = PersonalPackManager.shared
+    @ObservedObject private var userSession = UserSession.shared
+    private let lessonsManager = LessonsManager.shared
+    private let pro = ProManager.shared
 
     private func isFavorite(_ c: Course) -> Bool {
         favs.items.contains { $0.id == "course:\(c.id)" }
@@ -45,18 +52,31 @@ struct CourseView: View {
         }
     }
 
-    private func handleTapCourse(_ c: Course) {
+    private func handleTapCourse(_ c: Course, persistCarousel: PersistedCourseCarousel = .none) {
         // debug: trace taps / routing
         #if DEBUG
         print("[CourseView] tap course id=\(c.id) title=\(c.title) isPro=\(c.isPro) proUser=\(pro.isPro)")
         #endif
+
+        switch persistCarousel {
+        case .base:
+            if let idx = filteredBasa.firstIndex(where: { $0.id == c.id }) {
+                CarouselScrollPersistence.setBaseIndex(idx)
+            }
+        case .all(let rows):
+            if let idx = rows.firstIndex(where: { $0.id == c.id }) {
+                CarouselScrollPersistence.setAllCoursesIndex(idx)
+            }
+        case .none:
+            break
+        }
 
         // gate: free user taps PRO course
         if c.isPro && !pro.isPro {
             #if DEBUG
             print("[CourseView] -> PAYWALL courseId=\(c.id)")
             #endif
-            overlay.present(.proCoursePaywall(courseId: c.id))
+            overlay.presentPro(reason: .lockedCourse, courseId: c.id)
             #if os(iOS)
             let gen = UINotificationFeedbackGenerator(); gen.notificationOccurred(.warning)
             #endif
@@ -87,11 +107,10 @@ struct CourseView: View {
         deduplicateByID(all.filter { $0.category != "База от Тайки" })
     }
 
-    // EPIC 2: filters state in shared object (header opens overlay; CourseView reads from it)
-    @ObservedObject private var courseFilters = CourseFiltersState.shared
+    // EPIC 2: search in header overlay; tabs replace filters on Course screen
     @State private var sortActive: Bool = false
-    // forces recomputation of progress-dependent UI (used on reset / progress changes)
-    @State private var progressReloadToken: UUID = UUID()
+    /// Кэш: `loadAll()` декодит UserDefaults на каждый проход `body` — при скролле курса даёт джанк.
+    @State private var speakerAttemptsSnapshot: [String: SpeakerAttemptResult] = SpeakerAttemptsStore.loadAll()
     private struct _SelectedCourse: Identifiable { let id: String }
     @State private var selectedCourse: _SelectedCourse? = nil
 
@@ -99,6 +118,10 @@ struct CourseView: View {
     @State private var showGameModePicker: Bool = false
     @State private var selectedGameMode: GameModeType = .match
     @State private var pendingGameCourseId: String? = nil
+    @State private var selectedCourseTab: CourseScreenTab = CourseCatalogTabState.shared.selectedTab
+    @ObservedObject private var catalogTabState = CourseCatalogTabState.shared
+    /// Активная категория на вкладке «Сценарии» (один ряд карточек).
+    @State private var selectedScenarioCategory: String = ""
 
 
     // Search state (UI only; logic delegated to CourseSearch)
@@ -124,24 +147,8 @@ struct CourseView: View {
     }
 
 
-    // базовые фильтры
-    private let primaryChips: [String]   = ["Новый", "В процессе", "Завершено"]
-    private let secondaryChips: [String] = ["Free", "Pro"]
-
-    // Known order for categories, others will follow alphabetically
+    // Known order for scenario categories
     private let knownCategories: [String] = ["Тайский для жизни", "На одной волне", "Тайский для души"]
-
-    private var categoryChips: [String] {
-        // preserve order of first occurrence
-        var seen = Set<String>()
-        var ordered: [String] = []
-        for c in other.map({ $0.category }).filter({ $0 != "База от Тайки" }) {
-            if seen.insert(c).inserted { ordered.append(c) }
-        }
-        let head = knownCategories.filter { ordered.contains($0) }
-        let tail = ordered.filter { !knownCategories.contains($0) }.sorted()
-        return head + tail
-    }
 
     private var safeBottomInset: CGFloat {
         #if os(iOS)
@@ -199,6 +206,40 @@ struct CourseView: View {
         stableUnique(items) { $0.id }
     }
 
+    /// Perf: pre-aggregate pronunciation scores once per render pass instead of
+    /// filtering all attempts for every course card.
+    private func pronunciationMaps(
+        from attempts: [String: SpeakerAttemptResult],
+        includeAdvanced: Bool
+    ) -> (heard: [String: Int], advanced: [String: Int]) {
+        var heardBuckets: [String: (sum: Int, count: Int)] = [:]
+        var advancedBuckets: [String: (sum: Int, count: Int)] = [:]
+
+        for attempt in attempts.values {
+            let canonicalCourseId = ProgressManager.shared.canonicalize(attempt.courseId)
+            if attempt.heardConfidence > 0 {
+                let prev = heardBuckets[canonicalCourseId] ?? (0, 0)
+                heardBuckets[canonicalCourseId] = (prev.sum + attempt.heardConfidence, prev.count + 1)
+            }
+            if includeAdvanced, let score = attempt.advancedScore {
+                let prev = advancedBuckets[canonicalCourseId] ?? (0, 0)
+                advancedBuckets[canonicalCourseId] = (prev.sum + score, prev.count + 1)
+            }
+        }
+
+        let heard = heardBuckets.reduce(into: [String: Int]()) { out, entry in
+            let (sum, count) = entry.value
+            guard count > 0 else { return }
+            out[entry.key] = max(0, min(100, Int((Double(sum) / Double(count)).rounded())))
+        }
+        let advanced = advancedBuckets.reduce(into: [String: Int]()) { out, entry in
+            let (sum, count) = entry.value
+            guard count > 0 else { return }
+            out[entry.key] = max(0, min(100, Int((Double(sum) / Double(count)).rounded())))
+        }
+        return (heard: heard, advanced: advanced)
+    }
+
     // Normalizes a title into a stable slug (case/space/punctuation insensitive)
     private func titleSlug(_ t: String) -> String {
         let lowered = t.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
@@ -241,56 +282,420 @@ struct CourseView: View {
         basa
     }
     private var filteredCourses: [Course] {
-        // Поиск только в оверлее; здесь — только фильтры по чипам
-        let base: [Course] = other
-
-        // 2) Фильтр по доступу (Free/Pro)
-        let accessFiltered: [Course] = {
-            switch courseFilters.selectedSecondary {
-            case 0: // Free
-                return base.filter { !$0.isPro }
-            case 1: // Pro
-                return base.filter { $0.isPro }
-            default:
-                return base
-            }
-        }()
-
-        // 3) Фильтр по категории (чипы "Категории")
-        let catFiltered: [Course] = {
-            guard courseFilters.selectedCategory >= 0, courseFilters.selectedCategory < categoryChips.count else { return accessFiltered }
-            let cat = categoryChips[courseFilters.selectedCategory]
-            return accessFiltered.filter { $0.category == cat }
-        }()
-
-        // 4) Фильтр по статусу курса (Новый / В процессе / Завершено)
-        let statusFiltered: [Course] = {
-            guard courseFilters.selectedPrimary >= 0 else { return catFiltered }
-            return catFiltered.filter { c in
-                let (done, total) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
-                switch courseFilters.selectedPrimary {
-                case 0: // "Новый"
-                    return done == 0
-                case 1: // "В процессе"
-                    return done > 0 && done < total
-                case 2: // "Завершено"
-                    return done >= total && total > 0
-                default:
-                    return true
-                }
-            }
-        }()
-
-        return deduplicateByText(statusFiltered)
+        deduplicateByText(other)
     }
 
-    
-    private var marqueeSectionView: some View {
-        CDMarqueeSection(
-            title: "TAЙKA FM",
-            messages: [],
-            mascot: Image("mascot.course")
+
+    /// Курсы каталога, которые пользователь уже начал или добавил в избранное.
+    private func inProgressCourses(in pool: [Course]) -> [Course] {
+        let started = pool.filter { c in
+            if isFavorite(c) { return true }
+            let (done, _) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
+            return done > 0
+        }
+        return deduplicateByText(started)
+    }
+
+
+    private var scenarioCategoriesOrdered: [String] {
+        let cats = Set(filteredCourses.map(\.category))
+        let head = knownCategories.filter { cats.contains($0) }
+        let tail = cats.subtracting(Set(knownCategories)).sorted()
+        return head + tail
+    }
+
+    private func mapCourseItems(
+        from courses: [Course],
+        persistCarousel: PersistedCourseCarousel = .none
+    ) -> [CDCourseItem] {
+        let speakerAttemptsAll = speakerAttemptsSnapshot
+        let pronunciation = pronunciationMaps(from: speakerAttemptsAll, includeAdvanced: pro.isPro)
+        return courses.map { c in
+            let isTheoryBonus = courseExperienceKind(for: c.id) == .theoryBonus
+            let (done, total) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
+            let courseCompleted = total > 0 && done >= total
+            let courseProgress = lessonsManager.coursePercent(for: c.id)
+            let canonCourseId = ProgressManager.shared.canonicalize(c.id)
+            let pronunciationPercent: Int? = pronunciation.heard[canonCourseId]
+            let pronunciationAdvancedPercent: Int? = pro.isPro ? pronunciation.advanced[canonCourseId] : nil
+            let sanitizedDescription = c.description
+                .replacingOccurrences(of: "[[", with: "")
+                .replacingOccurrences(of: "]]", with: "")
+            let subtitleResolved: String = {
+                if isTheoryBonus {
+                    let hint = "Бонус · только теория"
+                    return sanitizedDescription.isEmpty ? hint : "\(hint)\n\(sanitizedDescription)"
+                }
+                return sanitizedDescription
+            }()
+            return CDCourseItem(
+                id: stableUUID(c.id),
+                title: c.title,
+                subtitle: subtitleResolved,
+                category: c.category,
+                lessons: c.lessonCount,
+                durationMin: c.durationMinutes,
+                cta: done == 0 ? "Начать" : (done < total ? "Продолжить" : "Повторить"),
+                isPro: c.isPro,
+                showProCrown: c.isPro && !pro.isPro,
+                status: done == 0 ? .new : (done < total ? .inProgress : .done),
+                progress: courseProgress,
+                statusStarsFraction: nil,
+                pronunciationPercent: pro.isPro ? (pronunciationAdvancedPercent ?? pronunciationPercent) : pronunciationPercent,
+                isProUser: pro.isPro,
+                flipEnabled: courseCompleted && !isTheoryBonus,
+                onBackSelectGameMode: (courseCompleted && !isTheoryBonus) ? { gameType in
+                    nav.go(.game(courseId: c.id, lessonId: nil, gameType: gameType))
+                } : nil,
+                homeworkTotal: total,
+                homeworkDone: done,
+                isActive: false,
+                onTap: { handleTapCourse(c, persistCarousel: persistCarousel) },
+                isFavorite: isFavorite(c),
+                onToggleFavorite: { toggleFavorite(c) },
+                onTapConsole: isTheoryBonus ? nil : {
+                    let cards = CourseManager.shared.cardsForGame(courseId: c.id)
+                    guard !cards.isEmpty else {
+#if os(iOS)
+                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+#endif
+                        return
+                    }
+                    selectedGameMode = .match
+                    pendingGameCourseId = c.id
+                    withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
+                        showGameModePicker = true
+                    }
+                },
+                onTapSpeaker: isTheoryBonus ? nil : {
+                    UserSession.shared.markActive(courseId: c.id)
+                    NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+                    SpeakerRequestedCourseId.shared.set(c.id)
+                    nav.requestTab(2)
+                },
+                onTapInfo: { overlay.present(.courseInfoPreview(courseId: c.id)) },
+                key: c.id
+            )
+        }
+    }
+
+    /// «Продолжить» только если есть начатые/избранные курсы — иначе новичок сразу в Базе.
+    private var visibleCourseTabs: [CourseScreenTab] {
+        if allCatalogInProgress.isEmpty {
+            return CourseScreenTab.mvpTabs.filter { $0 != .resume }
+        }
+        return CourseScreenTab.mvpTabs
+    }
+
+    private func courseScreenHeaderView() -> some View {
+        TaikaScreenPageTitle(title: "Курсы") {
+            CDCourseTabBar(selection: $selectedCourseTab, tabs: visibleCourseTabs)
+        }
+        .padding(.top, 4)
+    }
+
+    private func ensureValidCourseTabSelection() {
+        let tabs = visibleCourseTabs
+        if !tabs.contains(selectedCourseTab) {
+            selectedCourseTab = tabs.contains(.base) ? .base : (tabs.first ?? .base)
+        }
+    }
+
+    @ViewBuilder
+    private func courseTabContentView() -> some View {
+        switch selectedCourseTab {
+        case .resume:
+            resumeTabContentView()
+        case .base:
+            baseTabContentView()
+        case .scenarios:
+            scenariosTabContentView()
+        case .dictionary, .mine:
+            // MVP: вкладки скрыты — редирект на Базу.
+            baseTabContentView()
+        }
+    }
+
+    private var allCatalogInProgress: [Course] {
+        inProgressCourses(in: deduplicateByID(basa + other))
+    }
+
+    private func resumeTabContentView() -> some View {
+        let courses = allCatalogInProgress
+        let items = mapCourseItems(from: courses)
+        // Пустой «Продолжить» не показываем — вкладка скрыта, selection уезжает на Базу.
+        return Group {
+            if items.isEmpty {
+                Color.clear
+                    .frame(height: 1)
+                    .onAppear { ensureValidCourseTabSelection() }
+            } else {
+                CDAllCoursesSection(title: "В процессе", items: items, initialCarouselIndex: 0)
+            }
+        }
+    }
+
+    private func baseTabContentView() -> some View {
+        baseSectionView()
+    }
+
+    private func dictionaryTabContentView() -> some View {
+        dictionaryPhrasesView()
+    }
+
+    private func presentPersonalCourseCreate() {
+        overlay.present(.personalCourseCreate)
+    }
+
+    private func personalLessonHeroView() -> some View {
+        let isProUser = pro.isPro
+        return Button {
+#if os(iOS)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+#endif
+            if isProUser {
+                presentPersonalCourseCreate()
+            } else {
+                overlay.presentPro(reason: .personalPath)
+            }
+        } label: {
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    if !isProUser {
+                        CDProBadge()
+                    }
+                    Text("Урок из моих фраз")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(CD.ColorToken.text)
+                    Text("Спикер → словарь → собери карточки и тренируй")
+                        .font(CD.FontToken.caption(13))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                }
+                Spacer(minLength: 8)
+                ZStack {
+                    Circle()
+                        .strokeBorder(
+                            CD.ColorToken.textSecondary.opacity(0.28),
+                            style: StrokeStyle(lineWidth: 1.2, dash: [5, 4])
+                        )
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "bookmark")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(CD.ColorToken.card.opacity(0.5))
+            )
+            .padding(.horizontal, CD.Spacing.screen)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func mineTabContentView() -> some View {
+        let packItems = personalPack.carouselItems()
+        let dictCount = favs.smartSpeakerDictionaryCardsDTO.count
+        let isProUser = pro.isPro
+
+        return VStack(spacing: Theme.Layout.sectionGap) {
+            if isProUser, !packItems.isEmpty {
+                personalPackBuiltView(packItems: packItems)
+            } else {
+                personalLessonHeroView()
+                if dictCount == 0 {
+                    personalCourseEmptyHint(goToDictionary: true)
+                } else if isProUser {
+                    personalCourseEmptyHint(goToDictionary: false)
+                }
+            }
+        }
+    }
+
+    private func scenariosTabContentView() -> some View {
+        let categories = scenarioCategoriesOrdered
+        return Group {
+            if categories.isEmpty {
+                courseEmptyState(
+                    title: "Сценарии не нашлись",
+                    subtitle: "Пока нет курсов в этой категории",
+                    actionTitle: "К базе"
+                ) {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                        selectedCourseTab = .base
+                    }
+                }
+            } else {
+                let selected = resolvedScenarioCategory(in: categories)
+                let rows = filteredCourses.filter { $0.category == selected }
+                let items = mapCourseItems(from: rows)
+                let selectedIndex = categories.firstIndex(of: selected) ?? 0
+
+                CDAllCoursesSection(
+                    title: selected,
+                    items: items,
+                    initialCarouselIndex: 0
+                ) {
+                    // Заголовок секции = полное имя сценария; в чипе только стрелка.
+                    // В меню — те же полные названия (без «Жизнь / Волна»).
+                    if categories.count > 1 {
+                        AppInlineFilterPicker(
+                            titles: categories,
+                            selectedIndex: selectedIndex,
+                            showsSelectedTitle: false
+                        ) { index in
+                            guard categories.indices.contains(index) else { return }
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                                selectedScenarioCategory = categories[index]
+                            }
+                        }
+                    }
+                }
+                .onAppear {
+                    if selectedScenarioCategory.isEmpty || !categories.contains(selectedScenarioCategory) {
+                        selectedScenarioCategory = selected
+                    }
+                }
+                .onChange(of: categories) { _, newCats in
+                    if selectedScenarioCategory.isEmpty || !newCats.contains(selectedScenarioCategory) {
+                        selectedScenarioCategory = newCats.first ?? ""
+                    }
+                }
+            }
+        }
+    }
+
+    private func resolvedScenarioCategory(in categories: [String]) -> String {
+        if categories.contains(selectedScenarioCategory) {
+            return selectedScenarioCategory
+        }
+        return categories.first ?? ""
+    }
+
+    /// Курсы в скоупе текущего таба / выбранной категории сценариев.
+    private func rhythmScopeCourseIds() -> Set<String> {
+        switch selectedCourseTab {
+        case .resume:
+            return Set(allCatalogInProgress.map(\.id))
+        case .base:
+            return Set(filteredBasa.map(\.id))
+        case .scenarios:
+            let cats = scenarioCategoriesOrdered
+            let selected = resolvedScenarioCategory(in: cats)
+            return Set(filteredCourses.filter { $0.category == selected }.map(\.id))
+        case .dictionary, .mine:
+            return Set(filteredBasa.map(\.id))
+        }
+    }
+
+    /// Прогресс за **текущую календарную неделю** (Bangkok), только реальное изучение (`stepLearned`).
+    /// Раньше брали rolling 7 дней + `lessonOpened` → минуты прошлой недели «липли» в новую.
+    private func weeklyRhythmModel() -> CDWeeklyRhythmModel {
+        _ = userSession.snapshot.lastEventAt // observe session updates
+        let scope = rhythmScopeCourseIds()
+        guard !scope.isEmpty else { return .empty }
+
+        var cal = UserSession.bangkokCal
+        cal.firstWeekday = 2 // понедельник — как ожидает «эта неделя»
+        let today = cal.startOfDay(for: Date())
+        let weekStart = cal.date(from: cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: today)) ?? today
+        let dayCount = max(1, (cal.dateComponents([.day], from: weekStart, to: today).day ?? 0) + 1)
+        let dayKeys: [String] = (0..<dayCount).compactMap { offset in
+            guard let day = cal.date(byAdding: .day, value: offset, to: weekStart) else { return nil }
+            return userSession.dayKey(for: day)
+        }
+
+        var lessonKeys = Set<String>()
+        var words = 0
+        var minutesFromLessons = 0
+
+        func considerLesson(courseId: String, lessonId: String?) {
+            guard let lessonId, !lessonId.isEmpty else { return }
+            let key = "\(courseId)|\(lessonId)"
+            guard !lessonKeys.contains(key) else { return }
+            lessonKeys.insert(key)
+            if let mins = LessonsData.shared.lesson(courseID: courseId, lessonID: lessonId)?.durationMinutes,
+               mins > 0 {
+                minutesFromLessons += mins
+            } else {
+                minutesFromLessons += 7
+            }
+        }
+
+        for dayKey in dayKeys {
+            let events = userSession.snapshot.activityLog[dayKey] ?? []
+            for event in events {
+                guard let courseId = event.courseId, scope.contains(courseId) else { continue }
+                // Только выученные шаги — не считаем «открыл урок» как минуты учёбы.
+                guard event.kind == .stepLearned else { continue }
+                words += 1
+                considerLesson(courseId: courseId, lessonId: event.lessonId)
+            }
+        }
+
+        let model = CDWeeklyRhythmModel(
+            lessons: lessonKeys.count,
+            minutes: minutesFromLessons,
+            words: words,
+            minuteGoal: 45
         )
+
+        return model
+    }
+
+    private func courseEmptyState(
+        title: String,
+        subtitle: String,
+        actionTitle: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        VStack(spacing: 14) {
+            Spacer(minLength: 24)
+            Image(systemName: "rectangle.stack")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.7))
+            Text(title)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(CD.ColorToken.text)
+                .multilineTextAlignment(.center)
+            Text(subtitle)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 28)
+            Button(action: action) {
+                Text(actionTitle)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.black.opacity(0.88))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(ThemeManager.shared.currentAccentFill)
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 48)
+            .padding(.top, 4)
+            Spacer(minLength: 24)
+        }
+        .padding(.horizontal, CD.Spacing.screen)
+        .frame(maxWidth: .infinity, minHeight: 280)
+    }
+
+    private func courseFmSection(for tab: CourseScreenTab) -> some View {
+        TaikaFMSection(
+            scope: tab.taikaFMScope,
+            rotationExtra: tab.rawValue,
+            mode: .typing,
+            showBubble: false,
+            repeats: true,
+            horizontalPadding: CD.Spacing.screen
+        )
+        .id(tab.rawValue)
         .frame(maxWidth: .infinity)
     }
 
@@ -310,202 +715,293 @@ struct CourseView: View {
     }
 
 
-    private func baseSectionView() -> some View {
-        // Маппим наши Course -> CDCourseItem для DS-компонента (с учётом поиска — filteredBasa)
-        let items: [CDCourseItem] = filteredBasa.map { c in
-            let (done, total) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
-            let courseProgress = lessonsManager.coursePercent(for: c.id)
-            let sanitizedDescription = c.description
-                .replacingOccurrences(of: "[[", with: "")
-                .replacingOccurrences(of: "]]", with: "")
-            return CDCourseItem(
-                id: stableUUID(c.id),
-                title: c.title,
-                subtitle: sanitizedDescription,
-                category: c.category,
-                lessons: c.lessonCount,
-                durationMin: c.durationMinutes,
-                cta: done == 0 ? "Начать" : (done < total ? "Продолжить" : "Повторить"),
-                isPro: c.isPro,
-                status: done == 0 ? .new : (done < total ? .inProgress : .done),
-                progress: courseProgress,
-                homeworkTotal: total,
-                homeworkDone: done,
-                isActive: false,
-                onTap: { handleTapCourse(c) },
-                isFavorite: isFavorite(c),
-                onToggleFavorite: { toggleFavorite(c) },
-                onTapConsole: {
-                    let cards = CourseManager.shared.cardsForGame(courseId: c.id)
-                    guard !cards.isEmpty else {
-                        #if os(iOS)
-                        let gen = UINotificationFeedbackGenerator()
-                        gen.notificationOccurred(.warning)
-                        #endif
-                        return
-                    }
+    private func dictionaryPhrasesView() -> some View {
+        let cards = favs.smartSpeakerDictionaryCardsDTO
+        let isProUser = pro.isPro
 
-                    // reset mode to default for course-level training
-                    selectedGameMode = .match
-                    pendingGameCourseId = c.id
-                    withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
-                        showGameModePicker = true
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 8) {
+                Text("СЛОВАРЬ")
+                    .taikaSectionTitleStyle()
+                if !isProUser {
+                    CDProBadge()
+                }
+                Spacer(minLength: 8)
+                if !cards.isEmpty {
+                    Text("\(cards.count)")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                        .monospacedDigit()
+                }
+            }
+            .padding(.horizontal, CD.Spacing.screen)
+
+            if cards.isEmpty {
+                Text("Пока пусто — скажи фразу в спикере и сохрани в словарь")
+                    .font(CD.FontToken.body(14, weight: .regular))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+                    .padding(.horizontal, CD.Spacing.screen)
+
+                courseOpenSpeakerButton()
+                    .padding(.horizontal, CD.Spacing.screen)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(cards) { dto in
+                        courseDictionaryPhraseRow(dto)
                     }
-                },
-                onTapSpeaker: {
-                    UserSession.shared.markActive(courseId: c.id)
-                    NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                    SpeakerRequestedCourseId.shared.set(c.id)
-                    nav.requestTab(2)
-                },
-                onTapInfo: { overlay.present(.courseInfoPreview(courseId: c.id)) },
-                key: c.id
+                }
+                .padding(.horizontal, CD.Spacing.screen)
+
+                courseOpenSpeakerButton()
+                    .padding(.horizontal, CD.Spacing.screen)
+                    .padding(.top, 4)
+
+                // MVP: вкладка «Мои» / сборка урока скрыта.
+            }
+        }
+    }
+
+    private func courseOpenSpeakerButton() -> some View {
+        Button {
+#if os(iOS)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+#endif
+            SpeakerManager.shared.setSpeakerUIMode(.conversation)
+            nav.requestTab(2)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Открыть спикер")
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(ThemeManager.shared.currentAccentFill.opacity(0.55), lineWidth: 1.2)
             )
         }
+        .buttonStyle(.plain)
+    }
 
+    private func courseDictionaryPhraseRow(_ dto: FDCardDTO) -> some View {
+        let phonetic = dto.meta.trimmingCharacters(in: .whitespacesAndNewlines)
+        return HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                if !phonetic.isEmpty {
+                    Text(phonetic)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        .lineLimit(1)
+                }
+                Text(dto.title.trimmingCharacters(in: .whitespacesAndNewlines))
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+                    .lineLimit(2)
+                let thai = dto.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !thai.isEmpty {
+                    Text(thai)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(CD.ColorToken.text.opacity(0.88))
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                let thai = dto.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !thai.isEmpty { StepAudio.shared.speakThai(thai) }
+            } label: {
+                Image(systemName: "speaker.wave.2.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(CD.ColorToken.chip))
+                    .overlay(Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(CD.ColorToken.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+        )
+    }
+
+    @ViewBuilder
+    private func personalPackBuiltView(packItems: [SDStepItem]) -> some View {
+        let learned = ProgressManager.shared.learnedSet(
+            courseId: PersonalPackManager.courseId,
+            lessonId: PersonalPackManager.lessonId
+        )
+
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 8) {
+                Text("УРОК ИЗ МОИХ ФРАЗ")
+                    .taikaSectionTitleStyle()
+                Spacer(minLength: 8)
+                Button {
+                    presentPersonalCourseCreate()
+#if os(iOS)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+#endif
+                } label: {
+                    Text("собрать")
+                        .taikaSubsectionStyle(accent: true)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, CD.Spacing.screen)
+
+            Text(personalPack.sectionSubtitle(isPro: true))
+                .font(CD.FontToken.body(14, weight: .regular))
+                .foregroundStyle(CD.ColorToken.textSecondary)
+                .padding(.horizontal, CD.Spacing.screen)
+
+            VStack(spacing: 8) {
+                ForEach(Array(packItems.enumerated()), id: \.element.id) { index, item in
+                    coursePersonalPackPhraseRow(item: item, index: index, isLearned: learned.contains(index))
+                }
+            }
+            .padding(.horizontal, CD.Spacing.screen)
+
+            Button {
+#if os(iOS)
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+#endif
+                _ = personalPack.buildAndOpenLesson(nav: nav)
+            } label: {
+                Text("Начать урок")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color(white: 0.12))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(ThemeManager.shared.currentAccentFill)
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, CD.Spacing.screen)
+        }
+    }
+
+    private func coursePersonalPackPhraseRow(item: SDStepItem, index: Int, isLearned: Bool) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Button {
+                nav.go(.lesson(
+                    courseId: PersonalPackManager.courseId,
+                    lessonId: PersonalPackManager.lessonId,
+                    presentation: .personalPack(startIndex: index)
+                ))
+            } label: {
+                HStack(alignment: .center, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(item.subtitleTH)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.92))
+                            .lineLimit(1)
+                        Text(item.titleRU)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.text)
+                            .lineLimit(2)
+                        if !item.phonetic.isEmpty {
+                            Text(item.phonetic)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.72))
+                                .lineLimit(1)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if isLearned {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.55))
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                StepAudio.shared.speakThai(item.subtitleTH, stepItemId: item.id)
+            } label: {
+                Image(systemName: "speaker.wave.2.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(CD.ColorToken.card.opacity(0.55))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(CD.ColorToken.stroke.opacity(0.45), lineWidth: 0.8)
+        )
+    }
+
+    private func personalCourseEmptyHint(goToDictionary: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(
+                goToDictionary
+                ? "Сначала добавь фразы из умного спикера (кнопка «в словарь» после перевода)"
+                : "Нажми «Урок из моих фраз» выше — соберу карточки в урок"
+            )
+            .font(CD.FontToken.body(14, weight: .regular))
+            .foregroundStyle(CD.ColorToken.textSecondary)
+        }
+        .padding(.horizontal, CD.Spacing.screen)
+    }
+
+    private func baseSectionView() -> some View {
+        let items = mapCourseItems(from: filteredBasa, persistCarousel: .base)
         return CDBaseSection(
+            title: "БАЗА",
             items: items,
+            initialCarouselIndex: items.isEmpty ? nil : CarouselScrollPersistence.baseIndex(max: items.count),
             onTapItem: { item in
-                #if DEBUG
-                print("[CourseView] CDBaseSection.onTapItem -> id=\(item.key)")
-                #endif
-                // forward to the item's own navigation callback
                 item.onTap?()
             },
             onTapStart: {
-                #if DEBUG
-                print("[CourseView] CDBaseSection.onTapStart")
-                #endif
                 if let course = filteredBasa.first {
-                    handleTapCourse(course)
+                    handleTapCourse(course, persistCarousel: .base)
                 }
             }
         )
     }
 
+    // Legacy: flat «все курсы» list (unused while tabs are active).
     private func coursesSectionView() -> some View {
-        VStack(spacing: 0) {
-            // EPIC 2: filters/categories moved to header overlay; only course list here
-            // 4. ВСЕ КУРСЫ (DS)
-            let visible = deduplicateByTitle(filteredCourses)
-            let isFilteringActive = courseFilters.selectedPrimary != -1 || courseFilters.selectedSecondary != -1 || courseFilters.selectedCategory != -1
-            let allItems: [CDCourseItem] = visible.map { c in
-                let (done, total) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
-                let courseProgress = lessonsManager.coursePercent(for: c.id)
-                let sanitizedDescription = c.description
-                    .replacingOccurrences(of: "[[", with: "")
-                    .replacingOccurrences(of: "]]", with: "")
-                return CDCourseItem(
-                    id: stableUUID(c.id),
-                    title: c.title,
-                    subtitle: sanitizedDescription,
-                    category: c.category,
-                    lessons: c.lessonCount,
-                    durationMin: c.durationMinutes,
-                    cta: done == 0 ? "Начать" : (done < total ? "Продолжить" : "Повторить"),
-                    isPro: c.isPro,
-                    status: done == 0 ? .new : (done < total ? .inProgress : .done),
-                    progress: courseProgress,
-                    homeworkTotal: total,
-                    homeworkDone: done,
-                    isActive: false,
-                    onTap: { handleTapCourse(c) },
-                    isFavorite: isFavorite(c),
-                    onToggleFavorite: { toggleFavorite(c) },
-                    onTapConsole: {
-                        let cards = CourseManager.shared.cardsForGame(courseId: c.id)
-                        guard !cards.isEmpty else {
-                            #if os(iOS)
-                            let gen = UINotificationFeedbackGenerator()
-                            gen.notificationOccurred(.warning)
-                            #endif
-                            return
-                        }
+        let visible = deduplicateByTitle(filteredCourses)
+        let allItems = mapCourseItems(from: visible)
+        return CDAllCoursesSection(
+            items: allItems,
+            initialCarouselIndex: allItems.isEmpty ? nil : 0
+        )
+    }
 
-                        // reset mode to default for course-level training
-                        selectedGameMode = .match
-                        pendingGameCourseId = c.id
-                        withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
-                            showGameModePicker = true
-                        }
-                    },
-                    onTapSpeaker: {
-                        UserSession.shared.markActive(courseId: c.id)
-                        NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                        SpeakerRequestedCourseId.shared.set(c.id)
-                        nav.requestTab(2)
-                    },
-                    onTapInfo: { overlay.present(.courseInfoPreview(courseId: c.id)) },
-                    key: c.id
-                )
-            }
-            // NOTE: CDCourseItem does not expose favorite hook yet; use isFavorite/toggleFavorite if needed later.
-            CDAllCoursesSection(items: allItems)
-
-            // 5. Пустое состояние, когда поиск/фильтры не дали ни курсов из Базы, ни из списка
-            if filteredBasa.isEmpty && visible.isEmpty && isFilteringActive {
-                VStack(spacing: 14) {
-                    Image("mascot.profile")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 140, height: 140)
-                        .shadow(color: Color.black.opacity(0.35), radius: 16, x: 0, y: 8)
-
-                    Text("Курсы не нашлись")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.white)
-
-                    Text("Попробуй изменить запрос или сбросить фильтры каа")
-                        .font(CD.FontToken.caption(14))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
-                        .multilineTextAlignment(.center)
-
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            searchText = ""
-                            courseFilters.selectedPrimary = -1
-                            courseFilters.selectedSecondary = -1
-                            courseFilters.selectedCategory = -1
-                        }
-                    } label: {
-                        Text("Сбросить фильтры")
-                            .font(.system(size: 15, weight: .semibold))
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 9)
-                            .background(
-                                Capsule()
-                                    .fill(CD.ColorToken.accent.opacity(0.16))
-                            )
-                            .overlay(
-                                Capsule()
-                                    .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, CD.Spacing.screen)
-                .padding(.vertical, 20)
-                .frame(maxWidth: .infinity)
-            }
+    /// Единая проверка завершения курса для unlock логики (модалка выбора игр + карточки).
+    /// Сначала опираемся на headerCounts (done/total), затем на courseStatus по id-вариантам.
+    private func isCourseCompletedForGames(_ rawCourseId: String) -> Bool {
+        let ids = [rawCourseId, rawCourseId.replacingOccurrences(of: "_", with: "-"), rawCourseId.replacingOccurrences(of: "-", with: "_")]
+        for cid in ids {
+            let lessonsTotal = LessonsData.shared.lessons(for: cid).count
+            let (done, total) = lessonsManager.headerCounts(for: cid, lessonsTotal: lessonsTotal)
+            if total > 0 && done >= total { return true }
         }
-        .onChange(of: searchText) { _, text in
-            // простой дебаунс без Combine
-            debounceWork?.cancel()
-            let work = DispatchWorkItem {
-                debouncedQuery = text
-                if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    withAnimation(.easeInOut(duration: 0.2)) { isSearchFieldVisible = true }
-                }
-            }
-            debounceWork = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: work)
-        }
-        .onDisappear {
-            debounceWork?.cancel()
-        }
-        .onAppear {
-            debouncedQuery = searchText
-        }
+        return ids.contains { lessonsManager.courseStatus(for: $0) == .completed }
     }
 
     var body: some View {
@@ -516,25 +1012,59 @@ struct CourseView: View {
             let isPaywallPresented: Bool = {
                 if let o = overlay.overlay {
                     if case .proCoursePaywall = o { return true }
-                    if case .courseInfoPreview = o { return true }
                 }
                 return false
             }()
-            /// Локальные blur/scale/opacity только для локального пикера и превью курса; при proCoursePaywall блюр уже на уровне AppShell.
-            let contentBlurred: Bool = showGameModePicker || (overlay.overlay != nil && (overlay.overlay.map { if case .courseInfoPreview = $0 { return true }; return false } ?? false))
-
+            let isInfoPreviewPresented: Bool = {
+                if case .courseInfoPreview = overlay.overlay { return true }
+                return false
+            }()
             VStack(spacing: 0) {
+                courseScreenHeaderView()
+
+                courseFmSection(for: selectedCourseTab)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 2)
+
                 ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(spacing: Theme.Layout.sectionGap) {
-                            baseSectionView()
-                            marqueeSectionView
-                            coursesSectionView()
+                    TaikaRootVerticalScroll {
+                        LazyVStack(spacing: Theme.Layout.sectionGap) {
+                            courseTabContentView()
+                            CDWeeklyRhythmSection(model: weeklyRhythmModel())
+                                .id("weekly-rhythm-\(selectedCourseTab.rawValue)-\(selectedScenarioCategory)")
                         }
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
                         .padding(.bottom, bottomContentInset)
                     }
-                    .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-                    .scrollDismissesKeyboard(.immediately)
+                    .environment(\.taikaRootHeaderClearance, 0)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .onAppear {
+                        if let pending = catalogTabState.pendingTab {
+                            selectedCourseTab = pending
+                            catalogTabState.consumePending()
+                        }
+                        if selectedCourseTab == .mine || selectedCourseTab == .dictionary {
+                            selectedCourseTab = allCatalogInProgress.isEmpty ? .base : .resume
+                        }
+                        ensureValidCourseTabSelection()
+                        personalPack.bootstrapPackIfNeeded(isPro: pro.isPro)
+                    }
+                    .onChange(of: catalogTabState.pendingTab) { _, pending in
+                        guard let pending else { return }
+                        selectedCourseTab = pending
+                        catalogTabState.consumePending()
+                        ensureValidCourseTabSelection()
+                    }
+                    .onChange(of: selectedCourseTab) { _, tab in
+                        catalogTabState.selectedTab = tab
+                        if tab == .mine || tab == .dictionary {
+                            selectedCourseTab = allCatalogInProgress.isEmpty ? .base : .resume
+                        }
+                        ensureValidCourseTabSelection()
+                    }
+                    .onChange(of: allCatalogInProgress.count) { _, _ in
+                        ensureValidCourseTabSelection()
+                    }
                     .onChange(of: scrollToCategory) { _, target in
                         guard let target else { return }
                         withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
@@ -544,12 +1074,8 @@ struct CourseView: View {
                     }
                 }
             }
-            .id(progressReloadToken)
-            .blur(radius: contentBlurred ? 10 : 0)
-            .scaleEffect(contentBlurred ? 0.98 : 1)
-            .opacity(contentBlurred ? 0.92 : 1)
-            .allowsHitTesting(!(isPaywallPresented || showGameModePicker))
-            .animation(.spring(response: 0.36, dampingFraction: 0.92), value: isPaywallPresented || showGameModePicker)
+            .padding(.top, Theme.Layout.rootHeaderClearance)
+            .allowsHitTesting(!(isPaywallPresented || showGameModePicker || isInfoPreviewPresented))
 
             if showGameModePicker {
                 Color.black.opacity(0.28)
@@ -573,7 +1099,26 @@ struct CourseView: View {
                     },
                     onClose: {
                         showGameModePicker = false
-                    }
+                    },
+                    onLockedTap: { mode in
+                        if mode.isPro && !pro.isPro, let cid = pendingGameCourseId {
+                            overlay.presentPro(reason: .lockedCourse, courseId: cid)
+                        } else {
+#if os(iOS)
+                            let gen = UINotificationFeedbackGenerator()
+                            gen.notificationOccurred(.warning)
+#endif
+                        }
+                    },
+                    lockedModes: {
+                        guard TaikaReleaseFlags.showGrandDialogue,
+                              let cid = pendingGameCourseId else { return [] }
+                        return isCourseCompletedForGames(cid) ? [] : [.grandDialogue]
+                    }(),
+                    modes: {
+                        guard let cid = pendingGameCourseId else { return GameModeType.modesLessonAndPark }
+                        return GameModeType.modesForCourseLauncher(courseCompleted: isCourseCompletedForGames(cid))
+                    }()
                 )
                 .zIndex(3)
                 .transition(.scale(scale: 0.98).combined(with: .opacity))
@@ -589,17 +1134,30 @@ struct CourseView: View {
                     }
 
                 // Превью курса только по иконке инфо на карточке; корона открывает PROView в AppShell, здесь ничего не показываем.
-                if case .courseInfoPreview = overlay.overlay {
-                    coursePreviewGlass
-                        .transition(.scale(scale: 0.98).combined(with: .opacity))
-                }
             }
+
+            if isInfoPreviewPresented {
+                OverlayEtalonBackground(onDismiss: {
+                    withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
+                        overlay.dismiss()
+                    }
+                })
+                .zIndex(4)
+
+                coursePreviewGlass
+                    .zIndex(5)
+                    .transition(.scale(scale: 0.98).combined(with: .opacity))
+            }
+
         }
         .onReceive(NotificationCenter.default.publisher(for: .init("ProgressDidChange"))) { _ in
-            progressReloadToken = UUID()
+            speakerAttemptsSnapshot = SpeakerAttemptsStore.loadAll()
         }
         .onReceive(NotificationCenter.default.publisher(for: .init("AppResetAll"))) { _ in
-            progressReloadToken = UUID()
+            speakerAttemptsSnapshot = SpeakerAttemptsStore.loadAll()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .init("Step.progressDidChange"))) { _ in
+            speakerAttemptsSnapshot = SpeakerAttemptsStore.loadAll()
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .safeAreaInset(edge: .bottom) {
@@ -610,38 +1168,212 @@ struct CourseView: View {
         }
     }
 
+
     @ViewBuilder
     private var coursePreviewGlass: some View {
         let courseId: String? = {
             guard let o = overlay.overlay else { return nil }
-            if case let .proCoursePaywall(id) = o { return id }
             if case let .courseInfoPreview(id) = o { return id }
             return nil
         }()
-        let isInfoPreview: Bool = {
-            if case .courseInfoPreview = overlay.overlay { return true }
-            return false
-        }()
         if let cid = courseId {
-            ProCoursePaywallGlass(
-                course: all.first(where: { $0.id == cid }),
-                lessons: lessonsManager.paywallPreviewLessons(for: cid),
+            let course = CourseData.shared.course(with: cid) ?? all.first(where: { $0.id == cid })
+            let lessons = lessonsManager.paywallPreviewLessons(for: cid)
+            let isProLocked = (course?.isPro == true) && !pro.isPro
+            CourseInfoPreviewGlass(
+                course: course,
+                lessons: lessons,
+                isProLocked: isProLocked,
                 onClose: {
                     withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) { overlay.dismiss() }
                 },
-                onOpenPro: {
-                    withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) { overlay.dismiss() }
-                },
-                onOpenCourse: isInfoPreview ? {
+                onOpenCourse: {
                     withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
                         overlay.dismiss()
                         nav.go(.lessons(courseId: cid))
                     }
-                } : nil
+                },
+                onOpenPro: {
+                    withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
+                        overlay.presentPro(reason: .lockedCourse, courseId: cid)
+                    }
+                }
             )
         } else {
             EmptyView()
         }
+    }
+}
+
+private struct CourseInfoPreviewGlass: View {
+    var course: Course?
+    var lessons: [LessonBundle]
+    var isProLocked: Bool
+    var onClose: () -> Void
+    var onOpenCourse: () -> Void
+    var onOpenPro: () -> Void
+
+    private var subtitleText: String {
+        let raw = (course?.description ?? "")
+            .replacingOccurrences(of: "[[", with: "")
+            .replacingOccurrences(of: "]]", with: "")
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let limit = 160
+        if raw.count <= limit { return raw }
+        let i = raw.index(raw.startIndex, offsetBy: limit)
+        return String(raw[..<i]).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
+    }
+
+    var body: some View {
+        let title = (course?.title ?? "Курс").trimmingCharacters(in: .whitespacesAndNewlines)
+        let items = lessons.sorted { $0.order < $1.order }
+
+        return OverlayEtalonCard(title: "О курсе", onDismiss: onClose) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(title)
+                        .font(PD.FontToken.title(22, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.text)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.9)
+                    if isProLocked {
+                        CDProBadge(style: .locked)
+                            .padding(.top, 2)
+                    }
+                }
+
+                if !subtitleText.isEmpty {
+                    Text(subtitleText)
+                        .font(PD.FontToken.body(14, weight: .regular))
+                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.94))
+                        .lineLimit(4)
+                        .lineSpacing(1.5)
+                }
+
+                if !items.isEmpty {
+                    HStack(spacing: 7) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                        Text("Фразы из уроков")
+                            .font(PD.FontToken.caption(12, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
+                    }
+                    .padding(.top, 2)
+
+                    TaikaCarouselScroll {
+                        HStack(spacing: 12) {
+                            ForEach(items.prefix(8)) { l in
+                                CourseInfoMiniPhraseCard(
+                                    lessonTitle: l.title,
+                                    phrase: l.previewPrimary,
+                                    phonetic: l.previewSecondary,
+                                    meta: l.outcomes.first ?? ""
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 2)
+                        .padding(.vertical, 2)
+                    }
+                    .frame(height: Theme.Layout.paywallCarouselHeight)
+                }
+
+                OverlayEtalonPrimaryButton(
+                    title: isProLocked ? "Открыть с Taika+" : "Открыть курс",
+                    action: isProLocked ? onOpenPro : onOpenCourse
+                )
+                    .padding(.top, 6)
+            }
+            .padding(.horizontal, CD.Spacing.screen)
+            .padding(.bottom, 16)
+        }
+        .frame(maxWidth: 420)
+        .padding(.horizontal, Theme.Layout.paywallInnerHPad)
+        .padding(.vertical, Theme.Layout.paywallInnerVPad)
+    }
+}
+
+private struct CourseInfoMiniPhraseCard: View {
+    let lessonTitle: String
+    let phrase: String
+    let phonetic: String
+    let meta: String
+
+    var body: some View {
+        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("taikA")
+                    .font(.custom("ONMARK Trial", size: 14))
+                    .tracking(0.6)
+                    .foregroundStyle(PD.ColorToken.text)
+                Spacer(minLength: 6)
+            }
+
+            Spacer(minLength: 0)
+
+            // Mirror Speaker/Favorites mini card rhythm: accent translit + RU phrase + subtle meta.
+            VStack(alignment: .center, spacing: 8) {
+                if !phonetic.isEmpty {
+                    Text(phonetic)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                }
+
+                Text(phrase)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+
+                if !meta.isEmpty {
+                    Text(meta)
+                        .font(.footnote)
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .opacity(0.86)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            HStack {
+                if !lessonTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    HStack(spacing: 5) {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(lessonTitle)
+                            .font(.caption2.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Capsule(style: .continuous).fill(Color.clear))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .strokeBorder(ThemeManager.shared.currentAccentFill, lineWidth: 1.2)
+                    )
+                    .allowsHitTesting(false)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(14)
+        .frame(width: 268, height: 196, alignment: .topLeading)
+        .background(Theme.Surfaces.card(round))
     }
 }
 
@@ -716,7 +1448,7 @@ private struct ProCoursePaywallGlass: View {
                 Spacer(minLength: minSectionGap)
 
                 if !items.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
+                    TaikaCarouselScroll {
                         HStack(spacing: 12) {
                             ForEach(items) { l in
                                 NoteStepCard(
@@ -731,7 +1463,6 @@ private struct ProCoursePaywallGlass: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                     }
-                    .scrollIndicators(.hidden)
                     .frame(height: carouselHeight)
                 }
 
@@ -772,7 +1503,7 @@ private struct ProCoursePaywallGlass: View {
                 .allowsHitTesting(false)
 
                 if !items.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
+                    TaikaCarouselScroll {
                         HStack(spacing: 12) {
                             ForEach(items) { l in
                                 NoteStepCard(
@@ -787,7 +1518,6 @@ private struct ProCoursePaywallGlass: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                     }
-                    .scrollIndicators(.hidden)
                     .frame(height: carouselHeight)
                 }
 
@@ -813,7 +1543,7 @@ private struct ProCoursePaywallGlass: View {
 
             ViewThatFits(in: .vertical) {
                 paywallBodyFit
-                ScrollView(.vertical, showsIndicators: false) {
+                TaikaRootVerticalScroll {
                     paywallBodyScroll
                 }
             }
@@ -847,7 +1577,6 @@ private extension Array where Element: Hashable {
         .environmentObject(ThemeManager.shared)
         .environmentObject(OverlayPresenter.shared)
         .environmentObject(NavigationIntent())
-        .preferredColorScheme(.dark)
 }
 
 

@@ -1,54 +1,37 @@
 import SwiftUI
-import UIKit
 
-/// Docked, minimal bottom bar (Instagram‑inspired, but with Taika center action)
-/// Full‑width, attached to bottom; flat background; subtle hairline divider on top.
+/// Floating bottom bar (Instagram-style liquid glass) with Taika center mic.
 struct ToolBar: View {
     @Binding var selectedTab: Int   // 0...4
-    @State private var pulse = false
     @EnvironmentObject var theme: ThemeManager
 
     // MARK: Tokens
-    private let barHeight: CGFloat = 36
-    private let iconSize: CGFloat = 24
-    private let barDrop: CGFloat = 12
+    private let capsuleHeight: CGFloat = 48
+    private let iconSize: CGFloat = 21
+    private let tapSize: CGFloat = 40
+    private let horizontalInset: CGFloat = 28
+    private let bottomFloat: CGFloat = 8
 
-    /// Host views can use this to match safeAreaInset height
-    static let recommendedBottomInset: CGFloat = 56
+    /// Host views pad scroll content so it clears the floating capsule.
+    static var recommendedBottomInset: CGFloat { Theme.Layout.bottomToolbarHeight }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // content row
-            HStack(alignment: .center) {
-                tab(icon: "house", selectedIcon: "house.fill", index: 0)
-                Spacer(minLength: 0)
-                tab(icon: "magnifyingglass", index: 1)
-                Spacer(minLength: 0)
-                centerOrb()
-                Spacer(minLength: 0)
-                tab(icon: "heart", selectedIcon: "heart.fill", index: 3)
-                Spacer(minLength: 0)
-                tab(icon: "person", selectedIcon: "person.fill", index: 4)
-            }
-            .padding(.horizontal, 22)
-            .frame(height: barHeight)
+        HStack(alignment: .center, spacing: 0) {
+            tab(icon: "house", selectedIcon: "house.fill", index: 0)
+            Spacer(minLength: 0)
+            tab(icon: "graduationcap", selectedIcon: "graduationcap.fill", index: 1)
+            Spacer(minLength: 0)
+            centerOrb()
+            Spacer(minLength: 0)
+            tab(icon: "heart", selectedIcon: "heart.fill", index: 3)
+            Spacer(minLength: 0)
+            tab(icon: "person", selectedIcon: "person.fill", index: 4)
         }
-        .offset(y: barDrop)
-        .background(
-            ZStack {
-                // dense real blur
-                BackdropBlur(style: .systemChromeMaterialDark)
-                    .ignoresSafeArea(edges: .bottom)
-                // subtle brand background tint so glass matches app background
-                Theme.Colors.backgroundPrimary
-                    .opacity(0.65)
-                    .ignoresSafeArea(edges: .bottom)
-            }
-            .saturation(1.5)
-            .contrast(1.05)
-        )
-        .ignoresSafeArea(edges: .bottom)
-        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .padding(.horizontal, 10)
+        .frame(height: capsuleHeight)
+        .background { TaikaLiquidGlassCapsule() }
+        .padding(.horizontal, horizontalInset)
+        .padding(.bottom, bottomFloat)
         .accessibilityElement(children: .contain)
     }
 
@@ -56,55 +39,64 @@ struct ToolBar: View {
     @ViewBuilder
     private func tab(icon: String, selectedIcon: String? = nil, index: Int) -> some View {
         let isSelected = selectedTab == index
-        VStack(spacing: 4) {
-            Button {
-                selectedTab = index
-                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-            } label: {
-                Image(systemName: isSelected ? (selectedIcon ?? icon) : icon)
-                    .symbolRenderingMode(.monochrome)
-                    .renderingMode(.template)
-                    .font(.system(size: iconSize, weight: .regular))
-                    .foregroundStyle(
-                        isSelected
-                        ? AnyShapeStyle(theme.currentAccentFill)
-                        : AnyShapeStyle(Color.white.opacity(0.72))
-                    )
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-                    .scaleEffect(isSelected ? 1.08 : 1.0)
-                    .animation(.spring(response: 0.22, dampingFraction: 0.9), value: isSelected)
-            }
-            .buttonStyle(.plain)
+        Button {
+            selectTab(index)
+        } label: {
+            tabIcon(system: isSelected ? (selectedIcon ?? icon) : icon, selected: isSelected)
         }
+        .buttonStyle(ToolBarIconButtonStyle())
         .accessibilityIdentifier("toolbar_tab_\(index)")
     }
 
     @ViewBuilder
     private func centerOrb() -> some View {
         let isSelected = selectedTab == 2
-        VStack(spacing: 4) {
-            Button {
-                selectedTab = 2
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(theme.currentAccentFill.opacity(0.28))
-                        .frame(width: 34, height: 34)
-                        .shadow(radius: 12)
-                    Circle()
-                        .fill(theme.currentAccentFill)
-                        .frame(width: 24, height: 24)
-                        .shadow(radius: 6)
-                }
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-                .onAppear { pulse = true }
-            }
-            .buttonStyle(.plain)
+        Button {
+            selectTab(2)
+        } label: {
+            tabIcon(system: isSelected ? "mic.fill" : "mic", selected: isSelected)
         }
+        .buttonStyle(ToolBarIconButtonStyle())
         .accessibilityIdentifier("toolbar_center_orb")
+    }
+
+    @ViewBuilder
+    private func tabIcon(system: String, selected: Bool) -> some View {
+        Image(systemName: system)
+            .symbolRenderingMode(.monochrome)
+            .renderingMode(.template)
+            .font(.system(size: iconSize, weight: selected ? .semibold : .regular))
+            .foregroundStyle(iconColor(selected: selected))
+            .scaleEffect(selected ? 1.0 : 0.94)
+            .frame(width: tapSize, height: tapSize)
+            .contentShape(Rectangle())
+            .contentTransition(.symbolEffect(.replace))
+            .animation(.spring(response: 0.34, dampingFraction: 0.78), value: selected)
+            .symbolEffect(.bounce, value: selected ? selectedTab : -1)
+    }
+
+    private func selectTab(_ index: Int) {
+        guard selectedTab != index else { return }
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.78)) {
+            selectedTab = index
+        }
+    }
+
+    private func iconColor(selected: Bool) -> AnyShapeStyle {
+        if selected {
+            return AnyShapeStyle(theme.currentAccentFill)
+        }
+        return AnyShapeStyle(Color.white.opacity(0.58))
+    }
+}
+
+private struct ToolBarIconButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.72 : 1)
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.82), value: configuration.isPressed)
     }
 }
 
@@ -113,7 +105,6 @@ struct ToolBar_Previews: PreviewProvider {
     @State static var selectedTab = 2
     static var previews: some View {
         ZStack {
-            // Simulate host background
             PD.ColorToken.background.ignoresSafeArea()
             VStack { Spacer() }
                 .safeAreaInset(edge: .bottom) {
@@ -121,17 +112,7 @@ struct ToolBar_Previews: PreviewProvider {
                         .ignoresSafeArea(.keyboard, edges: .bottom)
                 }
         }
-        .preferredColorScheme(.dark)
-        .previewDisplayName("Tool Bar — docked, minimal")
+        .previewDisplayName("Tool Bar — liquid glass")
         .environmentObject(ThemeManager.shared)
     }
-}
-
-// MARK: - UIKit-backed dense blur (captures real background)
-struct BackdropBlur: UIViewRepresentable {
-    let style: UIBlurEffect.Style
-    func makeUIView(context: Context) -> UIVisualEffectView {
-        UIVisualEffectView(effect: UIBlurEffect(style: style))
-    }
-    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {}
 }

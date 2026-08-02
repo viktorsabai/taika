@@ -25,6 +25,19 @@ public struct ProfileDashboardState: Equatable {
     /// Радар: 5 осей 0...1 — Market, Taxi, Immigration, Cafe, General
     public var radarValues: [Double]
 
+    /// Шагов в спикере, для которых есть сохранённая оценка (уникальные ключи)
+    public var speakerTrackedStepsCount: Int
+    /// Сумма `attemptCount` по всем шагам спикера
+    public var speakerTotalMicAttempts: Int
+    /// Максимальный `heardConfidence` среди сохранённых попыток
+    public var speakerBestConfidence: Int?
+    /// Все сессии игр закрепления (ReinforcementStore), по всем курсам и режимам
+    public var reinforcementSessionsTotal: Int
+    /// Взвешенное среднее точности по режимам, где считали score (0...100)
+    public var reinforcementAvgAccuracy: Int?
+    /// Карточек в избранном
+    public var favoritesTotalCount: Int
+
     public static var empty: ProfileDashboardState {
         ProfileDashboardState(
             totalStableSteps: 0,
@@ -32,7 +45,13 @@ public struct ProfileDashboardState: Equatable {
             totalMasteryPercent: 0,
             averagePronunciationScore: nil,
             completedRecallGamesCount: 0,
-            radarValues: [0, 0, 0, 0, 0]
+            radarValues: [0, 0, 0, 0, 0],
+            speakerTrackedStepsCount: 0,
+            speakerTotalMicAttempts: 0,
+            speakerBestConfidence: nil,
+            reinforcementSessionsTotal: 0,
+            reinforcementAvgAccuracy: nil,
+            favoritesTotalCount: 0
         )
     }
 }
@@ -69,14 +88,45 @@ extension ProgressManager {
             totalStableSteps: totalStableSteps,
             totalMasteryPercent: totalMasteryPercent
         )
+        let attemptValues = Array(SpeakerAttemptsStore.loadAll().values)
+        let speakerTrackedStepsCount = attemptValues.count
+        let speakerTotalMicAttempts = attemptValues.reduce(0) { $0 + $1.attemptCount }
+        let speakerBestConfidence = attemptValues.map(\.heardConfidence).max()
+        let (reinforcementSessionsTotal, reinforcementAvgAccuracy) = Self.aggregateReinforcementTotals()
+        let favoritesTotalCount = FavoriteManager.shared.items.count
         return ProfileDashboardState(
             totalStableSteps: totalStableSteps,
             currentStreak: currentStreak,
             totalMasteryPercent: totalMasteryPercent,
             averagePronunciationScore: averagePronunciationScore,
             completedRecallGamesCount: completedRecallGamesCount,
-            radarValues: radarValues
+            radarValues: radarValues,
+            speakerTrackedStepsCount: speakerTrackedStepsCount,
+            speakerTotalMicAttempts: speakerTotalMicAttempts,
+            speakerBestConfidence: speakerBestConfidence,
+            reinforcementSessionsTotal: reinforcementSessionsTotal,
+            reinforcementAvgAccuracy: reinforcementAvgAccuracy,
+            favoritesTotalCount: favoritesTotalCount
         )
+    }
+
+    /// Сводка по `ReinforcementStore`: сколько раз играли и средняя точность там, где она считалась.
+    private static func aggregateReinforcementTotals() -> (sessions: Int, avg: Int?) {
+        let all = ReinforcementStore.shared.courses
+        var sessions = 0
+        var sumWeighted = 0
+        var weight = 0
+        for cm in all.values {
+            for mm in cm.byMode.values {
+                sessions += mm.sessions
+                if let a = mm.averageScore, mm.sessions > 0 {
+                    sumWeighted += a * mm.sessions
+                    weight += mm.sessions
+                }
+            }
+        }
+        let avg = weight > 0 ? sumWeighted / weight : nil
+        return (sessions, avg)
     }
 
     private static func computeCurrentStreak() -> Int {

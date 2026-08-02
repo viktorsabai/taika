@@ -12,10 +12,15 @@ import UIKit
 public enum AppHeaderStyle {
     /// Root header; tab 0=Main, 1=Course, 2=Speaker, 3=Favorites, 4=Profile. onBack: when set (e.g. Speaker from Favorites), show back button left of logo.
     case main(tab: Int, onBack: (() -> Void)?)
-    /// Back + optional Step segment (Лайфхаки/Карточки) с счётчиками, когда stepSegmentBinding != nil и stepShowsSegment == true.
-    case back(onBack: () -> Void, stepSegmentBinding: Binding<Int>?, stepShowsSegment: Bool, stepTipCount: Int, stepCardCount: Int)
-    /// Экран списка уроков курса: back + иконки Спикер, Закрепить, Сбросить.
-    case lessons(onBack: () -> Void, onSpeaker: () -> Void, onReinforce: () -> Void, onReset: () -> Void)
+    /// Back + опционально название урока/таймер (Step) или wordmark. Segment-чипы живут в теле Step рядом с «Урок».
+    case back(
+        onBack: () -> Void,
+        lessonTitle: String?,
+        timerText: String?,
+        showsWordmark: Bool
+    )
+    /// Экран списка уроков курса: иконки Спикер/Игры опциональны (теория-only курс).
+    case lessons(onBack: () -> Void, onSpeaker: (() -> Void)?, onReinforce: (() -> Void)?, onReset: () -> Void, gameParkActive: Bool)
     case game(GameHeaderConfig)
 }
 
@@ -24,10 +29,14 @@ public struct GameHeaderConfig {
     public var score: Int
     public var mistakes: Int
     public var streak: Int
-    /// Прогресс в стиле «X из Y пар» — показывается в хедере одной пилюлей (игра «подобрать пару»).
+    /// Прогресс в человеческом виде: «3 из 8 пар».
     public var progressText: String?
-    /// Название урока/источника — вторая строка под основным рядом (опционально).
+    /// Короткое имя игры для blank brain: «Найди пару».
+    public var gameTitle: String?
+    /// Название урока/источника — вторая строка (опционально).
     public var sourceTitle: String?
+    /// Ультра-минимальный ряд: назад + название (без счётчиков).
+    public var minimalGameChrome: Bool
     public var onBack: () -> Void
 
     public init(
@@ -36,7 +45,9 @@ public struct GameHeaderConfig {
         mistakes: Int = 0,
         streak: Int = 0,
         progressText: String? = nil,
+        gameTitle: String? = nil,
         sourceTitle: String? = nil,
+        minimalGameChrome: Bool = false,
         onBack: @escaping () -> Void = {}
     ) {
         self.timeText = timeText
@@ -44,7 +55,9 @@ public struct GameHeaderConfig {
         self.mistakes = mistakes
         self.streak = streak
         self.progressText = progressText
+        self.gameTitle = gameTitle
         self.sourceTitle = sourceTitle
+        self.minimalGameChrome = minimalGameChrome
         self.onBack = onBack
     }
 }
@@ -77,6 +90,8 @@ public struct TaikaLoadingView: View {
     public var hint: String?
     public var compact: Bool
 
+    @EnvironmentObject private var theme: ThemeManager
+
     public init(label: String, hint: String? = nil, compact: Bool = false) {
         self.label = label
         self.hint = hint
@@ -87,7 +102,7 @@ public struct TaikaLoadingView: View {
         VStack(spacing: compact ? 8 : 14) {
             ProgressView()
                 .progressViewStyle(.circular)
-                .tint(ThemeManager.shared.currentAccentFill)
+                .tint(theme.currentAccentFill)
                 .scaleEffect(compact ? 1.0 : 1.15)
 
             if !label.isEmpty {
@@ -136,7 +151,10 @@ public struct AppHeader: View {
     public var onTapGamePark: () -> Void
     public var onTapCourseSearch: () -> Void
     public var onTapCourseFilters: () -> Void
+    public var onTapPersonalCourseCreate: () -> Void
     public var onTapSpeakerFilters: () -> Void
+    /// Спикер: режим + выбор курсов для сборки карточек (иконка в хедере).
+    public var onTapSpeakerCourses: (() -> Void)? = nil
     public var speakerDailyAttemptsRemaining: Int
     /// When true, Game Park button looks active (accent); only false when user has no completed lessons.
     public var gameParkActive: Bool
@@ -147,7 +165,7 @@ public struct AppHeader: View {
     /// При тапе на радугу (Profile): открыть оверлей выбора акцента. Если nil — используется onTapAccent.
     public var onTapAccentPicker: (() -> Void)?
 
-    /// Speaker tab (tab 2): mode toggle in header. When non-nil, show Тренировка | Разговор.
+    /// Speaker tab (tab 2): mode toggle. «Закрепление курсов» | «Скажи сам».
     public var speakerUIMode: SpeakerManager.SpeakerUIMode? = nil
     public var onSpeakerUIModeChange: ((SpeakerManager.SpeakerUIMode) -> Void)? = nil
     /// Speaker tab: shuffle queue on/off. When non-nil, show По порядку | Вразброс switch.
@@ -157,9 +175,16 @@ public struct AppHeader: View {
     public var onTapFavoritesSpeaker: (() -> Void)? = nil
     /// Favorites tab: open game park with favorites as card source.
     public var onTapFavoritesGamePark: (() -> Void)? = nil
+    /// Favorites tab: search saved phrases (header magnifying glass).
+    public var onTapFavoritesSearch: (() -> Void)? = nil
+    /// Main / Speaker: открыть словарь (Избранное → Словарь или sheet умного спикера).
+    public var onTapDictionary: (() -> Void)? = nil
+    public var dictionaryCount: Int = 0
 
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var theme: ThemeManager
+    @ObservedObject private var favoritesFilter = FavoritesFilterState.shared
+    @ObservedObject private var favoriteManager = FavoriteManager.shared
 
     public init(
         showSearch: Bool = true,
@@ -174,7 +199,9 @@ public struct AppHeader: View {
         onTapGamePark: @escaping () -> Void = {},
         onTapCourseSearch: @escaping () -> Void = {},
         onTapCourseFilters: @escaping () -> Void = {},
+        onTapPersonalCourseCreate: @escaping () -> Void = {},
         onTapSpeakerFilters: @escaping () -> Void = {},
+        onTapSpeakerCourses: (() -> Void)? = nil,
         speakerDailyAttemptsRemaining: Int = 0,
         gameParkActive: Bool = false,
         onTapFavoritesFilters: @escaping () -> Void = {},
@@ -188,7 +215,10 @@ public struct AppHeader: View {
         speakerShuffleOn: Bool? = nil,
         onSpeakerShuffleChange: ((Bool) -> Void)? = nil,
         onTapFavoritesSpeaker: (() -> Void)? = nil,
-        onTapFavoritesGamePark: (() -> Void)? = nil
+        onTapFavoritesGamePark: (() -> Void)? = nil,
+        onTapFavoritesSearch: (() -> Void)? = nil,
+        onTapDictionary: (() -> Void)? = nil,
+        dictionaryCount: Int = 0
     ) {
         // legacy flags kept for call-site compatibility
         self.showSearch = showSearch
@@ -205,7 +235,9 @@ public struct AppHeader: View {
         self.onTapGamePark = onTapGamePark
         self.onTapCourseSearch = onTapCourseSearch
         self.onTapCourseFilters = onTapCourseFilters
+        self.onTapPersonalCourseCreate = onTapPersonalCourseCreate
         self.onTapSpeakerFilters = onTapSpeakerFilters
+        self.onTapSpeakerCourses = onTapSpeakerCourses
         self.speakerDailyAttemptsRemaining = speakerDailyAttemptsRemaining
         self.gameParkActive = gameParkActive
         self.onTapFavoritesFilters = onTapFavoritesFilters
@@ -219,6 +251,9 @@ public struct AppHeader: View {
         self.onSpeakerShuffleChange = onSpeakerShuffleChange
         self.onTapFavoritesSpeaker = onTapFavoritesSpeaker
         self.onTapFavoritesGamePark = onTapFavoritesGamePark
+        self.onTapFavoritesSearch = onTapFavoritesSearch
+        self.onTapDictionary = onTapDictionary
+        self.dictionaryCount = dictionaryCount
 
         // legacy actions retained but unused
         self.onTapSearch = onTapSearch
@@ -226,114 +261,193 @@ public struct AppHeader: View {
         self.onTapProfile = onTapProfile
     }
 
-    // MARK: Logo (taik + A with gradient) — keep visible, don't shrink
+    // MARK: Logo (taik + A with gradient)
     private var logo: some View {
-        HStack(spacing: 6) {
+        rootHeaderLogo(size: 36)
+    }
+
+    private func rootHeaderLogo(size: CGFloat) -> some View {
+        HStack(spacing: size > 32 ? 6 : 4) {
             Text("tai")
-                .font(.custom("Onmark Trial", size: 36))
+                .font(.custom("Onmark Trial", size: size))
                 .foregroundColor(CD.ColorToken.text)
             Text("kAAA")
-                .font(.custom("Onmark Trial", size: 36))
+                .font(.custom("Onmark Trial", size: size))
                 .foregroundStyle(theme.currentAccentFill)
         }
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityLabel("taikAAA")
     }
 
-    // MARK: Header icon — только иконка, активное = акцентный цвет. compact: меньше размер (для Favorites, чтобы название было читаемо).
-    private func headerIcon(_ system: String, isAccent: Bool = false, compact: Bool = false) -> some View {
-        let size: CGFloat = compact ? 16 : 18
-        let frameSize: CGFloat = compact ? 36 : 44
-        return Image(systemName: system)
-            .font(.system(size: size, weight: .medium))
-            .foregroundStyle(isAccent ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
-            .frame(minWidth: frameSize, minHeight: frameSize)
+    /// Компактный логотип для минимального игрового хедера (не конкурирует с контентом).
+    private var gameHeaderMinimalLogo: some View {
+        HStack(spacing: 3) {
+            Text("tai")
+                .font(.custom("Onmark Trial", size: 22))
+                .foregroundColor(CD.ColorToken.text.opacity(0.42))
+            Text("kAAA")
+                .font(.custom("Onmark Trial", size: 22))
+                .foregroundStyle(theme.currentAccentFill.opacity(0.5))
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .accessibilityLabel("taikAAA")
+    }
+
+    private var headerMinHeight: CGFloat {
+        if case .game(let c) = style, c.minimalGameChrome { return 44 }
+        return 56
+    }
+
+    private enum HeaderControlMetrics {
+        static let clusterSpacing: CGFloat = 8
+        static let rowSpacing: CGFloat = 12
+        static let glassSize: CGFloat = 38
+        static let hitSize: CGFloat = 44
+    }
+
+    private var headerIconForeground: AnyShapeStyle {
+        AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92))
+    }
+
+    private func headerIconForeground(accent: Bool) -> AnyShapeStyle {
+        accent ? AnyShapeStyle(theme.currentAccentFill) : headerIconForeground
+    }
+
+    // MARK: Header controls — glass orbs + единый hit target (все вкладки / push)
+
+    @ViewBuilder
+    private func headerIcon(_ system: String, isAccent: Bool = false) -> some View {
+        TaikaHeaderGlassButton(size: HeaderControlMetrics.glassSize) {
+            Image(systemName: system)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(headerIconForeground(accent: isAccent))
+        }
+        .frame(width: HeaderControlMetrics.hitSize, height: HeaderControlMetrics.hitSize)
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private func headerCounterBadge(icon: String, text: String, active: Bool) -> some View {
+        TaikaHeaderGlassPill(height: HeaderControlMetrics.glassSize) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                Text(text)
+                    .font(.system(size: 14, weight: .semibold))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(headerIconForeground(accent: active))
+        }
+        .frame(minWidth: HeaderControlMetrics.hitSize, minHeight: HeaderControlMetrics.hitSize)
+        .contentShape(Rectangle())
+    }
+
+    private func headerBackButton(action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            TaikaHeaderGlassButton(size: HeaderControlMetrics.glassSize) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(theme.currentAccentFill)
+            }
+            .frame(width: HeaderControlMetrics.hitSize, height: HeaderControlMetrics.hitSize)
             .contentShape(Rectangle())
+        }
+        .buttonStyle(TaikaHeaderButtonStyle())
     }
 
-    /// Иконка умного спикера (мозг): только иконка, тап → переход во второй режим.
+    private func headerIconButton(
+        _ system: String,
+        isAccent: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            headerIcon(system, isAccent: isAccent)
+        }
+        .buttonStyle(TaikaHeaderButtonStyle())
+    }
+
+    @ViewBuilder
+    private func headerTrailingCluster<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        HStack(spacing: HeaderControlMetrics.clusterSpacing) {
+            content()
+        }
+    }
+
+    /// Иконка умного спикера: профиль + волны (как voice в main).
+    @ViewBuilder
     private func speakerSmartIconButton(onTap: @escaping () -> Void) -> some View {
-        Button(action: onTap) {
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.92))
-        }
-        .buttonStyle(.plain)
-        .frame(minWidth: 44, minHeight: 44)
-        .contentShape(Rectangle())
+        headerIconButton("person.wave.2.fill", action: onTap)
     }
 
-    /// Иконка микрофона без счётчика: тап → возврат в стандартный спикер (режим 2).
+    @ViewBuilder
     private func speakerMicIconButton(onTap: @escaping () -> Void) -> some View {
-        Button(action: onTap) {
-            Image(systemName: "mic.fill")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.92))
-        }
-        .buttonStyle(.plain)
-        .frame(minWidth: 44, minHeight: 44)
-        .contentShape(Rectangle())
+        headerIconButton("mic.fill", action: onTap)
     }
 
     /// Режим микрофон: иконка микрофона + счётчик (стандартный спикер).
     private var speakerAttemptsBadge: some View {
         let active = isPro || speakerDailyAttemptsRemaining > 0
-        return HStack(spacing: 4) {
-            Image(systemName: "mic.fill")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
-            Text(isPro ? "∞" : "\(speakerDailyAttemptsRemaining)")
-                .font(.system(size: 15, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.text))
-        }
-        .frame(minWidth: 44, minHeight: 44)
-        .contentShape(Rectangle())
+        return headerCounterBadge(
+            icon: "mic.fill",
+            text: isPro ? "∞" : "\(speakerDailyAttemptsRemaining)",
+            active: active
+        )
     }
 
-    /// Режим умный спикер (мозг): счётчик умного спикера вместо микрофона.
+    /// Режим умный спикер: счётчик вместо микрофона.
     private var speakerSmartCounterBadge: some View {
         let active = isPro || speakerDailyAttemptsRemaining > 0
-        return HStack(spacing: 4) {
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
-            Text(isPro ? "∞" : "\(speakerDailyAttemptsRemaining)")
-                .font(.system(size: 15, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.text))
-        }
-        .frame(minWidth: 44, minHeight: 44)
-        .contentShape(Rectangle())
+        return headerCounterBadge(
+            icon: "person.wave.2.fill",
+            text: isPro ? "∞" : "\(speakerDailyAttemptsRemaining)",
+            active: active
+        )
     }
 
-    /// Favorites tab: heart + total likes count (как счётчик на карточке урока)
+    /// Favorites tab: heart + total likes count
     private var favoritesCountBadge: some View {
-        let active = favoritesTotalCount > 0
-        return HStack(spacing: 4) {
-            Image(systemName: "heart.fill")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
-            Text("\(favoritesTotalCount)")
-                .font(.system(size: 15, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(active ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.text))
-        }
-        .frame(minWidth: 44, minHeight: 44)
-        .contentShape(Rectangle())
+        headerCounterBadge(
+            icon: "heart.fill",
+            text: "\(favoritesTotalCount)",
+            active: favoritesTotalCount > 0
+        )
     }
 
-    /// Step header: иконка + счётчик в стиле хедера (как speakerAttemptsBadge / favoritesCountBadge).
-    private func stepSegmentIconBadge(icon: String, count: Int, isSelected: Bool) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 18, weight: .medium))
-            Text("\(count)")
-                .font(.system(size: 15, weight: .semibold))
-                .monospacedDigit()
+    /// Словарь: закладка (+ счётчик).
+    @ViewBuilder
+    private func dictionaryHeaderButton(
+        count: Int,
+        isAccent: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            if count > 0 {
+                headerCounterBadge(
+                    icon: "bookmark.fill",
+                    text: "\(count)",
+                    active: isAccent || count > 0
+                )
+            } else {
+                headerIcon("bookmark", isAccent: isAccent)
+            }
         }
-        .foregroundStyle(isSelected ? AnyShapeStyle(theme.currentAccentFill) : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92)))
-        .frame(minWidth: 44, minHeight: 44)
+        .buttonStyle(TaikaHeaderButtonStyle())
+        .accessibilityLabel(count > 0 ? "Словарь, \(count) фраз" : "Словарь")
+    }
+
+    /// Step header: иконка + счётчик в стиле хедера.
+    private func stepSegmentIconBadge(icon: String, count: Int, isSelected: Bool) -> some View {
+        TaikaHeaderGlassPill(height: HeaderControlMetrics.glassSize) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                Text("\(count)")
+                    .font(.system(size: 14, weight: .semibold))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(headerIconForeground(accent: isSelected))
+        }
+        .frame(minWidth: HeaderControlMetrics.hitSize, minHeight: HeaderControlMetrics.hitSize)
         .contentShape(Rectangle())
     }
 
@@ -357,186 +471,227 @@ public struct AppHeader: View {
         )
     }
 
-    /// Два читаемых чипа в игровом хедере: время и счёт (нормальный игровой UX).
+    /// Компактные чипы HUD: без fixedSize, чтобы ряд не вылезал за экран.
     private func gameHeaderBadge(icon: String, text: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(theme.currentAccentFill)
-            Text(text)
-                .font(.system(size: 16, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(CD.ColorToken.text)
+        TaikaHeaderGlassPill(height: HeaderControlMetrics.glassSize) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.currentAccentFill)
+                Text(text)
+                    .font(.system(size: 13, weight: .semibold))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .foregroundStyle(CD.ColorToken.text)
+            }
         }
-        .frame(minHeight: 40)
+        .frame(minHeight: HeaderControlMetrics.hitSize)
         .contentShape(Rectangle())
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center, spacing: 14) {
+            HStack(alignment: .center, spacing: HeaderControlMetrics.rowSpacing) {
 
             switch style {
 
             case .main(let tab, let onBack):
+                // Back (если пришли со стороны) + логотип всегда — иначе хедер «пустой».
                 if let onBack = onBack {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(theme.currentAccentFill)
-                    }
-                    .buttonStyle(.plain)
+                    headerBackButton(action: onBack)
                 }
                 logo
-                Spacer(minLength: 0)
-                // Context slots by tab; crown always last (EPIC 2)
-                switch tab {
-                case 0: // Main: voice (speaking person), game park (active when has learned lessons), crown
-                    Button(action: onTapVoice) { headerIcon("person.wave.2.fill") }
-                    .buttonStyle(.plain)
-                    Button(action: onTapGamePark) { headerIcon("gamecontroller.fill", isAccent: gameParkActive) }
-                    .buttonStyle(.plain)
-                case 1: // Course: фильтр, поиск, crown (иконки поменяны местами)
-                    Button(action: onTapCourseFilters) { headerIcon("slider.horizontal.3") }
-                    .buttonStyle(.plain)
-                    Button(action: onTapCourseSearch) { headerIcon("magnifyingglass") }
-                    .buttonStyle(.plain)
-                case 2: // Speaker: название ___ одна иконка умного спикера (тап → режим 2) или счётчик; микрофон с счётчиком или тап назад
-                    if speakerUIMode == .conversation {
-                        // Режим умного спикера: мозг со счётчиком, микрофон без счётчика (тап → назад в стандартный)
-                        speakerSmartCounterBadge
-                        if let onModeChange = onSpeakerUIModeChange {
-                            speakerMicIconButton(onTap: { onModeChange(.training) })
-                        }
-                    } else {
-                        // Стандартный спикер: иконка мозга (тап → режим умного спикера), микрофон со счётчиком
-                        if let onModeChange = onSpeakerUIModeChange {
-                            speakerSmartIconButton(onTap: { onModeChange(.conversation) })
-                        }
-                        speakerAttemptsBadge
-                    }
-                case 3: // Favorites: mic, game park (активны когда есть избранные карточки), count badge
-                    if let onSpeaker = onTapFavoritesSpeaker {
-                        Button(action: onSpeaker) { headerIcon("mic.fill", isAccent: favoritesHasCards, compact: true) }
-                        .buttonStyle(.plain)
-                    }
-                    if let onGamePark = onTapFavoritesGamePark {
-                        Button(action: onGamePark) { headerIcon("gamecontroller.fill", isAccent: favoritesHasCards, compact: true) }
-                        .buttonStyle(.plain)
-                    }
-                    favoritesCountBadge
-                case 4: // Profile: радуга → оверлей выбора акцента, theme, crown
-                    Button(action: { (onTapAccentPicker ?? onTapAccent)() }) { headerIcon("rainbow", isAccent: true) }
-                    .buttonStyle(.plain)
-                    let themeGlyph = (colorScheme == .dark) ? "sun.max" : "moon"
-                    Button(action: onTapTheme) { headerIcon(themeGlyph) }
-                    .buttonStyle(.plain)
-                default:
-                    Button(action: onTapAccent) { headerIcon("rainbow", isAccent: true) }
-                    .buttonStyle(.plain)
-                    let themeGlyph = (colorScheme == .dark) ? "sun.max" : "moon"
-                    Button(action: onTapTheme) { headerIcon(themeGlyph) }
-                    .buttonStyle(.plain)
-                }
-                if showPro {
-                    let proGlyph = isPro ? "crown.fill" : "crown"
-                    Button(action: onTapPro) {
-                        headerIcon(proGlyph, isAccent: isPro)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-            case .back(let onBack, let stepSegmentBinding, let stepShowsSegment, let stepTipCount, let stepCardCount):
-                Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(theme.currentAccentFill)
-                }
-                .buttonStyle(.plain)
 
                 Spacer(minLength: 0)
 
-                if stepShowsSegment, let binding = stepSegmentBinding {
-                    HStack(spacing: 4) {
-                        Button {
+                headerTrailingCluster {
+                    switch tab {
+                    case 0:
+                        // TF: «Голос Таики» скрыт (stub «Скоро»).
+                        headerIconButton("gamecontroller.fill", isAccent: gameParkActive, action: onTapGamePark)
+                        if let onDict = onTapDictionary {
+                            dictionaryHeaderButton(count: dictionaryCount, action: onDict)
+                        }
+                    case 1:
+                        // MVP: создание курса скрыто (как «Голос Таики» — позже).
+                        headerIconButton("magnifyingglass", action: onTapCourseSearch)
+                    case 2:
+                        if let onDict = onTapDictionary {
+                            dictionaryHeaderButton(count: dictionaryCount, action: onDict)
+                        }
+                        // Mic + N: счётчик попыток; тап → выбор курсов (сборка очереди).
+                        if speakerUIMode == .conversation {
+                            Button(action: onTapSpeakerFilters) {
+                                speakerSmartCounterBadge
+                            }
+                            .buttonStyle(TaikaHeaderButtonStyle())
+                            .accessibilityLabel("Попытки сегодня")
+                        } else {
+                            Button(action: onTapSpeakerFilters) {
+                                speakerAttemptsBadge
+                            }
+                            .buttonStyle(TaikaHeaderButtonStyle())
+                            .accessibilityLabel("Выбрать курсы, попыток \(speakerDailyAttemptsRemaining)")
+                        }
+                    case 3:
+                        if let onSpeaker = onTapFavoritesSpeaker {
+                            headerIconButton("mic.fill", isAccent: favoritesHasCards, action: onSpeaker)
+                        }
+                        if let onGamePark = onTapFavoritesGamePark {
+                            headerIconButton("gamecontroller.fill", isAccent: favoritesHasCards, action: onGamePark)
+                        }
+                        if let onSearch = onTapFavoritesSearch {
+                            headerIconButton("magnifyingglass", action: onSearch)
+                        }
+                    case 4:
+                        // MVP: тема и цвет акцента скрыты до пост-MVP.
+                        EmptyView()
+                    default:
+                        EmptyView()
+                    }
+                    if showPro {
+                        let proGlyph = isPro ? "crown.fill" : "crown"
+                        headerIconButton(proGlyph, isAccent: isPro, action: onTapPro)
+                    }
+                }
+
+            case .back(let onBack, let lessonTitle, let timerText, let showsWordmark):
+                headerBackButton(action: onBack)
+
+                if let title = lessonTitle?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 2)
+
+                    if let timerText, !timerText.isEmpty {
+                        Text(timerText)
+                            .font(.system(size: 16, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(CD.ColorToken.text)
+                            .lineLimit(1)
+                            .accessibilityLabel("Время \(timerText)")
+                    }
+                } else {
+                    Spacer(minLength: 0)
+                    if showsWordmark {
+                        logo
+                    }
+                }
+
+            case .lessons(_, let onSpeaker, let onReinforce, _, let gameParkActive):
+                logo
+
+                Spacer(minLength: 0)
+
+                headerTrailingCluster {
+                    if let onSpeaker {
+                        headerIconButton("mic.fill", action: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            binding.wrappedValue = 0
-                        } label: {
-                            stepSegmentIconBadge(icon: "sparkles", count: stepTipCount, isSelected: binding.wrappedValue == 0)
-                        }
-                        .buttonStyle(.plain)
-                        Button {
+                            onSpeaker()
+                        })
+                        .accessibilityLabel("Спикер")
+                    }
+                    if let onReinforce {
+                        headerIconButton("gamecontroller.fill", isAccent: gameParkActive, action: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            binding.wrappedValue = 1
-                        } label: {
-                            stepSegmentIconBadge(icon: "rectangle.stack.fill", count: stepCardCount, isSelected: binding.wrappedValue == 1)
-                        }
-                        .buttonStyle(.plain)
+                            onReinforce()
+                        })
+                        .accessibilityLabel("Игры")
                     }
-                }
-
-                logo
-
-            case .lessons(_, let onSpeaker, let onReinforce, let onReset):
-                logo
-
-                Spacer(minLength: 0)
-
-                HStack(spacing: 0) {
-                    Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onSpeaker() }) {
-                        headerIcon("mic.fill", isAccent: true, compact: true)
+                    if showPro {
+                        let proGlyph = isPro ? "crown.fill" : "crown"
+                        headerIconButton(proGlyph, isAccent: isPro, action: onTapPro)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Спикер")
-                    Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onReinforce() }) {
-                        headerIcon("gamecontroller.fill", isAccent: true, compact: true)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Закрепить")
-                    Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onReset() }) {
-                        headerIcon("trash", isAccent: false, compact: true)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Сбросить прогресс курса")
-                }
-
-                if showPro {
-                    let proGlyph = isPro ? "crown.fill" : "crown"
-                    Button(action: onTapPro) {
-                        headerIcon(proGlyph, isAccent: isPro)
-                    }
-                    .buttonStyle(.plain)
                 }
 
             case .game(let config):
-                Button(action: config.onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(theme.currentAccentFill)
-                }
-                .buttonStyle(.plain)
+                // Blank-brain: назад + название + читаемые цифры. Без стеклянных чипов (обрезались).
+                headerBackButton(action: config.onBack)
 
-                // Только два чипа: время и счёт (читаемые, нормальный игровой UX)
-                HStack(spacing: 16) {
-                    gameHeaderBadge(icon: "timer", text: config.timeText)
-                    gameHeaderBadge(icon: "star.fill", text: config.progressText ?? "\(config.score)")
-                }
-                .lineLimit(1)
-                .minimumScaleFactor(0.9)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(gameHeaderPrimaryTitle(config))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                        .truncationMode(.tail)
 
-                Spacer(minLength: 8)
-                logo
+                    if !config.minimalGameChrome {
+                        Text(gameHeaderStatusLine(config))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(CD.ColorToken.textSecondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .monospacedDigit()
+                    } else if let st = config.sourceTitle?.trimmingCharacters(in: .whitespacesAndNewlines), !st.isEmpty {
+                        Text(st)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(CD.ColorToken.textSecondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 2)
+
+                // Таймер в хедере — тот же нейтральный цвет, что чип timer (не отдельный «розовый»).
+                if !config.minimalGameChrome, !config.timeText.isEmpty {
+                    Text(config.timeText)
+                        .font(.system(size: 16, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(CD.ColorToken.text)
+                        .lineLimit(1)
+                        .accessibilityLabel("Время \(config.timeText)")
+                }
             }
             }
+            .frame(maxWidth: .infinity)
 
-            // Название урока не в хедере — показывается в секции контента (как в Main)
+            // Вторая строка source больше не нужна — всё в блоке слева.
         }
         .padding(.horizontal, CD.Spacing.screen)
-        .frame(minHeight: 56)
-        .background(
-            Theme.Colors.backgroundPrimary
-                .ignoresSafeArea(edges: .top)
-        )
+        .frame(maxWidth: .infinity, minHeight: headerMinHeight, alignment: .leading)
+        .background(Color.clear)
+    }
+
+    private func gameHeaderPrimaryTitle(_ config: GameHeaderConfig) -> String {
+        if let t = config.gameTitle?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty {
+            return t
+        }
+        if config.minimalGameChrome,
+           let st = config.sourceTitle?.trimmingCharacters(in: .whitespacesAndNewlines), !st.isEmpty {
+            return st
+        }
+        if let p = config.progressText?.trimmingCharacters(in: .whitespacesAndNewlines), !p.isEmpty {
+            return p
+        }
+        return "Игра"
+    }
+
+    private func gameHeaderStatusLine(_ config: GameHeaderConfig) -> String {
+        // Без названия курса/урока в статусе — длинные chip'ы обрезались и были нечитаемы.
+        var parts: [String] = []
+        if let p = config.progressText?.trimmingCharacters(in: .whitespacesAndNewlines), !p.isEmpty {
+            parts.append(p)
+        }
+        if config.mistakes > 0 {
+            let n = config.mistakes
+            let word: String = {
+                let m10 = n % 10
+                let m100 = n % 100
+                if m10 == 1, m100 != 11 { return "ошибка" }
+                if (2...4).contains(m10), !(12...14).contains(m100) { return "ошибки" }
+                return "ошибок"
+            }()
+            parts.append("\(n) \(word)")
+        } else if config.score > 0, config.progressText == nil {
+            parts.append("счёт \(config.score)")
+        }
+        return parts.isEmpty ? " " : parts.joined(separator: " · ")
     }
 
 }
@@ -568,19 +723,22 @@ public struct AppBackHeader: View {
     }
 
     public var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            Button(action: onTapBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
-            }
-            .buttonStyle(.plain)
-
-            Spacer(minLength: 0)
-
+        ZStack {
             logo
+                .frame(maxWidth: .infinity)
+
+            HStack {
+                Button(action: onTapBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, CD.Spacing.screen)
         .frame(height: 56)
         .background(
@@ -698,12 +856,12 @@ public struct AppGameHeader: View {
         .frame(height: 56)
         .background(
             ZStack {
-                BackdropBlur(style: .systemChromeMaterialDark)
+                SystemBlur(style: .systemChromeMaterial)
                 Theme.Colors.backgroundPrimary
-                    .opacity(0.85)
+                    .opacity(0.72)
             }
-            .saturation(1.5)
-            .contrast(1.05)
+            .saturation(1.15)
+            .contrast(1.02)
         )
         .ignoresSafeArea(edges: .top)
     }
@@ -753,25 +911,25 @@ public struct AppStatusChip: View {
     }
 
     private func colors(for kind: AppStatusKind) -> StatusColors {
+        // MVP: statuses must be distinguishable, but still in Taika identity (accent-driven).
         switch kind {
         case .new:
-            return Self.StatusColors(
-                fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.14)),
-                stroke: AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.75)),
-                text: AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.98))
+            return StatusColors(
+                fill: AnyShapeStyle(Color.white.opacity(0.04)),
+                stroke: AnyShapeStyle(Theme.Strokes.strokeSubtle.opacity(2.0)),
+                text: AnyShapeStyle(Theme.Colors.textPrimary.opacity(0.90))
             )
         case .inProgress:
-            let amber = Color(red: 0.98, green: 0.78, blue: 0.20)
-            return Self.StatusColors(
-                fill: AnyShapeStyle(amber.opacity(0.20)),
-                stroke: AnyShapeStyle(amber.opacity(0.95)),
-                text: AnyShapeStyle(Color.white.opacity(0.96))
+            return StatusColors(
+                fill: AnyShapeStyle(Color.clear),
+                stroke: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                text: AnyShapeStyle(ThemeManager.shared.currentAccentFill)
             )
         case .completed:
-            return Self.StatusColors(
-                fill: AnyShapeStyle(Color.green.opacity(0.14)),
-                stroke: AnyShapeStyle(Color.green.opacity(0.70)),
-                text: AnyShapeStyle(Color.green.opacity(0.96))
+            return StatusColors(
+                fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                stroke: AnyShapeStyle(Theme.Strokes.strokeSubtle.opacity(1.4)),
+                text: AnyShapeStyle(Color.black.opacity(0.85))
             )
         }
     }
@@ -821,6 +979,7 @@ public struct AppMiniChip: View {
     public var title: String
     public var style: AppMiniChipStyle = .neutral
     public var onTap: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     public init(title: String, style: AppMiniChipStyle = .neutral, onTap: @escaping () -> Void = {}) {
         self.title = title
@@ -836,10 +995,13 @@ public struct AppMiniChip: View {
 
     public var body: some View {
         let height: CGFloat = 28
+        let isLight = colorScheme == .light
 
         Button(action: onTap) {
             Text(displayTitle)
                 .font(.system(size: 12, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
                 .foregroundStyle(
                     style == .accent ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
                                      : AnyShapeStyle(CD.ColorToken.text.opacity(0.95))
@@ -850,8 +1012,8 @@ public struct AppMiniChip: View {
                     Capsule(style: .continuous)
                         .fill(
                             style == .accent
-                            ? AnyShapeStyle(Color.clear)
-                            : AnyShapeStyle(Color.clear)
+                            ? AnyShapeStyle(TaikaDynamicColors.accent.opacity(isLight ? 0.16 : 0.20))
+                            : AnyShapeStyle(TaikaDynamicColors.chip)
                         )
                 )
                 .overlay(
@@ -859,8 +1021,15 @@ public struct AppMiniChip: View {
                         .strokeBorder(
                             style == .accent
                             ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                            : AnyShapeStyle(Color.white.opacity(0.25)), lineWidth: 1.2
+                            : AnyShapeStyle(Theme.Strokes.strokeSubtle),
+                            lineWidth: style == .accent ? 1.35 : 1.2
                         )
+                )
+                .shadow(
+                    color: style == .accent && isLight ? Color.black.opacity(0.07) : .clear,
+                    radius: 3,
+                    x: 0,
+                    y: 1
                 )
                 .contentShape(Capsule())
         }
@@ -868,28 +1037,57 @@ public struct AppMiniChip: View {
     }
 }
 
-// MARK: - PRO Chip (brand identity)
+// MARK: - PRO Chip (brand identity) — как на Main «подборка дня»
 public struct AppProChip: View {
-    public var title: String = "PRO"
+    public var title: String = "Taika+"
     public var scale: CGFloat = 1.0
     public var showCrown: Bool = true
+    /// Locked gate (free user): замок вместо короны.
+    public var locked: Bool = false
 
-    @State private var wobble: Bool = false
-
-    public init(title: String = "PRO", scale: CGFloat = 1.0, showCrown: Bool = true) {
+    public init(
+        title: String = "Taika+",
+        scale: CGFloat = 1.0,
+        showCrown: Bool = true,
+        locked: Bool = false
+    ) {
         self.title = title
         self.scale = scale
         self.showCrown = showCrown
+        self.locked = locked
     }
 
-    private var height: CGFloat { 28 * scale }
-    private var hpad: CGFloat { 14 * scale }
-
     public var body: some View {
-        AppMiniChip(
-            title: title.lowercased(),
-            style: .accent
-        ) { }
+        let accent = ThemeManager.shared.currentAccentFill
+        let iconSize: CGFloat = 9.5 * scale
+        let fontSize: CGFloat = 11 * scale
+        let vPad: CGFloat = 4.5 * scale
+        let hPad: CGFloat = 8 * scale
+
+        HStack(spacing: 4 * scale) {
+            if locked {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: iconSize, weight: .semibold))
+            } else if showCrown {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: iconSize, weight: .semibold))
+            }
+            Text(title)
+                .font(.system(size: fontSize, weight: .semibold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(accent)
+        .padding(.vertical, vPad)
+        .padding(.horizontal, hPad)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color.clear)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .strokeBorder(accent, lineWidth: 1.15)
+        )
+        .accessibilityLabel(locked ? "\(title), закрыто" : title)
     }
 }
 
@@ -980,23 +1178,44 @@ public struct AppConsoleIconButton: View {
 // MARK: - Card Icon Buttons (like / console) — compact, unified
 public enum AppIconActionKind { case favorite, console, play, info, speaker, listen }
 
+private struct FavoriteSymbolBounceModifier: ViewModifier {
+    let kind: AppIconActionKind
+    let isOn: Bool
+
+    func body(content: Content) -> some View {
+        Group {
+            if kind == .favorite {
+                content.symbolEffect(.bounce, value: isOn)
+            } else {
+                content
+            }
+        }
+    }
+}
+
 public struct AppCardIconButton: View {
     public var kind: AppIconActionKind
     public var isActive: Bool = false   // for .favorite (filled heart). Ignored for .console
     public var isEnabled: Bool = true   // when false, shows locked/disabled visual
     /// Для .play — всегда показывать акцентом (главная CTA «запустить урок»).
     public var forceAccent: Bool = false
+    /// Если задан — тап по заблокированной иконке не молчит (shake + callback).
+    public var onLockedTap: (() -> Void)? = nil
     public var onTap: () -> Void
+    @State private var tapPulse: CGFloat = 1
+    @State private var lockShake: CGFloat = 0
 
     public init(kind: AppIconActionKind,
                 isActive: Bool = false,
                 isEnabled: Bool = true,
                 forceAccent: Bool = false,
+                onLockedTap: (() -> Void)? = nil,
                 onTap: @escaping () -> Void = {}) {
         self.kind = kind
         self.isActive = isActive
         self.isEnabled = isEnabled
         self.forceAccent = forceAccent
+        self.onLockedTap = onLockedTap
         self.onTap = onTap
     }
 
@@ -1004,43 +1223,91 @@ public struct AppCardIconButton: View {
     private let iconSize: CGFloat = Theme.IconButton.iconSizeCard
     private let minTapSize: CGFloat = Theme.IconButton.tapMinCard
 
-    public var body: some View {
-        let isOn = (kind == .favorite) ? isActive : false
-        let isAccent = forceAccent || isOn || (kind == .console && isEnabled) || (kind == .speaker && isEnabled) || (kind == .listen && isEnabled)
+    private var isOn: Bool { kind == .favorite && isActive }
+    private var isAccent: Bool {
+        forceAccent
+            || isOn
+            || (kind == .console && isEnabled)
+            || (kind == .speaker && isEnabled)
+            || (kind == .listen && isEnabled)
+    }
+    private var allowsLockedTap: Bool { !isEnabled && onLockedTap != nil }
 
-        let iconName: String = {
-            switch kind {
-            case .favorite:
-                return isOn ? "heart.fill" : "heart"
-            case .console:
-                return isAccent ? "gamecontroller.fill" : "gamecontroller"
-            case .play:
-                return "play.fill"
-            case .info:
-                return "info.circle"
-            case .speaker:
-                return "mic.fill"
-            case .listen:
-                return "speaker.wave.2.fill"
-            }
-        }()
-
-        let iconInk: some ShapeStyle = isAccent
-            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-            : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92))
-
-        Button(action: onTap) {
-            Image(systemName: iconName)
-                .font(.system(size: iconSize, weight: .semibold))
-                .foregroundStyle(iconInk)
-                .scaleEffect(kind == .favorite && isOn ? 1.06 : 1.0)
-                .animation(.spring(response: 0.32, dampingFraction: 0.72), value: isOn)
-                .frame(minWidth: minTapSize, minHeight: minTapSize)
-                .contentShape(Rectangle())
+    private var iconName: String {
+        switch kind {
+        case .favorite: return isOn ? "heart.fill" : "heart"
+        case .console:  return isAccent ? "gamecontroller.fill" : "gamecontroller"
+        case .play:     return "play.fill"
+        case .info:     return "info.circle"
+        case .speaker:  return "mic.fill"
+        case .listen:   return "speaker.wave.2.fill"
         }
-        .buttonStyle(PressDownStyle(scale: 0.88, fade: 0.92, useBouncySpring: true, flashOpacity: 0.16))
-        .disabled(!isEnabled)
+    }
+
+    public var body: some View {
+        Button(action: handleTap) {
+            iconLabel
+        }
+        .buttonStyle(PressDownStyle(scale: 0.90, fade: 0.94, useBouncySpring: true, flashOpacity: 0.12))
+        .disabled(!isEnabled && !allowsLockedTap)
+        .opacity(isEnabled || allowsLockedTap ? 1 : 0.55)
         .accessibilityLabel(accessibilityLabelForKind)
+        .accessibilityHint(allowsLockedTap ? "Доступно после первого урока" : "")
+    }
+
+    private var iconLabel: some View {
+        let scale: CGFloat = (kind == .favorite && isOn ? 1.06 : 1.0) * tapPulse
+        let shakeX: CGFloat = lockShake == 0 ? 0 : (lockShake > 0.5 ? 5 : -5)
+
+        return Image(systemName: iconName)
+            .font(.system(size: iconSize, weight: .semibold))
+            .foregroundStyle(iconInkStyle)
+            .modifier(FavoriteSymbolBounceModifier(kind: kind, isOn: isOn))
+            .scaleEffect(scale)
+            .offset(x: shakeX)
+            .animation(
+                lockShake == 0
+                ? .spring(response: 0.28, dampingFraction: 0.7)
+                : .easeInOut(duration: 0.06).repeatCount(4, autoreverses: true),
+                value: lockShake
+            )
+            .animation(.spring(response: 0.32, dampingFraction: 0.72), value: isOn)
+            .frame(minWidth: minTapSize, minHeight: minTapSize)
+            .contentShape(Rectangle())
+    }
+
+    private var iconInkStyle: AnyShapeStyle {
+        if isAccent {
+            return AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+        }
+        return AnyShapeStyle(CD.ColorToken.textSecondary.opacity(isEnabled ? 0.92 : 0.55))
+    }
+
+    private func handleTap() {
+        if !isEnabled {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.12, dampingFraction: 0.28)) {
+                lockShake = 1
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
+                    lockShake = 0
+                }
+            }
+            onLockedTap?()
+            return
+        }
+        if kind == .favorite || kind == .listen {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.58)) {
+                tapPulse = 1.08
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                    tapPulse = 1.0
+                }
+            }
+        }
+        onTap()
     }
 
     private var accessibilityLabelForKind: String {
@@ -1054,6 +1321,8 @@ public struct AppCardIconButton: View {
         }
     }
 }
+
+// MARK: - AppCardIconButton (end)
 
 // MARK: - Lesson Favorite Counter — минимальный вариант (только сердечко + число, без капсулы)
 public struct AppFavCounterMinimal: View {
@@ -1603,8 +1872,8 @@ public struct AppProCloseButton: View {
                 .frame(width: size, height: size)
                 .background(
                     Circle()
-                        .fill(CD.ColorToken.card.opacity(0.70))
-                        .background(.ultraThinMaterial)
+                        .fill(Color.black.opacity(0.55))
+                        .background(Circle().fill(.ultraThinMaterial))
                 )
                 .overlay(
                     Circle()
@@ -1652,24 +1921,9 @@ public struct AppProFrameChrome<Content: View>: View {
 
     @ViewBuilder
     private func panelFill() -> some View {
-        // keep it consistent with our glass overlays: material + dark overlay + subtle sheen
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(.ultraThinMaterial)
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(Color.black.opacity(0.35))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.05), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .blendMode(.plusLighter)
-            )
+        Theme.Surfaces.blackGlass(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        )
     }
 
     @ViewBuilder
@@ -1737,7 +1991,25 @@ public struct AppProFrameChrome<Content: View>: View {
     }
 }
 
-// MARK: - Lesson Summary Overlay (glass)
+// MARK: - PRO-style modal panel (same shell as PROView / CourseResetConfirm)
+public struct ProStyleModalPanel<Content: View>: View {
+    public var maxWidth: CGFloat
+    @ViewBuilder public var content: () -> Content
+
+    public init(maxWidth: CGFloat = 420, @ViewBuilder content: @escaping () -> Content) {
+        self.maxWidth = maxWidth
+        self.content = content
+    }
+
+    public var body: some View {
+        content()
+            .padding(20)
+            .frame(maxWidth: maxWidth)
+            .taikaBlackGlassBackground(cornerRadius: 28)
+    }
+}
+
+// MARK: - Lesson Summary Overlay (PRO shell + Taika FM)
 public struct LessonSummaryOverlay: View {
     public var title: String
     public var subtitle: String
@@ -1747,6 +2019,18 @@ public struct LessonSummaryOverlay: View {
     public var onSecondary: () -> Void
     public var onClose: () -> Void = {}
     public var ctaStyle: SummaryCTAStyle
+    /// Мини‑лайфхаки урока (те же атомы, что в FavoriteDS); `nil` — не показывать блок.
+    public var hacksAccessory: AnyView?
+    /// Вторая строка под основным CTA: переход в Спикер (итоги урока).
+    public var onSpeakerPractice: (() -> Void)? = nil
+    public var selectedGameMode: GameModeType? = nil
+    public var onSelectGameMode: ((GameModeType) -> Void)? = nil
+    public var lessonDurationText: String? = nil
+    public var overallProgressText: String? = nil
+    @State private var isGameModeExpanded: Bool = false
+    @State private var animateIntro: Bool = false
+    @State private var animateReward: Bool = false
+    @State private var animateCTA: Bool = false
 
     public init(
         title: String,
@@ -1756,7 +2040,13 @@ public struct LessonSummaryOverlay: View {
         onPrimary: @escaping () -> Void = {},
         onSecondary: @escaping () -> Void = {},
         onClose: @escaping () -> Void = {},
-        ctaStyle: SummaryCTAStyle = .brandChips
+        ctaStyle: SummaryCTAStyle = .brandChips,
+        hacksAccessory: AnyView? = nil,
+        onSpeakerPractice: (() -> Void)? = nil,
+        selectedGameMode: GameModeType? = nil,
+        onSelectGameMode: ((GameModeType) -> Void)? = nil,
+        lessonDurationText: String? = nil,
+        overallProgressText: String? = nil
     ) {
         self.title = title
         self.subtitle = subtitle
@@ -1766,29 +2056,19 @@ public struct LessonSummaryOverlay: View {
         self.onSecondary = onSecondary
         self.onClose = onClose
         self.ctaStyle = ctaStyle
+        self.hacksAccessory = hacksAccessory
+        self.onSpeakerPractice = onSpeakerPractice
+        self.selectedGameMode = selectedGameMode
+        self.onSelectGameMode = onSelectGameMode
+        self.lessonDurationText = lessonDurationText
+        self.overallProgressText = overallProgressText
     }
-    // Reusable label pattern: gradient puck + title
-    private func chipLabel(title: String, system: String, titleColor: Color) -> some View {
-        let iconSize: CGFloat = 22
-        let puckSize: CGFloat = 30
-        return HStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .fill(Theme.Colors.accent)
-                    .shadow(color: .clear, radius: 0)
-                    .overlay(Circle().stroke(Color.clear, lineWidth: 0))
-                    .frame(width: puckSize, height: puckSize)
-                Image(systemName: system)
-                    .font(.system(size: iconSize - 6, weight: .semibold))
-                    .foregroundColor(Color.black.opacity(0.9))
-            }
-            Text(title)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(titleColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-                .allowsTightening(true)
-        }
+
+    private var fmAccentLine: [TaikaFMChunk] {
+        let all = TaikaFMData.shared.lessonCompletionAccentMessages()
+        guard !all.isEmpty else { return [] }
+        let idx = abs((title + subtitle).hashValue) % all.count
+        return all[idx]
     }
 
     // Helper to compact long secondary titles (e.g. Russian)
@@ -1803,6 +2083,74 @@ public struct LessonSummaryOverlay: View {
         let nums = tail.split(whereSeparator: { !$0.isNumber }).map { Int(String($0)) }.compactMap { $0 }
         if nums.count >= 2 { return (section, nums[0], nums[1]) }
         return nil
+    }
+    @ViewBuilder
+    private func metaProgressLine() -> some View {
+        let duration = lessonDurationText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let overall = overallProgressText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        if !duration.isEmpty || !overall.isEmpty {
+            HStack(spacing: 8) {
+                if !duration.isEmpty {
+                    Label(duration, systemImage: "clock")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.82))
+                        .labelStyle(.titleAndIcon)
+                }
+
+                if !duration.isEmpty && !overall.isEmpty {
+                    Text("•")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.45))
+                }
+
+                if !overall.isEmpty {
+                    Text(overall)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.82))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private func taikaGuidanceBubble() -> some View {
+        TaikaFMBubble(label: "taika fm", reactions: [], onReactionTap: nil, showBubble: true) {
+            taikaFMStyledText(
+                "сначала *закрепи навык* в игре или *открой следующий урок*.",
+                baseColor: CD.ColorToken.textSecondary.opacity(0.92)
+            )
+            .font(.system(size: 12, weight: .medium))
+            .lineSpacing(2)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func startIntroAnimationIfNeeded() {
+        guard !animateIntro else { return }
+
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.88)) {
+            animateIntro = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                animateReward = true
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                animateCTA = true
+            }
+        }
     }
     private func compactSecondary(_ t: String) -> String {
         var s = t.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1819,192 +2167,435 @@ public struct LessonSummaryOverlay: View {
     private func buttonsBrandChips() -> some View {
         let h: CGFloat = 44
         VStack(spacing: 12) {
-            // PRIMARY — gradient capsule
+            // PRIMARY — visually neutral, on-brand capsule
             Button(action: {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 onPrimary()
             }) {
-                HStack(spacing: 10) {
-                    Image(systemName: "gamecontroller.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color.black.opacity(0.92))
-                    Text(primaryTitle)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color.black.opacity(0.92))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                        .allowsTightening(true)
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
-                .background(
-                    ZStack {
-                        Theme.Colors.accent.blur(radius: 8).opacity(0.28).mask(Capsule(style: .continuous))
-                        Theme.Colors.accent.blur(radius: 2.5).opacity(0.60).mask(Capsule(style: .continuous))
-                        Capsule(style: .continuous).fill(Theme.Colors.accent)
-                    }
-                )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .fill(LinearGradient(colors: [Color.white.opacity(0.05), .clear], startPoint: .top, endPoint: .bottom))
-                        .blendMode(.plusLighter)
-                )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .fill(LinearGradient(colors: [.clear, Color.white.opacity(0.05)], startPoint: .center, endPoint: .bottom))
-                        .blendMode(.plusLighter)
-                )
-                .clipShape(Capsule(style: .continuous))
-                .contentShape(Capsule(style: .continuous))
+                Text(primaryTitle)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color.black.opacity(0.92))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .allowsTightening(true)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
+                    .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .fill(LinearGradient(colors: [Color.white.opacity(0.10), .clear], startPoint: .top, endPoint: .center))
+                            .blendMode(.plusLighter)
+                    )
+                    .clipShape(Capsule(style: .continuous))
+                    .contentShape(Capsule(style: .continuous))
             }
             .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
 
-            // SECONDARY — filled capsule
+            // SECONDARY — quiet dark capsule + game icon
             Button(action: {
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                onSecondary()
+                if !isGameModeExpanded {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
+                        isGameModeExpanded = true
+                    }
+                } else {
+                    onSecondary()
+                }
             }) {
-                HStack(spacing: 12) {
-                    Text(compactSecondary(secondaryTitle))
+                HStack(spacing: 10) {
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    Text(
+                        isGameModeExpanded && selectedGameMode != nil
+                        ? gameModeActionTitle(selectedGameMode!)
+                        : compactSecondary(secondaryTitle)
+                    )
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(CD.ColorToken.text)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .allowsTightening(true)
                     Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
                 }
                 .padding(.horizontal, 16)
                 .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
-                .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.85)))
+                .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.82)))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                )
                 .contentShape(Capsule())
             }
             .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+
+            if isGameModeExpanded,
+               let selectedGameMode,
+               onSelectGameMode != nil {
+                inlineGameModeSelector()
+                    .padding(.top, 4)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         .frame(maxWidth: .infinity)
     }
 
+    private func secondaryNextCapsule() -> some View {
+        let h: CGFloat = 44
+        return Button(action: {
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            onSecondary()
+        }) {
+            HStack(spacing: 10) {
+                Image(systemName: "gamecontroller.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                Text(compactSecondary(secondaryTitle))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(CD.ColorToken.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .allowsTightening(true)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
+            .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.82)))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+            )
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+    }
+
+    private func gameModeLabel(_ mode: GameModeType) -> String {
+        switch mode {
+        case .match: return "матч"
+        case .recall: return "слоги"
+        case .audioRecall: return "аудио"
+        default: return "режим"
+        }
+    }
+
+    private func gameModeActionTitle(_ mode: GameModeType) -> String {
+        "Закрепить: " + gameModeLabel(mode)
+    }
+
+    private var collapsedGameActionTitle: String {
+        "Закрепить в игре"
+    }
+
+    private func gameModeHint(_ mode: GameModeType) -> String {
+        switch mode {
+        case .match: return "быстро вспомнить"
+        case .recall: return "собрать слово"
+        case .audioRecall: return "узнать на слух"
+        default: return "режим тренировки"
+        }
+    }
+
+    private func gameModeIcon(_ mode: GameModeType) -> String {
+        switch mode {
+        case .match: return "square.grid.2x2.fill"
+        case .recall: return "textformat.abc"
+        case .audioRecall: return "speaker.wave.2.fill"
+        default: return "gamecontroller.fill"
+        }
+    }
+
+    @ViewBuilder
+    private func inlineGameModeSelector() -> some View {
+        if let selectedGameMode, let onSelectGameMode {
+            HStack(spacing: 8) {
+                inlineGameModeCard(.match, selected: selectedGameMode == .match, onSelect: onSelectGameMode)
+                inlineGameModeCard(.recall, selected: selectedGameMode == .recall, onSelect: onSelectGameMode)
+                inlineGameModeCard(.audioRecall, selected: selectedGameMode == .audioRecall, onSelect: onSelectGameMode)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+
+    private func inlineGameModeCard(_ mode: GameModeType,
+                                    selected: Bool,
+                                    onSelect: @escaping (GameModeType) -> Void) -> some View {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            onSelect(mode)
+        }) {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: gameModeIcon(mode))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(
+                        selected
+                        ? AnyShapeStyle(Color.black.opacity(0.86))
+                        : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                    )
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(gameModeLabel(mode))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(
+                            selected
+                            ? AnyShapeStyle(Color.black.opacity(0.92))
+                            : AnyShapeStyle(CD.ColorToken.text)
+                        )
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+
+                    Text(gameModeHint(mode))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(
+                            selected
+                            ? AnyShapeStyle(Color.black.opacity(0.66))
+                            : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.82))
+                        )
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 94, alignment: .topLeading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        selected
+                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                        : AnyShapeStyle(CD.ColorToken.card.opacity(0.82))
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(
+                        selected
+                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                        : AnyShapeStyle(Theme.Strokes.strokeSubtle),
+                        lineWidth: 1.2
+                    )
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.98))
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private func footerBlock() -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let onSpeaker = onSpeakerPractice {
+                consolidateChipsWithSpeaker(onSpeaker: onSpeaker)
+            } else {
+                buttonsBrandChips()
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Итоги урока: акцент «Закрепить» → открывает выбор режима снаружи; Спикер; следующий шаг.
+    private func consolidateChipsWithSpeaker(onSpeaker: @escaping () -> Void) -> some View {
+        let h: CGFloat = 44
+        return VStack(spacing: 12) {
+            // PRIMARY — visually neutral, on-brand capsule
+            Button(action: {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                onPrimary()
+            }) {
+                Text(primaryTitle)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color.black.opacity(0.92))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .allowsTightening(true)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
+                    .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .fill(LinearGradient(colors: [Color.white.opacity(0.10), .clear], startPoint: .top, endPoint: .center))
+                            .blendMode(.plusLighter)
+                    )
+                    .clipShape(Capsule(style: .continuous))
+                    .contentShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+
+            // Speaker practice button — mic icon, quiet capsule
+            Button(action: {
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                onSpeaker()
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    Text("Практика в Спикере")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                        .allowsTightening(true)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
+                .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.82)))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                )
+                .contentShape(Capsule())
+            }
+            .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+
+            // Secondary — game icon, quiet capsule
+            Button(action: {
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                if !isGameModeExpanded {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
+                        isGameModeExpanded = true
+                    }
+                } else {
+                    onSecondary()
+                }
+            }) {
+                HStack(spacing: 10) {
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    Text(
+                        isGameModeExpanded && selectedGameMode != nil
+                        ? gameModeActionTitle(selectedGameMode!)
+                        : compactSecondary(secondaryTitle)
+                    )
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                        .allowsTightening(true)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
+                .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.82)))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                )
+                .contentShape(Capsule())
+            }
+            .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+
+            if isGameModeExpanded,
+               let selectedGameMode,
+               onSelectGameMode != nil {
+                inlineGameModeSelector()
+                    .padding(.top, 4)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private func progressAndSubtitleBlock() -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.7))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
 
     public var body: some View {
         GeometryReader { proxy in
+            let panelW = min(proxy.size.width - 40, 420)
             ZStack {
-                // Backdrop: clear tap‑catcher; actual blur is applied to host content in StepView
                 Color.clear
                     .contentShape(Rectangle())
                     .ignoresSafeArea()
 
-                // Vertically center the card + mascot
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-
-                    ZStack(alignment: .top) {
-                        // Mascot above and slightly overlapping the card top — looks like holding it
-                        Image("mascot.message")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 170, height: 170)
-                            .offset(y: -100) // offset so hands align with card edge
-                            .zIndex(2)
-                            .allowsHitTesting(false)
-
-                        // Card + close button block
-                        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        let closeButton = Button(action: { onClose() }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(CD.ColorToken.textSecondary)
-                                .frame(width: 36, height: 36)
-                                .background(
-                                    Circle()
-                                        .fill(CD.ColorToken.card.opacity(0.4))
-                                )
-                                .overlay(Circle().stroke(CD.ColorToken.stroke, lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-
-                        ZStack(alignment: .topTrailing) {
-                            VStack(alignment: .center, spacing: 22) {
-                                // Title
-                                Text(title)
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundStyle(CD.ColorToken.text)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.top, 2)
-
-                                // Subtitle (parsed to emphasize progress) + tiny progress bar
-                                Group {
-                                    if let p = parseProgress(subtitle) {
-                                        VStack(spacing: 4) {
-                                            // Row with section (caps) and progress text
-                                            HStack(spacing: 6) {
-                                                Text(p.section.uppercased())
-                                                    .font(.system(size: 12, weight: .semibold))
-                                                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
-                                                Text("—")
-                                                    .font(.system(size: 12, weight: .regular))
-                                                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.6))
-                                                (
-                                                    Text("выучено ")
-                                                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85)) +
-                                                    Text("\(p.learned)")
-                                                        .fontWeight(.semibold)
-                                                        .foregroundStyle(CD.ColorToken.text) +
-                                                    Text(" из \(p.total)")
-                                                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
-                                                )
-                                                Spacer(minLength: 0)
-                                            }
-                                            .frame(maxWidth: .infinity)
-                                        }
-                                    } else {
-                                        Text(subtitle)
-                                            .font(.system(size: 14, weight: .regular))
-                                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
-                                            .multilineTextAlignment(.center)
-                                            .lineSpacing(2)
-                                            .minimumScaleFactor(0.95)
-                                            .allowsTightening(true)
-                                            .padding(.horizontal, 4)
+                TaikaRootVerticalScroll {
+                    VStack(spacing: 16) {
+                        ProStyleModalPanel(maxWidth: panelW) {
+                            ZStack(alignment: .topTrailing) {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    HStack(alignment: .center, spacing: 8) {
+                                        Text("taikA")
+                                            .font(.taikaLogo(16))
+                                            .foregroundStyle(CD.ColorToken.text)
+                                        Spacer(minLength: 0)
                                     }
+
+                                    Text(title)
+                                        .font(.system(size: 20, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(CD.ColorToken.text)
+                                        .multilineTextAlignment(.leading)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .opacity(animateIntro ? 1 : 0)
+                                        .offset(y: animateIntro ? 0 : 8)
+
+                                    taikaGuidanceBubble()
+                                        .opacity(animateIntro ? 1 : 0)
+                                        .offset(y: animateIntro ? 0 : 10)
+
+                                    progressAndSubtitleBlock()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .opacity(animateIntro ? 1 : 0)
+                                        .offset(y: animateIntro ? 0 : 8)
+
+                                    if let hacksAccessory {
+                                        hacksAccessory
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.top, 4)
+                                            .opacity(animateReward ? 1 : 0)
+                                            .scaleEffect(animateReward ? 1 : 0.98)
+                                            .offset(y: animateReward ? 0 : 12)
+                                    }
+
+                                    footerBlock()
+                                        .padding(.top, 4)
+                                        .opacity(animateCTA ? 1 : 0)
+                                        .offset(y: animateCTA ? 0 : 12)
                                 }
+                                .padding(.trailing, 28)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                                // CTAs
-                                buttonsBrandChips()
+                                Button(action: { onClose() }) {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(CD.ColorToken.textSecondary)
+                                        .frame(width: 32, height: 32)
+                                        .background(
+                                            Circle()
+                                                .fill(Color.white.opacity(0.08))
+                                        )
+                                        .overlay(Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: 1))
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.top, 28)
-                            .padding(.bottom, 22)
-                            .frame(width: min(proxy.size.width - CD.Spacing.screen * 2, 340))
-                            .fixedSize(horizontal: false, vertical: true)
-                            .background(
-                                shape.fill(CD.ColorToken.card.opacity(0.92))
-                                    .allowsHitTesting(false)
-                            )
-                            // soft inner highlight (subtle)
-                            .overlay(
-                                shape
-                                    .fill(
-                                        LinearGradient(colors: [Color.white.opacity(0.06), .clear], startPoint: .top, endPoint: .bottom)
-                                    )
-                                    .blendMode(.plusLighter)
-                                    .allowsHitTesting(false)
-                            )
-                            .clipShape(shape)
-                            .shadow(color: Color.black.opacity(0.28), radius: 24, x: 0, y: 12)
-                            .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 0)
-
-                            closeButton
-                                .padding(12)
                         }
-                        .offset(y: -10)
                     }
-
-                    Spacer(minLength: 0)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .padding(.horizontal, 20)
                 }
-                .frame(width: proxy.size.width, height: proxy.size.height)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .onAppear {
+                startIntroAnimationIfNeeded()
+            }
+            .onChange(of: title) { _, _ in
+                animateIntro = false
+                animateReward = false
+                animateCTA = false
+                startIntroAnimationIfNeeded()
             }
         }
     }
@@ -2083,21 +2674,10 @@ public struct HomeTaskSummaryOverlay: View {
                 }
                 .padding(.horizontal, 16)
                 .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
-                .background(
-                    ZStack {
-                        Theme.Colors.accent.blur(radius: 8).opacity(0.28).mask(Capsule(style: .continuous))
-                        Theme.Colors.accent.blur(radius: 2.5).opacity(0.60).mask(Capsule(style: .continuous))
-                        Capsule(style: .continuous).fill(Theme.Colors.accent)
-                    }
-                )
+                .background(Capsule(style: .continuous).fill(Theme.Colors.accent))
                 .overlay(
                     Capsule(style: .continuous)
-                        .fill(LinearGradient(colors: [Color.white.opacity(0.05), .clear], startPoint: .top, endPoint: .bottom))
-                        .blendMode(.plusLighter)
-                )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .fill(LinearGradient(colors: [.clear, Color.white.opacity(0.05)], startPoint: .center, endPoint: .bottom))
+                        .fill(LinearGradient(colors: [Color.white.opacity(0.12), .clear], startPoint: .top, endPoint: .center))
                         .blendMode(.plusLighter)
                 )
                 .clipShape(Capsule(style: .continuous))
@@ -2184,6 +2764,7 @@ public struct HomeTaskSummaryOverlay: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: 170, height: 170)
+                            .taikaMascotChrome()
                             .offset(y: -100)
                             .zIndex(2)
                             .allowsHitTesting(false)
@@ -2195,7 +2776,6 @@ public struct HomeTaskSummaryOverlay: View {
                             Text(title)
                                 .font(.system(size: 24, weight: .bold))
                                 .foregroundStyle(CD.ColorToken.text)
-                                .multilineTextAlignment(.center)
                                 .lineLimit(2)
                                 .minimumScaleFactor(0.9)
                                 .padding(.top, 2)
@@ -3548,7 +4128,7 @@ public struct AppFilterChip: View {
     }
 }
 
-/// Horizontal filter bar template (values provided by caller)
+/// Horizontal filter chips (AppDS identity).
 public struct AppFiltersBar: View {
     public var items: [AppFilterItem]
     public var scale: AppFilterScale
@@ -3561,7 +4141,7 @@ public struct AppFiltersBar: View {
     }
 
     public var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        TaikaCarouselScroll {
             HStack(spacing: 10) {
                 ForEach(items) { it in
                     AppFilterChip(title: it.title, isActive: it.isActive, scale: scale) {
@@ -3570,8 +4150,164 @@ public struct AppFiltersBar: View {
                 }
             }
         }
-        .scrollIndicators(.hidden)
-        .scrollBounceBehavior(.basedOnSize)
+    }
+}
+
+/// Интерактивный фильтр в одну капсулу (справа от заголовка страницы):
+/// показывает текущий выбор; по тапу — меню вариантов в айдентике AppDS.
+public struct AppInlineFilterPicker: View {
+    public var titles: [String]
+    public var selectedIndex: Int
+    public var onSelect: (Int) -> Void
+    /// Если false — в закрытом чипе только стрелка (название видно в меню / в заголовке секции).
+    public var showsSelectedTitle: Bool
+
+    public init(
+        titles: [String],
+        selectedIndex: Int,
+        showsSelectedTitle: Bool = true,
+        onSelect: @escaping (Int) -> Void
+    ) {
+        self.titles = titles
+        self.selectedIndex = selectedIndex
+        self.showsSelectedTitle = showsSelectedTitle
+        self.onSelect = onSelect
+    }
+
+    private var selectedTitle: String {
+        guard titles.indices.contains(selectedIndex) else { return titles.first ?? "" }
+        return titles[selectedIndex]
+    }
+
+    public var body: some View {
+        Menu {
+            ForEach(Array(titles.enumerated()), id: \.offset) { index, title in
+                Button {
+                    guard index != selectedIndex else { return }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onSelect(index)
+                } label: {
+                    if index == selectedIndex {
+                        Label(title, systemImage: "checkmark")
+                    } else {
+                        Text(title)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                if showsSelectedTitle {
+                    Text(selectedTitle)
+                        .font(.system(size: 13, weight: .semibold))
+                        .kerning(0.1)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            .padding(.horizontal, showsSelectedTitle ? 12 : 10)
+            .frame(height: 32)
+            .frame(minWidth: showsSelectedTitle ? nil : 32)
+            .background(
+                ZStack {
+                    let shape = Capsule(style: .continuous)
+                    shape.fill(CD.ColorToken.card)
+                    shape.fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.06), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .blendMode(.plusLighter)
+                    shape.stroke(Theme.Strokes.strokeStrong, lineWidth: Theme.Strokes.strokeLineWidth)
+                }
+            )
+            .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+        .accessibilityLabel(showsSelectedTitle ? "Фильтр: \(selectedTitle)" : "Фильтр категорий")
+        .accessibilityHint("Выбрать раздел")
+        .accessibilityValue(selectedTitle)
+    }
+}
+
+/// Сегмент-фильтр в одной капсуле (legacy / оверлеи):
+/// общая обводка, активный пункт — акцент-текст + мягкая внутренняя подложка.
+/// Сегменты делят ширину экрана поровну (без горизонтального скролла).
+public struct AppSegmentFilterBar: View {
+    public var titles: [String]
+    public var selectedIndex: Int
+    public var onSelect: (Int) -> Void
+
+    public init(titles: [String], selectedIndex: Int, onSelect: @escaping (Int) -> Void) {
+        self.titles = titles
+        self.selectedIndex = selectedIndex
+        self.onSelect = onSelect
+    }
+
+    private let barHeight: CGFloat = 40
+    private let innerInset: CGFloat = 3
+
+    public var body: some View {
+        HStack(spacing: 2) {
+            ForEach(Array(titles.enumerated()), id: \.offset) { index, title in
+                let isOn = index == selectedIndex
+                Button {
+                    guard !isOn else { return }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onSelect(index)
+                } label: {
+                    Text(title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .kerning(0.1)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .foregroundStyle(
+                            isOn
+                            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                            : AnyShapeStyle(CD.ColorToken.text.opacity(0.88))
+                        )
+                        .frame(maxWidth: .infinity)
+                        .frame(height: barHeight - innerInset * 2)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(isOn ? CD.ColorToken.card.opacity(0.92) : Color.clear)
+                                .overlay(
+                                    Capsule(style: .continuous)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: isOn
+                                                ? [Color.white.opacity(0.07), .clear]
+                                                : [.clear, .clear],
+                                                startPoint: .top,
+                                                endPoint: .bottom
+                                            )
+                                        )
+                                        .blendMode(.plusLighter)
+                                )
+                        )
+                        .contentShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.98))
+                .accessibilityLabel(title + (isOn ? ", выбран" : ""))
+                .accessibilityAddTraits(isOn ? .isSelected : [])
+            }
+        }
+        .padding(innerInset)
+        .frame(maxWidth: .infinity)
+        .background(
+            Capsule(style: .continuous)
+                .fill(CD.ColorToken.card.opacity(0.42))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+        )
+        .padding(.horizontal, CD.Spacing.screen)
+        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: selectedIndex)
     }
 }
 
@@ -3610,7 +4346,7 @@ struct AppDS_Previews: PreviewProvider {
     }
 
     private static var mainTab: some View {
-        ScrollView {
+        TaikaRootVerticalScroll {
             VStack(alignment: .leading, spacing: 24) {
                 DSSection("Headers") {
                     VStack(spacing: 8) {
@@ -3620,7 +4356,7 @@ struct AppDS_Previews: PreviewProvider {
                 }
 
                 DSSection("Status chips") {
-                    ScrollView(.horizontal, showsIndicators: false) {
+                    TaikaCarouselScroll {
                         HStack(spacing: 8) {
                             AppStatusChip(kind: .new, scale: .xs)
                             AppStatusChip(kind: .inProgress, scale: .xs)
@@ -3745,14 +4481,13 @@ struct AppDS_Previews: PreviewProvider {
         }
         .id(UUID())
         .background(CD.ColorToken.background.ignoresSafeArea())
-        .preferredColorScheme(.dark)
         .environmentObject(ThemeManager.shared)
         .previewLayout(.sizeThatFits)
         .previewDisplayName("AppDS — main")
     }
 
     private static var statsTab: some View {
-        ScrollView {
+        TaikaRootVerticalScroll {
             let heat: [CGFloat] = [0.0, 0.25, 0.0, 0.6, 1.0, 0.2, 0.8]
             let bars: [CGFloat] = [1, 2, 0.5, 3.4, 2.2, 4.0, 1.4]
             let spark: [CGFloat] = [1, 1.2, 1.1, 1.6, 1.4, 1.9, 1.7, 2.2, 2.0]
@@ -3851,7 +4586,6 @@ struct AppDS_Previews: PreviewProvider {
         }
         .id(UUID())
         .background(CD.ColorToken.background.ignoresSafeArea())
-        .preferredColorScheme(.dark)
         .environmentObject(ThemeManager.shared)
         .previewLayout(.sizeThatFits)
         .previewDisplayName("AppDS — stats")

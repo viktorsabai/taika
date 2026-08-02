@@ -9,6 +9,76 @@ import AVKit
 private enum TaikaFontPS {
     static let title = "ONMARK Trial" // PostScript name
 }
+
+/// Canonical app wordmark: `tai` + accent `kAAA` (same lockup as `AppChromeHeader` / `AppBackHeader`, not legacy single-string `taikA`).
+public struct TaikaWordmarkLockup: View {
+    public var fontSize: CGFloat
+    /// Opacity for the white `tai` half (accent half uses `accentOpacity`).
+    public var taiOpacity: Double
+    public var accentOpacity: Double
+
+    public init(fontSize: CGFloat = 16, taiOpacity: Double = 1, accentOpacity: Double = 1) {
+        self.fontSize = fontSize
+        self.taiOpacity = taiOpacity
+        self.accentOpacity = accentOpacity
+    }
+
+    public var body: some View {
+        let spacing = max(2, fontSize * 0.15)
+        return HStack(spacing: spacing) {
+            Text("tai")
+                .font(.custom("Onmark Trial", size: fontSize))
+                .foregroundColor(CD.ColorToken.text.opacity(taiOpacity))
+            Text("kAAA")
+                .font(.custom("Onmark Trial", size: fontSize))
+                .foregroundStyle(ThemeManager.shared.currentAccentFill.opacity(accentOpacity))
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .accessibilityLabel("taikAAA")
+    }
+}
+
+/// Lockup в углу step-карточки; на экране урока отключается через `Environment.stepLessonSuppressCardWordmark`.
+fileprivate struct StepCardInlineWordmarkSlot: View {
+    @Environment(\.stepLessonSuppressCardWordmark) private var suppress
+    var body: some View {
+        if suppress {
+            Color.clear.frame(width: 1, height: 1)
+        } else {
+            TaikaWordmarkLockup(fontSize: 16)
+        }
+    }
+}
+
+/// Шапка step: две **равные** по ширине колонки (leading / trailing), чтобы чип и lockup были симметричны относительно центра карты.
+fileprivate struct StepCardBalancedTopChrome<Leading: View, Trailing: View>: View {
+    let leading: Leading
+    let trailing: Trailing
+    let sideSlotWidth: CGFloat
+
+    init(sideSlotWidth: CGFloat = 92, @ViewBuilder leading: () -> Leading, @ViewBuilder trailing: () -> Trailing) {
+        self.sideSlotWidth = sideSlotWidth
+        self.leading = leading()
+        self.trailing = trailing()
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            leading
+                .frame(width: sideSlotWidth, alignment: .leading)
+            Spacer(minLength: 0)
+            trailing
+                .frame(width: sideSlotWidth, alignment: .trailing)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+fileprivate func stepCardTypeChipStyle(forLabel label: String) -> AppMiniChipStyle {
+    let c = label.lowercased()
+    return (c == "лайфхак" || c == "запомнил") ? .accent : .neutral
+}
+
 // MARK: - StepProGateCard (DS atom: step-style PRO gate card; same shell as StepWordCard)
 public struct StepProGateCard: View {
     public let title: String
@@ -53,19 +123,16 @@ public struct StepProGateCard: View {
             sectionChrome: sectionChrome,
             chromeStyle: chromeStyle,
             showTitle: false,
+            cornerRadius: CardDS.Metrics.stepCardContentRadius,
+            contentLayout: .stepSymmetric,
             top: {
-                HStack {
-                    Text("taikA")
-                        .font(.taikaLogo(16))
-                        .foregroundStyle(CD.ColorToken.text)
-
-                    Spacer(minLength: 0)
-
+                StepCardBalancedTopChrome {
+                    TaikaWordmarkLockup(fontSize: 16)
+                } trailing: {
                     Image(systemName: "crown.fill")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(ThemeManager.shared.currentAccentFill)
                 }
-                .padding(.horizontal, CardDS.Metrics.contentX)
                 .padding(.top, 8)
             },
             bottom: {
@@ -81,7 +148,6 @@ public struct StepProGateCard: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, CardDS.Metrics.contentX)
             },
             meta: {
                 VStack(spacing: 0) {
@@ -123,7 +189,6 @@ public struct StepProGateCard: View {
 
                     Spacer(minLength: 20)
                 }
-                .padding(.horizontal, CardDS.Metrics.contentX)
                 .padding(.vertical, 18)
             },
             tags: { EmptyView() },
@@ -142,6 +207,8 @@ public struct StepWordCardVisual: View {
     public let isFavorite: Bool
     public let isLearned: Bool
     public let allowLearn: Bool
+    public let isAudioPlaying: Bool
+    public let showsTypeChip: Bool
     public let onPlay: (() -> Void)?
     public let onFavorite: () -> Void
     public let onLearn: () -> Void
@@ -157,6 +224,8 @@ public struct StepWordCardVisual: View {
         isFavorite: Bool = false,
         isLearned: Bool = false,
         allowLearn: Bool = true,
+        isAudioPlaying: Bool = false,
+        showsTypeChip: Bool = true,
         onPlay: (() -> Void)? = nil,
         onFavorite: @escaping () -> Void = {},
         onLearn: @escaping () -> Void = {}
@@ -180,6 +249,8 @@ public struct StepWordCardVisual: View {
         self.isFavorite = isFavorite
         self.isLearned = isLearned
         self.allowLearn = allowLearn
+        self.isAudioPlaying = isAudioPlaying
+        self.showsTypeChip = showsTypeChip
         self.onPlay = onPlay
         self.onFavorite = onFavorite
         self.onLearn = onLearn
@@ -198,6 +269,8 @@ public struct StepWordCardVisual: View {
             isFavorite: isFavorite,
             isLearned: isLearned,
             allowLearn: allowLearn,
+            isAudioPlaying: isAudioPlaying,
+            showsTypeChip: showsTypeChip,
             onPlay: onPlay,
             onFavorite: onFavorite,
             onLearn: onLearn
@@ -247,8 +320,13 @@ public struct StepLifehackCardVisual: View {
     }
 
     public var body: some View {
+        let trimmedRU = item.titleRU.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTH = item.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines)
+        let bodyStr = trimmedTH.isEmpty ? trimmedRU : trimmedTH
+        let headlineStr: String? = trimmedTH.isEmpty ? nil : (trimmedRU.isEmpty ? nil : trimmedRU)
         StepLifehackCardLegacy(
-            body: item.subtitleTH,
+            headline: headlineStr,
+            body: bodyStr.isEmpty ? "Лайфхак" : bodyStr,
             label: label,
             size: size,
             sectionChrome: sectionChrome,
@@ -262,18 +340,24 @@ public struct StepLifehackCardVisual: View {
 
 // MARK: - StepLifehackCard (DS atom: lifehack card)
 public struct StepLifehackCardLegacy: View {
+    /// Короткий заголовок (как RU-строка карточки слова) — опционально, под канон word/tip.
+    public let headline: String?
     public let bodyText: String      // основной текст лайфхака
     public let label: String         // чип в правом верхнем углу, по умолчанию "лайфхак"
     public let size: CGSize
     public let sectionChrome: CardDS.SectionChrome
     public let chromeStyle: CardDS.ChromeStyle
     public let isFavorite: Bool
+    public let isLearned: Bool
+    public let allowLearn: Bool
+    /// `true` в зачётке: показываем «запомнил» вместо шеврона «далее».
+    public let tipShowsLearnSlot: Bool
     public let onFavorite: () -> Void
+    public let onLearn: () -> Void
     public let onNext: (() -> Void)?
 
-    @State private var showExpandSheet: Bool = false
-
     public init(
+        headline: String? = nil,
         body: String,
         label: String = "лайфхак",
         size: CGSize = CGSize(width: CardDS.Metrics.stepLifehackWidth,
@@ -281,90 +365,132 @@ public struct StepLifehackCardLegacy: View {
         sectionChrome: CardDS.SectionChrome = .seps,
         chromeStyle: CardDS.ChromeStyle = .cards,
         isFavorite: Bool = false,
+        isLearned: Bool = false,
+        allowLearn: Bool = true,
+        tipShowsLearnSlot: Bool = false,
         onFavorite: @escaping () -> Void = {},
+        onLearn: @escaping () -> Void = {},
         onNext: (() -> Void)? = nil
     ) {
+        self.headline = headline
         self.bodyText = body
         self.label = label
         self.size = size
         self.sectionChrome = sectionChrome
         self.chromeStyle = chromeStyle
         self.isFavorite = isFavorite
+        self.isLearned = isLearned
+        self.allowLearn = allowLearn
+        self.tipShowsLearnSlot = tipShowsLearnSlot
         self.onFavorite = onFavorite
+        self.onLearn = onLearn
         self.onNext = onNext
     }
 
+    private var parsedBody: (main: String, tip: String?) {
+        let raw = bodyText.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Режем по 💡 / «Лайфхак:» — эмодзи и рамку не показываем, только суть.
+        let tipMarkers = ["💡", "Лайфхак:", "лайфхак:"]
+        for marker in tipMarkers {
+            guard let range = raw.range(of: marker) else { continue }
+            let main = String(raw[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+            var tip = String(raw[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            // Убрать ведущий «Лайфхак:» если резали только по эмодзи
+            for prefix in ["Лайфхак:", "лайфхак:"] where tip.lowercased().hasPrefix(prefix.lowercased()) {
+                tip = String(tip.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            tip = tip.replacingOccurrences(of: "💡", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return (main.isEmpty ? Self.stripEmojiNoise(raw) : Self.stripEmojiNoise(main),
+                    tip.isEmpty ? nil : tip)
+        }
+        return (Self.stripEmojiNoise(raw), nil)
+    }
+
+    private static func stripEmojiNoise(_ s: String) -> String {
+        s.replacingOccurrences(of: "💡", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     public var body: some View {
-        CardBase(
-            title: "",
-            subtitle: nil,
-            size: size,
-            sectionChrome: sectionChrome,
-            chromeStyle: chromeStyle,
-            showTitle: false,
-            top: {
-                HStack {
-                    Text("taikA")
-                        .font(.taikaLogo(16))
-                        .foregroundStyle(CD.ColorToken.text)
-                    Spacer(minLength: 0)
+        let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+        let tint = ThemeManager.shared.currentAccentTintColor
+        let parts = parsedBody
 
-                    let chipLabel = label.lowercased()
+        ZStack {
+            shape.fill(CD.ColorToken.card)
 
+            // Лёгкий brand wash — без тяжёлой обводки и «рамки в рамке».
+            LinearGradient(
+                colors: [
+                    tint.opacity(0.14),
+                    Color.clear
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .clipShape(shape)
+
+            VStack(spacing: 0) {
+                HStack(alignment: .center, spacing: 10) {
+                    StepCardInlineWordmarkSlot()
+                    Spacer(minLength: 8)
                     AppMiniChip(
-                        title: chipLabel,
-                        style: (chipLabel == "лайфхак" || chipLabel == "запомнил")
-                            ? .accent
-                            : .neutral
+                        title: label.lowercased(),
+                        style: stepCardTypeChipStyle(forLabel: label)
                     ) { }
                 }
-                .padding(.horizontal, CardDS.Metrics.contentX)
-                .padding(.top, 8)
-            },
-            bottom: {
-                StepCardActionBar(
-                    isFavorite: isFavorite,
-                    isLearned: false,
-                    allowLearn: false,
-                    isTip: true,
-                    showsPlayAndFavorite: true,
-                    onPlay: nil,
-                    onFavorite: onFavorite,
-                    onLearn: {},
-                    onNext: onNext,
-                    onExpand: { showExpandSheet = true }
-                )
-            },
-            meta: {
-                // Лайфхак: текст по центру карточки по вертикали; длинный контент скроллится
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        Spacer(minLength: 0)
-                        taikaFMStyledText(bodyText, baseColor: CD.ColorToken.textSecondary.opacity(0.92))
-                            .font(.system(size: 16, weight: .medium))
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+
+                Spacer(minLength: 12)
+
+                VStack(spacing: 12) {
+                    if let headline, !headline.isEmpty {
+                        Text(Self.stripEmojiNoise(headline))
+                            .font(.system(size: Theme.StepCardText.lifehackTitleFontSize, weight: .bold, design: .rounded))
+                            .foregroundStyle(CD.ColorToken.text)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .minimumScaleFactor(0.82)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    taikaFMStyledText(parts.main, baseColor: CD.ColorToken.text.opacity(0.94))
+                        .font(.system(size: Theme.StepCardText.lifehackBodyFontSize, weight: .medium))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(Theme.StepCardText.lifehackLineSpacing)
+                        .lineLimit(Theme.StepCardText.lifehackLines)
+                        .minimumScaleFactor(Theme.StepCardText.lifehackScale)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let tip = parts.tip {
+                        taikaFMStyledText(tip, baseColor: tint)
+                            .font(.system(size: Theme.StepCardText.lifehackTipFontSize, weight: .semibold))
                             .multilineTextAlignment(.center)
                             .lineSpacing(5)
-                            .frame(maxWidth: .infinity)
-                        Spacer(minLength: 0)
+                            .lineLimit(5)
+                            .minimumScaleFactor(0.88)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .frame(minHeight: max(200, size.height - 120))
-                    .padding(.horizontal, CardDS.Metrics.contentX)
-                    .padding(.vertical, 18)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            },
-            tags: {
-                EmptyView()
-            },
-            belowTitle: {
-                EmptyView()
-            }
-        )
-        .sheet(isPresented: $showExpandSheet) {
-            StepLifehackExpandSheet(bodyText: bodyText) {
-                showExpandSheet = false
+                .padding(.horizontal, 22)
+                .frame(maxWidth: .infinity)
+
+                Spacer(minLength: 12)
+
+                StepIconCircleButton(
+                    systemName: isFavorite ? "heart.fill" : "heart",
+                    isActive: isFavorite,
+                    caption: "в избранное",
+                    action: onFavorite
+                )
+                .padding(.bottom, 16)
             }
         }
+        .frame(width: size.width, height: size.height)
+        .shadow(color: Color.black.opacity(0.28), radius: 16, y: 10)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel([headline, parts.main, parts.tip].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ". "))
     }
 }
 
@@ -381,9 +507,7 @@ private struct StepLifehackExpandSheet: View {
     private var cardContent: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("taikA")
-                    .font(.taikaLogo(16))
-                    .foregroundStyle(CD.ColorToken.text)
+                TaikaWordmarkLockup(fontSize: 16)
                 Spacer(minLength: 0)
                 AppMiniChip(title: "лайфхак", style: .accent) { }
             }
@@ -392,11 +516,11 @@ private struct StepLifehackExpandSheet: View {
             .padding(.bottom, 8)
 
             let scrollHeight: CGFloat = UIScreen.main.bounds.height * 0.45
-            ScrollView {
+            TaikaRootVerticalScroll {
                 VStack(spacing: 0) {
                     Spacer(minLength: 24)
                     taikaFMStyledText(bodyText, baseColor: CD.ColorToken.textSecondary.opacity(0.92))
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: Theme.StepCardText.lifehackBodyFontSize, weight: .medium))
                         .multilineTextAlignment(.center)
                         .lineSpacing(5)
                         .padding(.horizontal, CardDS.Metrics.contentX)
@@ -420,22 +544,14 @@ private struct StepLifehackExpandSheet: View {
             .padding(.bottom, 20)
             .padding(.top, 8)
         }
-        .background(
-            RoundedRectangle(cornerRadius: Self.sheetCornerRadius)
-                .fill(.ultraThinMaterial)
-                .overlay(Color.black.opacity(0.35))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Self.sheetCornerRadius)
-                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-        )
+        .taikaBlackGlassBackground(cornerRadius: Self.sheetCornerRadius)
         .clipShape(cardShape)
         .frame(maxWidth: 320)
     }
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.45)
+            Theme.Surfaces.blackGlassScrim
                 .ignoresSafeArea()
                 .onTapGesture { onDismiss() }
 
@@ -475,6 +591,8 @@ public enum CardDS {
 
     public struct Metrics {
         public static let radius: CGFloat = 16
+        /// Квадратные карточки шага: чуть крупнее радиус, чем у 280×360 — визуально ближе к «мягкой» карусели курса.
+        public static let stepCardContentRadius: CGFloat = 20
         public static let contentX: CGFloat = 18
         public static let contentYTop: CGFloat = 24
         public static let contentYBottom: CGFloat = 32
@@ -484,9 +602,8 @@ public enum CardDS {
         public static let titleTopGap: CGFloat = 4
         public static let titleBottomGap: CGFloat = 6
         // Unified card sizing for course and lesson cards (canonical dimensions)
-        // made slightly more compact so they don't feel oversized on main and course screens
-        public static let courseWidth: CGFloat  = 280
-        public static let courseHeight: CGFloat = 360
+        public static let courseWidth: CGFloat  = 300
+        public static let courseHeight: CGFloat = 384
         public static let courseCardWidth: CGFloat  = courseWidth
         public static let courseCardHeight: CGFloat = courseHeight
 
@@ -496,20 +613,26 @@ public enum CardDS {
         public static let lessonCardWidth: CGFloat  = lessonWidth
         public static let lessonCardHeight: CGFloat = lessonHeight
 
-        // step cards sizing (shared by StepDS and previews)
-        // независимые размеры степ‑карточек, чтобы изменения курсов/уроков не влияли на степы
-        // делаем все степ‑карты квадратными, чтобы центр секции в StepView выглядел чище
-        public static let stepCardWidth: CGFloat = 290            // ширина всех степ‑карт
-        public static let stepWordCardHeight: CGFloat = 290       // учебная квадратная (minHeight при stepCardFlexHeight)
+        // step cards: фразы — квадрат; лайфхаки — вертикальный портрет.
+        public static let stepCardWidth: CGFloat = 286
+        public static let stepWordCardHeight: CGFloat = stepCardWidth
         /// EPIC 5: max height for step word card when using adaptive height so long text is not truncated.
         public static let stepCardMaxHeight: CGFloat = 420
-        public static let stepLifehackCardHeight: CGFloat = 360   // лайфхак теперь тоже квадратный
+        public static let stepLifehackCardHeight: CGFloat = 468
+        /// Сторона квадрата в ленте шагов для фраз (`SDStepCarousel`).
+        public static var stepCarouselSquareSide: CGFloat { stepCardWidth }
 
         // алиасы для старых имён, чтобы не ломать существующие вызовы
         public static let stepWordWidth: CGFloat = stepCardWidth
         public static let stepWordHeight: CGFloat = stepWordCardHeight
-        public static let stepLifehackWidth: CGFloat = stepCardWidth
+        /// Шире и выше: презентационный портрет, не «мини-стикер».
+        public static let stepLifehackWidth: CGFloat = 318
         public static let stepLifehackHeight: CGFloat = stepLifehackCardHeight
+
+        /// Компактная рабочая карточка «По фразам» в Спикере (фраза + разбор) — намеренно НЕ квадрат
+        /// лайфхака/тизера: это плотная рабочая единица, а не промо-плашка.
+        public static let speakerPhraseCardWidth: CGFloat = 268
+        public static let speakerPhraseCardHeight: CGFloat = 196
 
         // note cards sizing (independent from step cards)
         // noteCourse/noteText are square; noteStep is a shorter rectangle.
@@ -522,13 +645,26 @@ public enum CardDS {
 
         public static let topBandHeight: CGFloat = 56
         public static let bottomBandHeight: CGFloat = 80
+        /// Узкая шапка для квадратной step-карты — иначе meta + нижний ряд не помещаются в фиксированный квадрат и клипает `clipShape`.
+        public static let stepCardTopBandHeight: CGFloat = 50
+        /// Нижняя зона step-карты: ближе к верхней полосе, чтобы контентный центр был визуально симметричным.
+        public static let stepCardBottomBandHeight: CGFloat = 62
+        /// Main «Разминка»: подписи под иконками — чуть выше нижняя полоса.
+        public static let stepCardBottomBandHeightCaptions: CGFloat = 78
+        /// Добавляется к `contentX` для всей step-карты (`stepSymmetric`): шапка, meta и нижний ряд на одной сетке; чип не липнет к скруглению.
+        public static let stepCardHeaderEdgeInset: CGFloat = 6
         public static let bannerHeight: CGFloat = 340
         public static let bannerHeightCompact: CGFloat = 170 // half-height banner for calendar detail
         public static let weeklyCellWidth: CGFloat = 120
         public static let weeklyCellHeight: CGFloat = 260
+        /// Компактная полоска дней на Main (не board-карточки 260pt).
+        public static let weeklyRowCompactWidth: CGFloat = 52
+        public static let weeklyRowCompactHeight: CGFloat = 48
 
         // Global inter-card spacing token for carousels (used by CourseDS/LessonsDS)
         public static let carouselSpacing: CGFloat = 20
+        /// `SDStepCarousel`: заметный gutter между ячейками — иначе центр с большим z-index «съедает» скругление соседей.
+        public static let stepCarouselSpacing: CGFloat = 34
 
         // Isolated block metrics
         public static let blockSpacing: CGFloat = 12       // space between content blocks
@@ -545,6 +681,39 @@ public enum CardDS {
         public static let tearTabGap: CGFloat = 10
         public static let tearPerforationDash: [CGFloat] = [4, 4]
         public static let consoleContentX: CGFloat = 14
+    }
+
+    /// Только `CourseLessonCard` в `CDLessonCarousel` читает `stepCarouselCellSize` (ячейка карусели курса/урока). Шаговые карточки используют параметр `size` из `SDStepCard` — так не подтягиваются чужие 280×360.
+    public enum StepCarousel {
+        public struct CellSizeKey: EnvironmentKey {
+            public static let defaultValue: CGSize? = nil
+        }
+        /// Экран урока (`StepView`): шапка уже даёт wordmark — не дублировать внутри `StepWordCard` / pro / лайфхак. Main «Разминка» не выставляет ключ → lockup остаётся как в референсе.
+        public struct SuppressInlineWordmarkKey: EnvironmentKey {
+            public static let defaultValue: Bool = false
+        }
+        /// Main «Разминка»: подписи под иконками (слушать / в избранное) — для «бланкового» мозга.
+        public struct ActionCaptionsKey: EnvironmentKey {
+            public static let defaultValue: Bool = false
+        }
+    }
+}
+
+extension EnvironmentValues {
+    /// Ячейка `CDLessonCarousel` для `CourseLessonCard` (шаговые атомы этот ключ не используют).
+    public var stepCarouselCellSize: CGSize? {
+        get { self[CardDS.StepCarousel.CellSizeKey.self] }
+        set { self[CardDS.StepCarousel.CellSizeKey.self] = newValue }
+    }
+
+    public var stepLessonSuppressCardWordmark: Bool {
+        get { self[CardDS.StepCarousel.SuppressInlineWordmarkKey.self] }
+        set { self[CardDS.StepCarousel.SuppressInlineWordmarkKey.self] = newValue }
+    }
+
+    public var taikaStepActionCaptions: Bool {
+        get { self[CardDS.StepCarousel.ActionCaptionsKey.self] }
+        set { self[CardDS.StepCarousel.ActionCaptionsKey.self] = newValue }
     }
 }
 
@@ -584,6 +753,12 @@ public struct CardFooterRail<Left: View, Right: View>: View {
 
 // MARK: - Single template: Course/Lesson card (layout only, atoms come from AppDS)
 
+/// Раскладка контентной колонки: курс — слева; квадрат step — симметрично по центру (одинаковые боковые inset с шапкой и нижним рядом).
+public enum CardBaseContentLayout: Equatable {
+    case editorial
+    case stepSymmetric
+}
+
 /// Usage (compose with AppDS atoms):
 /// CardBase(title: ..., subtitle: ...) { // top, optional via trailing label
 ///   // top: e.g. AppStatusChip + AppProChip (from AppDS)
@@ -602,6 +777,9 @@ public struct CardBase<Top: View, Meta: View, BelowTitle: View, Tags: View, Bott
     let showTitle: Bool
     let isFluidWidth: Bool
     let brandText: String?
+    let cornerRadius: CGFloat
+    let contentLayout: CardBaseContentLayout
+    @Environment(\.taikaStepActionCaptions) private var stepActionCaptions
 
     // provided slots
     let top: Top          // e.g. статус/PRO-ряд (из AppDS)
@@ -619,6 +797,8 @@ public struct CardBase<Top: View, Meta: View, BelowTitle: View, Tags: View, Bott
         showTitle: Bool = true,
         isFluidWidth: Bool = false,
         brandText: String? = nil,
+        cornerRadius: CGFloat = CardDS.Metrics.radius,
+        contentLayout: CardBaseContentLayout = .editorial,
         @ViewBuilder top: () -> Top = { EmptyView() as! Top },
         @ViewBuilder bottom: () -> Bottom = { EmptyView() as! Bottom },
         @ViewBuilder meta: () -> Meta,
@@ -633,6 +813,8 @@ public struct CardBase<Top: View, Meta: View, BelowTitle: View, Tags: View, Bott
         self.showTitle = showTitle
         self.isFluidWidth = isFluidWidth
         self.brandText = brandText
+        self.cornerRadius = cornerRadius
+        self.contentLayout = contentLayout
         self.top = top()
         self.bottom = bottom()
         self.meta = meta()
@@ -641,7 +823,16 @@ public struct CardBase<Top: View, Meta: View, BelowTitle: View, Tags: View, Bott
     }
 
     public var body: some View {
-        let shape = RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let isStepSymmetric = contentLayout == .stepSymmetric
+        let contentHStackAlignment: HorizontalAlignment = isStepSymmetric ? .center : .leading
+        let metaSlotAlignment: Alignment = isStepSymmetric ? .center : .topLeading
+        let titleBlockAlignment: Alignment = isStepSymmetric ? .center : .leading
+        let belowTitleAlignment: Alignment = isStepSymmetric ? .center : .leading
+        let bottomSlotAlignment: Alignment = isStepSymmetric ? .center : .leading
+        let horizontalPadding: CGFloat = isStepSymmetric
+            ? CardDS.Metrics.contentX + CardDS.Metrics.stepCardHeaderEdgeInset
+            : CardDS.Metrics.contentX
         // Core layout
         let base = ZStack {
             CardChrome(style: chromeStyle)
@@ -652,25 +843,22 @@ public struct CardBase<Top: View, Meta: View, BelowTitle: View, Tags: View, Bott
                     HStack(spacing: 12) {
                         top
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity)
                     Spacer(minLength: 0)
                 }
-                .padding(.horizontal, CardDS.Metrics.contentX)
-                .frame(height: CardDS.Metrics.topBandHeight)
+                .padding(.horizontal, horizontalPadding)
+                .frame(height: isStepSymmetric ? CardDS.Metrics.stepCardTopBandHeight : CardDS.Metrics.topBandHeight)
 
-                // CONTENT zone — center-left text/meta; tags pinned bottom-right
+                // CONTENT zone — editorial: leading; step: симметричная колонка по центру
                 ZStack {
-                    // Center-left text/meta block
                     VStack(spacing: 0) {
                         Spacer(minLength: 0)
-                        VStack(alignment: .leading, spacing: CardDS.Metrics.blockSpacing) {
-                            // META block — items that must appear ABOVE the title
+                        VStack(alignment: contentHStackAlignment, spacing: CardDS.Metrics.blockSpacing) {
                             meta
                                 .frame(maxWidth: .infinity,
                                        minHeight: CardDS.Metrics.metaRowMinHeight,
-                                       alignment: .leading)
+                                       alignment: metaSlotAlignment)
 
-                            // TITLE block — central element (optional)
                             if showTitle {
                                 Text(title)
                                     .font(.taikaTitle(24))
@@ -678,53 +866,61 @@ public struct CardBase<Top: View, Meta: View, BelowTitle: View, Tags: View, Bott
                                     .foregroundStyle(CD.ColorToken.text)
                                     .lineLimit(2)
                                     .minimumScaleFactor(0.88)
+                                    .multilineTextAlignment(isStepSymmetric ? .center : .leading)
                                     .fixedSize(horizontal: false, vertical: true)
-                                    .frame(minHeight: CardDS.Metrics.titleMinHeight, alignment: .leading)
+                                    .frame(minHeight: CardDS.Metrics.titleMinHeight, alignment: titleBlockAlignment)
                             }
 
-                            // BELOW-TITLE block — e.g. inline progress for courses
                             belowTitle
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .frame(maxWidth: .infinity, alignment: belowTitleAlignment)
 
-                            // DESCRIPTION block — one calm line
                             if let subtitle, !subtitle.isEmpty {
                                 Text(subtitle)
                                     .font(.system(size: 13, weight: .regular))
                                     .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.95))
                                     .lineLimit(2)
-                                    .frame(minHeight: CardDS.Metrics.descMinHeight, alignment: .leading)
+                                    .multilineTextAlignment(isStepSymmetric ? .center : .leading)
+                                    .frame(minHeight: CardDS.Metrics.descMinHeight, alignment: titleBlockAlignment)
                             }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: isStepSymmetric ? .center : .leading)
                         Spacer(minLength: 0)
                     }
 
-                    // Tags pinned to the bottom-right of CONTENT area, very close to bottom
                     HStack(spacing: 10) { tags }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                         .padding(.bottom, 4)
                 }
-                .padding(.horizontal, CardDS.Metrics.contentX)
-                .padding(.vertical, 8)
+                .padding(.horizontal, horizontalPadding)
+                .padding(.vertical, isStepSymmetric ? 5 : 8)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                // BOTTOM zone (CTA/actions area), vertically centered
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
                     bottom
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: bottomSlotAlignment)
                     Spacer(minLength: 0)
                 }
-                .padding(.horizontal, CardDS.Metrics.contentX)
-                .frame(height: CardDS.Metrics.bottomBandHeight)
+                .padding(.horizontal, horizontalPadding)
+                .frame(height: {
+                    if !isStepSymmetric { return CardDS.Metrics.bottomBandHeight }
+                    return stepActionCaptions
+                        ? CardDS.Metrics.stepCardBottomBandHeightCaptions
+                        : CardDS.Metrics.stepCardBottomBandHeight
+                }())
             }
         }
 
         // Clean base chrome: no legacy overlays — all visual tokens come from Theme (CD.ColorToken.card, etc.)
-        return base
-            .clipShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
-            .compositingGroup()
+        let clipped = base
+            .clipShape(shape)
+            .contentShape(shape)
+
+        let optimized: AnyView = isStepSymmetric
+            ? AnyView(clipped)
+            : AnyView(clipped.compositingGroup())
+
+        return optimized
             .frame(width: isFluidWidth ? nil : size.width, height: size.height, alignment: .topLeading)
             .frame(maxWidth: isFluidWidth ? .infinity : nil)
     }
@@ -751,6 +947,7 @@ extension CardBase where Top == EmptyView, BelowTitle == EmptyView, Tags == Empt
             showTitle: showTitle,
             isFluidWidth: isFluidWidth,
             brandText: brandText,
+            cornerRadius: CardDS.Metrics.radius,
             top: { EmptyView() },
             bottom: { EmptyView() },
             meta: meta,
@@ -760,93 +957,266 @@ extension CardBase where Top == EmptyView, BelowTitle == EmptyView, Tags == Empt
     }
 }
 
+// MARK: - YouTube-like micro burst (лайк / выучил) — короткий разлёт частиц из центра кнопки
+fileprivate struct TaikaStepTapBurst: View {
+    let trigger: Int
+    let systemName: String
+    // `phase` управляет и позицией частиц, и их непрозрачностью.
+    // Нужна начальная невидимость: иначе на старте (до первого тапа) видно “точки” в центре иконки.
+    @State private var phase: CGFloat = 1
+
+    var body: some View {
+        let accent = ThemeManager.shared.currentAccentFill
+        GeometryReader { g in
+            let mid = CGPoint(x: g.size.width / 2, y: g.size.height / 2)
+            ZStack {
+                ForEach(0..<10, id: \.self) { i in
+                    let angle = Double(i) / 10.0 * 2 * Double.pi
+                    Image(systemName: systemName)
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundStyle(accent.opacity(0.92))
+                        .position(
+                            x: mid.x + CGFloat(cos(angle)) * 28 * phase,
+                            y: mid.y + CGFloat(sin(angle)) * 28 * phase
+                        )
+                        .opacity(1.0 - Double(phase))
+                        .scaleEffect(0.45 + 0.6 * phase)
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .onChange(of: trigger) { _, _ in
+            phase = 0
+            DispatchQueue.main.async {
+                withAnimation(.easeOut(duration: 0.5)) {
+                    phase = 1
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Unified step card action bar (CTA for word/tip cards)
 public struct StepCardActionBar: View {
     public let isFavorite: Bool
     public let isLearned: Bool
     public let allowLearn: Bool
     public let isTip: Bool
+    /// В зачётке: у лайфхака те же действия, что у слова (без шеврона «далее») — раскрыть, сердце, запомнил.
+    public let tipShowsLearnSlot: Bool
     public let showsPlayAndFavorite: Bool
+    /// Highlights the speaker control while TTS for this card is playing.
+    public let isAudioPlaying: Bool
     public let onPlay: (() -> Void)?
     public let onFavorite: () -> Void
     public let onLearn: () -> Void
     public let onNext: (() -> Void)?
     public let onExpand: (() -> Void)?
+    /// Мини-карточки (избранное): выучено → только залитая галочка, без чипа «запомнил» (иначе ломается нижний ряд).
+    public let miniLearnedCheckmarkOnly: Bool
+
+    @State private var favBurstTrigger: Int = 0
+    @State private var learnBurstTrigger: Int = 0
+    @State private var playBurstTrigger: Int = 0
+    @Environment(\.taikaStepActionCaptions) private var showCaptions
 
     public init(
         isFavorite: Bool,
         isLearned: Bool,
         allowLearn: Bool = true,
         isTip: Bool = false,
+        tipShowsLearnSlot: Bool = false,
         showsPlayAndFavorite: Bool = true,
+        isAudioPlaying: Bool = false,
         onPlay: (() -> Void)? = nil,
         onFavorite: @escaping () -> Void,
         onLearn: @escaping () -> Void,
         onNext: (() -> Void)? = nil,
-        onExpand: (() -> Void)? = nil
+        onExpand: (() -> Void)? = nil,
+        miniLearnedCheckmarkOnly: Bool = false
     ) {
         self.isFavorite = isFavorite
         self.isLearned = isLearned
         self.allowLearn = allowLearn
         self.isTip = isTip
+        self.tipShowsLearnSlot = tipShowsLearnSlot
         self.showsPlayAndFavorite = showsPlayAndFavorite
+        self.isAudioPlaying = isAudioPlaying
         self.onPlay = onPlay
         self.onFavorite = onFavorite
         self.onLearn = onLearn
         self.onNext = onNext
         self.onExpand = onExpand
+        self.miniLearnedCheckmarkOnly = miniLearnedCheckmarkOnly
     }
 
+    /// Горизонтальный зазор между иконками: на квадратной step-карте ~232pt контента 28pt разносил ряд за край.
+    private static let stepActionHSpacing: CGFloat = 14
+    /// Фиксированная ширина слота «выучил» / chip. Слегка увеличено для баланса с левой парой иконок.
+    private static let stepLearnSlotWidth: CGFloat = 102
+    /// Fixed width for every icon slot so speaker / heart / expand / check align on one grid.
+    private static let stepIconSlotWidth: CGFloat = Theme.IconButton.tapMinCard
+    /// Width of the left icon cluster (2 icon slots + spacing), matched against the learn chip slot.
+    private static let stepLeftClusterWidth: CGFloat = (Theme.IconButton.tapMinCard * 2) + stepActionHSpacing
+
     public var body: some View {
-        HStack(spacing: 28) {
-            if isTip {
-                StepIconCircleButton(
-                    systemName: "rectangle.expand.vertical",
-                    isActive: false,
-                    action: { onExpand?() }
-                )
-                if showsPlayAndFavorite {
-                    AppCardIconButton(
-                        kind: .favorite,
-                        isActive: isFavorite,
-                        onTap: { onFavorite() }
-                    )
-                }
-                StepIconCircleButton(
-                    systemName: "chevron.right",
-                    isActive: false,
-                    action: { onNext?() }
-                )
-            } else {
-                if showsPlayAndFavorite {
+        HStack(spacing: 0) {
+            // left slot
+            Group {
+                if isTip {
                     StepIconCircleButton(
-                        systemName: "speaker.wave.2.fill",
+                        systemName: "rectangle.expand.vertical",
                         isActive: false,
-                        action: { onPlay?() }
+                        caption: showCaptions ? "ещё" : nil,
+                        action: { onExpand?() }
                     )
-                    AppCardIconButton(
-                        kind: .favorite,
-                        isActive: isFavorite,
-                        onTap: { onFavorite() }
-                    )
-                }
-                if isLearned {
-                    AppMiniChip(
-                        title: "запомнил",
-                        style: .accent
-                    ) {
-                        if allowLearn { onLearn() }
+                } else if showsPlayAndFavorite {
+                    ZStack {
+                        StepIconCircleButton(
+                            systemName: "speaker.wave.2.fill",
+                            isActive: false,
+                            playbackActive: isAudioPlaying,
+                            caption: showCaptions ? "слушать" : nil,
+                            action: {
+                                playBurstTrigger &+= 1
+                                onPlay?()
+                            }
+                        )
+                        TaikaStepTapBurst(trigger: playBurstTrigger, systemName: "speaker.wave.2.fill")
+                            .frame(width: 72, height: 56)
                     }
                 } else {
-                    StepIconCircleButton(
-                        systemName: "checkmark",
-                        isActive: false,
-                        action: { if allowLearn { onLearn() } }
-                    )
+                    Color.clear
+                        .frame(width: Theme.IconButton.tapMinCard, height: Theme.IconButton.tapMinCard)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .center)
+
+            // center slot
+            Group {
+                if showsPlayAndFavorite {
+                    ZStack {
+                        StepIconCircleButton(
+                            systemName: isFavorite ? "heart.fill" : "heart",
+                            isActive: isFavorite,
+                            caption: showCaptions ? (isFavorite ? "избранное" : "в избранное") : nil,
+                            action: {
+                                favBurstTrigger &+= 1
+                                onFavorite()
+                            }
+                        )
+                        TaikaStepTapBurst(trigger: favBurstTrigger, systemName: "heart.fill")
+                            .frame(width: 72, height: 56)
+                    }
+                } else {
+                    Color.clear
+                        .frame(width: Theme.IconButton.tapMinCard, height: Theme.IconButton.tapMinCard)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+
+            // right slot
+            Group {
+                if isTip {
+                    if tipShowsLearnSlot {
+                        Group {
+                            if isLearned {
+                                ZStack {
+                                    AppMiniChip(
+                                        title: "запомнил",
+                                        style: .accent
+                                    ) {
+                                        learnBurstTrigger &+= 1
+                                        if allowLearn { onLearn() }
+                                    }
+                                    TaikaStepTapBurst(trigger: learnBurstTrigger, systemName: "checkmark")
+                                        .frame(width: 100, height: 48)
+                                }
+                            } else {
+                                ZStack {
+                                    StepIconCircleButton(
+                                        systemName: "checkmark",
+                                        isActive: false,
+                                        caption: showCaptions ? "запомнил" : nil,
+                                        action: {
+                                            learnBurstTrigger &+= 1
+                                            if allowLearn { onLearn() }
+                                        }
+                                    )
+                                    TaikaStepTapBurst(trigger: learnBurstTrigger, systemName: "checkmark")
+                                        .frame(width: 72, height: 56)
+                                }
+                            }
+                        }
+                    } else {
+                        StepIconCircleButton(
+                            systemName: "chevron.right",
+                            isActive: false,
+                            caption: showCaptions ? "далее" : nil,
+                            action: { onNext?() }
+                        )
+                    }
+                } else {
+                    Group {
+                        if miniLearnedCheckmarkOnly {
+                            if isLearned {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                    .frame(minWidth: Theme.IconButton.tapMinCard, minHeight: Theme.IconButton.tapMinCard)
+                                    .accessibilityLabel("Выучено")
+                            } else {
+                                // Как на полноразмерной step-карточке: приглушённая круглая галочка (в мини-избранном allowLearn обычно false).
+                                ZStack {
+                                    StepIconCircleButton(
+                                        systemName: "checkmark",
+                                        isActive: false,
+                                        caption: showCaptions ? "запомнил" : nil,
+                                        action: {
+                                            guard allowLearn else { return }
+                                            learnBurstTrigger &+= 1
+                                            onLearn()
+                                        }
+                                    )
+                                    if allowLearn {
+                                        TaikaStepTapBurst(trigger: learnBurstTrigger, systemName: "checkmark")
+                                            .frame(width: 72, height: 56)
+                                    }
+                                }
+                            }
+                        } else if isLearned {
+                            ZStack {
+                                AppMiniChip(
+                                    title: "запомнил",
+                                    style: .accent
+                                ) {
+                                    learnBurstTrigger &+= 1
+                                    if allowLearn { onLearn() }
+                                }
+                                TaikaStepTapBurst(trigger: learnBurstTrigger, systemName: "checkmark")
+                                    .frame(width: 100, height: 48)
+                            }
+                        } else {
+                            ZStack {
+                                StepIconCircleButton(
+                                    systemName: "checkmark",
+                                    isActive: false,
+                                    caption: showCaptions ? "запомнил" : nil,
+                                    action: {
+                                        learnBurstTrigger &+= 1
+                                        if allowLearn { onLearn() }
+                                    }
+                                )
+                                TaikaStepTapBurst(trigger: learnBurstTrigger, systemName: "checkmark")
+                                    .frame(width: 72, height: 56)
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
-        .frame(maxWidth: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity)
         .font(.system(size: 16, weight: .semibold))
         .foregroundStyle(CD.ColorToken.textSecondary)
     }
@@ -856,21 +1226,77 @@ public struct StepCardActionBar: View {
 fileprivate struct StepIconCircleButton: View {
     let systemName: String
     let isActive: Bool
+    var playbackActive: Bool = false
+    var caption: String? = nil
     let action: () -> Void
+    @State private var pulseScale: CGFloat = 1
+
+    private var iconForeground: AnyShapeStyle {
+        let accent = ThemeManager.shared.currentAccentFill
+        let dim = CD.ColorToken.textSecondary.opacity(0.92)
+        if systemName == "speaker.wave.2.fill", playbackActive {
+            return AnyShapeStyle(accent)
+        }
+        if isActive {
+            return AnyShapeStyle(accent)
+        }
+        return AnyShapeStyle(dim)
+    }
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: Theme.IconButton.iconSizeCard, weight: .semibold))
-                .foregroundStyle(
-                    isActive
-                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                    : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92))
-                )
-                .frame(minWidth: Theme.IconButton.tapMinCard, minHeight: Theme.IconButton.tapMinCard)
-                .contentShape(Rectangle())
+        Button(action: {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.58)) {
+                pulseScale = 1.12
+            }
+            action()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                    pulseScale = 1.0
+                }
+            }
+        }) {
+            VStack(spacing: 3) {
+                Image(systemName: systemName)
+                    .font(.system(size: Theme.IconButton.iconSizeCard, weight: .semibold))
+                    .foregroundStyle(iconForeground)
+                    .modifier(StepSpeakerWaveSpeakingModifier(systemName: systemName, speaking: playbackActive))
+                    .scaleEffect(pulseScale)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(PD.ColorToken.chip)
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                    )
+
+                if let caption, !caption.isEmpty {
+                    Text(caption)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+            }
+            .frame(minWidth: Theme.IconButton.tapMinCard, minHeight: Theme.IconButton.tapMinCard)
+            .contentShape(Rectangle())
         }
         .buttonStyle(PressDownStyle(scale: 0.88, fade: 0.92, useBouncySpring: true, flashOpacity: 0.16))
+        .accessibilityLabel(caption ?? systemName)
+    }
+}
+
+private struct StepSpeakerWaveSpeakingModifier: ViewModifier {
+    let systemName: String
+    let speaking: Bool
+
+    func body(content: Content) -> some View {
+        if systemName == "speaker.wave.2.fill", speaking {
+            content.symbolEffect(.variableColor.iterative, options: .repeating, isActive: true)
+        } else {
+            content
+        }
     }
 }
 public struct StepCardBase<Content: View, Bottom: View>: View {
@@ -904,6 +1330,8 @@ public struct StepCardBase<Content: View, Bottom: View>: View {
             showTitle: false,
             isFluidWidth: false,
             brandText: nil,
+            cornerRadius: CardDS.Metrics.stepCardContentRadius,
+            contentLayout: .stepSymmetric,
             top: { EmptyView() },
             bottom: { bottom },
             meta: {
@@ -979,9 +1407,7 @@ public struct CardNoteBase<Content: View, Bottom: View>: View {
                 VStack(spacing: 0) {
                     // header (brand + top-right chips)
                     HStack(alignment: .top, spacing: 8) {
-                        Text("taikA")
-                            .font(.taikaLogo(16))
-                            .foregroundStyle(CD.ColorToken.text)
+                        TaikaWordmarkLockup(fontSize: 16)
 
                         Spacer(minLength: 0)
 
@@ -1207,21 +1633,28 @@ public extension CardDS {
             let size = CGSize(width: CardDS.Metrics.noteCardWidth, height: CardDS.Metrics.noteCardHeight)
             let sectionChrome: CardDS.SectionChrome = .seps
             let chromeStyle: CardDS.ChromeStyle = .cards
-            let chipTitle = (categoryChip?.isEmpty == false ? categoryChip! : label).lowercased()
+            let chipTitle = (categoryChip?.isEmpty == false ? categoryChip! : label)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
 
             CardNoteBase(
                 label: nil,
                 topTrailing: AnyView(
                     VStack(alignment: .trailing, spacing: 6) {
                         if showsProBadge {
-                            AppProChip(title: "pro")
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                                .frame(width: 18, height: 18, alignment: .center)
                                 .allowsHitTesting(false)
                         }
-                        AppMiniChip(
-                            title: chipTitle,
-                            style: .neutral
-                        ) { }
-                        .allowsHitTesting(false)
+                        if !chipTitle.isEmpty {
+                            AppMiniChip(
+                                title: chipTitle,
+                                style: .accent
+                            ) { }
+                            .allowsHitTesting(false)
+                        }
                     }
                 ),
                 size: size,
@@ -1488,11 +1921,12 @@ public struct TaikaFMBubble<Content: View>: View {
                 .scaledToFit()
                 .scaleEffect(x: -1, y: 1, anchor: .center)
                 .frame(width: 60, height: 60)
+                .taikaMascotChrome()
 
             if showBubble {
                 content
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: 64)
+                    .frame(minHeight: 52)
                     .padding(.horizontal, 14)
                     .padding(.top, 8)
                     .padding(.bottom, 12)
@@ -1620,11 +2054,20 @@ func taikaFMParseAccentChunks(_ raw: String) -> [TaikaFMInlineChunk] {
 /// baseColor: для лайфхаков передать textSecondary/white, иначе используется text.
 func taikaFMStyledText(_ s: String, baseColor: Color? = nil) -> Text {
     let chunks = taikaFMParseAccentChunks(s)
-    let nonAccentColor = baseColor ?? CD.ColorToken.text
-    guard !chunks.isEmpty else {
+    let mapped = chunks.map { TaikaFMChunk(text: $0.text, isAccent: $0.isAccent) }
+    if mapped.isEmpty {
+        let nonAccentColor = baseColor ?? CD.ColorToken.text
         return Text(s).foregroundStyle(nonAccentColor)
     }
+    return taikaFMStyledText(chunks: mapped, baseColor: baseColor)
+}
 
+/// Styled `Text` from pre-parsed FM chunks (same accent rules as string variant).
+func taikaFMStyledText(chunks: [TaikaFMChunk], baseColor: Color? = nil) -> Text {
+    let nonAccentColor = baseColor ?? CD.ColorToken.text
+    guard !chunks.isEmpty else {
+        return Text("")
+    }
     var result = Text("")
     for chunk in chunks {
         let base = Text(chunk.text)
@@ -1670,10 +2113,19 @@ public struct TaikaFMBubbleTyping: View {
         self.init(messages: [text], reactions: [], repeats: repeats, showBubble: showBubble)
     }
 
+    /// Никогда не оставляем список пустым: иначе фаза «печатает» зацикливается без текста (см. Step без tip в JSON).
+    private var effectiveMessages: [String] {
+        if !messages.isEmpty { return messages }
+        let scope = TaikaFMData.shared.messages(for: .step)
+        if !scope.isEmpty { return scope }
+        return ["Листай карточки — рядом [[подсказки]] по уроку."]
+    }
+
     private var currentText: String {
-        guard !messages.isEmpty else { return "" }
-        let safeIndex = min(currentIndex, messages.count - 1)
-        return messages[safeIndex]
+        let msgs = effectiveMessages
+        guard !msgs.isEmpty else { return "" }
+        let safeIndex = min(currentIndex, msgs.count - 1)
+        return msgs[safeIndex]
     }
 
     private var currentReactions: [String] {
@@ -1723,14 +2175,7 @@ public struct TaikaFMBubbleTyping: View {
             didCompleteCycle = false
         }
         .onReceive(timer) { _ in
-            // special case: no messages (e.g. step lifehack) — keep typing dots forever
-            if messages.isEmpty {
-                phase = .typing
-                dotsStep = (dotsStep + 1) % 4
-                return
-            }
-            // если цикл уже один раз прошёл и repeats == false — просто держим последнее сообщение
-
+            let msgs = effectiveMessages
             let now = Date()
             let typingDuration: TimeInterval = 1.8   // сколько таика "печатает"
             let showDuration: TimeInterval = 6.0     // сколько держим показанным текст
@@ -1747,7 +2192,7 @@ public struct TaikaFMBubbleTyping: View {
             case .showing:
                 // если ещё есть следующие сообщения — переходим к следующему
                 if now.timeIntervalSince(phaseStart) >= showDuration {
-                    let lastIndex = max(0, messages.count - 1)
+                    let lastIndex = max(0, msgs.count - 1)
                     if currentIndex < lastIndex {
                         currentIndex += 1
                         phase = .typing
@@ -1770,9 +2215,138 @@ public struct TaikaFMBubbleTyping: View {
     }
 }
 
-// MARK: - Inline progress view for CourseLessonCard (matches WeeklyResumeCell style)
-fileprivate struct CourseInlineProgressView: View {
+// MARK: - Taika FM unified section (все экраны)
+
+public enum TaikaFMDisplayMode {
+    /// Одна строка на день / вкладку — без таймера, не дёргает scroll.
+    case dailyRotate
+    /// Анимация «печатает» + ротация по списку.
+    case typing
+}
+
+/// Строка бабла без заголовка секции (Step, Speaker, вложенные блоки).
+public struct TaikaFMRow: View {
+    public var scope: TaikaFMScope
+    public var overrideMessages: [String]?
+    public var rotationExtra: String
+    public var mode: TaikaFMDisplayMode
+    public var showBubble: Bool
+    public var repeats: Bool
+
+    public init(
+        scope: TaikaFMScope,
+        overrideMessages: [String]? = nil,
+        rotationExtra: String = "",
+        mode: TaikaFMDisplayMode = .dailyRotate,
+        showBubble: Bool = false,
+        repeats: Bool = true
+    ) {
+        self.scope = scope
+        self.overrideMessages = overrideMessages
+        self.rotationExtra = rotationExtra
+        self.mode = mode
+        self.showBubble = showBubble
+        self.repeats = repeats
+    }
+
+    private var effectiveMessages: [String] {
+        if let overrideMessages, !overrideMessages.isEmpty { return overrideMessages }
+        return TaikaFMData.shared.rotatedMessages(for: scope, extra: rotationExtra)
+    }
+
+    public var body: some View {
+        Group {
+            switch mode {
+            case .dailyRotate:
+                TaikaFMBubble(label: "taika fm", reactions: [], onReactionTap: nil, showBubble: showBubble) {
+                    taikaFMStyledText(
+                        effectiveMessages.first ?? "",
+                        baseColor: CD.ColorToken.textSecondary.opacity(0.95)
+                    )
+                    .font(.system(size: 13, weight: .regular))
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                }
+            case .typing:
+                TaikaFMBubbleTyping(
+                    messages: effectiveMessages,
+                    reactions: TaikaFMData.shared.reactionGroups(for: scope),
+                    repeats: repeats,
+                    showBubble: showBubble
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Секция «ТАЙКА FM» — заголовок + бабл; единый вид на Main, Course, Favorites и т.д.
+public struct TaikaFMSection: View {
+    public var title: String
+    public var scope: TaikaFMScope
+    public var overrideMessages: [String]?
+    public var rotationExtra: String
+    public var mode: TaikaFMDisplayMode
+    public var showBubble: Bool
+    public var showTitle: Bool
+    public var repeats: Bool
+    public var horizontalPadding: CGFloat
+
+    public init(
+        title: String = "ТАЙКА FM",
+        scope: TaikaFMScope,
+        overrideMessages: [String]? = nil,
+        rotationExtra: String = "",
+        mode: TaikaFMDisplayMode = .dailyRotate,
+        showBubble: Bool = false,
+        showTitle: Bool = true,
+        repeats: Bool = true,
+        horizontalPadding: CGFloat = CD.Spacing.screen
+    ) {
+        self.title = title
+        self.scope = scope
+        self.overrideMessages = overrideMessages
+        self.rotationExtra = rotationExtra
+        self.mode = mode
+        self.showBubble = showBubble
+        self.showTitle = showTitle
+        self.repeats = repeats
+        self.horizontalPadding = horizontalPadding
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: showTitle ? Theme.Layout.sectionTitleToContent : 0) {
+            if showTitle {
+                Text(title.uppercased())
+                    .taikaSectionTitleStyle()
+                    .padding(.horizontal, horizontalPadding)
+            }
+
+            TaikaFMRow(
+                scope: scope,
+                overrideMessages: overrideMessages,
+                rotationExtra: rotationExtra,
+                mode: mode,
+                showBubble: showBubble,
+                repeats: repeats
+            )
+            .padding(.horizontal, horizontalPadding)
+        }
+        .padding(.top, showTitle ? Theme.Layout.sectionTop : 0)
+    }
+}
+
+// MARK: - Inline progress view for CourseLessonCard + Step completion overlay (единая «полоска зачёта»)
+struct CourseInlineProgressView: View {
     let fraction: Double
+    let secondaryText: String?
+
+    @State private var animatedFraction: Double = 0
+
+    init(fraction: Double, secondaryText: String? = nil) {
+        self.fraction = fraction
+        self.secondaryText = secondaryText
+    }
 
     var body: some View {
         let clamped = fraction.clamped01
@@ -1787,18 +2361,167 @@ fileprivate struct CourseInlineProgressView: View {
                         RoundedRectangle(cornerRadius: barH / 2, style: .continuous)
                             .fill(ThemeManager.shared.currentAccentFill)
                             .frame(
-                                width: max(0, w * CGFloat(clamped)),
+                                width: max(0, w * CGFloat(animatedFraction)),
                                 height: barH
-                            )
-                            .animation(.easeInOut(duration: 0.28), value: clamped),
+                            ),
                         alignment: .leading
                     )
             }
             .frame(height: 12)
 
-            Text("\(Int(clamped * 100))% пройдено")
+            Text("\(Int((animatedFraction * 100).rounded()))% пройдено")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
+                .contentTransition(.numericText())
+                .animation(.easeOut(duration: 0.45), value: animatedFraction)
+
+            if let secondaryText, !secondaryText.isEmpty {
+                Text(secondaryText)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.72))
+                    .lineLimit(1)
+            }
+        }
+        .onAppear {
+            animatedFraction = 0
+            withAnimation(.spring(response: 0.72, dampingFraction: 0.84).delay(0.08)) {
+                animatedFraction = clamped
+            }
+        }
+        .onChange(of: fraction) { _, new in
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.86)) {
+                animatedFraction = new.clamped01
+            }
+        }
+    }
+}
+
+// MARK: - Pro wash (как Main «подборка дня»)
+/// Split into tiny views + method-ref TimelineView so the type-checker stays fast.
+private struct CourseProCardWash: View {
+    var cornerRadius: CGFloat
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { context in
+            washLayers(at: context.date)
+        }
+    }
+
+    private func washLayers(at date: Date) -> CourseProCardWashLayers {
+        CourseProCardWashLayers(
+            cornerRadius: cornerRadius,
+            phase: date.timeIntervalSinceReferenceDate * 0.22,
+            tint: ThemeManager.shared.currentAccentTintColor
+        )
+    }
+}
+
+private struct CourseProCardWashLayers: View {
+    var cornerRadius: CGFloat
+    var phase: Double
+    var tint: Color
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        ZStack {
+            shape.fill(washGradient)
+            waveCanvas.mask(waveMask)
+        }
+        .clipShape(shape)
+    }
+
+    private var washGradient: LinearGradient {
+        LinearGradient(
+            colors: [tint.opacity(0.16), Color.clear, tint.opacity(0.10)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var waveMask: LinearGradient {
+        LinearGradient(
+            colors: [.clear, .white.opacity(0.55), .white],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var waveCanvas: some View {
+        Canvas { context, size in
+            CourseProCardWashDrawer.drawWaves(
+                context: context,
+                size: size,
+                phase: phase,
+                tint: tint
+            )
+        }
+    }
+}
+
+private enum CourseProCardWashDrawer {
+    static func drawWaves(
+        context: GraphicsContext,
+        size: CGSize,
+        phase: Double,
+        tint: Color
+    ) {
+        for i in 0..<6 {
+            let t = Double(i) / 5.0
+            var path = Path()
+            let y0 = size.height * (0.35 + t * 0.45)
+            let amp = 8.0 + t * 10.0
+            var x: CGFloat = 0
+            while x <= size.width {
+                let xn = Double(x / max(size.width, 1))
+                let y = y0 + sin((xn * 2.2 + t + phase) * .pi * 2) * amp
+                let pt = CGPoint(x: x, y: y)
+                if x == 0 {
+                    path.move(to: pt)
+                } else {
+                    path.addLine(to: pt)
+                }
+                x += 4
+            }
+            let opacity = 0.10 + (1 - t) * 0.12
+            context.stroke(path, with: .color(tint.opacity(opacity)), lineWidth: 0.9)
+        }
+    }
+}
+
+/// Вовлекающая корона Taika+ — лёгкий pulse + soft glow, без текста «Taika+».
+private struct CourseProAnimatedCrown: View {
+    var onTap: (() -> Void)? = nil
+    var size: CGFloat = 28
+
+    @State private var pulse = false
+
+    var body: some View {
+        let accent = ThemeManager.shared.currentAccentFill
+        Button {
+            onTap?()
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(accent.opacity(pulse ? 0.24 : 0.10))
+                    .frame(width: size + 10, height: size + 10)
+                    .scaleEffect(pulse ? 1.1 : 0.92)
+                Image(systemName: "crown.fill")
+                    .font(.system(size: size * 0.55, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .scaleEffect(pulse ? 1.06 : 0.96)
+            }
+            .frame(width: size + 10, height: size + 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(onTap == nil)
+        .allowsHitTesting(onTap != nil)
+        .accessibilityLabel("Taika+")
+        .accessibilityHint(onTap == nil ? "" : "Открыть Taika+")
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.35).repeatForever(autoreverses: true)) {
+                pulse = true
+            }
         }
     }
 }
@@ -1813,6 +2536,7 @@ public struct CourseLessonCard: View {
     public let statusKind: AppStatusKind?
     public let courseCategory: String?
     public let isPro: Bool
+    public let showProCrown: Bool
     public let tags: [String]
     public let brandText: String?
 
@@ -1833,6 +2557,35 @@ public struct CourseLessonCard: View {
     public let isConsoleEnabled: Bool
     // Drives console availability based on lesson completion
     public let completionFraction: Double?
+
+    /// Optional row of stars under the top-right status chip (used for course cards).
+    /// When provided, we render up to `maxStars` filled stars using the given 0...1 fraction.
+    public let statusStarsFraction: Double?
+
+    /// Optional averaged pronunciation score for this course (0...100).
+    /// Rendered on the back face plan (instead of stars).
+    public let pronunciationPercent: Int?
+
+    // MARK: - Optional flip (course grade sheet vs lesson reminders)
+    public enum BackFaceKind: Equatable {
+        /// Default: reinforcement / pronunciation / dialogue summary (course cards).
+        case courseGradeSheet
+        /// Lesson card: short actionable reminders (no duplicate course metrics).
+        case lessonReminders(lines: [String])
+    }
+
+    // MARK: - Optional flip (course -> "what to do next" back face)
+    public let flipEnabled: Bool
+    public let backFaceKind: BackFaceKind
+    /// Stable course id key for cross-feature aggregates (reinforcement, speaker averages, etc.).
+    /// When nil, back-face grade sheet will fall back to placeholders.
+    public let courseKey: String?
+    /// текущий статус подписки юзера (для PRO-gating строк на back-face)
+    public let isProUser: Bool
+    /// Called when user taps a checklist item on the back face.
+    /// Available only when `flipEnabled == true`.
+    /// Parameter is `gameType` (raw value from `GameModeType`).
+    public let onBackSelectGameMode: ((String) -> Void)?
 
     // Controls whether we show inline progress on the card face
     public let showsInlineProgress: Bool
@@ -1865,6 +2618,7 @@ public struct CourseLessonCard: View {
         statusKind: AppStatusKind? = nil,
         courseCategory: String? = nil,
         isPro: Bool = false,
+        showProCrown: Bool = false,
         tags: [String] = [],
         brandText: String? = nil,
         size: CGSize = CGSize(width: CardDS.Metrics.courseWidth, height: CardDS.Metrics.courseHeight),
@@ -1878,6 +2632,13 @@ public struct CourseLessonCard: View {
         isFavoriteActive: Bool = false,
         isConsoleEnabled: Bool = false,
         completionFraction: Double? = nil,
+        statusStarsFraction: Double? = nil,
+        pronunciationPercent: Int? = nil,
+        flipEnabled: Bool = false,
+        backFaceKind: BackFaceKind = .courseGradeSheet,
+        courseKey: String? = nil,
+        isProUser: Bool = false,
+        onBackSelectGameMode: ((String) -> Void)? = nil,
         favoriteCount: Int? = nil,
         onFavoriteTap: (() -> Void)? = nil,
         onConsoleTap: (() -> Void)? = nil,
@@ -1895,6 +2656,7 @@ public struct CourseLessonCard: View {
         self.statusKind = statusKind
         self.courseCategory = courseCategory
         self.isPro = isPro
+        self.showProCrown = showProCrown
         self.tags = tags
         self.brandText = brandText
         self.size = size
@@ -1908,6 +2670,13 @@ public struct CourseLessonCard: View {
         self.isFavoriteActive = isFavoriteActive
         self.isConsoleEnabled = isConsoleEnabled
         self.completionFraction = completionFraction
+        self.statusStarsFraction = statusStarsFraction
+        self.pronunciationPercent = pronunciationPercent
+        self.flipEnabled = flipEnabled
+        self.backFaceKind = backFaceKind
+        self.courseKey = courseKey
+        self.isProUser = isProUser
+        self.onBackSelectGameMode = onBackSelectGameMode
         self.favoriteCount = favoriteCount
         self.onFavoriteTap = onFavoriteTap
         self.onConsoleTap = onConsoleTap
@@ -1919,24 +2688,97 @@ public struct CourseLessonCard: View {
         self.visualRotateY = visualRotateY
     }
 
-    public var body: some View {
-        let consoleIsEnabled = isConsoleEnabled || ((completionFraction ?? 0) >= 0.999)
-        let progressFraction: Double? = showsInlineProgress ? (completionFraction ?? 0).clamped01 : nil
+    @State private var isFlipped: Bool = false
+    @State private var lockedActionHint: String? = nil
+    @State private var lockedHintHideTask: DispatchWorkItem? = nil
+    @Environment(\.stepCarouselCellSize) private var stepCarouselCellSize
 
-        let baseCard = CardBase(
-            title: title.lowercased(),
-            subtitle: subtitle,
-            size: size,
-            sectionChrome: sectionChrome,
-            chromeStyle: chromeStyle,
-            showTitle: true,
-            isFluidWidth: false,
-            brandText: brandText,
-            top: {
-                HStack(alignment: .top, spacing: 8) {
-                    Text("taikA")
-                        .font(.taikaLogo(16))
-                        .foregroundStyle(CD.ColorToken.text)
+    private func showLockedActionHint(_ text: String) {
+        lockedHintHideTask?.cancel()
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+            lockedActionHint = text
+        }
+        let work = DispatchWorkItem {
+            withAnimation(.easeOut(duration: 0.22)) {
+                lockedActionHint = nil
+            }
+        }
+        lockedHintHideTask = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2, execute: work)
+    }
+
+    private var showsProWash: Bool { isPro || showProCrown }
+
+    @ViewBuilder
+    private var courseProWashOverlay: some View {
+        if showsProWash {
+            CourseProCardWash(cornerRadius: CardDS.Metrics.radius)
+                .clipShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
+                .allowsHitTesting(false)
+        }
+    }
+
+    private var courseProShadowColor: Color {
+        showsProWash ? ThemeManager.shared.currentAccentTintColor.opacity(0.18) : .clear
+    }
+
+    private var courseProShadowRadius: CGFloat { showsProWash ? 12 : 0 }
+    private var courseProShadowY: CGFloat { showsProWash ? 5 : 0 }
+
+    public var body: some View {
+        let resolvedSize: CGSize = stepCarouselCellSize ?? size
+
+        let consoleIsEnabled = isConsoleEnabled || ((completionFraction ?? 0) >= 0.999)
+        // Pro-карточка: либо чип Taika+ (не открыт), либо статус (уже открыт) — никогда вместе.
+        let courseOpened =
+            (completionFraction ?? 0) > 0.01
+            || statusKind == .inProgress
+            || statusKind == .completed
+        let showProTeaserChip = isPro && !showProCrown && !courseOpened
+        let showStatusOnFace = !showProCrown && !showProTeaserChip && statusKind != nil
+        let progressFraction: Double? = {
+            guard showsInlineProgress else { return nil }
+            if showProCrown || showProTeaserChip { return nil }
+            return (completionFraction ?? 0).clamped01
+        }()
+        @ViewBuilder
+        func topContent(isBack: Bool) -> some View {
+            // Blank-brain: locked = корона; teaser = AppProChip; opened = статус.
+            if isBack {
+                HStack(alignment: .center, spacing: 8) {
+                    TaikaWordmarkLockup(fontSize: 16)
+
+                    Spacer(minLength: 0)
+
+                    if showProCrown {
+                        CourseProAnimatedCrown(onTap: { onPrimaryTap?() })
+                    } else if showProTeaserChip {
+                        CourseProAnimatedCrown(onTap: nil)
+                    } else if showStatusOnFace, let statusKind {
+                        Button {
+                            if flipEnabled {
+                                withAnimation(.spring(response: 0.42, dampingFraction: 0.85)) {
+                                    isFlipped.toggle()
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                                    .opacity(0.85)
+                                AppStatusChip(kind: statusKind, title: title.lowercased())
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Свернуть зачёт курса")
+                    }
+                }
+                .padding(.top, 18)
+                .padding(.bottom, 0)
+            } else {
+                HStack(alignment: .center, spacing: 8) {
+                    TaikaWordmarkLockup(fontSize: 16)
 
                     Spacer(minLength: 0)
 
@@ -1944,38 +2786,93 @@ public struct CourseLessonCard: View {
                         if let onTapInfo {
                             Button(action: onTapInfo) {
                                 Image(systemName: "info.circle")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.9)))
+                                    .frame(width: 20, height: 20)
                             }
                             .buttonStyle(.plain)
                         }
-                        VStack(alignment: .trailing, spacing: 4) {
-                            if let statusKind {
-                                AppStatusChip(kind: statusKind)
+
+                        if showProCrown {
+                            CourseProAnimatedCrown(onTap: { onPrimaryTap?() })
+                        } else if showProTeaserChip {
+                            CourseProAnimatedCrown(onTap: nil)
+                        } else if showStatusOnFace, let statusKind {
+                            Button {
+                                if flipEnabled {
+                                    withAnimation(.spring(response: 0.42, dampingFraction: 0.85)) {
+                                        isFlipped.toggle()
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 5) {
+                                    AppStatusChip(kind: statusKind)
+                                    Image(systemName: isFlipped ? "chevron.up" : "chevron.right")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                                        .opacity(0.85)
+                                }
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Открыть или свернуть план закрепления")
                         }
                     }
                 }
                 .padding(.top, 18)
                 .padding(.bottom, 0)
-            },
-            bottom: {
-                // Порядок: Play (главная CTA, всегда цветная) → счётчик лайков → консоль → Спикер
-                HStack(spacing: 24) {
+            }
+        }
+
+        @ViewBuilder
+        func bottomContent() -> some View {
+            // Locked hint replaces the whole console row in-place (not a floating toast).
+            if let lockedActionHint {
+                Button {
+                    lockedHintHideTask?.cancel()
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                        self.lockedActionHint = nil
+                    }
+                } label: {
+                    Text(lockedActionHint)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.text)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.88)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(PD.ColorToken.chip.opacity(0.96))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 18)
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                .accessibilityLabel(lockedActionHint)
+                .accessibilityHint("Закрыть")
+            } else {
+                // Порядок: Play → лайки → консоль → Спикер
+                HStack(spacing: 20) {
                     AppCardIconButton(
                         kind: .play,
-                        forceAccent: true,
+                        forceAccent: !showProCrown,
                         onTap: { onPrimaryTap?() }
                     )
+                    .opacity(showProCrown ? 0.72 : 1)
+                    .accessibilityLabel(showProCrown ? "Открыть с Taika+" : "Открыть курс")
                     if showFavorite {
                         if let count = favoriteCount {
-                            // Урок: счётчик лайков (карточки в избранном внутри урока)
                             AppFavCounterMinimal(
                                 count: count,
                                 onTap: { onFavoriteTap?() }
                             )
                         } else {
-                            // Курс: лайк как был — просто сердечко-переключатель (добавить курс в избранное)
                             AppCardIconButton(
                                 kind: .favorite,
                                 isActive: isFavoriteActive,
@@ -1987,61 +2884,258 @@ public struct CourseLessonCard: View {
                         AppCardIconButton(
                             kind: .console,
                             isEnabled: consoleIsEnabled,
+                            onLockedTap: {
+                                showLockedActionHint("Игры откроются после первого урока")
+                            },
                             onTap: { onConsoleTap?() }
                         )
                     }
                     if let onSpeaker = onSpeakerTap {
-                        // По аналогии с консолью: активен когда есть хотя бы один пройденный урок (выученные карточки)
-                        let speakerActive = consoleIsEnabled
                         AppCardIconButton(
                             kind: .speaker,
-                            isEnabled: speakerActive,
-                            forceAccent: speakerActive,
+                            isEnabled: consoleIsEnabled,
+                            forceAccent: consoleIsEnabled,
+                            onLockedTap: {
+                                showLockedActionHint("Спикер курса откроется после первого урока")
+                            },
                             onTap: onSpeaker
                         )
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.bottom, 18)
-            },
-            meta: {
-                HStack(spacing: 8) {
-                    if let courseCategory, !courseCategory.isEmpty {
-                        AppMiniChip(
-                            title: courseCategory.lowercased(),
-                            style: .neutral
-                        ) { }
-                    }
-                    if isPro {
-                        AppProChip(title: "pro")
-                    }
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+            }
+        }
+
+        func metaContent(isBack: Bool) -> some View {
+            HStack(spacing: 8) {
+                if !isBack, let courseCategory, !courseCategory.isEmpty {
+                    AppMiniChip(
+                        title: courseCategory.lowercased(),
+                        style: .neutral
+                    ) { }
                 }
-                .padding(.bottom, 2)
-            },
-            tags: {
-                HStack(spacing: 10) {
+            }
+            .padding(.bottom, 2)
+        }
+
+        func tagsContent(isBack: Bool) -> some View {
+            HStack(spacing: 10) {
+                if !isBack {
                     ForEach(tags, id: \.self) { t in
                         Text(t)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(Color.white.opacity(0.75))
                     }
                 }
-            },
+            }
+        }
+
+        func planRow(icon: String, title: String, subtitle: String?, onTap: @escaping () -> Void) -> some View {
+            Button { onTap() } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        .frame(width: 22, alignment: .center)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.92))
+                            .lineLimit(1)
+                        if let subtitle {
+                            Text(subtitle)
+                                .font(.system(size: 11, weight: .regular))
+                                .foregroundStyle(Color.white.opacity(0.55))
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.65))
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(title)
+        }
+
+        func gradeRow(title: String, value: String?) -> some View {
+            HStack(spacing: 10) {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.92))
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                if let value, !value.isEmpty {
+                    Text(value)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(
+                            value == "ещё нет"
+                            ? AnyShapeStyle(Color.white.opacity(0.62))
+                            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                        )
+                        .lineLimit(1)
+                }
+            }
+            .padding(.vertical, 7)
+            .padding(.horizontal, 4)
+        }
+
+        @ViewBuilder
+        func backPlanBelowTitle() -> some View {
+            switch backFaceKind {
+            case .lessonReminders(let lines):
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("напоминание")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.96))
+
+                    Text("Закрепляй урок через консоль внизу экрана курса — микрофон и мини‑игры.")
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(Color.white.opacity(0.62))
+                        .lineSpacing(1)
+                        .lineLimit(3)
+
+                    ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                        HStack(alignment: .top, spacing: 8) {
+                            Circle()
+                                .fill(ThemeManager.shared.currentAccentFill.opacity(0.55))
+                                .frame(width: 5, height: 5)
+                                .padding(.top, 5)
+                            Text(line)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.white.opacity(0.88))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+
+            case .courseGradeSheet:
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Зачёт по курсу")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.96))
+
+                    Text("Повторяй через игры и спикер — так навык останется с тобой.")
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(Color.white.opacity(0.62))
+                        .lineSpacing(1)
+                        .lineLimit(3)
+
+                    gradeRow(
+                        title: "Закрепление",
+                        value: courseKey
+                            .flatMap { ReinforcementStore.shared.overallScore(courseId: $0) }
+                            .map { "\($0)%" } ?? "ещё нет"
+                    )
+
+                    gradeRow(
+                        title: "Произношение",
+                        value: pronunciationPercent.map { "\($0)%" } ?? "ещё нет"
+                    )
+
+                    gradeRow(
+                        title: TaikaReleaseFlags.showGrandDialogue ? "Диалог курса" : "Игры PRO",
+                        value: isProUser ? "доступно" : "нужен Taika+"
+                    )
+                }
+            }
+        }
+
+        let frontCard = CardBase(
+            title: title.lowercased(),
+            subtitle: subtitle,
+            size: resolvedSize,
+            sectionChrome: sectionChrome,
+            chromeStyle: chromeStyle,
+            showTitle: true,
+            isFluidWidth: false,
+            brandText: brandText,
+            top: { topContent(isBack: false) },
+            bottom: { bottomContent() },
+            meta: { metaContent(isBack: false) },
+            tags: { tagsContent(isBack: false) },
             belowTitle: {
-                if let f = progressFraction {
-                    CourseInlineProgressView(fraction: f)
+                // Locked / teaser Pro — продающая подпись как Main-подборка, без «0% пройдено».
+                if showProCrown {
+                    Text("откроется с Taika+")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 2)
+                } else if showProTeaserChip {
+                    Text(isProUser ? "ещё не начат" : "расширь практику с Taika+")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 2)
+                } else if let f = progressFraction {
+                    let showPlanHint = flipEnabled && !isFlipped && (f >= 0.999)
+                    CourseInlineProgressView(
+                        fraction: f,
+                        secondaryText: showPlanHint ? "закрепление доступно" : nil
+                    )
                 }
             }
         )
 
-        return baseCard
-            .fixedSize(horizontal: false, vertical: false)
-            .compositingGroup()
-            .scaleEffect(visualScale)
-            .rotation3DEffect(.degrees(visualRotateY), axis: (x: 0, y: 1, z: 0), perspective: 0.8)
-            .opacity(visualOpacity)
-            .frame(width: CardDS.Metrics.courseWidth, height: CardDS.Metrics.courseHeight)
-            .padding(.horizontal, 0)
+        let backCard = CardBase(
+            title: title.lowercased(),
+            subtitle: nil,
+            size: resolvedSize,
+            sectionChrome: sectionChrome,
+            chromeStyle: chromeStyle,
+            showTitle: false,
+            isFluidWidth: false,
+            brandText: brandText,
+            top: { topContent(isBack: true) },
+            bottom: { bottomContent() },
+            meta: { metaContent(isBack: true) },
+            tags: { tagsContent(isBack: true) },
+            belowTitle: { backPlanBelowTitle() }
+        )
+
+        return Group {
+            if flipEnabled {
+                Group {
+                    if isFlipped {
+                        // Counter-rotate the back face so text doesn't mirror.
+                        // Parent rotation (Y: 180) flips the entire view; back face needs +180 to face front.
+                        backCard
+                            .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
+                    } else {
+                        frontCard
+                    }
+                }
+                // Only one face is measured at a time (prevents layout shifts).
+                .transition(.opacity)
+                .compositingGroup()
+                .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0), perspective: 0.9)
+                .animation(.spring(response: 0.55, dampingFraction: 0.82), value: isFlipped)
+            } else {
+                frontCard
+            }
+        }
+        .animation(.spring(response: 0.34, dampingFraction: 0.86), value: lockedActionHint)
+        .frame(width: resolvedSize.width, height: resolvedSize.height)
+        .compositingGroup()
+        // Pro: только мягкий wash внутри clip — без accent-stroke (обрезал карточку справа).
+        .overlay { courseProWashOverlay }
+        .clipShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
+        .shadow(color: courseProShadowColor, radius: courseProShadowRadius, y: courseProShadowY)
+        .scaleEffect(visualScale)
+        .rotation3DEffect(.degrees(flipEnabled ? 0 : visualRotateY), axis: (x: 0, y: 1, z: 0), perspective: 0.8)
+        .opacity(visualOpacity)
+        .padding(.horizontal, 0)
+        // Prevent state leak between reused carousel cells.
+        .onChange(of: flipEnabled) { _ in isFlipped = false }
+        .onChange(of: title) { _ in isFlipped = false }
     }
 }
 
@@ -2113,6 +3207,9 @@ public struct WeeklyResumeItem: Identifiable, Hashable {
 
 public enum WeeklyResumeLayout { case board, row, carousel }
 
+/// `.full` — большие day-board ячейки; `.compact` — pill-ряд для Main.
+public enum WeeklyResumeCellStyle { case full, compact }
+
 // lightweight day summary adapter so CardDS can render the same panel as MainDS without importing it
 public struct CardDS_DaySummary {
     public let learned: Int
@@ -2182,6 +3279,72 @@ fileprivate struct WeeklyResumePill: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("\(item.weekdayShort), \(BangkokCalendar.cal.component(.day, from: item.date))"))
+    }
+}
+
+/// Компактный день для горизонтального ряда на Main.
+public struct WeeklyResumeCompactCell: View {
+    let item: WeeklyResumeItem
+    let isSelected: Bool
+    let onTap: (WeeklyResumeItem) -> Void
+
+    public init(item: WeeklyResumeItem, isSelected: Bool, onTap: @escaping (WeeklyResumeItem) -> Void) {
+        self.item = item
+        self.isSelected = isSelected
+        self.onTap = onTap
+    }
+
+    private var hasActivity: Bool {
+        (item.progress ?? 0) > 0.0001
+            || (item.learnedCount ?? 0) > 0
+            || (item.favCount ?? 0) > 0
+            || (item.audioMinutes ?? 0) > 0
+    }
+
+    private var isToday: Bool { BangkokCalendar.cal.isDateInToday(item.date) }
+
+    public var body: some View {
+        let accent = ThemeManager.shared.currentAccentFill
+        let weekdayColor: Color = (isSelected || isToday)
+            ? CD.ColorToken.text
+            : CD.ColorToken.textSecondary.opacity(0.85)
+        let dotFill: Color = hasActivity
+            ? CD.ColorToken.text
+            : CD.ColorToken.textSecondary.opacity(0.25)
+        let strokeColor: Color = isSelected
+            ? CD.ColorToken.text.opacity(0.35)
+            : CD.ColorToken.stroke.opacity(0.35)
+
+        Button(action: { onTap(item) }) {
+            VStack(spacing: 5) {
+                Text(item.weekdayShort.prefix(2).uppercased())
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(weekdayColor)
+                Text("\(BangkokCalendar.cal.component(.day, from: item.date))")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(CD.ColorToken.text)
+                Circle()
+                    .fill(dotFill)
+                    .overlay(Circle().fill(accent).opacity(hasActivity ? 1 : 0))
+                    .frame(width: 5, height: 5)
+            }
+            .frame(width: CardDS.Metrics.weeklyRowCompactWidth, height: CardDS.Metrics.weeklyRowCompactHeight)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(isSelected ? Color.white.opacity(0.06) : Color.white.opacity(0.02))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(strokeColor, lineWidth: isSelected ? 1.5 : 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(accent, lineWidth: isSelected ? 1.5 : 0)
+                    .opacity(isSelected ? 0.55 : 0)
+            )
+        }
+        .buttonStyle(.plain)
         .accessibilityLabel(Text("\(item.weekdayShort), \(BangkokCalendar.cal.component(.day, from: item.date))"))
     }
 }
@@ -2596,6 +3759,7 @@ public struct WeeklyResumeStrip: View {
     public let items: [WeeklyResumeItem]            // legacy: can be empty when using provider
     public let onTapDay: (WeeklyResumeItem) -> Void
     public let layout: WeeklyResumeLayout
+    public let cellStyle: WeeklyResumeCellStyle
     @State private var selected: WeeklyResumeItem?
     @State private var didInitialCenter: Bool = false
 
@@ -2607,11 +3771,18 @@ public struct WeeklyResumeStrip: View {
     @State private var itemsState: [WeeklyResumeItem] = []
 
     // Legacy init — uses static items (no week navigation)
-    public init(items: [WeeklyResumeItem], layout: WeeklyResumeLayout = .board, daySummaryProvider: ((Date) -> CardDS_DaySummary?)? = nil, onTapDay: @escaping (WeeklyResumeItem) -> Void) {
+    public init(
+        items: [WeeklyResumeItem],
+        layout: WeeklyResumeLayout = .board,
+        cellStyle: WeeklyResumeCellStyle = .full,
+        daySummaryProvider: ((Date) -> CardDS_DaySummary?)? = nil,
+        onTapDay: @escaping (WeeklyResumeItem) -> Void
+    ) {
         self.items = items
         self.onTapDay = onTapDay
         self.weekProvider = nil
         self.layout = layout
+        self.cellStyle = cellStyle
         self.daySummaryProvider = daySummaryProvider
         _itemsState = State(initialValue: [])
         let defaultSelected = items.first(where: { $0.isToday })
@@ -2621,11 +3792,18 @@ public struct WeeklyResumeStrip: View {
     }
 
     // New init — supplies a provider for fixed-week data (supports swipe between weeks)
-    public init(weekProvider: @escaping (Int) -> [WeeklyResumeItem], layout: WeeklyResumeLayout = .board, daySummaryProvider: ((Date) -> CardDS_DaySummary?)? = nil, onTapDay: @escaping (WeeklyResumeItem) -> Void) {
+    public init(
+        weekProvider: @escaping (Int) -> [WeeklyResumeItem],
+        layout: WeeklyResumeLayout = .board,
+        cellStyle: WeeklyResumeCellStyle = .full,
+        daySummaryProvider: ((Date) -> CardDS_DaySummary?)? = nil,
+        onTapDay: @escaping (WeeklyResumeItem) -> Void
+    ) {
         self.items = []
         self.onTapDay = onTapDay
         self.weekProvider = weekProvider
         self.layout = layout
+        self.cellStyle = cellStyle
         self.daySummaryProvider = daySummaryProvider
 
         // Fetch initial items from provider once; no week navigation logic here
@@ -2640,8 +3818,8 @@ public struct WeeklyResumeStrip: View {
 
     public var body: some View {
         let currentItems: [WeeklyResumeItem] = {
-            if weekProvider == nil { return items }
-            return itemsState.isEmpty ? items : itemsState
+            if let weekProvider { return weekProvider(0) }
+            return items
         }()
         // decide columns: 7 -> board mode (4 columns => 2 rows 4+3), 8–10 -> 5 columns, otherwise compact
         let columnsCount: Int = {
@@ -2669,88 +3847,125 @@ public struct WeeklyResumeStrip: View {
         .padding(.bottom, 2)
         // (gesture removed)
 
-        let row = ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: 12) {
+        let rowHeight: CGFloat = {
+            if cellStyle == .compact {
+                return CardDS.Metrics.weeklyRowCompactHeight + 12
+            }
+            return CardDS.Metrics.weeklyCellHeight + 36
+        }()
+
+        let compactRow = TaikaCarouselScroll {
+            LazyHStack(spacing: 8) {
                 ForEach(currentItems) { item in
                     let isSel: Bool = {
                         if let s = selected { return BangkokCalendar.cal.isDate(s.date, inSameDayAs: item.date) }
                         return false
                     }()
-                    WeeklyResumeCell(item: item, isSelected: isSel, onTap: { tapped in
+                    WeeklyResumeCompactCell(item: item, isSelected: isSel, onTap: { tapped in
                         onTapDay(tapped)
                         withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) { selected = tapped }
-                    }, daySummaryProvider: daySummaryProvider)
+                    })
                 }
             }
             .padding(.horizontal, CardDS.Metrics.contentX)
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
         }
+        .frame(height: rowHeight)
 
-        let carousel = GeometryReader { outer in
-            // compute side inset so the first/last cell can sit centered in the viewport
-            let cellW = CardDS.Metrics.weeklyCellWidth * 1.5
-            let sideInset = max(0, (outer.size.width - cellW) / 2)
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: CardDS.Metrics.carouselSpacing * 0.5) {
+        let row = Group {
+            if cellStyle == .compact {
+                compactRow
+            } else {
+                TaikaCarouselScroll {
+                    LazyHStack(spacing: 12) {
                         ForEach(currentItems) { item in
-                            GeometryReader { cellGeo in
-                                let isSel: Bool = {
-                                    if let s = selected { return BangkokCalendar.cal.isDate(s.date, inSameDayAs: item.date) }
-                                    return false
-                                }()
-                                // distance of cell midX to the visible viewport center
-                                let viewportCenterX = outer.size.width / 2
-                                let cellCenterX = cellGeo.frame(in: .named("weeklyCarousel")).midX
-                                let dist = abs(cellCenterX - viewportCenterX)
-                                // normalize and derive visual weights (with 3D rotation)
-                                let norm = min(1.0, dist / max(1.0, outer.size.width * 0.65))
-                                let scale = 0.85 + 0.25 * (1.0 - norm)   // center ≈1.10, sides ≈0.85 (stronger depth)
-                                let opacity = 0.45 + 0.55 * (1.0 - norm) // center 1.0, sides ≈0.45
-
-                                WeeklyResumeCell(item: item, isSelected: isSel, onTap: { tapped in
-                                    if !(selected?.date == tapped.date) {
-                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    }
-                                    onTapDay(tapped)
-                                    withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-                                        selected = tapped
-                                        proxy.scrollTo(item.dayKey, anchor: .center)
-                                    }
-                                }, daySummaryProvider: daySummaryProvider)
-                                .frame(width: CardDS.Metrics.weeklyCellWidth * 1.5, height: CardDS.Metrics.weeklyCellHeight)
-                                .padding(.horizontal, 4)
-                                .scaleEffect(scale)
-                                .rotation3DEffect(
-                                    .degrees(Double((cellCenterX - viewportCenterX) / -10.0)),
-                                    axis: (x: 0, y: 1, z: 0),
-                                    perspective: 0.8
-                                )
-                                .opacity(opacity)
-                                .shadow(color: Color.black.opacity(scale >= 1.08 ? 0.28 : 0.10),
-                                        radius: scale >= 1.08 ? 8 : 2,
-                                        x: 0,
-                                        y: scale >= 1.08 ? 3 : 1)
-                                .zIndex(Double(1.0 - norm))
-                            }
-                            .frame(width: CardDS.Metrics.weeklyCellWidth * 1.5, height: CardDS.Metrics.weeklyCellHeight)
-                            .id(item.dayKey)
+                            let isSel: Bool = {
+                                if let s = selected { return BangkokCalendar.cal.isDate(s.date, inSameDayAs: item.date) }
+                                return false
+                            }()
+                            WeeklyResumeCell(item: item, isSelected: isSel, onTap: { tapped in
+                                onTapDay(tapped)
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) { selected = tapped }
+                            }, daySummaryProvider: daySummaryProvider)
+                            .frame(width: CardDS.Metrics.weeklyCellWidth)
                         }
                     }
-                    .padding(.horizontal, sideInset)
+                    .padding(.horizontal, CardDS.Metrics.contentX)
+                    .padding(.vertical, 8)
                 }
-                .onAppear {
-                    // center only once on initial render; never auto-recenter later
-                    guard didInitialCenter == false else { return }
-                    didInitialCenter = true
-                    if let sel = selected {
-                        proxy.scrollTo(sel.dayKey, anchor: .center)
+                .frame(height: rowHeight)
+            }
+        }
+
+        let carouselHeight = CardDS.Metrics.weeklyCellHeight + 24
+        let carousel = Color.clear
+            .frame(height: carouselHeight)
+            .overlay {
+                GeometryReader { outer in
+                    // compute side inset so the first/last cell can sit centered in the viewport
+                    let cellW = CardDS.Metrics.weeklyCellWidth * 1.5
+                    let sideInset = max(0, (outer.size.width - cellW) / 2)
+                    ScrollViewReader { proxy in
+                        TaikaCarouselScroll {
+                            LazyHStack(spacing: CardDS.Metrics.carouselSpacing * 0.5) {
+                                ForEach(currentItems) { item in
+                                    GeometryReader { cellGeo in
+                                        let isSel: Bool = {
+                                            if let s = selected { return BangkokCalendar.cal.isDate(s.date, inSameDayAs: item.date) }
+                                            return false
+                                        }()
+                                        // distance of cell midX to the visible viewport center
+                                        let viewportCenterX = outer.size.width / 2
+                                        let cellCenterX = cellGeo.frame(in: .named("weeklyCarousel")).midX
+                                        let dist = abs(cellCenterX - viewportCenterX)
+                                        // normalize and derive visual weights (with 3D rotation)
+                                        let norm = min(1.0, dist / max(1.0, outer.size.width * 0.65))
+                                        let scale = 0.85 + 0.25 * (1.0 - norm)   // center ≈1.10, sides ≈0.85 (stronger depth)
+                                        let opacity = 0.45 + 0.55 * (1.0 - norm) // center 1.0, sides ≈0.45
+
+                                        WeeklyResumeCell(item: item, isSelected: isSel, onTap: { tapped in
+                                            if !(selected?.date == tapped.date) {
+                                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                            }
+                                            onTapDay(tapped)
+                                            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                                                selected = tapped
+                                                proxy.scrollTo(item.dayKey, anchor: .center)
+                                            }
+                                        }, daySummaryProvider: daySummaryProvider)
+                                        .frame(width: CardDS.Metrics.weeklyCellWidth * 1.5, height: CardDS.Metrics.weeklyCellHeight)
+                                        .padding(.horizontal, 4)
+                                        .scaleEffect(scale)
+                                        .rotation3DEffect(
+                                            .degrees(Double((cellCenterX - viewportCenterX) / -10.0)),
+                                            axis: (x: 0, y: 1, z: 0),
+                                            perspective: 0.8
+                                        )
+                                        .opacity(opacity)
+                                        .shadow(color: Color.black.opacity(scale >= 1.08 ? 0.28 : 0.10),
+                                                radius: scale >= 1.08 ? 8 : 2,
+                                                x: 0,
+                                                y: scale >= 1.08 ? 3 : 1)
+                                        .zIndex(Double(1.0 - norm))
+                                    }
+                                    .frame(width: CardDS.Metrics.weeklyCellWidth * 1.5, height: CardDS.Metrics.weeklyCellHeight)
+                                    .id(item.dayKey)
+                                }
+                            }
+                            .padding(.horizontal, sideInset)
+                        }
+                        .onAppear {
+                            // center only once on initial render; never auto-recenter later
+                            guard didInitialCenter == false else { return }
+                            didInitialCenter = true
+                            if let sel = selected {
+                                proxy.scrollTo(sel.dayKey, anchor: .center)
+                            }
+                        }
                     }
+                    .coordinateSpace(name: "weeklyCarousel")
                 }
             }
-            .coordinateSpace(name: "weeklyCarousel")
-        }
-        .frame(height: CardDS.Metrics.weeklyCellHeight + 80)
 
         return VStack(spacing: 12) {
             switch layout {
@@ -2764,7 +3979,6 @@ public struct WeeklyResumeStrip: View {
         }
         .padding(.top, 8)
         .background(Color.clear)
-        .fixedSize(horizontal: false, vertical: true)
         .padding(.bottom, 0)
         // .onAppear and .onReceive removed
         .onChange(of: items) { newItems in
@@ -2800,6 +4014,13 @@ public struct StepWordCard: View {
     public let isFavorite: Bool
     public let isLearned: Bool
     public let allowLearn: Bool
+    public let isAudioPlaying: Bool
+    /// When true, renders a slightly smaller action bar (useful for mini variants like Favorites).
+    public let compactActionBar: Bool
+    /// См. `StepCardActionBar.miniLearnedCheckmarkOnly` — для мини-карточек в избранном.
+    public let miniLearnedCheckmarkOnly: Bool
+    /// «слово / фраза» справа сверху; для PRO-витрины выключить и показать корону.
+    public let showsTypeChip: Bool
     public let onPlay: (() -> Void)?
     public let onFavorite: () -> Void
     public let onLearn: () -> Void
@@ -2816,6 +4037,10 @@ public struct StepWordCard: View {
         isFavorite: Bool = false,
         isLearned: Bool = false,
         allowLearn: Bool = true,
+        isAudioPlaying: Bool = false,
+        compactActionBar: Bool = false,
+        miniLearnedCheckmarkOnly: Bool = false,
+        showsTypeChip: Bool = true,
         onPlay: (() -> Void)? = nil,
         onFavorite: @escaping () -> Void = {},
         onLearn: @escaping () -> Void = {}
@@ -2831,6 +4056,10 @@ public struct StepWordCard: View {
         self.isFavorite = isFavorite
         self.isLearned = isLearned
         self.allowLearn = allowLearn
+        self.isAudioPlaying = isAudioPlaying
+        self.compactActionBar = compactActionBar
+        self.miniLearnedCheckmarkOnly = miniLearnedCheckmarkOnly
+        self.showsTypeChip = showsTypeChip
         self.onPlay = onPlay
         self.onFavorite = onFavorite
         self.onLearn = onLearn
@@ -2844,81 +4073,88 @@ public struct StepWordCard: View {
             sectionChrome: sectionChrome,
             chromeStyle: chromeStyle,
             showTitle: false,
+            cornerRadius: CardDS.Metrics.stepCardContentRadius,
+            contentLayout: .stepSymmetric,
             top: {
-                HStack {
-                    Text("taikA")
-                        .font(.taikaLogo(16))
-                        .foregroundStyle(CD.ColorToken.text)
-                    Spacer(minLength: 0)
-                    HStack(spacing: 6) {
-                        let chipLabel = label.lowercased()
-
-                        AppMiniChip(
-                            title: chipLabel,
-                            style: (chipLabel == "лайфхак" || chipLabel == "запомнил")
-                                ? .accent
-                                : .neutral
-                        ) { }
+                StepCardBalancedTopChrome {
+                    StepCardInlineWordmarkSlot()
+                } trailing: {
+                    Group {
+                        if showsTypeChip {
+                            AppMiniChip(
+                                title: label.lowercased(),
+                                style: stepCardTypeChipStyle(forLabel: label)
+                            ) { }
+                        } else {
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        }
                     }
                 }
-                .padding(.horizontal, CardDS.Metrics.contentX)
-                .padding(.top, 8)
+                .padding(.top, 6)
             },
             bottom: {
-                StepCardActionBar(
+                let bar = StepCardActionBar(
                     isFavorite: isFavorite,
                     isLearned: isLearned,
                     allowLearn: allowLearn,
                     isTip: false,
+                    tipShowsLearnSlot: false,
                     showsPlayAndFavorite: true,
+                    isAudioPlaying: isAudioPlaying,
                     onPlay: onPlay,
                     onFavorite: onFavorite,
                     onLearn: onLearn,
-                    onNext: nil
+                    onNext: nil,
+                    onExpand: nil,
+                    miniLearnedCheckmarkOnly: miniLearnedCheckmarkOnly
                 )
+                if compactActionBar {
+                    bar
+                        .scaleEffect(0.92)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                } else {
+                    bar
+                }
             },
             meta: {
-                // Порядок: тайский оригинал → русский перевод → транслит (без изменения размеров/стиля)
-                VStack(spacing: 0) {
-                    Spacer(minLength: 10)
-                    VStack(spacing: Theme.StepCardText.blockSpacing) {
-                        Text(thai)
-                            .font(.system(size: Theme.StepCardText.thaiFontSize, weight: .regular))
-                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.92))
-                            .multilineTextAlignment(.center)
-                            .lineLimit(Theme.StepCardText.thaiLines)
-                            .minimumScaleFactor(Theme.StepCardText.thaiScale)
-                            .allowsTightening(true)
+                // Тайский → RU → транслит, один связный блок по центру зоны meta (без Spacer’ов, ломавших квадрат).
+                VStack(spacing: Theme.StepCardText.blockSpacing) {
+                    Text(thai)
+                        .font(.system(size: Theme.StepCardText.thaiFontSize, weight: .regular))
+                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.92))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(Theme.StepCardText.thaiLines)
+                        .minimumScaleFactor(Theme.StepCardText.thaiScale)
+                        .allowsTightening(true)
 
-                        Text(title)
-                            .font(.system(size: Theme.StepCardText.titleFontSize, weight: .semibold))
-                            .foregroundStyle(CD.ColorToken.text)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(Theme.StepCardText.titleLines)
-                            .minimumScaleFactor(Theme.StepCardText.titleScale)
-                            .allowsTightening(true)
+                    Text(title)
+                        .font(.system(size: Theme.StepCardText.titleFontSize, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.text)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(Theme.StepCardText.titleLines)
+                        .minimumScaleFactor(Theme.StepCardText.titleScale)
+                        .allowsTightening(true)
 
-                        if let phoneticView {
-                            phoneticView
-                                .multilineTextAlignment(.center)
-                                .lineLimit(Theme.StepCardText.phoneticLines)
-                                .minimumScaleFactor(Theme.StepCardText.phoneticScale)
-                                .allowsTightening(true)
-                        } else {
-                            phoneticStyledText(translit)
-                                .font(.system(size: Theme.StepCardText.phoneticFontSize, weight: .semibold))
-                                .multilineTextAlignment(.center)
-                                .lineLimit(Theme.StepCardText.phoneticLines)
-                                .minimumScaleFactor(Theme.StepCardText.phoneticScale)
-                                .allowsTightening(true)
-                        }
+                    if let phoneticView {
+                        phoneticView
+                            .multilineTextAlignment(.center)
+                            .lineLimit(Theme.StepCardText.phoneticLines)
+                            .minimumScaleFactor(Theme.StepCardText.phoneticScale)
+                            .allowsTightening(true)
+                    } else {
+                        phoneticStyledText(translit)
+                            .font(.system(size: Theme.StepCardText.phoneticFontSize, weight: .semibold))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(Theme.StepCardText.phoneticLines)
+                            .minimumScaleFactor(Theme.StepCardText.phoneticScale)
+                            .allowsTightening(true)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(maxHeight: .infinity)
-                    Spacer(minLength: 12)
                 }
-                .padding(.horizontal, CardDS.Metrics.contentX)
-                .padding(.vertical, 18)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .padding(.vertical, 6)
             },
             tags: {
                 EmptyView()
@@ -2927,6 +4163,192 @@ public struct StepWordCard: View {
                 EmptyView()
             }
         )
+    }
+}
+
+/// Продающая карточка карусели Спикера — тот же язык, что StepProTeaserCard в разминке.
+/// CTA только внутри карточки.
+public struct SpeakerTeaserCard: View {
+    public let icon: String
+    public let title: String
+    public let subtitle: String
+    public let chipTitle: String
+    public let ctaTitle: String
+    public let size: CGSize
+    public let onCTA: () -> Void
+
+    public init(
+        icon: String,
+        title: String,
+        subtitle: String,
+        chipTitle: String,
+        ctaTitle: String,
+        size: CGSize = CGSize(width: CardDS.Metrics.stepCardWidth, height: CardDS.Metrics.stepCardWidth),
+        onCTA: @escaping () -> Void
+    ) {
+        self.icon = icon
+        self.title = title
+        self.subtitle = subtitle
+        self.chipTitle = chipTitle
+        self.ctaTitle = ctaTitle
+        self.size = size
+        self.onCTA = onCTA
+    }
+
+    public var body: some View {
+        let shape = RoundedRectangle(cornerRadius: CardDS.Metrics.stepCardContentRadius, style: .continuous)
+        let accent = ThemeManager.shared.currentAccentFill
+        let tint = ThemeManager.shared.currentAccentTintColor
+
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 8) {
+                StepCardInlineWordmarkSlot()
+                Spacer(minLength: 4)
+                Text(chipTitle)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .strokeBorder(accent, lineWidth: 1.2)
+                    )
+            }
+            .padding(.horizontal, CardDS.Metrics.contentX + CardDS.Metrics.stepCardHeaderEdgeInset)
+            .frame(height: CardDS.Metrics.stepCardTopBandHeight)
+
+            Spacer(minLength: 8)
+
+            VStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(accent)
+
+                Text(title)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(CD.ColorToken.text)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+
+                Text(subtitle)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.9)
+            }
+            .padding(.horizontal, 18)
+
+            Spacer(minLength: 8)
+
+            Button(action: onCTA) {
+                Text(ctaTitle)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.black.opacity(0.88))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background(Capsule(style: .continuous).fill(accent))
+            }
+            .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+            .padding(.horizontal, 22)
+            .padding(.bottom, 18)
+        }
+        .frame(width: size.width, height: size.height)
+        .background(Theme.Surfaces.card(shape))
+        .overlay(
+            shape.stroke(accent.opacity(0.45), lineWidth: Theme.Strokes.strokeCardLineWidth + 0.4)
+        )
+        .shadow(color: tint.opacity(0.18), radius: 12, y: 5)
+        .contentShape(shape)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(subtitle). \(ctaTitle)")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { onCTA() }
+    }
+}
+
+/// PRO-заглушка в карусели разминки: продающая карточка, не «пустой» StepWordCard.
+public struct StepProTeaserCard: View {
+    public let title: String
+    public let subtitle: String
+    public let ctaTitle: String
+    public let size: CGSize
+    public let onOpen: () -> Void
+
+    public init(
+        title: String = "ещё 5 карточек",
+        subtitle: String = "расширь разминку с Taika+",
+        ctaTitle: String = "открыть Taika+",
+        size: CGSize = CGSize(width: CardDS.Metrics.stepWordWidth, height: CardDS.Metrics.stepWordHeight),
+        onOpen: @escaping () -> Void = {}
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.ctaTitle = ctaTitle
+        self.size = size
+        self.onOpen = onOpen
+    }
+
+    public var body: some View {
+        let shape = RoundedRectangle(cornerRadius: CardDS.Metrics.stepCardContentRadius, style: .continuous)
+        let accent = ThemeManager.shared.currentAccentFill
+        let tint = ThemeManager.shared.currentAccentTintColor
+
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 8) {
+                StepCardInlineWordmarkSlot()
+                Spacer(minLength: 4)
+                AppProChip(scale: 0.86)
+            }
+            .padding(.horizontal, CardDS.Metrics.contentX + CardDS.Metrics.stepCardHeaderEdgeInset)
+            .frame(height: CardDS.Metrics.stepCardTopBandHeight)
+
+            Spacer(minLength: 8)
+
+            VStack(spacing: 10) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(accent)
+
+                Text(title)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(CD.ColorToken.text)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+
+                Text(subtitle)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.9)
+            }
+            .padding(.horizontal, 18)
+
+            Spacer(minLength: 8)
+
+            Text(ctaTitle)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.black.opacity(0.88))
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
+                .background(Capsule(style: .continuous).fill(accent))
+                .padding(.horizontal, 22)
+                .padding(.bottom, 18)
+        }
+        .frame(width: size.width, height: size.height)
+        .background(Theme.Surfaces.card(shape))
+        .overlay(
+            shape.stroke(accent.opacity(0.55), lineWidth: Theme.Strokes.strokeCardLineWidth + 0.4)
+        )
+        .shadow(color: tint.opacity(0.22), radius: 12, y: 5)
+        .contentShape(shape)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(subtitle). \(ctaTitle)")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { onOpen() }
     }
 }
 
@@ -3028,7 +4450,7 @@ fileprivate struct CardNoteCarouselPreviewView: View {
             let spacing: CGFloat = 15
             let sideInset: CGFloat = max(0, (outer.size.width - cardW) / 2)
 
-            ScrollView(.horizontal, showsIndicators: false) {
+            TaikaCarouselScroll {
                 LazyHStack(spacing: spacing) {
                     ForEach(Array(items.enumerated()), id: \.1.id) { idx, item in
                         let itemH: CGFloat = {
@@ -3166,7 +4588,6 @@ struct CardNoteBaseCarousel_Previews: PreviewProvider {
             .frame(width: 680)
             .padding(12)
             .background(Color.black)
-            .preferredColorScheme(.dark)
             .previewDisplayName("CardNoteBase — carousel (preview)")
             .environmentObject(ThemeManager.shared)
     }
@@ -3326,7 +4747,7 @@ struct WeeklyResumeCell_PlannedStub_Previews: PreviewProvider {
             ("active (2 courses)", active2, false)
         ]
 
-        return ScrollView(.vertical, showsIndicators: true) {
+        return TaikaRootVerticalScroll(showsScrollIndicators: true) {
             VStack(spacing: 16) {
                 ForEach(Array(samples.enumerated()), id: \.offset) { _, s in
                     VStack(alignment: .leading, spacing: 8) {
@@ -3343,7 +4764,6 @@ struct WeeklyResumeCell_PlannedStub_Previews: PreviewProvider {
             .padding(20)
         }
         .background(Color.black)
-        .preferredColorScheme(.dark)
         .environmentObject(ThemeManager.shared)
         .previewDisplayName("weekly resume — all states")
     }
@@ -3428,9 +4848,7 @@ public extension CardDS {
                 top: {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .top, spacing: 10) {
-                            Text("taikA")
-                                .font(.taikaLogo(16))
-                                .foregroundStyle(CD.ColorToken.text)
+                            TaikaWordmarkLockup(fontSize: 16)
 
                             Spacer(minLength: 0)
 
@@ -3628,7 +5046,7 @@ public extension CardDS {
                 let spacing: CGFloat = 14
                 let sideInset: CGFloat = max(0, (outer.size.width - cardW) / 2)
 
-                ScrollView(.horizontal, showsIndicators: false) {
+                TaikaCarouselScroll {
                     LazyHStack(spacing: spacing) {
                         ForEach(items) { item in
                             GeometryReader { cellGeo in

@@ -130,14 +130,16 @@ async def post_assess(
     return result
 
 
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
-
-
 # --- Smart Speaker: RU -> (thai, phonetic) in Taika style ---
 
 ARROWS = ("→", "↓", "↘", "↑", "↗")
+# Иногда модель выдаёт ↕/↔ вместо одного из пяти тоновых знаков Taika — нормализуем в средний тон.
+_PHONETIC_ARROW_FIXUPS = (
+    ("↕", "→"),
+    ("⇕", "→"),
+    ("↔", "→"),
+    ("⇅", "→"),
+)
 
 
 def _norm_ru(s: str) -> str:
@@ -312,6 +314,8 @@ def _normalize_phonetic(phonetic: str) -> str:
     out = _strip_thai_from_phonetic(phonetic)
     for old, new in replacements:
         out = out.replace(old, new)
+    for bad, good in _PHONETIC_ARROW_FIXUPS:
+        out = out.replace(bad, good)
     out = _fix_latin_i_in_phonetic(out)
     out = re.sub(r"\s+", " ", out).strip()
     out = _collapse_letter_space_arrow(out)
@@ -336,6 +340,12 @@ def _apply_politeness(thai: str, phonetic: str, politeness: str) -> tuple[str, s
 class SmartSpeakerReq(BaseModel):
     text_ru: str
     politeness: str | None = "female"
+
+
+class ThaiPhoneticReq(BaseModel):
+    """Тайский текст (например с ASR) → кириллическая фонетика в стиле taikA (как в /smart_speaker)."""
+
+    text_th: str
 
 
 # --- Smart Speaker: SQLite cache для переводов (экономия API-запросов) ---
@@ -424,7 +434,8 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] 
         "Phonetic format (STRICT):\n"
         "- Cyrillic а-я/ё only, plus hyphens inside a syllable, spaces between words. NO Thai letters in phonetic. NO Latin. NO IPA.\n"
         "- For the vowel sound [i] use ONLY Cyrillic «и»/«И», never Latin I or i.\n"
-        "- One tone arrow glued to the end of each syllable chunk (no space before the arrow).\n"
+        "- One tone arrow glued to the end of each syllable chunk (no space before the arrow). "
+        "Use ONLY these five: → ↓ ↘ ↑ ↗ (mid/low/falling/rising/high). Never ↕ ↔ or other arrows.\n"
         "- Good example: Russian «Как дела?» → thai might be «สบายดีไหม» → phonetic like «са-бай↘ ди↗-май↗» (sounds of Thai words).\n"
         "- BAD: any phonetic whose letters read as the Russian question (e.g. «как→ де→ла») — forbidden.\n"
         "- Do NOT add ครับ/ค่ะ or кхрап/кха in output — we append politeness on the server.\n\n"
@@ -520,7 +531,7 @@ def _llm_phonetic_from_thai_script(thai: str) -> str | None:
     system = (
         "Return JSON {\"phonetic\": \"...\"} only.\n"
         "The user message is ONE sentence in Thai script.\n"
-        "You write how that Thai sentence is pronounced, using Russian Cyrillic letters and tone arrows (→ ↓ ↘ ↑ ↗).\n"
+        "You write how that Thai sentence is pronounced, using Russian Cyrillic letters and tone arrows (→ ↓ ↘ ↑ ↗ only; never ↕ or ↔).\n"
         "Rules:\n"
         "- Follow Thai syllable boundaries (read the Thai left to right; each Thai syllable → one Cyrillic chunk + one arrow).\n"
         "- Spaces between Thai words → spaces between corresponding Cyrillic word groups.\n"
@@ -664,3 +675,37 @@ async def smart_speaker(req: SmartSpeakerReq):
     _cache_set(ru_norm, politeness, thai, phonetic)
 
     return {"thai": thai, "phonetic": phonetic}
+
+
+@app.post("/thai_phonetic")
+async def thai_phonetic(req: ThaiPhoneticReq):
+    """
+    Кириллическая фонетика произношения тайской строки (для колонки «ты сказал» после ASR в умном спикере).
+    Тот же LLM-проход, что и при санитизации phonetic в /smart_speaker.
+    """
+    t = (req.text_th or "").strip()
+    if not t:
+        raise HTTPException(status_code=400, detail="text_th is required")
+    if len(t) > 200:
+        raise HTTPException(status_code=413, detail="text_th too long")
+    raw = _llm_phonetic_from_thai_script(t)
+    if not raw:
+        raise HTTPException(
+            status_code=503,
+            detail="phonetic generation failed (OPENAI_API_KEY / network / model)",
+        )
+    phonetic = _normalize_phonetic(raw)
+    if not phonetic.strip() or _has_thai_script(phonetic):
+        raise HTTPException(status_code=503, detail="phonetic invalid after normalize")
+    return {"phonetic": phonetic}
+
+
+@app.get("/health")
+async def health():
+    steps_ok = _steps_path().is_file()
+    return {
+        "status": "ok",
+        "steps_json": steps_ok,
+        "openai_configured": bool(OPENAI_API_KEY),
+        "model": OPENAI_MODEL,
+    }

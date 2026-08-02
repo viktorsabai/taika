@@ -112,12 +112,15 @@ public struct StepAnimationView: View {
         }
         .onChange(of: activeIndex.wrappedValue) { newVal in
             let clamped = min(max(newVal, 0), max(items.count - 1, 0))
-            if isJumpingViaProgress {
-                // During a jump initiated by tapping progress we update only when deck reaches the target in onActiveIndexChange.
-                return
+            guard clamped != displayedActiveIndex else { return }
+            if isJumpingViaProgress { return }
+
+            var noAnim = Transaction()
+            noAnim.disablesAnimations = true
+            withTransaction(noAnim) {
+                displayedActiveIndex = clamped
+                animatedIndex = Double(clamped)
             }
-            displayedActiveIndex = clamped
-            animatedIndex = Double(clamped)
         }
     }
 
@@ -129,9 +132,8 @@ public struct StepAnimationView: View {
             items: items,
             activeIndex: activeIndex,
             onTap: { item in if let i = index(of: item) { setActive(i) } },
-            onPlay: { item in
+            onPlay: { _ in
                 playHaptic(.light)
-                advanceFromIntroIfNeeded(item)
             },
             onFav: { item in if let i = index(of: item) { toggleFavorite(i) } },
             onDone: { item in if let i = index(of: item) { markLearned(i) } },
@@ -176,7 +178,8 @@ public struct StepAnimationView: View {
             onNext: { item in
                 playSelection()
                 advanceFromTipCTA(item)
-            }
+            },
+            isOverlay: false
         )
     }
 
@@ -211,10 +214,14 @@ public struct StepAnimationView: View {
 
     private func setActive(_ index: Int) {
         let clamped = min(max(index, 0), max(items.count - 1, 0))
-        activeIndex.wrappedValue = clamped
-        displayedActiveIndex = clamped
-        animatedIndex = Double(clamped)
-        shouldNudgeActive = false
+        guard clamped != activeIndex.wrappedValue else { return }
+
+        withAnimation(.spring(response: 0.26, dampingFraction: 0.88)) {
+            activeIndex.wrappedValue = clamped
+            displayedActiveIndex = clamped
+            animatedIndex = Double(clamped)
+            shouldNudgeActive = false
+        }
         playHaptic(.light)
     }
 
@@ -247,25 +254,10 @@ public struct StepAnimationView: View {
     }
 
     // Auto-advance specifically for Intro card when user taps the right-arrow CTA
-    private func advanceFromIntroIfNeeded(_ item: SDStepItem) {
-        guard item.kind == .intro, let i = index(of: item) else { return }
-        // advance only if intro is the current card
-        if i == activeIndex.wrappedValue, i + 1 < items.count {
-            setActive(i + 1)
-        }
-    }
+    // (removed: advanceFromIntroIfNeeded)
 
     // Auto-advance for lifehacks (tips) when user taps the heart on the active card
-    private func advanceFromTipIfNeeded(at index: Int) {
-        guard items.indices.contains(index) else { return }
-        // Only for lifehack cards
-        if items[index].kind == .tip {
-            // Advance only when user liked the card currently in focus
-            if index == activeIndex.wrappedValue, index + 1 < items.count {
-                setActive(index + 1)
-            }
-        }
-    }
+    // (removed: advanceFromTipIfNeeded)
 
     private func toggleFavorite(_ index: Int) {
         // Remember state before toggle
@@ -277,10 +269,9 @@ public struct StepAnimationView: View {
             playHaptic(.soft)
             return
         } else {
-            // Turning ON favorite — update state and (for tips) auto-advance
+            // Turning ON favorite — update state only, no auto-advance
             favorites.insert(index)
             playHaptic(.soft)
-            advanceFromTipIfNeeded(at: index)
         }
     }
 
@@ -294,13 +285,11 @@ public struct StepAnimationView: View {
 
         // Для коротких прыжков просто одна пружинящая анимация
         if distance <= 2 {
-            isJumpingViaProgress = true
             withAnimation(.spring(response: 0.22, dampingFraction: 0.9)) {
                 animatedIndex = Double(clamped)
                 displayedActiveIndex = clamped
                 activeIndex.wrappedValue = clamped
             }
-            isJumpingViaProgress = false
             playSelection()
             return
         }
@@ -390,7 +379,6 @@ struct StepAnimation_Previews: PreviewProvider {
             ZStack { PD.ColorToken.background.ignoresSafeArea() }
                 .overlay(
                     StepAnimationView(items: demo, startIndex: 0, bindActiveIndex: idx)
-                        .preferredColorScheme(.dark)
                 )
         }
     }

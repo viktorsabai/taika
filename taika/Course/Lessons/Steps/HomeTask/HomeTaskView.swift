@@ -34,6 +34,7 @@ public struct HomeTaskView: View {
     @State private var tries: Int = 0
     // Summary overlay visibility (separate from computed isFinished)
     @State private var showSummary: Bool = false
+    @State private var didRecordReinforcementSession: Bool = false
     /// Секунды с начала текущего раунда (для хедера). Останавливается при showSummary.
     @State private var gameElapsedSeconds: Int = 0
     /// Секунды с начала Recall-игры (для хедера).
@@ -79,13 +80,18 @@ public struct HomeTaskView: View {
 
     public var body: some View {
         Group {
-            switch currentGameType {
+            switch effectiveGameType {
             case .match:
                 matchBody
-            case .recall:
+            case .recall, .builder:
+                // Один движок (сборка из слогов); builder = «фразы в контексте», другие тексты в UI.
                 recallBody
-            case .builder:
-                matchBody
+            case .audioRecall:
+                audioRecallFlowBody
+            case .grandDialogue:
+                grandDialogueFlowBody
+            case .conversation:
+                audioRecallFlowBody
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -94,8 +100,8 @@ public struct HomeTaskView: View {
 
     // MARK: - Game Type Routing
 
-    private var currentGameType: HomeGameType {
-        return gameType
+    private var effectiveGameType: HomeGameType {
+        gameType.normalizedForGameShell
     }
 
     // MARK: - Match Body (existing implementation extracted)
@@ -132,6 +138,18 @@ public struct HomeTaskView: View {
         }
         .onChange(of: showSummary) { _, isShowing in
             if isShowing {
+                if !didRecordReinforcementSession, !isGlobalParkContext {
+                    didRecordReinforcementSession = true
+                    let total = max(1, totalPairsCount)
+                    let attempts = max(1, tries)
+                    let accuracy = Double(total) / Double(attempts)
+                    let percent = max(0, min(100, Int((accuracy * 100).rounded())))
+                    ReinforcementStore.shared.recordSession(
+                        courseId: courseId,
+                        gameType: "match",
+                        score: percent
+                    )
+                }
                 lastGameTimeSeconds = gameElapsedSeconds
                 let key = Self.matchBestTimeKey(courseId: courseId, lessonId: lessonId)
                 let current = UserDefaults.standard.object(forKey: key) as? Int ?? .max
@@ -149,46 +167,56 @@ public struct HomeTaskView: View {
 
     /// Название текущей игры для секции (слева).
     private func currentGameDisplayName() -> String {
-        switch gameType {
+        switch effectiveGameType {
         case .match: return "Найди пару"
         case .recall: return "Быстрое повторение"
         case .builder: return "Фразы в контексте"
+        case .audioRecall: return "Audio Recall"
+        case .grandDialogue: return "Курсовая"
+        case .conversation: return "Audio Recall"
         }
     }
 
-    /// Название курса для правой части секции (без дублирования с чипом урока в карточке).
+    /// Правая колонка секции игры: курс / избранное (как подсекция в Main/Course), без дубля в app-header.
     private func courseTitleForSection() -> String {
         let (ccid, _) = canonicalIds()
-        if ccid == "__favorites__" { return "Избранное" }
+        if isFavoritesContext { return "Избранное" }
+        if isLearnedParkContext { return "Все выученные" }
         return CourseData.shared.title(for: ccid) ?? CourseData.shared.title(for: courseId) ?? ccid
     }
 
-    /// Стандартная секция: слева название игры, справа название курса (в карточке — чип с названием урока).
-    private var gameSectionHeader: some View {
-        HStack {
-            Text(currentGameDisplayName().uppercased())
-                .font(CD.FontToken.caption(12, weight: .semibold))
-                .kerning(0.6)
-                .foregroundStyle(CD.ColorToken.textSecondary)
-            Spacer(minLength: 8)
-            Text(courseTitleForSection().uppercased())
-                .font(CD.FontToken.caption(12, weight: .semibold))
-                .kerning(0.6)
-                .foregroundStyle(CD.ColorToken.textSecondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
+    /// Название урока для чипа на карточке recall (текущий раунд → урок-источник в пуле курса).
+    private func recallLessonChipTitle() -> String? {
+        if let lid = store.currentBuilderRound?.lessonId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !lid.isEmpty,
+           let t = LessonsData.shared.lessonTitle(for: lid), !t.isEmpty {
+            return t
         }
-        .padding(.vertical, 6)
+        if !lessonId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return resolvedLessonTitle()
+        }
+        if let t = displayTitle?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty {
+            return t
+        }
+        return nil
     }
 
     @ViewBuilder
     private var contentBody: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            gameSectionHeader
-                .padding(.bottom, 10)
+        VStack(alignment: .leading, spacing: 12) {
+            TaikaGameStatusStrip(
+                timeText: formatGameTime(gameElapsedSeconds),
+                progressText: {
+                    let total = max(1, totalPairsCount)
+                    return "\(matchedPairIds.count)/\(total)"
+                }(),
+                mistakes: max(0, tries - matchedPairIds.count),
+                score: matchedPairIds.count
+            )
 
             if leftItems.isEmpty || rightItems.isEmpty {
                 emptyState
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .onAppear {
                         buildRound()
                         if !didRunIntro {
@@ -197,23 +225,15 @@ public struct HomeTaskView: View {
                         }
                     }
             } else {
-                if !isFinished {
-                    Text("найди пары. не спеши. слушай, чувствуй, сопоставляй.")
-                        .font(CD.FontToken.caption(13, weight: .regular))
-                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
-                        .padding(.bottom, 10)
-                } else {
-                    Text("ну что, закрепили? хочешь ещё раунд?")
-                        .font(CD.FontToken.caption(13, weight: .regular))
-                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
-                        .padding(.bottom, 10)
-                }
+                Spacer(minLength: 6)
                 activeGameBlock
+                Spacer(minLength: 0)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 32)
+        .padding(.horizontal, CD.Spacing.screen)
+        .padding(.top, 6)
+        .padding(.bottom, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .overlay {
             if showSummary {
                 completionOverlay
@@ -261,16 +281,7 @@ public struct HomeTaskView: View {
                 finishedBlockContent
             }
             .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(Color.black.opacity(0.28))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-            )
-            .shadow(color: Color.black.opacity(0.35), radius: 24, y: 14)
+            .taikaBlackGlassBackground(cornerRadius: 28)
             .frame(maxWidth: 420)
             .padding(.horizontal, 20)
         }
@@ -354,37 +365,111 @@ public struct HomeTaskView: View {
     }
 
     private var activeGameBlock: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 8)
+        MPMatchPairsGrid(
+            left: leftItems,
+            right: rightItems,
+            selectedLeft: selectedLeft,
+            selectedRight: selectedRight,
+            leftTitle: "",
+            rightTitle: "",
+            onTapLeft: { tapLeft($0) },
+            onTapRight: { tapRight($0) },
+            revealedIds: Set(flipStates.compactMap { $0.value ? $0.key : nil })
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
 
-            MPMatchPairsGrid(
-                left: leftItems,
-                right: rightItems,
-                selectedLeft: selectedLeft,
-                selectedRight: selectedRight,
-                leftTitle: "",
-                rightTitle: "",
-                onTapLeft: { tapLeft($0) },
-                onTapRight: { tapRight($0) },
-                revealedIds: Set(flipStates.compactMap { $0.value ? $0.key : nil })
+    // MARK: - Conversation flow (PRO)
+
+    /// `AnyView` + явные `let`: на некоторых тулчейнах Swift иначе падает на `some View` (opaque) без вывода типа / краш компилятора.
+    private var audioRecallFlowBody: AnyView {
+        // Course-mode (lessonId == ""): берём learned-steps по всему курсу.
+        // Lesson-mode: резолвим «какой урок использовать» для диалогового сценария.
+        let lid: String = lessonId.isEmpty
+        ? ""
+        : GameLessonContextResolver.resolveConversationLessonId(courseId: courseId, explicitLessonId: lessonId)
+        let title = audioRecallSourceTitle(resolvedLessonId: lid)
+        let optionalClose = onClose
+        return AnyView(
+            AudioRecallGameView(
+                courseId: courseId,
+                lessonId: lid,
+                sourceTitle: title,
+                sourceContextTitle: courseTitleForSection(),
+                onClose: {
+                    if let performClose = optionalClose {
+                        performClose()
+                    } else {
+                        dismiss()
+                    }
+                },
+                onNextGame: onNextGame,
+                nextGameTitle: nextGameTitle,
+                isProUser: isProUser
             )
-            .padding(.horizontal, 16)
+            .environmentObject(theme)
+        )
+    }
 
-            Spacer(minLength: 12)
+    private var grandDialogueFlowBody: AnyView {
+        let optionalClose = onClose
+        return AnyView(
+            GrandDialogueGameView(
+                courseId: courseId,
+                courseTitle: courseTitleForSection(),
+                onClose: {
+                    if let performClose = optionalClose {
+                        performClose()
+                    } else {
+                        dismiss()
+                    }
+                },
+                onNextGame: onNextGame,
+                nextGameTitle: nextGameTitle,
+                isProUser: isProUser
+            )
+            .environmentObject(theme)
+        )
+    }
+
+    /// Заголовок в шапке: если урок подставлен резолвером (курс без `lessonId`, избранное), показываем название урока.
+    private func audioRecallSourceTitle(resolvedLessonId: String) -> String {
+        let raw = lessonId.trimmingCharacters(in: .whitespacesAndNewlines)
+        if raw.isEmpty, !resolvedLessonId.isEmpty,
+           let t = LessonsData.shared.lessonTitle(for: resolvedLessonId), !t.isEmpty {
+            return t
         }
+        return gameContextSourceTitle()
     }
 
     // MARK: - Recall Body (PRO recall game)
+
+    private var recallCompletionTitle: String {
+        switch gameType {
+        case .builder: return "фразы в контексте — раунд завершён"
+        case .recall: return "быстрое повторение завершено"
+        case .match: return "тренировка завершена"
+        case .conversation, .audioRecall: return "аудио-реплика завершена"
+        case .grandDialogue: return "курсовая завершена"
+        }
+    }
 
     private func recallSyllableItems(round: HomeTaskManager.BuilderRound) -> [RecallSyllableItem] {
         let assembled = store.assembledBuilder
         let syllables = round.syllables
         let replaceMode = store.builderSelectedSlotForReplacement != nil
+        let usedByText = Dictionary(grouping: assembled, by: { $0 }).mapValues(\.count)
+        var consumedRank: [String: Int] = [:]
         return syllables.enumerated().map { index, text in
-            let usedCount = assembled.filter { $0 == text }.count
+            let rank = consumedRank[text, default: 0]
+            consumedRank[text] = rank + 1
+            let isInUse = rank < (usedByText[text] ?? 0)
+            let usedCount = usedByText[text] ?? 0
             let availableCount = syllables.filter { $0 == text }.count
-            let isSelectable = (usedCount < availableCount && assembled.count < round.slotCount) || replaceMode
-            return RecallSyllableItem(id: index, text: text, isSelectable: isSelectable)
+            let canAdd = !isInUse && usedCount < availableCount && assembled.count < round.slotCount
+            // Повторный тап по уже поставленному чипу — снять; в replace — любой свободный/пул.
+            let isSelectable = replaceMode || isInUse || canAdd
+            return RecallSyllableItem(id: index, text: text, isSelectable: isSelectable, isInUse: isInUse)
         }
     }
 
@@ -401,9 +486,7 @@ public struct HomeTaskView: View {
             gameHeaderConfig: nil,
             gameContextHeader: nil
         ) {
-                VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
-                    gameSectionHeader
-                    Group {
+            Group {
                 if let round = store.currentBuilderRound {
                     let roundDisplays: [RecallRoundDisplay] = store.builderRoundDisplays.map { d in
                         RecallRoundDisplay(id: d.id, question: d.question, target: d.target, thai: d.thai)
@@ -426,14 +509,24 @@ public struct HomeTaskView: View {
                         wrongSlotIndices: store.builderWrongSlotIndices,
                         selectedSlotForReplacement: store.builderSelectedSlotForReplacement,
                         onTapSlot: { idx in
-                            if store.builderSelectedSlotForReplacement == idx {
-                                store.clearSlotForReplacement()
-                            } else {
-                                store.selectSlotForReplacement(idx)
+                            if store.builderState == .wrong {
+                                if store.builderSelectedSlotForReplacement == idx {
+                                    store.clearSlotForReplacement()
+                                } else {
+                                    store.selectSlotForReplacement(idx)
+                                }
+                            } else if store.builderState != .correct {
+                                store.removeBuilderPiece(at: idx)
                             }
                         },
                         audioText: round.audioText,
-                        onTapSyllable: { store.appendBuilderPiece($0) },
+                        onTapSyllable: { text, isInUse in
+                            if isInUse, store.builderSelectedSlotForReplacement == nil {
+                                store.removeLastBuilderPiece(matching: text)
+                            } else {
+                                store.appendBuilderPiece(text)
+                            }
+                        },
                         onPlayAudio: round.audioText.map { text in
                             { StepAudio.shared.speakThai(text) }
                         },
@@ -447,18 +540,23 @@ public struct HomeTaskView: View {
                         roundDisplays: roundDisplays.isEmpty ? nil : roundDisplays,
                         currentRoundIndex: store.builderIndex,
                         onSelectRound: { store.selectBuilderRound(at: $0) },
-                        lessonTitle: displayTitle ?? gameContextSourceTitle()
+                        lessonTitle: displayTitle ?? gameContextSourceTitle(),
+                        statusTimeText: {
+                            let m = recallElapsedSeconds / 60
+                            let s = recallElapsedSeconds % 60
+                            return String(format: "%d:%02d", m, s)
+                        }(),
+                        statusProgressText: "\(store.builderIndex + 1)/\(max(1, store.builderTotalRounds))",
+                        statusMistakes: store.builderMistakeCount,
+                        statusScore: store.builderScore
                     )
                 } else {
                     TaikaLoadingView(label: "подготовка…", compact: true)
                         .onAppear { startRecallGame() }
                 }
-                    }
-                    .padding(.top, Theme.Layout.sectionTitleToContent)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
-                .overlay {
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay {
                     if store.builderState == .finished {
                         recallCompletionOverlay
                             .zIndex(100)
@@ -468,6 +566,7 @@ public struct HomeTaskView: View {
         }
         .onAppear {
             recallElapsedSeconds = 0
+            didRecordReinforcementSession = false
             GameHeaderStore.shared.config = recallHeaderConfig()
         }
         .onDisappear {
@@ -479,6 +578,9 @@ public struct HomeTaskView: View {
         .onChange(of: store.builderScore) { _, _ in
             GameHeaderStore.shared.config = recallHeaderConfig()
         }
+        .onChange(of: store.builderMistakeCount) { _, _ in
+            GameHeaderStore.shared.config = recallHeaderConfig()
+        }
         .onChange(of: store.builderAttemptCount) { _, _ in
             GameHeaderStore.shared.config = recallHeaderConfig()
         }
@@ -487,11 +589,24 @@ public struct HomeTaskView: View {
         }
         .onChange(of: store.builderState) { _, newState in
             if newState == .correct {
+                TaikaGameFeedbackHaptics.answerCorrect()
                 if let round = store.currentBuilderRound, let text = round.audioText, !text.isEmpty {
                     StepAudio.shared.speakThai(text)
                 }
             } else if newState == .wrong {
+                TaikaGameFeedbackHaptics.mismatch()
                 TaikaVoice.shared.playMatchFail()
+            } else if newState == .finished {
+                if !didRecordReinforcementSession, !isGlobalParkContext {
+                    didRecordReinforcementSession = true
+                    let total = max(1, store.builderTotalRounds)
+                    let percent = max(0, min(100, Int((Double(store.builderScore) / Double(total) * 100).rounded())))
+                    ReinforcementStore.shared.recordSession(
+                        courseId: courseId,
+                        gameType: "recall",
+                        score: percent
+                    )
+                }
             }
         }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
@@ -502,17 +617,17 @@ public struct HomeTaskView: View {
     }
 
     private func recallHeaderConfig() -> GameHeaderConfig {
-        let m = recallElapsedSeconds / 60
-        let s = recallElapsedSeconds % 60
-        let timeText = String(format: "%d:%02d", m, s)
         let total = max(1, store.builderTotalRounds)
+        // Время уже в status-чипах — в хедере не дублируем (и не красим в accent).
         return GameHeaderConfig(
-            timeText: timeText,
+            timeText: "",
             score: store.builderScore,
-            mistakes: store.builderAttemptCount,
+            mistakes: store.builderMistakeCount,
             streak: 0,
-            progressText: "\(store.builderIndex + 1)/\(total)",
-            sourceTitle: gameContextSourceTitle(),
+            progressText: "раунд \(store.builderIndex + 1) из \(total)",
+            gameTitle: "Быстрое повторение",
+            sourceTitle: recallLessonChipTitle(),
+            minimalGameChrome: false,
             onBack: {
                 if let onClose = onClose {
                     onClose()
@@ -528,10 +643,12 @@ public struct HomeTaskView: View {
         let (ccid, clid) = canonicalIds()
         var triples: [HomeTaskManager.LearnedTriple]
         if lessonId.isEmpty {
-            if ccid == "__favorites__" {
+            if isFavoritesContext {
                 triples = store.userTriplesForCourse(courseId: "__favorites__", lessonIds: [])
+            } else if isLearnedParkContext {
+                triples = store.userTriplesForCourse(courseId: LearnedGameSource.pseudoCourseId, lessonIds: [])
             } else {
-                let lessonIds = LessonsData.shared.lessons(for: courseId).map { $0.lessonID }
+                let lessonIds = catalogLessonsSortedForCourse(courseId).map { $0.lessonID }
                 triples = lessonIds.isEmpty ? [] : store.userTriplesForCourse(courseId: ccid, lessonIds: lessonIds)
             }
         } else {
@@ -546,6 +663,7 @@ public struct HomeTaskView: View {
     private func startRecallGame() {
         let triples = recallTriples()
         guard !triples.isEmpty else { return }
+        didRecordReinforcementSession = false
         store.startBuilderRound(from: triples)
     }
 
@@ -566,7 +684,7 @@ public struct HomeTaskView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 4)
 
-                Text("быстрое повторение завершено")
+                Text(recallCompletionTitle)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(CD.ColorToken.text)
                     .frame(maxWidth: .infinity)
@@ -631,16 +749,7 @@ public struct HomeTaskView: View {
                 }
             }
             .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(Color.black.opacity(0.28))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-            )
-            .shadow(color: Color.black.opacity(0.35), radius: 24, y: 14)
+            .taikaBlackGlassBackground(cornerRadius: 28)
             .frame(maxWidth: 420)
             .padding(.horizontal, 20)
         }
@@ -699,7 +808,8 @@ public struct HomeTaskView: View {
 
     /// Course or lesson name for second header (unified with Speaker).
     private func gameContextSourceTitle() -> String {
-        if courseId == "__favorites__" { return "Избранное" }
+        if isFavoritesContext { return "Избранное" }
+        if isLearnedParkContext { return "Все выученные" }
         let (ccid, _) = canonicalIds()
         if !lessonId.isEmpty {
             return resolvedLessonTitle()
@@ -719,17 +829,18 @@ public struct HomeTaskView: View {
     }
 
     private func gameHeaderConfigForMatch() -> GameHeaderConfig {
-        let total = max(1, totalPairsCount)
-        let m = gameElapsedSeconds / 60
-        let s = gameElapsedSeconds % 60
-        let timeText = String(format: "%d:%02d", m, s)
+        let total = totalPairsCount
+        let progressText = total <= 0
+            ? "нет пар"
+            : "\(matchedPairIds.count) из \(total) пар"
         return GameHeaderConfig(
-            timeText: timeText,
+            timeText: "",
             score: matchedPairIds.count,
             mistakes: tries,
             streak: 0,
-            progressText: "\(matchedPairIds.count) из \(total)",
-            sourceTitle: gameContextSourceTitle(),
+            progressText: progressText,
+            gameTitle: "Найди пару",
+            sourceTitle: courseTitleForSection(),
             onBack: {
                 if let onClose = onClose {
                     onClose()
@@ -741,10 +852,10 @@ public struct HomeTaskView: View {
     }
 
     private func gameContextHeaderForMatch() -> GameContextHeader {
-        let total = max(1, totalPairsCount)
+        let total = totalPairsCount
         return GameContextHeader(
             sourceTitle: gameContextSourceTitle(),
-            cardCount: total,
+            cardCount: max(0, total),
             attemptCount: tries,
             avgScore: 0,
             progressCurrent: matchedPairIds.count,
@@ -785,6 +896,32 @@ public struct HomeTaskView: View {
         return (cid, lid)
     }
 
+    private var isFavoritesContext: Bool {
+        let raw = courseId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return raw == "__favorites__" || raw == "--favorites--"
+    }
+
+    private var isLearnedParkContext: Bool {
+        LearnedGameSource.isPseudoCourseId(courseId)
+    }
+
+    private var isGlobalParkContext: Bool {
+        isFavoritesContext || isLearnedParkContext
+    }
+
+    /// Lessons catalog for course-level mode (lessonId == "").
+    /// Course ids can be referenced with dash/underscore variants; all games must see the same lesson set.
+    private func catalogLessonsSortedForCourse(_ rawCourseId: String) -> [LessonBundle] {
+        var list = LessonsData.shared.lessons(for: rawCourseId)
+        if list.isEmpty {
+            list = LessonsData.shared.lessons(for: rawCourseId.replacingOccurrences(of: "_", with: "-"))
+        }
+        if list.isEmpty {
+            list = LessonsData.shared.lessons(for: rawCourseId.replacingOccurrences(of: "-", with: "_"))
+        }
+        return list.sorted { $0.order < $1.order }
+    }
+
     private var isPreview: Bool {
         ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     }
@@ -806,11 +943,13 @@ public struct HomeTaskView: View {
         var triples: [HomeTaskManager.LearnedTriple] = []
 
         if lessonId.isEmpty {
-            // COURSE MODE or FAVORITES: all learned cards from course, or from favorites when courseId == "__favorites__"
-            if ccid == "__favorites__" {
+            // COURSE MODE / FAVORITES / ALL LEARNED (парк с Main)
+            if isFavoritesContext {
                 triples = store.userTriplesForCourse(courseId: "__favorites__", lessonIds: [])
+            } else if isLearnedParkContext {
+                triples = store.userTriplesForCourse(courseId: LearnedGameSource.pseudoCourseId, lessonIds: [])
             } else {
-                let lessonIds = LessonsData.shared.lessons(for: courseId).map { $0.lessonID }
+                let lessonIds = catalogLessonsSortedForCourse(courseId).map { $0.lessonID }
                 if !lessonIds.isEmpty {
                     triples = store.userTriplesForCourse(courseId: ccid, lessonIds: lessonIds)
                 }
@@ -832,6 +971,7 @@ public struct HomeTaskView: View {
         matchedPairIds = []
         tries = 0
         gameElapsedSeconds = 0
+        didRecordReinforcementSession = false
         selectedLeft = nil; selectedRight = nil
 
         // Seed visible with up to 5 pairs
@@ -918,7 +1058,7 @@ public struct HomeTaskView: View {
         if let p = selectedLeft, leftItems.indices.contains(p) {
             leftItems[p].state = .idle
         }
-        withAnimation(.spring(response: 0.22, dampingFraction: 0.85)) {
+        withAnimation(TaikaGameFeedbackMotion.pairSelectSpring) {
             selectedLeft = (selectedLeft == idx) ? nil : idx
         }
         // apply selected state
@@ -934,7 +1074,7 @@ public struct HomeTaskView: View {
         if let p = selectedRight, rightItems.indices.contains(p) {
             rightItems[p].state = .idle
         }
-        withAnimation(.spring(response: 0.22, dampingFraction: 0.85)) {
+        withAnimation(TaikaGameFeedbackMotion.pairSelectSpring) {
             selectedRight = (selectedRight == idx) ? nil : idx
         }
         if let s = selectedRight {
@@ -953,8 +1093,7 @@ public struct HomeTaskView: View {
             // mark matched visually
             leftItems[li].state = .matched
             rightItems[ri].state = .matched
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            TaikaGameFeedbackHaptics.matchSuccess()
             TaikaVoice.shared.playMatchSuccess()
 
             // If we still have newcomers in the pool, remove matched and introduce next pair
@@ -974,6 +1113,7 @@ public struct HomeTaskView: View {
                 showSummary = true
             }
         } else {
+            TaikaGameFeedbackHaptics.mismatch()
             // brief wrong pulse + случайно: оой или match_fail.mp3
             if Bool.random() {
                 TaikaVoice.shared.playMatchFail()
@@ -1071,7 +1211,6 @@ struct HomeTaskView_Previews: PreviewProvider {
                             store: s,
                             displayTitle: "Урок 1 — подобрать пару",
                             gameType: .match)
-            .preferredColorScheme(.dark)
             .environmentObject(ThemeManager.shared)
     }
 }

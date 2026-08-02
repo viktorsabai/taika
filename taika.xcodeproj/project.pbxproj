@@ -13,6 +13,7 @@
 		159EBA352F5814A800D6906D /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 15FB00002E59B31600EBEA0E /* FirebaseCore */; };
 		159EBA362F5814A800D6906D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 15FB00022E59B31600EBEA0E /* FirebaseAuth */; };
 		159EBA372F5814A800D6906D /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 15FB00032E59B31600EBEA0E /* FirebaseFirestore */; };
+		16RC00032E59B31600EBEA0E /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 16RC00002E59B31600EBEA0E /* RevenueCat */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,26 +42,12 @@
 		158B02402E59B67000EBEA0E /* Onmark TRIAL Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Onmark TRIAL Regular.otf"; path = "taika/Theme/Onmark TRIAL Regular.otf"; sourceTree = "<group>"; };
 		158B025C2E5AEC0C00EBEA0E /* taika_basa_course.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = taika_basa_course.json; path = taika/Resourses/taika_basa_course.json; sourceTree = "<group>"; };
 		158E96742EDDD24F00C4E831 /* taikafm.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taikafm.json; sourceTree = "<group>"; };
+		15A4AA122FD70708003C8344 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		158B022B2E59B31900EBEA0E /* Exceptions for "taika" folder in "taika" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				CONTENT_README.md,
-				"Course/Lessons/Steps/STEP(README).txt",
-				Info.plist,
-			);
-			target = 158B02042E59B31600EBEA0E /* taika */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		158B02072E59B31600EBEA0E /* taika */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				158B022B2E59B31900EBEA0E /* Exceptions for "taika" folder in "taika" target */,
-			);
 			path = taika;
 			sourceTree = "<group>";
 		};
@@ -81,6 +68,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				16RC00032E59B31600EBEA0E /* RevenueCat in Frameworks */,
 				159EBA372F5814A800D6906D /* FirebaseFirestore in Frameworks */,
 				159EBA362F5814A800D6906D /* FirebaseAuth in Frameworks */,
 				159EBA352F5814A800D6906D /* FirebaseCore in Frameworks */,
@@ -107,6 +95,7 @@
 		158B01FC2E59B31600EBEA0E = {
 			isa = PBXGroup;
 			children = (
+				15A4AA122FD70708003C8344 /* Info.plist */,
 				151AE3CE2E6DCCCB00746E8E /* steps.json */,
 				158E96742EDDD24F00C4E831 /* taikafm.json */,
 				15194D322E6C6B5B00F57D9B /* lessons.json */,
@@ -152,6 +141,7 @@
 				15FB00002E59B31600EBEA0E /* FirebaseCore */,
 				15FB00022E59B31600EBEA0E /* FirebaseAuth */,
 				15FB00032E59B31600EBEA0E /* FirebaseFirestore */,
+				16RC00002E59B31600EBEA0E /* RevenueCat */,
 			);
 			productName = taika;
 			productReference = 158B02052E59B31600EBEA0E /* taika.app */;
@@ -237,6 +227,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				15FB00012E59B31600EBEA0E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				16RC00012E59B31600EBEA0E /* XCRemoteSwiftPackageReference "purchases-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 158B02062E59B31600EBEA0E /* Products */;
@@ -325,12 +316,13 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"taika/Preview Content\"";
 				DEVELOPMENT_TEAM = G6B65R5TY3;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = taika/Info.plist;
+				INFOPLIST_FILE = Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -352,6 +344,7 @@
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = minimal;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 				XROS_DEPLOYMENT_TARGET = 2.2;
@@ -368,12 +361,13 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"taika/Preview Content\"";
 				DEVELOPMENT_TEAM = G6B65R5TY3;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = taika/Info.plist;
+				INFOPLIST_FILE = Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -395,6 +389,7 @@
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = minimal;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 				XROS_DEPLOYMENT_TARGET = 2.2;
@@ -435,6 +430,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -496,6 +492,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -521,6 +518,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = G6B65R5TY3;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
@@ -544,6 +542,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = G6B65R5TY3;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
@@ -566,6 +565,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = G6B65R5TY3;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
@@ -588,6 +588,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = G6B65R5TY3;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
@@ -655,6 +656,14 @@
 				minimumVersion = 11.0.0;
 			};
 		};
+		16RC00012E59B31600EBEA0E /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -672,6 +681,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 15FB00012E59B31600EBEA0E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		16RC00002E59B31600EBEA0E /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 16RC00012E59B31600EBEA0E /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

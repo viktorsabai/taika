@@ -71,6 +71,9 @@ final class MainManager: ObservableObject {
         let title: String
         let subtitle: String
         let categoryChip: String?
+        let lessonCount: Int?
+        let durationMinutes: Int?
+        let learningOutcomes: [String]
         let isPro: Bool
 
         // Optional progress (0…1). `nil` means we intentionally don't show progress for this scenario.
@@ -84,6 +87,9 @@ final class MainManager: ObservableObject {
             title: String,
             subtitle: String,
             categoryChip: String? = nil,
+            lessonCount: Int? = nil,
+            durationMinutes: Int? = nil,
+            learningOutcomes: [String] = [],
             isPro: Bool,
             progress: Double? = nil,
             cta: CTA
@@ -93,6 +99,9 @@ final class MainManager: ObservableObject {
             self.title = title
             self.subtitle = subtitle
             self.categoryChip = categoryChip
+            self.lessonCount = lessonCount
+            self.durationMinutes = durationMinutes
+            self.learningOutcomes = learningOutcomes
             self.isPro = isPro
             self.progress = progress
             self.cta = cta
@@ -101,6 +110,8 @@ final class MainManager: ObservableObject {
 
     @Published var dailyPicks: DailyPicksPayload = .empty
     @Published var dailyCoursePicks: DailyCoursePicksPayload = .empty
+    /// Prepared UI models for "ПОДБОРКА ДНЯ" course reel (stable per day).
+    @Published var dailyCourseCards: [CourseCardModel] = []
     @Published var dailyFavMask: [Bool] = []
     @Published var resumeItems: [MainBannerItem] = []
     @Published var weekSummary: [DaySummary] = []   // 7 items, Sun..Sat (or locale order)
@@ -153,6 +164,7 @@ final class MainManager: ObservableObject {
     private var coursePlanObserver: NSObjectProtocol?
     private var removeCourseObserver: NSObjectProtocol?
     private var addCourseObserver: NSObjectProtocol?
+    private var activityObserver: NSObjectProtocol?
 
     // Cached formatters and calendar helpers
     // MARK: - Thailand canonical calendar (Asia/Bangkok)
@@ -180,6 +192,7 @@ final class MainManager: ObservableObject {
     }()
 
     private var weekSummaryReloadWork: DispatchWorkItem?
+    private var resumeReloadWork: DispatchWorkItem?
 
     private func scheduleWeekSummaryReload() {
         weekSummaryReloadWork?.cancel()
@@ -191,6 +204,18 @@ final class MainManager: ObservableObject {
         }
         weekSummaryReloadWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: work)
+    }
+
+    private func scheduleResumeReload() {
+        resumeReloadWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                await self.refresh()
+            }
+        }
+        resumeReloadWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
     }
 
     private init() {
@@ -218,10 +243,10 @@ final class MainManager: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             guard let self else { return }
-            // do not rebuild the set on progress change; keep today's list stable
             self.invalidateDailyCacheIfDayChanged()
             self.scheduleDailyPicksReload()
             self.scheduleWeekSummaryReload()
+            self.scheduleResumeReload()
         }
         lessonsObserver = NotificationCenter.default.addObserver(
             forName: .init("LessonsDidChange"),
@@ -230,6 +255,7 @@ final class MainManager: ObservableObject {
         ) { [weak self] _ in
             guard let self else { return }
             self.scheduleWeekSummaryReload()
+            self.scheduleResumeReload()
         }
         coursePlanObserver = NotificationCenter.default.addObserver(
             forName: .init("CoursePlanDidChange"),
@@ -252,7 +278,7 @@ final class MainManager: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] note in
-            guard let self else { return }
+            guard self != nil else { return }
             guard let courseId = note.userInfo?["courseId"] as? String else { return }
             let day = (note.userInfo?["day"] as? Date) ?? Self.bangkokCal.startOfDay(for: Date())
             let dayStart = Self.bangkokCal.startOfDay(for: day)
@@ -290,7 +316,7 @@ final class MainManager: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] note in
-            guard let self else { return }
+            guard self != nil else { return }
             guard let courseId = note.userInfo?["courseId"] as? String else { return }
             let day = (note.userInfo?["day"] as? Date) ?? Self.bangkokCal.startOfDay(for: Date())
             let dayStart = Self.bangkokCal.startOfDay(for: day)
@@ -304,6 +330,13 @@ final class MainManager: ObservableObject {
                 UserSession.shared.logActivity(.coursePlannedRemoved, courseId: courseId, ts: dayStart)
             }
         }
+        activityObserver = NotificationCenter.default.addObserver(
+            forName: .usActivityLogDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.scheduleResumeReload()
+        }
     }
 
     deinit {
@@ -314,8 +347,10 @@ final class MainManager: ObservableObject {
         if let token = coursePlanObserver { NotificationCenter.default.removeObserver(token) }
         if let token = removeCourseObserver { NotificationCenter.default.removeObserver(token) }
         if let token = addCourseObserver { NotificationCenter.default.removeObserver(token) }
+        if let token = activityObserver { NotificationCenter.default.removeObserver(token) }
         dailyReloadWork?.cancel()
         weekSummaryReloadWork?.cancel()
+        resumeReloadWork?.cancel()
     }
     
     private var cacheInvalidated = false
@@ -333,23 +368,74 @@ final class MainManager: ObservableObject {
         dailyReloadWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.30, execute: work)
     }
+
+    @MainActor
+    private func resolvedResumeLessonId(courseId: String, preferredLessonId: String?) -> String? {
+        let lessons = LessonsData.shared.lessons(for: courseId)
+        guard !lessons.isEmpty else { return nil }
+
+        struct LessonProgress {
+            let lessonId: String
+            let progress: Double
+            let order: Int
+        }
+
+        let progressByLesson: [LessonProgress] = lessons.map { lesson in
+            LessonProgress(
+                lessonId: lesson.lessonID,
+                progress: LessonsManager.shared.lessonPercent(courseId: courseId, lessonId: lesson.lessonID),
+                order: lesson.order
+            )
+        }
+
+        let inProgress = progressByLesson
+            .filter { $0.progress > 0.0001 && $0.progress < 0.9999 }
+            .sorted {
+                if abs($0.progress - $1.progress) > 0.0001 { return $0.progress > $1.progress }
+                return $0.order < $1.order
+            }
+        if let preferredLessonId,
+           inProgress.contains(where: { $0.lessonId == preferredLessonId }) {
+            return preferredLessonId
+        }
+        if let firstInProgress = inProgress.first {
+            return firstInProgress.lessonId
+        }
+
+        let completed = progressByLesson
+            .filter { $0.progress >= 0.9999 }
+            .sorted { $0.order < $1.order }
+        if let lastCompleted = completed.last {
+            if let next = progressByLesson.first(where: { $0.order == lastCompleted.order + 1 }) {
+                return next.lessonId
+            }
+            // Course is fully completed — don't keep it in "Continue".
+            return nil
+        }
+
+        if let preferredLessonId,
+           progressByLesson.contains(where: { $0.lessonId == preferredLessonId }) {
+            return preferredLessonId
+        }
+        return progressByLesson.sorted { $0.order < $1.order }.first?.lessonId
+    }
     
     @MainActor
     func refresh() async {
         // Derive recent pairs from UserSession snapshot (no recentActivity API)
-        let snap = await UserSession.shared.snapshot
+        let snap = UserSession.shared.snapshot
         let nav = CourseNavigator.shared
         let todayStart = Self.bangkokCal.startOfDay(for: Date())
         var recent: [(courseId: String, lessonId: String?)] = []
 
-        // 1) last lesson per course (most precise signal)
+        // 1) derive a real lesson target per course (in-progress first; if completed, next lesson)
         for (cid, lid) in snap.lastLessonByCourse {
-            recent.append((courseId: cid, lessonId: lid))
+            recent.append((courseId: cid, lessonId: resolvedResumeLessonId(courseId: cid, preferredLessonId: lid)))
         }
         // 2) fallback: started courses if nothing else
         if recent.isEmpty {
             for cid in snap.startedCourses {
-                recent.append((courseId: cid, lessonId: nil))
+                recent.append((courseId: cid, lessonId: resolvedResumeLessonId(courseId: cid, preferredLessonId: nil)))
             }
         }
 
@@ -359,34 +445,53 @@ final class MainManager: ObservableObject {
             return lhs.courseId < rhs.courseId
         }
 
-        // Planned for today first (sync with "План на неделю") — order from UserSession
         let plannedIds = UserSession.shared.plannedCourseIds(on: todayStart)
-        var ordered: [(courseId: String, lessonId: String?)] = plannedIds.map { cid in
-            (courseId: cid, lessonId: snap.lastLessonByCourse[cid])
+        var ordered: [(courseId: String, lessonId: String?)] = []
+        var usedCourseIds = Set<String>()
+
+        func appendResume(courseId cid: String, preferredLessonId: String?) {
+            guard !cid.isEmpty, !usedCourseIds.contains(cid) else { return }
+            let lid = resolvedResumeLessonId(courseId: cid, preferredLessonId: preferredLessonId)
+            ordered.append((courseId: cid, lessonId: lid))
+            usedCourseIds.insert(cid)
         }
 
-        // Then add recent (up to 2 lessons + 2 courses interleaved), excluding already in planned
-        let plannedSet = Set(plannedIds)
-        let lessonsOnly = recent.filter { $0.lessonId != nil && !plannedSet.contains($0.courseId) }
-        let coursesOnly = recent.filter { $0.lessonId == nil && !plannedSet.contains($0.courseId) }
-        let pickLessons = Array(lessonsOnly.prefix(2))
-        let pickCourses = Array(coursesOnly.prefix(2))
-        func appendIfAny(_ item: (courseId: String, lessonId: String?)?) { if let it = item { ordered.append(it) } }
+        // Последний открытый курс — всегда первый в «Продолжить».
+        if let lastCid = snap.lastCourseId?.trimmingCharacters(in: .whitespacesAndNewlines), !lastCid.isEmpty {
+            appendResume(courseId: lastCid, preferredLessonId: snap.lastLessonByCourse[lastCid])
+        }
+
+        // План на сегодня (без дублей).
+        for cid in plannedIds {
+            appendResume(courseId: cid, preferredLessonId: snap.lastLessonByCourse[cid])
+        }
+
+        // Недавние курсы (до 4 слотов).
+        let pickLessons = Array(recent.filter { $0.lessonId != nil && !usedCourseIds.contains($0.courseId) }.prefix(2))
+        let pickCourses = Array(recent.filter { $0.lessonId == nil && !usedCourseIds.contains($0.courseId) }.prefix(2))
+        func appendIfAny(_ item: (courseId: String, lessonId: String?)?) {
+            guard let it = item else { return }
+            appendResume(courseId: it.courseId, preferredLessonId: it.lessonId)
+        }
         appendIfAny(pickCourses.indices.contains(0) ? pickCourses[0] : nil)
         appendIfAny(pickLessons.indices.contains(0) ? pickLessons[0] : nil)
         appendIfAny(pickCourses.indices.contains(1) ? pickCourses[1] : nil)
         appendIfAny(pickLessons.indices.contains(1) ? pickLessons[1] : nil)
 
         if ordered.count < 4 {
-            for pair in recent where !plannedSet.contains(pair.courseId) && !ordered.contains(where: { $0.courseId == pair.courseId && $0.lessonId == pair.lessonId }) {
-                ordered.append(pair)
+            for pair in recent where !usedCourseIds.contains(pair.courseId) {
+                appendResume(courseId: pair.courseId, preferredLessonId: pair.lessonId)
                 if ordered.count == 4 { break }
             }
         }
 
+        // Legacy block removed — ordered built above.
+        let plannedSet = Set(plannedIds)
+        _ = plannedSet
+
         // Map to banner items — titles via CourseNavigator; real progress from ProgressManager/LessonsManager
         let now = Date()
-        var mapped: [(id: String, date: Date, title: String, kind: MainBannerItem.Kind, progress: Double)] = []
+        var mapped: [(id: String, date: Date, title: String, kind: MainBannerItem.Kind, progress: Double, lessonMinutes: Int?)] = []
         for pair in ordered {
             let id = pair.lessonId != nil ? "\(pair.courseId):\(pair.lessonId!)" : pair.courseId
             let title: String = {
@@ -398,16 +503,33 @@ final class MainManager: ObservableObject {
             }()
             let kind: MainBannerItem.Kind = (pair.lessonId != nil) ? .lesson : .course
             let progress: Double
+            let lessonMinutes: Int?
             if pair.lessonId == nil {
                 // average course progress from ProgressManager
-                progress = await ProgressManager.shared.progress(for: pair.courseId, lessonId: nil)
+                progress = ProgressManager.shared.progress(for: pair.courseId, lessonId: nil)
+                lessonMinutes = nil
             } else if let lid = pair.lessonId {
                 // use LessonsManager helper (0…1)
-                progress = await LessonsManager.shared.lessonPercent(courseId: pair.courseId, lessonId: lid)
+                progress = LessonsManager.shared.lessonPercent(courseId: pair.courseId, lessonId: lid)
+                lessonMinutes = LessonsData.shared.lesson(courseID: pair.courseId, lessonID: lid)?.durationMinutes
             } else {
                 progress = 0.0
+                lessonMinutes = nil
             }
-            mapped.append((id: id, date: now, title: title, kind: kind, progress: progress))
+            let cleanedTitle: String = {
+                let raw = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !raw.isEmpty else { return kind == .lesson ? "урок" : "курс" }
+                let lowered = raw.lowercased()
+                let looksIdentifier = raw == pair.courseId
+                    || lowered == "user dict"
+                    || lowered.contains("user_dict")
+                    || lowered.contains("user-dict")
+                if looksIdentifier {
+                    return kind == .lesson ? "урок" : "курс"
+                }
+                return raw
+            }()
+            mapped.append((id: id, date: now, title: cleanedTitle, kind: kind, progress: progress, lessonMinutes: lessonMinutes))
         }
 
         // Deduplicate by id (just in case) and keep order
@@ -418,23 +540,20 @@ final class MainManager: ObservableObject {
             return true
         }
 
-        let bannerItems = unique.map { MainBannerItem(id: $0.id, title: $0.title, kind: $0.kind, progress: $0.progress) }
-
-        // Skip publishing (and logs) if nothing changed to avoid notification loops & log spam
-        if bannerItems == self.resumeItems {
-            #if DEBUG
-            print("[MainManager] skip reload (unchanged)")
-            #endif
-            return
+        let bannerItems = unique.map {
+            MainBannerItem(
+                id: $0.id,
+                title: $0.title,
+                kind: $0.kind,
+                progress: $0.progress,
+                lessonMinutes: $0.lessonMinutes
+            )
         }
 
-        #if DEBUG
-        print("[MainManager] order -> \(ordered.map{ $0.lessonId == nil ? "C" : "L" }.joined())")
-        print("[MainManager] reload banners \(bannerItems.count) items (derived from snapshot)")
-        let dbg = mapped.map { String(format: "%@ %.0f%%", $0.kind == .course ? "C" : "L", $0.progress * 100) }.joined(separator: ", ")
-        print("[MainManager] progress map -> \(dbg)")
-        print("[MainManager] titles -> \(bannerItems.map{ $0.title }.joined(separator: " | "))")
-        #endif
+        // Skip publishing if nothing changed to avoid notification loops
+        if bannerItems == self.resumeItems {
+            return
+        }
 
         self.resumeItems = bannerItems
         await rebuildWeekSummary()
@@ -447,6 +566,15 @@ struct MainBannerItem: Identifiable, Equatable {
     let title: String
     let kind: Kind
     let progress: Double
+    let lessonMinutes: Int?
+
+    init(id: String, title: String, kind: Kind, progress: Double, lessonMinutes: Int? = nil) {
+        self.id = id
+        self.title = title
+        self.kind = kind
+        self.progress = progress
+        self.lessonMinutes = lessonMinutes
+    }
     
     enum Kind: Equatable {
         case course
@@ -478,11 +606,11 @@ extension MainManager {
     @MainActor
     private func courseProgressFraction(courseId: String) async -> Double {
         // single source of truth: ProgressManager
-        let raw = await ProgressManager.shared.progress(for: courseId, lessonId: nil)
+        let raw = ProgressManager.shared.progress(for: courseId, lessonId: nil)
         let clamped = min(max(raw, 0.0), 1.0)
 
         // if course was started but progress is still ~0, show minimal visible progress
-        let snap = await UserSession.shared.snapshot
+        let snap = UserSession.shared.snapshot
         let isStarted =
             snap.startedCourses.contains(courseId) ||
             snap.lastLessonByCourse[courseId] != nil
@@ -556,6 +684,20 @@ extension MainManager {
         return false
     }
 
+    /// Course meta resolver from typed `Course` fields.
+    private func resolveCourseMeta(_ course: Course) -> (lessonCount: Int?, durationMinutes: Int?, outcomes: [String]) {
+        let lessonCount = course.lessonCount > 0 ? course.lessonCount : nil
+        let durationMinutes = course.durationMinutes > 0 ? course.durationMinutes : nil
+        let outcomes = course.learningOutcomes
+            .map { item -> String in
+                let t = item.type.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !t.isEmpty else { return "" }
+                return t
+            }
+            .filter { !$0.isEmpty }
+        return (lessonCount, durationMinutes, outcomes)
+    }
+
     // Best-effort category resolver (chip text) without hard dependencies on Course model fields.
     private func resolveCourseCategoryChip(_ course: Course) -> String? {
         let m = Mirror(reflecting: course)
@@ -588,7 +730,7 @@ extension MainManager {
         guard !all.isEmpty else { return [] }
 
         // Map → models (title falls back to id)
-        let snap = await UserSession.shared.snapshot
+        let snap = UserSession.shared.snapshot
         let startedIds = snap.startedCourses
 
         var mapped: [CourseCardModel] = []
@@ -598,12 +740,16 @@ extension MainManager {
             let title = await shortCourseName(cid)
             let subtitle = courseOutcomePreview(cid) ?? shortCourseSubtitle(cid, course: c)
             let isProCourse = resolveIsProCourse(c)
+            let meta = resolveCourseMeta(c)
             let cta: CourseCardModel.CTA = startedIds.contains(cid) ? .continue : .add
             mapped.append(CourseCardModel(
                 courseId: cid,
                 title: title,
                 subtitle: subtitle,
                 categoryChip: resolveCourseCategoryChip(c),
+                lessonCount: meta.lessonCount,
+                durationMinutes: meta.durationMinutes,
+                learningOutcomes: meta.outcomes,
                 isPro: isProCourse,
                 progress: nil,
                 cta: cta
@@ -676,6 +822,13 @@ extension MainManager {
                 if let c = featuredCourse(by: cid) { return resolveCourseCategoryChip(c) }
                 return nil
             }()
+            let meta: (Int?, Int?, [String]) = {
+                if let c = featuredCourse(by: cid) {
+                    let m = resolveCourseMeta(c)
+                    return (m.lessonCount, m.durationMinutes, m.outcomes)
+                }
+                return (nil, nil, [])
+            }()
 
             let p = await courseProgressFraction(courseId: cid)
 
@@ -685,6 +838,9 @@ extension MainManager {
                     title: title,
                     subtitle: subtitle,
                     categoryChip: categoryChip,
+                    lessonCount: meta.0,
+                    durationMinutes: meta.1,
+                    learningOutcomes: meta.2,
                     isPro: isProCourse,
                     progress: p,
                     cta: .continue
@@ -715,15 +871,21 @@ extension MainManager {
     /// Priority step refs for Smart Discovery (empty = current behavior). Reserved for future use.
     @MainActor
     func reloadDailyPicks(count: Int = 5, priorityStepRefs: [StepData.StepRef] = []) async {
+        // Free всегда ≤5 реальных карточек + PRO-заглушки; PRO — до proDailyPicksLimit.
+        // Игнорируем «раздутый» count от UI/кэша после смены entitlement.
+        let cappedCount = hasExtraDailyPicks()
+            ? min(max(1, count), proDailyPicksLimit)
+            : freeDailyPicksLimit
+
         // keep today's picks stable: rebuild only when cache is empty or day changed or count changes
         invalidateDailyCacheIfDayChanged()
-        if dailyKeysCache.isEmpty || dailyKeysCacheCount != count {
-            let keys = await StepData.shared.dailyPicksKeys(count: count, priorityStepRefs: priorityStepRefs)
+        if dailyKeysCache.isEmpty || dailyKeysCacheCount != cappedCount {
+            let keys = StepData.shared.dailyPicksKeys(count: cappedCount, priorityStepRefs: priorityStepRefs)
             dailyKeysCache = keys.map { k in
                 let r = DailyPicksPayload.Ref(courseId: k.courseId, lessonId: k.lessonId, index: k.index)
                 return (ref: r, item: k.item)
             }
-            dailyKeysCacheCount = count
+            dailyKeysCacheCount = cappedCount
         }
 
         var refs: [DailyPicksPayload.Ref] = []
@@ -750,16 +912,16 @@ extension MainManager {
         if !visuals.isEmpty && !hasExtra {
             let before = SDStepItem(
                 kind: .word,
-                titleRU: "расширь подборку",
-                subtitleTH: "открой ещё 12 карточек",
-                phonetic: "нужно pro",
+                titleRU: "ещё 5 карточек",
+                subtitleTH: "расширь разминку с Taika+",
+                phonetic: "",
                 isPro: true
             )
             let after = SDStepItem(
                 kind: .word,
-                titleRU: "открой ещё",
-                subtitleTH: "ещё 12 карточек",
-                phonetic: "нужно pro",
+                titleRU: "полная подборка",
+                subtitleTH: "до 10 карточек каждый день",
+                phonetic: "",
                 isPro: true
             )
 
@@ -798,11 +960,7 @@ extension MainManager {
 
         self.cacheInvalidated = false
 
-        #if DEBUG
-        let courses = Set(refs.map{ $0.courseId }).count
-        let lessons = Set(refs.map{ $0.lessonId }).count
-        print("[MainManager] daily picks → items=\(refs.count) courses=\(courses) lessons=\(lessons)")
-        #endif
+        // No per-refresh console log here: daily picks can refresh frequently in normal app flow.
     }
 
     private func sd(from item: StepItem) -> SDStepItem {
@@ -1068,13 +1226,14 @@ extension MainManager {
         return await dailyProgressFromActiveIds(ids)
     }
 
+    @MainActor
     private func dailyUniqueItemsCount(on date: Date) async -> Int {
         // Use today's cached daily picks; historical aggregation will be added in later steps.
         if isSameCalendarDay(date, Date()) {
             invalidateDailyCacheIfDayChanged()
             // ensure cache is populated at least once
             if dailyKeysCache.isEmpty {
-                let keys = await StepData.shared.dailyPicksKeys(count: 5)
+                let keys = StepData.shared.dailyPicksKeys(count: 5)
                 dailyKeysCache = keys.map { k in
                     let r = DailyPicksPayload.Ref(courseId: k.courseId, lessonId: k.lessonId, index: k.index)
                     return (ref: r, item: k.item)
@@ -1085,10 +1244,11 @@ extension MainManager {
         return 0
     }
 
+    @MainActor
     private func dailyTopCoursesTitles(on date: Date, limit: Int) async -> [String] {
         guard limit > 0 else { return [] }
         let day = Self.bangkokCal.startOfDay(for: date)
-        let ids = await UserSession.shared.courseIds(on: day)
+        let ids = UserSession.shared.courseIds(on: day)
         guard !ids.isEmpty else { return [] }
 
         var out: [String] = []
@@ -1107,7 +1267,7 @@ extension MainManager {
     func courseIds(for date: Date, limit: Int = 10) async -> [String] {
         guard limit > 0 else { return [] }
         let day = Self.bangkokCal.startOfDay(for: date)
-        let all = await UserSession.shared.courseIds(on: day)
+        let all = UserSession.shared.courseIds(on: day)
         guard !all.isEmpty else { return [] }
 
         // DO NOT drop zero-progress courses. If the course is recorded in dayCourses, it counts as activity for that day.
@@ -1153,7 +1313,7 @@ extension MainManager {
     /// helper: whether there is any activity for a given day.
     @MainActor
     func hasCourses(on date: Date) async -> Bool {
-        !(await UserSession.shared.courseIds(on: date)).isEmpty
+        !UserSession.shared.courseIds(on: date).isEmpty
     }
 }
 
@@ -1168,35 +1328,112 @@ extension MainManager {
 
     @MainActor
     func reloadDailyCoursePicks(count: Int = 5) async {
+        // Free: смесь free+PRO (не «все платные»). PRO: больше слотов, любой микс.
+        let cappedCount = hasExtraDailyPicks()
+            ? min(max(1, count), proDailyCoursePicksLimit)
+            : freeDailyCoursePicksLimit
+
         // keep today's course picks stable: rebuild only when cache is empty or day changed or count changes
         invalidateDailyCacheIfDayChanged()
 
-        if dailyCourseCache.isEmpty || dailyCourseCacheCount != count {
+        if dailyCourseCache.isEmpty || dailyCourseCacheCount != cappedCount {
             let all = CourseData.shared.featuredCourses
             if all.isEmpty {
                 dailyCoursePicks = .empty
+                dailyCourseCards = []
                 return
             }
-            let limited = Array(all.shuffled().prefix(count))
+            let limited = Self.pickDailyCourses(
+                from: all,
+                count: cappedCount,
+                isProUser: hasExtraDailyPicks(),
+                isProCourse: { [weak self] c in
+                    self?.resolveIsProCourse(c) ?? c.isPro
+                }
+            )
             dailyCourseCache = limited
-            dailyCourseCacheCount = count
+            dailyCourseCacheCount = cappedCount
         }
 
         let payload = DailyCoursePicksPayload(courses: dailyCourseCache)
         dailyCoursePicks = payload
 
-        #if DEBUG
-        print("[MainManager] daily course picks → \(dailyCourseCache.count) courses")
-        #endif
+        // Prepare UI cards once here (MainView must only render).
+        let snap = UserSession.shared.snapshot
+        let started = snap.startedCourses
+        var out: [CourseCardModel] = []
+        out.reserveCapacity(dailyCourseCache.count)
+        for c in dailyCourseCache {
+            let cid = c.id
+            let title = await shortCourseName(cid)
+            let subtitle: String = {
+                if let outcome = courseOutcomePreview(cid) { return outcome }
+                let s = shortCourseSubtitle(cid, course: c)
+                return s.isEmpty ? CourseCardModel.CTA.continue.hint : s
+            }()
+            let isProCourse = resolveIsProCourse(c)
+            let categoryChip = resolveCourseCategoryChip(c)
+            let meta = resolveCourseMeta(c)
+            let p = await courseProgressFraction(courseId: cid)
+            let cta: CourseCardModel.CTA = started.contains(cid) ? .continue : .add
+            out.append(
+                CourseCardModel(
+                    courseId: cid,
+                    title: title,
+                    subtitle: subtitle,
+                    categoryChip: categoryChip,
+                    lessonCount: meta.lessonCount,
+                    durationMinutes: meta.durationMinutes,
+                    learningOutcomes: meta.outcomes,
+                    isPro: isProCourse,
+                    progress: p,
+                    cta: cta
+                )
+            )
+        }
+        dailyCourseCards = out
     }
 
+
+    /// Free: сначала бесплатные (шанс начать), затем PRO-витрина.
+    /// PRO: случайная выборка из всего каталога.
+    private static func pickDailyCourses(
+        from all: [Course],
+        count: Int,
+        isProUser: Bool,
+        isProCourse: (Course) -> Bool
+    ) -> [Course] {
+        guard count > 0, !all.isEmpty else { return [] }
+        if isProUser {
+            return Array(all.shuffled().prefix(count))
+        }
+
+        let free = all.filter { !isProCourse($0) }.shuffled()
+        let pro = all.filter { isProCourse($0) }.shuffled()
+
+        // Цель: минимум 2 free (если есть), остальное — PRO-витрина; иначе добиваем free.
+        let freeTarget: Int = {
+            if free.isEmpty { return 0 }
+            if pro.isEmpty { return min(free.count, count) }
+            return min(free.count, max(2, count - min(2, pro.count)))
+        }()
+        var picked = Array(free.prefix(freeTarget))
+        let remaining = count - picked.count
+        if remaining > 0 {
+            picked.append(contentsOf: pro.prefix(remaining))
+        }
+        if picked.count < count {
+            picked.append(contentsOf: free.dropFirst(freeTarget).prefix(count - picked.count))
+        }
+        return Array(picked.prefix(count))
+    }
 
     @MainActor
     func randomCourseForToday(isProUser: Bool) async -> Course? {
         let all = CourseData.shared.featuredCourses
         guard !all.isEmpty else { return nil }
 
-        let snap = await UserSession.shared.snapshot
+        let snap = UserSession.shared.snapshot
         let startedIds = snap.startedCourses
 
         let filtered = all.filter { course in

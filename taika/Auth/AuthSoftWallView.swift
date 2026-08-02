@@ -73,7 +73,7 @@ struct AuthSoftWallView: View {
     }
 
     private var mainContent: some View {
-        ScrollView {
+        TaikaRootVerticalScroll {
             VStack(alignment: .leading, spacing: 24) {
                 Text("Закрепи свой результат")
                     .font(.system(size: 22, weight: .bold))
@@ -108,22 +108,7 @@ struct AuthSoftWallView: View {
                     .buttonStyle(.plain)
                     .disabled(authInProgress)
 
-                    Button {
-                        // Telegram — скоро
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "paperplane.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Sign in with Telegram")
-                                .font(.system(size: 16, weight: .medium))
-                        }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color(red: 0.22, green: 0.51, blue: 0.92))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
+                    // Telegram CTA скрыт для TF (нет бэкенда входа).
                 }
 
                 if authInProgress {
@@ -146,7 +131,6 @@ struct AuthSoftWallView: View {
             }
             .padding(.horizontal, 4)
         }
-        .scrollIndicators(.hidden)
     }
 
     private func statPill(label: String, value: String) -> some View {
@@ -209,7 +193,18 @@ struct AuthSoftWallSheetHost: View {
                 .presentationDetents([.fraction(0.6), .large])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(PD.Radius.card)
-                .presentationBackground(.ultraThinMaterial)
+                .presentationBackground {
+                    ZStack {
+                        Rectangle().fill(.ultraThinMaterial)
+                        Color.black.opacity(0.78)
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.10), Color.clear],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
+                        .blendMode(.plusLighter)
+                    }
+                }
             }
             .onChange(of: showSheet) { _, new in
                 if !new { onDismiss() }

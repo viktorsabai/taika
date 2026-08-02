@@ -1,16 +1,21 @@
 import Foundation
-import AVFoundation
+import Combine
+@preconcurrency import AVFoundation
 
 /// boxed audio helper for step cards (speaker button)
 /// usage: StepAudio.shared.speakThai(_:) or .speak(text:language:)
-final class StepAudio: NSObject {
+final class StepAudio: NSObject, ObservableObject {
     static let shared = StepAudio()
+
+    /// When set from step cards, matches `SDStepItem.id` while that utterance is actively playing.
+    @Published private(set) var activeStepSpeechItemId: UUID?
 
     private let synth = AVSpeechSynthesizer()
     private var sessionConfigured = false
     private var sessionActive = false
     private var progressCallback: ((Double) -> Void)?
     private var currentUtteranceLength: Int = 0
+    private var pendingStepItemId: UUID?
 
     // default voice params
     private let defaultRate: Float = 0.48  // 0.0...1.0 (system maps to AVSpeechUtteranceDefaultSpeechRate scale)
@@ -25,19 +30,21 @@ final class StepAudio: NSObject {
     // MARK: - Public API
 
     /// speak thai phrase with th-TH voice; falls back gracefully if no thai voice
-    func speakThai(_ text: String) {
-        speak(text: text, language: "th-TH")
+    func speakThai(_ text: String, stepItemId: UUID? = nil) {
+        speak(text: text, language: "th-TH", onProgress: nil, stepItemId: stepItemId)
     }
 
     /// Speak Thai and report playback progress 0.0...1.0 (for syncing UI e.g. tone graph). Callback is invoked on main queue.
-    func speakThai(_ text: String, onProgress: @escaping (Double) -> Void) {
-        speak(text: text, language: "th-TH", onProgress: onProgress)
+    func speakThai(_ text: String, onProgress: @escaping (Double) -> Void, stepItemId: UUID? = nil) {
+        speak(text: text, language: "th-TH", onProgress: onProgress, stepItemId: stepItemId)
     }
 
     /// generic speak with BCP-47 language code (e.g., "th-TH", "ru-RU")
-    func speak(text: String, language: String, onProgress: ((Double) -> Void)? = nil) {
+    func speak(text: String, language: String, onProgress: ((Double) -> Void)? = nil, stepItemId: UUID? = nil) {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         prepareSessionIfNeeded()
+
+        bindStepSpeechItem(stepItemId)
 
         // if already speaking, stop and re-speak fresh
         if synth.isSpeaking {
@@ -56,6 +63,26 @@ final class StepAudio: NSObject {
         utt.pitchMultiplier = defaultPitch
         utt.volume = defaultVolume
         synth.speak(utt)
+    }
+
+    private func bindStepSpeechItem(_ id: UUID?) {
+        let work = {
+            self.pendingStepItemId = id
+            if id == nil {
+                self.activeStepSpeechItemId = nil
+            }
+        }
+        if Thread.isMainThread {
+            work()
+        } else {
+            DispatchQueue.main.sync(execute: work)
+        }
+    }
+
+    private func clearActiveStepSpeechItem() {
+        DispatchQueue.main.async {
+            self.activeStepSpeechItemId = nil
+        }
     }
 
     func stop() {
@@ -133,6 +160,9 @@ final class StepAudio: NSObject {
 
 extension StepAudio: AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+        DispatchQueue.main.async {
+            self.activeStepSpeechItemId = self.pendingStepItemId
+        }
         if let cb = progressCallback {
             DispatchQueue.main.async { cb(0) }
         }
@@ -151,6 +181,7 @@ extension StepAudio: AVSpeechSynthesizerDelegate {
         progressCallback = nil
         currentUtteranceLength = 0
         print("[StepAudio] didFinish: \(utterance.speechString.prefix(20))...")
+        clearActiveStepSpeechItem()
         deactivateSessionIfNeeded()
     }
 
@@ -161,6 +192,7 @@ extension StepAudio: AVSpeechSynthesizerDelegate {
         progressCallback = nil
         currentUtteranceLength = 0
         print("[StepAudio] didCancel")
+        clearActiveStepSpeechItem()
         deactivateSessionIfNeeded()
     }
 }

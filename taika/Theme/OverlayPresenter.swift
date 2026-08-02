@@ -29,7 +29,7 @@ final class OverlayPresenter: ObservableObject {
         case randomCourseLoading
 
         // pro gating (data only)
-        case proCoursePaywall(courseId: String)
+        case proCoursePaywall(courseId: String, reason: ProGateReason)
         /// PRO paywall from Speaker "получить разбор" (сквозной процесс завлечения на разбор)
         case speakerPaywall
 
@@ -42,13 +42,24 @@ final class OverlayPresenter: ObservableObject {
         // EPIC 2: header-driven overlays
         case courseFilters
         case courseSearchAndFilters  // unified: search + filters for Course tab
+        /// Сценарий создания персонального курса (Pro: умный спикер → словарь → урок).
+        case personalCourseCreate
         case speakerFilters
+        /// Режим + выбор курсов для сборки очереди (вместо чипов на экране Спикера).
+        case speakerCourses
+        /// Лимит попыток спикера на сегодня (не фильтры режима).
+        case speakerAttempts
         case voiceSettings
         case gamePark
         case gameParkFromFavorites
         case favoritesFilters
+        /// Поиск по избранным фразам (вкладка «Карточки»).
+        case favoritesSearch
         /// Превью курса (описание + кнопка «Открыть курс»), открывается по тапу на иконку инфо на карточке.
         case courseInfoPreview(courseId: String)
+
+        /// Подтверждение сброса прогресса курса (тот же chrome, что у PRO).
+        case courseResetConfirm(courseId: String)
 
         // theme / accent (ui only)
         case accentPicker
@@ -116,6 +127,11 @@ final class OverlayPresenter: ObservableObject {
 
     func present(_ overlay: Overlay) {
         self.overlay = overlay
+    }
+
+    /// Plus paywall с контекстом (карусель стартует с нужного слайда).
+    func presentPro(reason: ProGateReason = .general, courseId: String = "") {
+        present(.proCoursePaywall(courseId: courseId, reason: reason))
     }
 
     func dismiss() {

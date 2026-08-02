@@ -88,7 +88,7 @@ final class ProfileManager: ObservableObject {
         )
 
         observers.append(
-            nc.addObserver(forName: .init("stepProgressDidChange"), object: nil, queue: .main) { [weak self] _ in
+            nc.addObserver(forName: Notification.Name.stepProgressDidChange, object: nil, queue: .main) { [weak self] _ in
                 self?.refresh()
             }
         )
@@ -137,45 +137,28 @@ final class ProfileManager: ObservableObject {
     }
 
     private func rebuildDashboard() async {
+        // Single source of truth: ProgressManager.publishedState (see ProgressManager+Profile.swift)
         let pm = ProgressManager.shared
-        let learnedCount = pm.learnedSteps.values.reduce(0) { $0 + $1.count }
-        dashboardLearnedCount = learnedCount
+        pm.refreshProfileState()
+        let s = pm.publishedState
+
+        dashboardLearnedCount = s.totalStableSteps
+        dashboardMasteryFraction = min(1, max(0, Double(s.totalMasteryPercent) / 100.0))
+        dashboardStreakDays = s.currentStreak
+        dashboardSpeakingScore = s.averagePronunciationScore
+        dashboardRecognitionPercent = s.totalMasteryPercent
+        dashboardRecallPercent = s.totalMasteryPercent
+        dashboardRecallGamesCount = s.completedRecallGamesCount
+        dashboardRadarValues = s.radarValues
 
         let courseIds = UserSession.shared.profileAllKnownCourseIds()
-        let mastery = await overallCourseProgress(courseIds: courseIds)
-        dashboardMasteryFraction = min(1, max(0, mastery))
-
-        dashboardStreakDays = computeStreakDays()
-
-        let attempts = SpeakerAttemptsStore.loadAll()
-        if !attempts.isEmpty {
-            let total = attempts.values.reduce(0) { $0 + $1.heardConfidence }
-            dashboardSpeakingScore = total / attempts.count
-        } else {
-            dashboardSpeakingScore = nil
-        }
-
-        dashboardRecognitionPercent = Int(round(mastery * 100))
-        dashboardRecallPercent = Int(round(mastery * 100))
-
         let (lessonsDone, lessonsTotal) = await overallLessonsDoneTotal(courseIds: courseIds)
         let lessonBase = lessonsTotal > 0 ? Double(lessonsDone) / Double(lessonsTotal) : 0
+        let learnedCount = s.totalStableSteps
         dashboardExpatMarket = min(100, max(0, Int(round(Double(learnedCount) * 1.2 + lessonBase * 25))))
         dashboardExpatImmigration = min(100, lessonsTotal > 0 ? Int(round(lessonBase * 80)) : 0)
-
         dashboardProblemSyllables = []
-
         dashboardHeatValues = activityWeekDays.map { CGFloat($0.intensity01) }
-        // Recall games: proxy = completed lessons count (real per-step recall count can be added later)
-        let snapshot = ProgressManager.shared.snapshot
-        dashboardRecallGamesCount = snapshot.completed.count
-
-        let m = Double(dashboardExpatMarket) / 100.0
-        let imm = Double(dashboardExpatImmigration) / 100.0
-        let taxi = m * 0.85
-        let nightlife = lessonBase * 0.5
-        let cafe = m * 0.7
-        dashboardRadarValues = [m, taxi, imm, nightlife, cafe]
     }
 
     private func computeStreakDays() -> Int {

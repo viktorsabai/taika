@@ -12,6 +12,8 @@ public final class LessonsHeaderStore: ObservableObject {
     public static let shared = LessonsHeaderStore()
 
     @Published public private(set) var resetRequested: Bool = false
+    /// Инкремент при setActions/clearActions — чтобы AppShell пересобрал хедер с актуальными замыканиями.
+    @Published public private(set) var actionsRevision: UInt = 0
 
     public var onSpeaker: (() -> Void)?
     public var onReinforce: (() -> Void)?
@@ -29,10 +31,12 @@ public final class LessonsHeaderStore: ObservableObject {
     public func setActions(onSpeaker: (() -> Void)?, onReinforce: (() -> Void)?) {
         self.onSpeaker = onSpeaker
         self.onReinforce = onReinforce
+        actionsRevision &+= 1
     }
 
     public func clearActions() {
         onSpeaker = nil
         onReinforce = nil
+        actionsRevision &+= 1
     }
 }

@@ -8,6 +8,59 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Lesson presentation (global stack / N1)
+
+/// Параметры `StepView` при открытии урока через `NavigationIntent.path` (единый стек AppShell).
+public struct LessonRoutePresentation: Hashable {
+    public var startIndex: Int?
+    public var scope: InteractionScope
+    public var showKinds: [SDStepItem.Kind]?
+    public var layoutCardsOnly: Bool
+    public var allowLearning: Bool
+    public var showBottomProgress: Bool
+    public var showInternalHeader: Bool
+    public var useInternalBackground: Bool
+
+    public static let canonical = LessonRoutePresentation(
+        startIndex: nil,
+        scope: .full,
+        showKinds: nil,
+        layoutCardsOnly: false,
+        allowLearning: true,
+        showBottomProgress: true,
+        showInternalHeader: false,
+        useInternalBackground: true
+    )
+
+    /// Полноэкранный урок из списка «Показать всё» (push в общем стеке — как канонический урок, с `PD.ColorToken.background` в `StepView`).
+    public static func favoritesAllList(startIndex: Int, hacksOnly: Bool) -> LessonRoutePresentation {
+        LessonRoutePresentation(
+            startIndex: startIndex,
+            scope: .full,
+            showKinds: hacksOnly ? [.tip] : [.word, .phrase, .casual],
+            layoutCardsOnly: false,
+            allowLearning: true,
+            showBottomProgress: true,
+            showInternalHeader: false,
+            useInternalBackground: true
+        )
+    }
+
+    /// Персональная подборка Pro из словаря умного спикера (`user_dict` / `personal_pack`).
+    public static func personalPack(startIndex: Int = 0) -> LessonRoutePresentation {
+        LessonRoutePresentation(
+            startIndex: startIndex,
+            scope: .full,
+            showKinds: [.word, .phrase, .casual],
+            layoutCardsOnly: false,
+            allowLearning: true,
+            showBottomProgress: true,
+            showInternalHeader: false,
+            useInternalBackground: true
+        )
+    }
+}
+
 /// a tiny, app-wide navigation signal.
 ///
 /// goal: views/managers can *request* navigation without directly owning navigation state.
@@ -17,30 +70,14 @@ public final class NavigationIntent: ObservableObject {
 
     public enum Route: Hashable {
         case lessons(courseId: String)
-        case lesson(courseId: String, lessonId: String)
+        case lesson(courseId: String, lessonId: String, presentation: LessonRoutePresentation)
         case course(courseId: String)
         case game(courseId: String, lessonId: String?, gameType: String)
-
-        // MARK: - legacy aliases (keep call-sites compiling)
-
-        @available(*, deprecated, message: "use .lessons(courseId:) instead")
-        public static func steps(courseId: String) -> Route {
-            .lessons(courseId: courseId)
-        }
-
-        @available(*, deprecated, message: "use .lesson(courseId:lessonId:) instead")
-        public static func step(courseId: String, lessonId: String) -> Route {
-            .lesson(courseId: courseId, lessonId: lessonId)
-        }
-
-        // MARK: - unlabeled convenience factories
+        /// Список «Показать всё» на табе избранного (глобальный push).
+        case favoritesAll(initialFilter: FDK)
 
         public static func lessons(_ courseId: String) -> Route {
             .lessons(courseId: courseId)
-        }
-
-        public static func lesson(_ courseId: String, _ lessonId: String) -> Route {
-            .lesson(courseId: courseId, lessonId: lessonId)
         }
 
         public static func game(_ courseId: String, _ lessonId: String?, _ gameType: String) -> Route {
@@ -64,17 +101,26 @@ public final class NavigationIntent: ObservableObject {
         requestedTab = nil
     }
 
+    /// Открыть корневой каталог курсов на нужной вкладке (без push `__all__`).
+    public func openCourseCatalog(tab: CourseScreenTab = .scenarios) {
+        CourseCatalogTabState.shared.request(tab)
+        popToRoot()
+        requestTab(1)
+    }
+
     public func go(_ route: Route) {
-        // important: keep `path` elements homogeneous (Route only)
+        if case let .favoritesAll(initialFilter) = route {
+            FavoritesFilterState.shared.selectedTab = FavoriteScreenTab(fdk: initialFilter)
+            requestTab(3)
+            return
+        }
         path.append(route)
     }
 
-    /// replace the whole stack with a single route (useful to avoid multiple updates per frame)
     public func set(_ route: Route) {
         path = [route]
     }
 
-    /// convenience for returning to root without touching other state
     public func popToRoot() {
         path.removeAll(keepingCapacity: true)
     }

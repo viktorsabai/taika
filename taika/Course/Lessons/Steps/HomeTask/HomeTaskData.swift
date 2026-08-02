@@ -16,7 +16,38 @@ public enum HTaskStatus: String, Codable, Equatable {
 public enum HomeGameType: String, Codable, Equatable {
     case match
     case recall
+    /// Legacy: тот же recall/builder UI (сборка по слогам).
     case builder
+    /// Legacy rawValue в сохранённых задачах: маршрутизируется как `audioRecall`.
+    case conversation
+    /// Игра 3 (урок): чат-оболочка, аудио по-тайски, тайский скрыт до ответа; сборка перевода из слов (PRO).
+    case audioRecall
+    /// Игра 4 (курс): сценарий по `reply_to` / `is_question`, ответ голосом, движок как у Спикера (PRO).
+    case grandDialogue
+}
+
+public extension HomeGameType {
+    /// Старые домашки и `context` в навигации → Audio Recall.
+    var normalizedForGameShell: HomeGameType {
+        switch self {
+        case .conversation:
+            return .audioRecall
+        case .grandDialogue where !TaikaReleaseFlags.showGrandDialogue:
+            return .audioRecall
+        default:
+            return self
+        }
+    }
+
+    /// Бесплатно только «Найди пару»; остальные режимы требуют PRO (см. `GameModeType.isPro`).
+    var requiresProSubscription: Bool {
+        switch normalizedForGameShell {
+        case .match:
+            return false
+        case .recall, .builder, .audioRecall, .conversation, .grandDialogue:
+            return true
+        }
+    }
 }
 
 public struct HTask: Identifiable, Codable, Equatable {

@@ -219,6 +219,5 @@ struct CourseGlowPreview: View {
 struct CourseGlowPreview_Previews: PreviewProvider {
     static var previews: some View {
         CourseGlowPreview()
-            .preferredColorScheme(.dark)
     }
 }

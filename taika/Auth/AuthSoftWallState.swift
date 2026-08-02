@@ -11,7 +11,8 @@
 //
 //  Триггеры:
 //  1. Закрытие экрана успеха урока в StepView (крестик, тап по фону, «Следующий урок», «Следующий курс», «К курсам»).
-//  2. onAppear вкладки «Профиль» (ProfileView).
+//  2. onAppear вкладки «Профиль» (ProfileView) — без отдельного cooldown-ключа; shouldShowSoftWall() уже проверяет 7 дней.
+//     calledFromProfile: true — не пишем lastShown при показе из Профиля (можно повторять, пока не войдёт).
 //
 //  Отладка: в DEBUG в консоли печатаются [AuthSoftWall] shouldShow: ... и tryPresentSoftWall / presenting overlay.
 //  Сброс cooldown для теста: UserDefaults.standard.removeObject(forKey: "authSoftWall.lastShownDate")

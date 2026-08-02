@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import RevenueCat
 
 // MARK: - Pro Feature Gates
 
@@ -34,6 +35,7 @@ enum ProEntitlementSource {
     case none
     case localReceipt
     case server
+    case revenueCat
     case debug
 }
 
@@ -49,6 +51,9 @@ final class ProManager: ObservableObject {
     @Published private(set) var isPro: Bool = false
     @Published private(set) var tier: ProTier = .none
     @Published private(set) var source: ProEntitlementSource = .none
+
+    /// Активное entitlement из RevenueCat (обновляется delegate + sync).
+    @Published private(set) var revenueCatEntitled: Bool = false
 
     // MARK: Debug Override
 
@@ -72,58 +77,70 @@ final class ProManager: ObservableObject {
     func start(session: UserSession) {
         self.session = session
         bindSession(session)
-        refreshEntitlement()
+        applyMergedEntitlement()
     }
 
     /// Call on logout
     func reset() {
         cancellables.removeAll()
         session = nil
+        revenueCatEntitled = false
         setPro(false, tier: .none, source: .none)
     }
 
     // MARK: Session Binding
 
     private func bindSession(_ session: UserSession) {
-        // listen to server-driven flags if they exist
         session.$isProFromServer
             .removeDuplicates()
-            .sink { [weak self] serverFlag in
+            .sink { [weak self] _ in
                 guard let self else { return }
-                // if debug override is active, do not let server updates replace it
                 guard self.debugOverride == nil else {
-                    self.refreshEntitlement()
+                    self.applyMergedEntitlement()
                     return
                 }
-                if let serverFlag {
-                    self.setPro(serverFlag, tier: serverFlag ? .pro : .none, source: .server)
-                }
+                self.applyMergedEntitlement()
             }
             .store(in: &cancellables)
     }
 
     // MARK: Entitlement
 
-    /// Recalculate PRO entitlement (StoreKit receipt / server flags)
+    /// Пересчитать PRO: debug → (сервер ИЛИ RevenueCat).
     func refreshEntitlement() {
-        // priority:
-        // 1) debug override (if set)
-        // 2) server flag (if present)
-        // 3) local receipt (StoreKit)
-        // 4) fallback to none
+        applyMergedEntitlement()
+    }
 
+    /// Обновление из RevenueCat (`CustomerInfo`).
+    func applyRevenueCatCustomerInfo(_ info: CustomerInfo) {
+        let active = info.entitlements[TaikaProConfig.entitlementIdentifier]?.isActive == true
+        revenueCatEntitled = active
+        applyMergedEntitlement()
+    }
+
+    func applyMergedEntitlement() {
         if let forced = debugOverride {
             setPro(forced, tier: forced ? .pro : .none, source: .debug)
             return
         }
 
-        if let serverFlag = session?.isProFromServer {
-            setPro(serverFlag, tier: serverFlag ? .pro : .none, source: .server)
-            return
+        let serverGrantsPro = session?.isProFromServer == true
+        let combined = serverGrantsPro || revenueCatEntitled
+
+        let src: ProEntitlementSource
+        if combined {
+            if serverGrantsPro && revenueCatEntitled {
+                src = .revenueCat
+            } else if serverGrantsPro {
+                src = .server
+            } else {
+                src = .revenueCat
+            }
+        } else {
+            src = .none
         }
 
-        // TODO: integrate StoreKit 2 receipt check
-        // For now: keep current state
+        setPro(combined, tier: combined ? .pro : .none, source: src)
     }
 
     // MARK: Debug Control
@@ -135,7 +152,7 @@ final class ProManager: ObservableObject {
         } else {
             UserDefaults.standard.removeObject(forKey: ProManager.debugOverrideKey)
         }
-        refreshEntitlement()
+        applyMergedEntitlement()
     }
 
     func setDebugPro(_ enabled: Bool) {
@@ -166,15 +183,10 @@ final class ProManager: ObservableObject {
         }
     }
 
-    // MARK: StoreKit (stubs)
-
-    func purchasePro() async throws {
-        // TODO: StoreKit 2 purchase flow
-        // on success -> setPro(true, tier: .pro, source: .localReceipt)
-    }
+    // MARK: Purchases (RevenueCat)
 
     func restorePurchases() async throws {
-        // TODO: StoreKit 2 restore flow
+        try await restorePurchasesRevenueCat()
     }
 
     // MARK: Internal State
@@ -183,5 +195,24 @@ final class ProManager: ObservableObject {
         self.isPro = enabled
         self.tier = tier
         self.source = source
+    }
+}
+
+// MARK: - Errors
+
+enum ProStoreError: LocalizedError {
+    case productsNotConfigured
+    case productNotFound
+    case purchaseFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .productsNotConfigured:
+            return "Подписка временно недоступна. Попробуй позже."
+        case .productNotFound:
+            return "Тариф не найден. Попробуй другой план."
+        case .purchaseFailed(let message):
+            return message.isEmpty ? "Покупка не прошла. Попробуй ещё раз." : message
+        }
     }
 }

@@ -5,7 +5,6 @@
 //
 
 import Foundation
-import Combine
 import UIKit
 
 /// Статус урока в рамках курса
@@ -47,7 +46,6 @@ extension LessonProgress {
     private let storeKey = "LessonsManager.progress.v1"
     private let storeKeyStarted = "LessonsManager.started.v1"
     private var saveWorkItem: DispatchWorkItem?
-    private var cancellables = Set<AnyCancellable>()
 
     // Coalesced UI notifier to prevent excessive objectWillChange/tick spam
     private var pendingEmit = false
@@ -68,6 +66,76 @@ extension LessonProgress {
     // single source of truth for lesson content (parsed from lessons.json)
     private let lessonsData = LessonsData.shared
 
+    // MARK: - Course id canonicalization (same course, duplicate UserDefaults keys: `a_b` vs `a-b`)
+
+    private static func normalizeCourseIdKey(_ s: String) -> String {
+        s.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "-")
+    }
+
+    /// Всегда используем `courseID` из `lessons.json`, чтобы `LessonsManager.progress` совпадал с `rebuildAggregatesFromProgressManager` и с `ProgressManager`.
+    private func catalogCourseId(for raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return t }
+        if let c = lessonsData.courseBundle(matchingAnyId: t) {
+            return c.courseID
+        }
+        return t
+    }
+
+    /// Сопоставить `lessonId` с id из каталога (разный регистр / `_` vs `-`).
+    private func catalogLessonId(courseId cid: String, lessonId raw: String) -> String {
+        if let l = lessonsData.lesson(courseID: cid, lessonID: raw) {
+            return l.lessonID
+        }
+        let target = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        for l in lessonsData.lessons(for: cid) {
+            if l.lessonID.caseInsensitiveCompare(target) == .orderedSame { return l.lessonID }
+            let a = l.lessonID.replacingOccurrences(of: "_", with: "-").lowercased()
+            let b = target.replacingOccurrences(of: "_", with: "-").lowercased()
+            if a == b { return l.lessonID }
+        }
+        return raw
+    }
+
+    private func mergeLessonProgress(_ a: LessonProgress, _ b: LessonProgress) -> LessonProgress {
+        if a.status == .completed { return a }
+        if b.status == .completed { return b }
+        if a.percent != b.percent {
+            return a.percent >= b.percent ? a : b
+        }
+        return a.learned >= b.learned ? a : b
+    }
+
+    private func mergeProgressDictionary(_ input: [String: [String: LessonProgress]]) -> [String: [String: LessonProgress]] {
+        var out: [String: [String: LessonProgress]] = [:]
+        for (rawKey, lessons) in input {
+            let canon = catalogCourseId(for: rawKey)
+            var bucket = out[canon] ?? [:]
+            for (lid, lp) in lessons {
+                if let existing = bucket[lid] {
+                    bucket[lid] = mergeLessonProgress(existing, lp)
+                } else {
+                    bucket[lid] = lp
+                }
+            }
+            out[canon] = bucket
+        }
+        return out
+    }
+
+    private func mergeStartedDictionary(_ decoded: [String: [String]]) -> [String: Set<String>] {
+        var out: [String: Set<String>] = [:]
+        for (rawKey, arr) in decoded {
+            let canon = catalogCourseId(for: rawKey)
+            var s = out[canon] ?? []
+            s.formUnion(arr)
+            out[canon] = s
+        }
+        return out
+    }
+
     private init() {
         load()
         NotificationCenter.default.addObserver(forName: .stepProgressDidChange, object: nil, queue: .main) { [weak self] note in
@@ -76,40 +144,12 @@ extension LessonProgress {
                 guard let u = note.userInfo as? [String: Any],
                       let courseId = u["courseId"] as? String,
                       let lessonId = u["lessonId"] as? String else {
-                    self.publishProgress()
+                    // Нет контекста урока — полный ребилд из ProgressManager (синк, игры, облако).
+                    self.refreshFromProgressManager()
                     return
                 }
-
-                var updated = false
-
-                if let learnedArr = u["learnedContent"] as? [Int],
-                   let allArr = u["allCards"] as? [Int] {
-                    let hacksArr = (u["lifehacks"] as? [Int]) ?? []
-                    self.updateLessonProgress(
-                        courseId: courseId,
-                        lessonId: lessonId,
-                        learnedContent: Set(learnedArr),
-                        allCards: Set(allArr),
-                        lifehacks: Set(hacksArr)
-                    )
-                    updated = true
-                } else if let learned = u["learnedCount"] as? Int,
-                          let total = u["totalCount"] as? Int {
-                    let hacks = (u["lifehackCount"] as? Int) ?? 0
-                    self.updateLessonProgress(courseId: courseId,
-                                              lessonId: lessonId,
-                                              learnedCount: learned,
-                                              total: total,
-                                              lifehackCount: hacks)
-                    updated = true
-                }
-
-                if updated == false {
-                    #if DEBUG
-                    print("[LessonsManager] stepProgressDidChange: payload parsed but no fields matched, forcing refresh")
-                    #endif
-                }
-                self.forceRefresh()
+                // Единый источник счётчиков: ProgressManager (снапшоты StepView могли давать рассинхрон по индексам полоски).
+                self.syncLessonFromProgressManager(courseId: courseId, lessonId: lessonId)
             }
         }
         NotificationCenter.default.addObserver(forName: .stepProgressDidReset, object: nil, queue: .main) { [weak self] _ in
@@ -130,20 +170,19 @@ extension LessonProgress {
                 self.markLessonStarted(courseId: courseId, lessonId: lessonId, hintTotal: providedTotal)
             }
         }
-        // Refresh lesson counters when favorites change
-        FavoriteManager.shared.$items
-            .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.forceRefresh()
-            }
-            .store(in: &cancellables)
+        // Favorites: LessonsView/CourseView refresh via FavoriteManager / NotificationCenter;
+        // avoid invalidating all LessonsManager subscribers on every $items emission (global jank).
         // Save on app background so progress never lost (safety net; we also save immediately on change)
         NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.save()
+            Task { @MainActor in
+                self?.save()
+            }
         }
         // При возврате в приложение — пересобрать агрегаты из ProgressManager, чтобы выученные уроки не «пропадали»
         NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.refreshFromProgressManager()
+            Task { @MainActor in
+                self?.refreshFromProgressManager()
+            }
         }
     }
 
@@ -167,6 +206,19 @@ extension LessonProgress {
     /// Синхронизировать progress с ProgressManager (источник истины для выученных шагов). Вызывается при возврате в приложение.
     public func refreshFromProgressManager() {
         rebuildAggregatesFromProgressManager()
+    }
+
+    /// Одна строка урока в `progress` из `ProgressManager.learnedEffectiveCount` / `totalEffectiveCount`.
+    public func syncLessonFromProgressManager(courseId rawCourseId: String, lessonId rawLessonId: String) {
+        let cid = catalogCourseId(for: rawCourseId)
+        let lid = catalogLessonId(courseId: cid, lessonId: rawLessonId)
+        let learned = ProgressManager.shared.learnedEffectiveCount(courseId: cid, lessonId: lid)
+        let totalEffective = ProgressManager.shared.totalEffectiveCount(courseId: cid, lessonId: lid)
+        if applyLessonProgressInMemory(courseId: cid, lessonId: lid, learnedCount: learned, total: totalEffective, lifehackCount: 0) {
+            // ProgressManager already persists learned state; coalesce LessonsManager JSON writes.
+            saveDebounced()
+            scheduleEmit()
+        }
     }
 
     /// Применить снапшот прогресса по конкретному уроку (используется из Step/ProgressManager)
@@ -199,11 +251,12 @@ extension LessonProgress {
                                      learnedCount: Int,
                                      total: Int,
                                      lifehackCount: Int = 0) {
-        // Выкидываем лайфхаки из общего количества для расчёта статуса/процента
-        let hacks = max(0, lifehackCount)
-        let rawTotal = max(0, total)
-        let effectiveTotal = max(0, rawTotal - hacks)
-
+        let cid = catalogCourseId(for: courseId)
+        let lid = catalogLessonId(courseId: cid, lessonId: lessonId)
+        // LessonsManager stores progress denominators as *effective totals*
+        // (consistent with ProgressManager learnedEffectiveCount/totalEffectiveCount).
+        // `lifehackCount` is ignored for consistency; older call sites may pass it.
+        let effectiveTotal = max(0, total)
         let learned = max(0, learnedCount)
 
         let status: LessonStatus
@@ -218,21 +271,18 @@ extension LessonProgress {
             status = .locked
         }
 
-        var byLesson = progress[courseId] ?? [:]
+        var byLesson = progress[cid] ?? [:]
         let next = LessonProgress(learned: learned, total: effectiveTotal, status: status)
 
-        if byLesson[lessonId] != next {
-            byLesson[lessonId] = next
-            progress[courseId] = byLesson
+        if byLesson[lid] != next {
+            byLesson[lid] = next
+            progress[cid] = byLesson
             save()  // immediate save so progress persists before app exit/background (same as ProgressManager)
             objectWillChange.send()
             tick()
         }
 
-        // Print percent for debug
-        #if DEBUG
-        print("[LessonsManager] update course=\(courseId) lesson=\(lessonId) → learned=\(learned) / total=\(rawTotal) (hacks=\(hacks) → effective=\(effectiveTotal)) status=\(status) percent=\(next.percent)")
-        #endif
+        // Hot-path debug log removed: this callback can fire very frequently.
     }
 
     /// Удобный апдейтер, если уже посчитаны наборы индексов
@@ -249,36 +299,31 @@ extension LessonProgress {
     ) {
         let effectiveSet = allCards.subtracting(lifehacks)
         let learned = learnedContent.intersection(effectiveSet).count
-        // Use StepData as source of truth for denominator (same as StepManager path), so set-based notification doesn't overwrite with wrong total
-        let (totalLearnable, totalLifehack) = StepData.shared.progressCounts(for: lessonId)
         self.updateLessonProgress(courseId: courseId,
                                   lessonId: lessonId,
                                   learnedCount: learned,
-                                  total: totalLearnable + totalLifehack,
-                                  lifehackCount: totalLifehack)
-        // Print percent for debug
-        if let prog = lessonProgress(courseId: courseId, lessonId: lessonId) {
-            #if DEBUG
-            print("[LessonsManager] updateLessonProgress (set-based) course=\(courseId) lesson=\(lessonId) percent=\(prog.percent)")
-            #endif
-        }
+                                  total: effectiveSet.count,
+                                  lifehackCount: 0)
+        // Hot-path debug log removed to keep console signal/noise healthy.
     }
 
     /// Помечает урок как «начатый» (вошли в lesson), даже если learned==0.
     /// Если передан hintTotal > 0 и у нас не было записи по уроку — создаём запись с total=hintTotal.
     public func markLessonStarted(courseId: String, lessonId: String, hintTotal: Int = 0) {
-        var s = started[courseId] ?? []
-        let inserted = s.insert(lessonId).inserted
+        let cid = catalogCourseId(for: courseId)
+        let lid = catalogLessonId(courseId: cid, lessonId: lessonId)
+        var s = started[cid] ?? []
+        let inserted = s.insert(lid).inserted
         if inserted {
-            started[courseId] = s
+            started[cid] = s
             // Если нет прогресса по уроку — можем создать "нулевую" запись,
             // чтобы статус курса пересчитался в .inProgress сразу после входа.
-            if progress[courseId]?[lessonId] == nil {
+            if progress[cid]?[lid] == nil {
                 let total = max(0, hintTotal)
                 let lp = LessonProgress(learned: 0, total: total, status: .inProgress)
-                var byLesson = progress[courseId] ?? [:]
-                byLesson[lessonId] = lp
-                progress[courseId] = byLesson
+                var byLesson = progress[cid] ?? [:]
+                byLesson[lid] = lp
+                progress[cid] = byLesson
             }
             save()
             saveStarted()
@@ -289,7 +334,9 @@ extension LessonProgress {
 
     /// Текущий прогресс по конкретному уроку
     public func lessonProgress(courseId: String, lessonId: String) -> LessonProgress? {
-        progress[courseId]?[lessonId]
+        let cid = catalogCourseId(for: courseId)
+        let lid = catalogLessonId(courseId: cid, lessonId: lessonId)
+        return progress[cid]?[lid]
     }
 
     // MARK: - Main integration helpers
@@ -302,7 +349,9 @@ extension LessonProgress {
 
     /// Возвращает статус и прогресс по уроку (0.0...1.0)
     public func lessonStatusWithProgress(courseId: String, lessonId: String) -> (LessonStatus, Double) {
-        guard let lp = lessonProgress(courseId: courseId, lessonId: lessonId), lp.total > 0 else {
+        let cid = catalogCourseId(for: courseId)
+        let lid = catalogLessonId(courseId: cid, lessonId: lessonId)
+        guard let lp = progress[cid]?[lid], lp.total > 0 else {
             return (.locked, 0.0)
         }
         return (lp.status, lp.percent)
@@ -310,7 +359,8 @@ extension LessonProgress {
 
     /// Returns all lessonIds currently tracked for a course, sorted for stability.
     public func lessonIds(for courseId: String) -> [String] {
-        let byLesson = progress[courseId] ?? [:]
+        let cid = catalogCourseId(for: courseId)
+        let byLesson = progress[cid] ?? [:]
         return byLesson.keys.sorted()
     }
 
@@ -319,11 +369,12 @@ extension LessonProgress {
     /// - .inProgress if any lesson is in progress or any lesson is started,
     /// - .locked otherwise (no progress or all locked).
     public func courseStatus(for courseId: String) -> LessonStatus {
-        let byLesson = progress[courseId] ?? [:]
+        let cid = catalogCourseId(for: courseId)
+        let byLesson = progress[cid] ?? [:]
         let statuses = byLesson.values.map { $0.status }
 
         // Если хотя бы один урок отмечен как «начатый», курс считается в процессе
-        let startedLessons = started[courseId] ?? []
+        let startedLessons = started[cid] ?? []
 
         if statuses.isEmpty && startedLessons.isEmpty {
             return .locked
@@ -339,36 +390,59 @@ extension LessonProgress {
 
     /// Общий процент прогресса по курсу (0.0 ... 1.0): выученные карточки / все карточки всех уроков курса
     public func coursePercent(for courseId: String) -> Double {
-        let lessonIds = lessonsData.lessons(for: courseId).map { $0.lessonID }
-        guard !lessonIds.isEmpty else { return 0.0 }
+        let cid = catalogCourseId(for: courseId)
+        let lessons = lessonsData.lessons(for: cid)
+        guard !lessons.isEmpty else { return 0.0 }
 
-        let totalCards = lessonIds.reduce(0) { acc, lid in acc + StepData.shared.progressCounts(for: lid).learnable }
-        guard totalCards > 0 else { return 0.0 }
+        // Important: course progress must be computed from ProgressManager
+        // (same source as LessonsView "Итоги курса"), otherwise partial progress
+        // can temporarily desync between different aggregators.
+        let learnedTotal = lessons.reduce(0) { acc, lesson in
+            acc + ProgressManager.shared.learnedEffectiveCount(courseId: cid, lessonId: lesson.lessonID)
+        }
 
-        let byLesson = progress[courseId] ?? [:]
-        let learnedTotal = lessonIds.reduce(0) { acc, lid in acc + max(0, byLesson[lid]?.learned ?? 0) }
-        let value = Double(min(learnedTotal, totalCards)) / Double(totalCards)
+        let totalEffective = lessons.reduce(0) { acc, lesson in
+            acc + ProgressManager.shared.totalEffectiveCount(courseId: cid, lessonId: lesson.lessonID)
+        }
+
+        guard totalEffective > 0 else { return 0.0 }
+        let value = Double(min(max(learnedTotal, 0), totalEffective)) / Double(totalEffective)
         return min(max(value, 0.0), 1.0)
     }
-    /// Кол-во завершённых уроков для хэдера курса
+    /// Кол-во завершённых уроков для хэдера курса и карточек CourseView.
+    /// Учитываются только `lesson_id` из актуального `lessons.json`, иначе после удаления урока из каталога
+    /// в персисте остаётся «призрак» (например `course_b_1_l8`) и получается логически 9/8 при total=8.
     public func headerCounts(for courseId: String, lessonsTotal: Int) -> (completed: Int, total: Int) {
-        let course = progress[courseId] ?? [:]
-        let completed = course.values.filter { $0.status == .completed }.count
-        return (completed, lessonsTotal)
+        let cid = catalogCourseId(for: courseId)
+        let catalogIds = lessonsData.lessons(for: cid).map(\.lessonID)
+        let byLesson = progress[cid] ?? [:]
+        if !catalogIds.isEmpty {
+            let completed = catalogIds.filter { byLesson[$0]?.status == .completed }.count
+            return (completed, catalogIds.count)
+        }
+        let completed = byLesson.values.filter { $0.status == .completed }.count
+        return (completed, max(1, lessonsTotal))
     }
 
     /// Полный сброс прогресса по курсу
     public func resetCourseProgress(courseId: String) {
-        // 1) Обнуляем агрегаты по урокам этого курса
-        progress[courseId] = [:]
+        let cid = catalogCourseId(for: courseId)
+        // 1) Обнуляем агрегаты по урокам этого курса (включая старые дубли ключей)
+        for key in progress.keys where Self.normalizeCourseIdKey(catalogCourseId(for: key)) == Self.normalizeCourseIdKey(cid) {
+            progress.removeValue(forKey: key)
+        }
+        for key in started.keys where Self.normalizeCourseIdKey(catalogCourseId(for: key)) == Self.normalizeCourseIdKey(cid) {
+            started.removeValue(forKey: key)
+        }
+        saveStarted()
         // также чистим персист в ProgressManager по всем урокам курса
-        ProgressManager.shared.resetCourse(courseId: courseId)
+        ProgressManager.shared.resetCourse(courseId: cid)
 
         NotificationCenter.default.post(
             name: .stepProgressDidReset,
             object: nil,
             userInfo: [
-                "courseId": courseId,
+                "courseId": cid,
                 "lessonId": "__all__"
             ]
         )
@@ -376,7 +450,7 @@ extension LessonProgress {
         // 2) Сбрасываем связанные состояния в соседних менеджерах (если реализованы)
         // NOTE: Реализуй методы в соответствующих менеджерах, если их ещё нет.
         #if canImport(Foundation)
-        FavoriteManager.shared.clearForCourse(courseId)
+        FavoriteManager.shared.clearForCourse(cid)
         #endif
 
         // 3) Сохранить и оповестить подписчиков
@@ -384,30 +458,32 @@ extension LessonProgress {
         scheduleEmit()
 
         // 4) Широкое оповещение через NotificationCenter (на него можно подписать StepView и др.)
-        NotificationCenter.default.post(name: .lessonsCourseProgressDidReset, object: nil, userInfo: ["courseId": courseId])
-        NotificationCenter.default.post(name: .courseProgressDidReset, object: nil, userInfo: ["courseId": courseId])
-        NotificationCenter.default.post(name: .stepStateShouldReset, object: nil, userInfo: ["courseId": courseId])
+        NotificationCenter.default.post(name: .lessonsCourseProgressDidReset, object: nil, userInfo: ["courseId": cid])
+        NotificationCenter.default.post(name: .courseProgressDidReset, object: nil, userInfo: ["courseId": cid])
+        NotificationCenter.default.post(name: .stepStateShouldReset, object: nil, userInfo: ["courseId": cid])
 
         #if DEBUG
-        print("[LessonsManager] reset progress for course=\(courseId)")
+        print("[LessonsManager] reset progress for course=\(cid)")
         #endif
     }
 
     /// Сброс прогресса по конкретному уроку
     public func resetLessonProgress(courseId: String, lessonId: String) {
+        let cid = catalogCourseId(for: courseId)
+        let lid = catalogLessonId(courseId: cid, lessonId: lessonId)
         // 1) Удалить агрегат по этому уроку в рамках курса
-        var byLesson = progress[courseId] ?? [:]
-        let hadValue = byLesson.removeValue(forKey: lessonId) != nil
-        progress[courseId] = byLesson
+        var byLesson = progress[cid] ?? [:]
+        let hadValue = byLesson.removeValue(forKey: lid) != nil
+        progress[cid] = byLesson
         // чистим персист в ProgressManager для конкретного урока
-        ProgressManager.shared.resetLesson(courseId: courseId, lessonId: lessonId)
+        ProgressManager.shared.resetLesson(courseId: cid, lessonId: lid)
 
         NotificationCenter.default.post(
             name: .stepProgressDidReset,
             object: nil,
             userInfo: [
-                "courseId": courseId,
-                "lessonId": lessonId
+                "courseId": cid,
+                "lessonId": lid
             ]
         )
 
@@ -420,8 +496,8 @@ extension LessonProgress {
             name: .lessonsLessonProgressDidReset,
             object: nil,
             userInfo: [
-                "courseId": courseId,
-                "lessonId": lessonId,
+                "courseId": cid,
+                "lessonId": lid,
                 "changed": hadValue
             ]
         )
@@ -429,8 +505,8 @@ extension LessonProgress {
             name: .lessonProgressDidReset,
             object: nil,
             userInfo: [
-                "courseId": courseId,
-                "lessonId": lessonId,
+                "courseId": cid,
+                "lessonId": lid,
                 "changed": hadValue
             ]
         )
@@ -438,13 +514,13 @@ extension LessonProgress {
             name: .stepStateShouldReset,
             object: nil,
             userInfo: [
-                "courseId": courseId,
-                "lessonId": lessonId
+                "courseId": cid,
+                "lessonId": lid
             ]
         )
 
         #if DEBUG
-        print("[LessonsManager] reset progress course=\(courseId) lesson=\(lessonId)")
+        print("[LessonsManager] reset progress course=\(cid) lesson=\(lid)")
         #endif
     }
 
@@ -475,7 +551,8 @@ extension LessonProgress {
     /// Количество лайков (из FavoriteManager) по конкретному уроку
     public func lessonFavoriteCount(courseId: String, lessonId: String) -> Int {
         #if canImport(Foundation)
-        let favs = FavoriteManager.shared.favoritesForLesson(courseId: courseId, lessonId: lessonId)
+        let cid = catalogCourseId(for: courseId)
+        let favs = FavoriteManager.shared.favoritesForLesson(courseId: cid, lessonId: lessonId)
         return favs.count
         #else
         return 0
@@ -500,9 +577,9 @@ extension LessonProgress {
     ///   - courseId: идентификатор курса
     ///   - lessonIds: массив lessonId в нужном порядке (1:1 с отображением во View)
     /// - Returns: массив значений [0.0 ... 1.0], по одному на каждый lessonId
-    @inlinable
     public func percentsForLessons(courseId: String, lessonIds: [String]) -> [Double] {
-        let byLesson = progress[courseId] ?? [:]
+        let cid = catalogCourseId(for: courseId)
+        let byLesson = progress[cid] ?? [:]
         return lessonIds.map { lid in
             guard let lp = byLesson[lid], lp.total > 0 else { return 0.0 }
             let clamped = min(max(0, lp.learned), lp.total)
@@ -511,9 +588,9 @@ extension LessonProgress {
     }
 
     /// Точные доли прогресса по урокам для мини-слотов хэдера (0.0...1.0 в заданном порядке)
-    @inlinable
     public func progressSlots(courseId: String, lessonIds: [String]) -> [Double] {
-        let byLesson = progress[courseId] ?? [:]
+        let cid = catalogCourseId(for: courseId)
+        let byLesson = progress[cid] ?? [:]
         return lessonIds.map { lid in
             guard let lp = byLesson[lid] else { return 0.0 }
             let value = lp.percent
@@ -556,7 +633,7 @@ extension LessonProgress {
         }
         do {
             let decoded = try JSONDecoder().decode([String: [String: LessonProgress]].self, from: data)
-            progress = decoded
+            progress = mergeProgressDictionary(decoded)
             let ver = UserDefaults.standard.integer(forKey: storeKey+".version")
             self.progressVersion = max(0, ver)
         } catch {
@@ -564,8 +641,7 @@ extension LessonProgress {
         }
         if let dataStarted = UserDefaults.standard.data(forKey: storeKeyStarted),
            let decoded = try? JSONDecoder().decode([String: [String]].self, from: dataStarted) {
-            // восстановим множества
-            self.started = decoded.mapValues { Set($0) }
+            self.started = mergeStartedDictionary(decoded)
         }
         // EPIC 4: align aggregates with ProgressManager (single source of truth for learned)
         rebuildAggregatesFromProgressManager()
@@ -579,9 +655,8 @@ extension LessonProgress {
             for lesson in course.lessons {
                 let lessonId = lesson.lessonID
                 let learned = ProgressManager.shared.learnedEffectiveCount(courseId: courseId, lessonId: lessonId)
-                let (learnable, lifehack) = StepData.shared.progressCounts(for: lessonId)
-                let total = learnable + lifehack
-                if applyLessonProgressInMemory(courseId: courseId, lessonId: lessonId, learnedCount: learned, total: total, lifehackCount: lifehack) {
+                let totalEffective = ProgressManager.shared.totalEffectiveCount(courseId: courseId, lessonId: lessonId)
+                if applyLessonProgressInMemory(courseId: courseId, lessonId: lessonId, learnedCount: learned, total: totalEffective, lifehackCount: 0) {
                     didChange = true
                 }
             }
@@ -595,9 +670,10 @@ extension LessonProgress {
 
     /// Updates progress dictionary only (no save/emit). Returns true if value changed. Used by rebuildAggregatesFromProgressManager.
     private func applyLessonProgressInMemory(courseId: String, lessonId: String, learnedCount: Int, total: Int, lifehackCount: Int) -> Bool {
-        let hacks = max(0, lifehackCount)
-        let rawTotal = max(0, total)
-        let effectiveTotal = max(0, rawTotal - hacks)
+        // LessonsManager stores progress denominators as *effective totals*
+        // (consistent with ProgressManager learnedEffectiveCount/totalEffectiveCount).
+        // `lifehackCount` is kept only for backward signature compatibility.
+        let effectiveTotal = max(0, total)
         let learned = max(0, learnedCount)
         let status: LessonStatus
         if effectiveTotal == 0 {
@@ -665,7 +741,6 @@ public extension Notification.Name {
     static let allProgressDidReset = Notification.Name("LessonsManager.allProgressDidReset")
     static let stepStateShouldReset = Notification.Name("LessonsManager.stepStateShouldReset")
 
-    static let stepProgressDidChange = Notification.Name("Step.progressDidChange")
     static let stepProgressDidReset  = Notification.Name("Step.progressDidReset")
     static let lessonDidStart = Notification.Name("Lesson.sessionDidStart")
 }

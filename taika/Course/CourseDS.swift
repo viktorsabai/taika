@@ -12,13 +12,13 @@ import UIKit
 // Mirrors PD style but tailored for the Course screen.
 public enum CD {
     public enum ColorToken {
-        public static var background: SwiftUI.Color { Color(red: 0.06, green: 0.06, blue: 0.07) }
-        public static var card: SwiftUI.Color { Color(red: 0.10, green: 0.10, blue: 0.12) }
-        public static var stroke: SwiftUI.Color { Color.white.opacity(0.08) }
-        public static var text: SwiftUI.Color { Color.white }
-        public static var textSecondary: SwiftUI.Color { Color.white.opacity(0.6) }
-        public static var accent: SwiftUI.Color { Color(red: 0.95, green: 0.36, blue: 0.65) }
-        public static var chip: SwiftUI.Color { Color.white.opacity(0.06) }
+        public static var background: SwiftUI.Color { TaikaDynamicColors.background }
+        public static var card: SwiftUI.Color { TaikaDynamicColors.card }
+        public static var stroke: SwiftUI.Color { TaikaDynamicColors.stroke }
+        public static var text: SwiftUI.Color { TaikaDynamicColors.text }
+        public static var textSecondary: SwiftUI.Color { TaikaDynamicColors.textSecondary }
+        public static var accent: SwiftUI.Color { TaikaDynamicColors.accent }
+        public static var chip: SwiftUI.Color { TaikaDynamicColors.chip }
     }
     public enum Radius {
         public static var card: CGFloat { 20 }
@@ -44,11 +44,11 @@ public enum CD {
 
     public enum GradientToken {
         public static var pro: LinearGradient {
-            // Unified pink gradient (matches PRO badge)
+            // Brand accent only (без «чужого» фиолетового хвоста).
             LinearGradient(
                 colors: [
-                    Color(red:0.95, green:0.36, blue:0.65),
-                    Color(red:0.91, green:0.62, blue:0.98)
+                    Color(red: 0.95, green: 0.36, blue: 0.65),
+                    Color(red: 0.98, green: 0.48, blue: 0.72)
                 ],
                 startPoint: .leading, endPoint: .trailing
             )
@@ -58,18 +58,63 @@ public enum CD {
 
 // MARK: - Shared mini components (unified with Lessons DS)
 public struct CDProBadge: View {
-    public init() {}
+    public enum Style {
+        /// Free user, locked course — явно «нужен Taika+».
+        case locked
+        /// Compact membership chip (hero / dictionary).
+        case membership
+        /// Pro user на PRO-курсе — тихое «это Taika+», без ощущения замка.
+        case quiet
+    }
+
+    public var style: Style
+
+    public init(style: Style = .membership) {
+        self.style = style
+    }
+
     public var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "crown.fill").font(.system(size: 12, weight: .semibold))
-            Text("PRO").font(CD.FontToken.caption(11, weight: .semibold))
+        HStack(spacing: 5) {
+            Image(systemName: style == .locked ? "lock.fill" : "crown.fill")
+                .font(.system(size: style == .quiet ? 10 : 11, weight: .semibold))
+            Text("Taika+")
+                .font(CD.FontToken.caption(style == .quiet ? 10 : 11, weight: .semibold))
         }
-        .foregroundStyle(Color.black.opacity(0.86))
-        .padding(.vertical, 6)
-        .padding(.horizontal, 10)
-        .background(CD.GradientToken.pro)
+        .foregroundStyle(foreground)
+        .padding(.vertical, style == .quiet ? 4 : 6)
+        .padding(.horizontal, style == .quiet ? 8 : 10)
+        .background(background)
         .clipShape(RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous).stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+        .overlay(
+            RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous)
+                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+        )
+        .accessibilityLabel(accessibility)
+    }
+
+    private var foreground: Color {
+        switch style {
+        case .locked, .membership: return Color.black.opacity(0.86)
+        case .quiet: return CD.ColorToken.textSecondary
+        }
+    }
+
+    @ViewBuilder
+    private var background: some View {
+        switch style {
+        case .locked, .membership:
+            CD.GradientToken.pro
+        case .quiet:
+            CD.ColorToken.card.opacity(0.85)
+        }
+    }
+
+    private var accessibility: String {
+        switch style {
+        case .locked: return "Курс Taika+, сейчас закрыт"
+        case .membership: return "Taika+"
+        case .quiet: return "Курс Taika+"
+        }
     }
 }
 
@@ -415,11 +460,12 @@ public struct CDAssistantCard: View {
     public var body: some View {
         HStack(alignment: .center, spacing: 12) {
             ZStack {
-                Circle().fill(Color.white.opacity(0.06))
+                Circle().fill(CD.ColorToken.chip)
                 Image("mascot.course")
                     .resizable()
                     .scaledToFit()
                     .padding(4)
+                    .taikaMascotChrome()
             }
             .frame(width: 36, height: 36)
             .overlay(Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
@@ -516,6 +562,7 @@ public struct CDHeaderCard: View {
                         .scaledToFit()
                         .frame(width: 72, height: 72)
                         .scaleEffect(x: -1, y: 1) // face towards content
+                        .taikaMascotChrome()
                         .padding(.leading, 2)
                 }
 
@@ -652,39 +699,103 @@ public struct CDChip: View {
         self.label = label; self.isSelected = isSelected; self.action = action
     }
 
-    private func niceCase(_ s: String) -> String {
-        let lower = s.localizedLowercase
-        return lower.prefix(1).uppercased() + lower.dropFirst()
-    }
-
     public var body: some View {
-        Button(action: action) {
-            Text(niceCase(label))
-                .font(CD.FontToken.caption(12, weight: .medium))
-                .foregroundStyle(
-                    isSelected
-                    ? AnyShapeStyle(Color.black.opacity(0.9))
-                    : AnyShapeStyle(CD.ColorToken.textSecondary)
-                )
-                .padding(.vertical, 7)
-                .padding(.horizontal, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous)
-                        .fill(
-                            isSelected
-                            ? AnyShapeStyle(CD.GradientToken.pro)
-                            : AnyShapeStyle(Color.clear)
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: CD.Radius.chip, style: .continuous)
-                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                )
-        }
-        .buttonStyle(.plain)
+        AppFilterChip(title: label, isActive: isSelected, scale: .xs, onTap: action)
     }
 }
 public enum CDCourseStatus { case new, inProgress, done }
+
+// MARK: - Course screen tabs (CourseView)
+
+public enum CourseScreenTab: String, CaseIterable, Identifiable {
+    /// Начатые и избранные курсы каталога.
+    case resume
+    /// Курсы «База от Тайки».
+    case base
+    /// Тематические курсы (жизнь, душа, волна).
+    case scenarios
+    /// Фразы из умного спикера — сырьё для урока.
+    case dictionary
+    /// Урок из собранных фраз (Pro).
+    case mine
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .resume: return "Продолжить"
+        case .base: return "База"
+        case .scenarios: return "Сценарии"
+        case .dictionary: return "Словарь"
+        case .mine: return "Мои"
+        }
+    }
+
+    /// Скоуп подсказок Taika FM — свой текст на каждой вкладке, одинаковый бабл.
+    public var taikaFMScope: TaikaFMScope {
+        switch self {
+        case .resume: return .resume
+        case .base: return .course
+        case .scenarios: return .scenarios
+        case .dictionary: return .dictionary
+        case .mine: return .mine
+        }
+    }
+
+    /// Вкладки Course для MVP (без «Мои» и без «Словарь» — словарь вынесем отдельно позже).
+    public static var mvpTabs: [CourseScreenTab] {
+        [.resume, .base, .scenarios]
+    }
+}
+
+/// Вкладки каталога курсов — shared state (как FavoritesFilterState), чтобы Main мог открыть «Сценарии».
+@MainActor
+public final class CourseCatalogTabState: ObservableObject {
+    public static let shared = CourseCatalogTabState()
+    /// По умолчанию База: у новичка нет «Продолжить», сразу каталог.
+    @Published public var selectedTab: CourseScreenTab = .base
+    /// Одноразовый запрос вкладки при переходе с Main («Все курсы»).
+    @Published public var pendingTab: CourseScreenTab?
+
+    public func request(_ tab: CourseScreenTab) {
+        pendingTab = tab
+        selectedTab = tab
+    }
+
+    public func consumePending() {
+        pendingTab = nil
+    }
+
+    private init() {}
+}
+
+/// Фильтр раздела Курсов — компактный пикер справа от заголовка.
+public struct CDCourseTabBar: View {
+    @Binding public var selection: CourseScreenTab
+    /// Если пусто — все MVP-вкладки. Иначе, например, без «Продолжить», когда нет начатых курсов.
+    public var tabs: [CourseScreenTab]
+
+    public init(
+        selection: Binding<CourseScreenTab>,
+        tabs: [CourseScreenTab] = CourseScreenTab.mvpTabs
+    ) {
+        self._selection = selection
+        self.tabs = tabs.isEmpty ? CourseScreenTab.mvpTabs : tabs
+    }
+
+    public var body: some View {
+        let resolved = tabs.isEmpty ? CourseScreenTab.mvpTabs : tabs
+        AppInlineFilterPicker(
+            titles: resolved.map(\.title),
+            selectedIndex: resolved.firstIndex(of: selection) ?? 0
+        ) { index in
+            guard resolved.indices.contains(index), selection != resolved[index] else { return }
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                selection = resolved[index]
+            }
+        }
+    }
+}
 
 public struct CDStatusBadge: View {
     public var status: CDCourseStatus
@@ -876,16 +987,26 @@ fileprivate func ruPlural(_ n: Int, _ one: String, _ few: String, _ many: String
 
 // Consistent spacing between course cards in all carousels
 public let CDCarouselSpacing: CGFloat = 32
-fileprivate let CDCardWidth: CGFloat = 268   // match canonical Course/Lesson card width (~268×340)
-fileprivate let CDCardHeight: CGFloat = 420  // keep in sync with CourseLessonCard preferred height
+
+/// Canonical geometry для `CDLessonCarousel` на экранах **Курс** и **Уроки** (`CourseLessonCard`).
+/// Step/Main «разминка» — через `SDStepCarousel` / `stepCardWidth`.
+public enum CDLessonCarouselCanonical {
+    public static let cardWidth: CGFloat = CardDS.Metrics.courseWidth
+    public static let spacing: CGFloat = CDCarouselSpacing
+    public static let courseLessonCardHeight: CGFloat = CardDS.Metrics.courseHeight
+}
+
+fileprivate let CDCardWidth: CGFloat = CDLessonCarouselCanonical.cardWidth   // match canonical Course/Lesson card width
+fileprivate let CDCardHeight: CGFloat = CDLessonCarouselCanonical.courseLessonCardHeight
 // depth & peek tokens to match CardDS calendar
-fileprivate let CDCarouselPeekMin: CGFloat = 24           // visible neighbors per side
+fileprivate let CDCarouselPeekMin: CGFloat = 14           // visible neighbors per side
 fileprivate let CDDepthNormWidthFactor: CGFloat = 0.60    // wider influence → сильнее эффект
 fileprivate let CDDepthScaleSide: CGFloat = 0.85          // глубже сжатие по краям
-fileprivate let CDDepthScaleCenter: CGFloat = 1.06        // легкое усиление центра
+/// Центр ≤ 1.0: иначе `scaleEffect` + фикс. `.frame(height: cardHeight)` обрезают карту сверху/снизу в секции.
+fileprivate let CDDepthScaleCenter: CGFloat = 1.0
 fileprivate let CDDepthOpacitySide: CGFloat = 0.45        // затемнение по краям
 fileprivate let CDDepthOpacityCenter: CGFloat = 1.00      // центр без затемнения
-fileprivate let CDDepthYOffsetMax: CGFloat = 10           // лёгкий подъем центра
+fileprivate let CDDepthYOffsetMax: CGFloat = 0            // отрицательный offset «поднимал» центр и резал верх
 // MARK: - Layout tokens (section-level)
 public enum CDLayout {
     // MARK: - section-level
@@ -1127,33 +1248,6 @@ public struct CDReelCourseCard: View {
     }
 }
 
-// MARK: - Sticky App Header (logo + quick actions)
-@available(*, deprecated, message: "Use AppHeader (AppDS.swift) directly.")
-public struct CDAppHeader: View {
-    public var onTapSearch: () -> Void = {}
-    public var onTapFavorites: () -> Void = {}
-    public var onTapProfile: () -> Void = {}
-
-    public init(onTapSearch: @escaping () -> Void = {},
-                onTapFavorites: @escaping () -> Void = {},
-                onTapProfile: @escaping () -> Void = {}) {
-        self.onTapSearch = onTapSearch
-        self.onTapFavorites = onTapFavorites
-        self.onTapProfile = onTapProfile
-    }
-
-    public var body: some View {
-        AppHeader(
-            showSearch: true,
-            showHeart: true,
-            showProfile: true,
-            onTapSearch: onTapSearch,
-            onTapHeart: onTapFavorites,
-            onTapProfile: onTapProfile
-        )
-    }
-}
-
 /// Simple blur wrapper to avoid importing extra utilities here
 fileprivate struct VisualEffectBlur: UIViewRepresentable {
     var style: UIBlurEffect.Style
@@ -1168,10 +1262,7 @@ public struct CDSection<Content: View>: View {
     public init(_ title: String, @ViewBuilder content: () -> Content) { self.title = title; self.content = content() }
     public var body: some View {
         VStack(alignment: .leading, spacing: CDLayout.sectionContentV) {
-            Text(title.uppercased())
-                .font(CD.FontToken.caption(12, weight: .semibold))
-                .kerning(0.6)
-                .foregroundColor(CD.ColorToken.textSecondary)
+            TaikaSectionLabel(title: title)
                 .padding(.horizontal, CD.Spacing.screen)
             content
                 .padding(.top, CDSectionTitleToContentSpacing)
@@ -1196,12 +1287,7 @@ public struct CDSectionWithAction<Action: View, Content: View>: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: CDLayout.sectionContentV) {
-            HStack(alignment: .center) {
-                Text(title.uppercased())
-                    .font(CD.FontToken.caption(12, weight: .semibold))
-                    .kerning(0.6)
-                    .foregroundColor(CD.ColorToken.textSecondary)
-                Spacer()
+            TaikaSectionHeaderRow(title) {
                 action
             }
             .padding(.horizontal, CD.Spacing.screen)
@@ -1241,8 +1327,7 @@ public struct CDSubsectionRow: View {
                     Spacer()
                     HStack(spacing: 3) {
                         Text(title.uppercased())
-                            .font(CD.FontToken.caption(12, weight: .semibold))
-                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                            .taikaSubsectionStyle(accent: true)
                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(ThemeManager.shared.currentAccentFill)
@@ -1269,6 +1354,7 @@ public struct CDSubsectionRow: View {
 /// Section wrapper so the assistant stripe looks like other sections (e.g., "БАЗА", "КУРСЫ").
 public struct CDMarqueeSection: View {
     public var title: String
+    public var scope: TaikaFMScope
     public var messages: [String]
     public var mascot: Image?
     public var typingDuration: TimeInterval
@@ -1278,7 +1364,8 @@ public struct CDMarqueeSection: View {
 
     public init(
         title: String = "ТАЙКА FM",
-        messages: [String],
+        scope: TaikaFMScope = .course,
+        messages: [String] = [],
         mascot: Image? = Image("mascot.course"),
         typingDuration: TimeInterval = 2.2,
         showDuration: TimeInterval = 3.2,
@@ -1286,6 +1373,7 @@ public struct CDMarqueeSection: View {
         showBubble: Bool = false
     ) {
         self.title = title
+        self.scope = scope
         self.messages = messages
         self.mascot = mascot
         self.typingDuration = typingDuration
@@ -1295,23 +1383,16 @@ public struct CDMarqueeSection: View {
     }
 
     public var body: some View {
-        // taika fm для экрана курсов: текст и реакции берём из taikafm.json (scope: .course),
-        // а входной параметр messages используем как оверрайд, если он не пустой.
-        let configMessages = TaikaFMData.shared.messages(for: .course)
-        let configReactions = TaikaFMData.shared.reactionGroups(for: .course)
-
-        let effectiveMessages = messages.isEmpty ? configMessages : messages
-        let effectiveReactions = configReactions
-
-        return CDSection(title) {
-            TaikaFMBubbleTyping(
-                messages: effectiveMessages,
-                reactions: effectiveReactions,
-                repeats: false,
-                showBubble: showBubble
-            )
-            .padding(.top, 0)
-        }
+        TaikaFMSection(
+            title: title,
+            scope: scope,
+            overrideMessages: messages.isEmpty ? nil : messages,
+            rotationExtra: scope.rawValue,
+            mode: .typing,
+            showBubble: showBubble,
+            repeats: true,
+            horizontalPadding: CD.Spacing.screen
+        )
     }
 }
 
@@ -1326,8 +1407,23 @@ public struct CDCourseItem: Identifiable {
     public var durationMin: Int
     public var cta: String
     public var isPro: Bool
+    /// When true, we show a crown instead of status for free users.
+    public var showProCrown: Bool = false
     public var status: CDCourseStatus?
     public var progress: Double
+    /// Optional 0...1 fraction used to render stars under the top-right status chip.
+    public var statusStarsFraction: Double? = nil
+
+    /// Optional averaged pronunciation score for this course (0...100).
+    public var pronunciationPercent: Int? = nil
+    /// Current user's PRO status (used for back-face gating copy).
+    public var isProUser: Bool = false
+
+    /// When true, the course card shows a back face (flip) with a "what to do next" checklist.
+    public var flipEnabled: Bool = false
+
+    /// Back face checklist action (e.g. start reinforcement game for a completed course).
+    public var onBackSelectGameMode: ((String) -> Void)? = nil
     public var homeworkTotal: Int
     public var homeworkDone: Int
     public var isActive: Bool = false
@@ -1349,8 +1445,14 @@ public struct CDCourseItem: Identifiable {
         durationMin: Int,
         cta: String,
         isPro: Bool,
+        showProCrown: Bool = false,
         status: CDCourseStatus? = nil,
         progress: Double,
+        statusStarsFraction: Double? = nil,
+        pronunciationPercent: Int? = nil,
+        isProUser: Bool = false,
+        flipEnabled: Bool = false,
+        onBackSelectGameMode: ((String) -> Void)? = nil,
         homeworkTotal: Int = 0,
         homeworkDone: Int = 0,
         isActive: Bool = false,
@@ -1370,8 +1472,14 @@ public struct CDCourseItem: Identifiable {
         self.durationMin = durationMin
         self.cta = cta
         self.isPro = isPro
+        self.showProCrown = showProCrown
         self.status = status
         self.progress = progress
+        self.statusStarsFraction = statusStarsFraction
+        self.pronunciationPercent = pronunciationPercent
+        self.isProUser = isProUser
+        self.flipEnabled = flipEnabled
+        self.onBackSelectGameMode = onBackSelectGameMode
         self.homeworkTotal = homeworkTotal
         self.homeworkDone = homeworkDone
         self.isActive = isActive
@@ -1449,6 +1557,8 @@ private struct CDViewportWidthKey: PreferenceKey {
 public struct CDBaseSection: View {
     public var title: String = "БАЗА"
     public var items: [CDCourseItem]
+    /// Initial centered index in `items` (0-based). Restores carousel after back navigation.
+    public var initialCarouselIndex: Int?
     public var onTapItem: ((CDCourseItem) -> Void)?
     public var onTapStart: (() -> Void)?
 
@@ -1457,8 +1567,16 @@ public struct CDBaseSection: View {
     @State private var viewportMidX: CGFloat = UIScreen.main.bounds.midX
     @State private var viewportWidth: CGFloat = UIScreen.main.bounds.width
 
-    public init(items: [CDCourseItem], onTapItem: ((CDCourseItem) -> Void)? = nil, onTapStart: (() -> Void)? = nil) {
+    public init(
+        title: String = "БАЗА",
+        items: [CDCourseItem],
+        initialCarouselIndex: Int? = nil,
+        onTapItem: ((CDCourseItem) -> Void)? = nil,
+        onTapStart: (() -> Void)? = nil
+    ) {
+        self.title = title
         self.items = items
+        self.initialCarouselIndex = initialCarouselIndex
         self.onTapItem = onTapItem
         self.onTapStart = onTapStart
     }
@@ -1491,18 +1609,19 @@ public struct CDBaseSection: View {
                 cardWidth: CDCardWidth,
                 cardHeight: CDCardHeight,
                 spacing: CDCarouselSpacing,
-                initialIndex: nil,
+                initialIndex: initialCarouselIndex,
                 onTapScrollToCenter: true,
-                loop: true
+                loop: false
             ) { item in
                 CourseLessonCard(
                     title: item.title,
                     subtitle: "",
                     lessonsCount: item.lessons,
                     durationText: "≈ \(item.durationMin) мин",
-                    statusKind: item.status.map { toAppStatus($0) },
+                    statusKind: item.showProCrown ? nil : item.status.map { toAppStatus($0) },
                     courseCategory: item.category,
                     isPro: item.isPro,
+                    showProCrown: item.showProCrown,
                     tags: [],
                     sectionChrome: .none,
                     primaryCTA: {
@@ -1515,7 +1634,7 @@ public struct CDBaseSection: View {
                     }(),
                     scale: .xs,
                     showFavorite: true,
-                    showConsole: true,
+                    showConsole: item.onTapConsole != nil,
                     onPrimaryTap: {
                         if let act = onTapItem {
                             DispatchQueue.main.async { act(item) }
@@ -1526,6 +1645,12 @@ public struct CDBaseSection: View {
                     isFavoriteActive: item.isFavorite,
                     isConsoleEnabled: item.homeworkDone > 0,
                     completionFraction: item.progress,
+                    statusStarsFraction: item.statusStarsFraction,
+                    pronunciationPercent: item.pronunciationPercent,
+                    flipEnabled: item.flipEnabled,
+                    courseKey: item.key,
+                    isProUser: item.isProUser,
+                    onBackSelectGameMode: item.onBackSelectGameMode,
                     onFavoriteTap: { item.onToggleFavorite?() },
                     onConsoleTap: { item.onTapConsole?() },
                     onSpeakerTap: item.onTapSpeaker,
@@ -1537,85 +1662,272 @@ public struct CDBaseSection: View {
     }
 }
 
-public struct CDAllCoursesSection: View {
+public struct CDAllCoursesSection<Trailing: View>: View {
     public var title: String = ""
     public var items: [CDCourseItem]
+    public var initialCarouselIndex: Int?
+    @ViewBuilder public var trailing: () -> Trailing
 
-    public init(title: String = "", items: [CDCourseItem]) {
+    public init(
+        title: String = "",
+        items: [CDCourseItem],
+        initialCarouselIndex: Int? = nil,
+        @ViewBuilder trailing: @escaping () -> Trailing
+    ) {
         self.title = title
         self.items = items
-    }
-
-    private var renderedItems: [_RenderedCourseItem] {
-        let base = items.map { _RenderedCourseItem(origin: $0) }
-        if base.count > 1, let first = base.first, let last = base.last {
-            return [last] + base + [first]
-        } else {
-            return base
-        }
+        self.initialCarouselIndex = initialCarouselIndex
+        self.trailing = trailing
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: CDLayout.sectionContentV) {
-            if !title.isEmpty {
-                Text(title.uppercased())
-                    .font(CD.FontToken.caption(12, weight: .semibold))
-                    .kerning(0.6)
-                    .foregroundColor(CD.ColorToken.textSecondary)
-                    .padding(.horizontal, CD.Spacing.screen)
-            }
-            if items.isEmpty {
-                Text("Ничего не найдено")
-                    .font(CD.FontToken.body(14))
-                    .foregroundColor(CD.ColorToken.textSecondary)
-                    .padding(.horizontal, CD.Spacing.screen)
-                    .padding(.vertical, 10)
-            } else {
-                CDLessonCarousel(
-                    data: items,
-                    cardWidth: CDCardWidth,
-                    cardHeight: CDCardHeight,
-                    spacing: CDCarouselSpacing,
-                    initialIndex: nil,
-                    onTapScrollToCenter: true,
-                    loop: true
-                ) { item in
-                    CourseLessonCard(
-                        title: item.title,
-                        subtitle: "",
-                        lessonsCount: item.lessons,
-                        durationText: "≈ \(item.durationMin) мин",
-                        statusKind: item.status.map { toAppStatus($0) },
-                        courseCategory: item.category,
-                        isPro: item.isPro,
-                        tags: [],
-                        sectionChrome: .none,
-                        primaryCTA: {
-                            let t = item.cta.lowercased()
-                            if t.contains("нач") { return .start }
-                            if t.contains("продолж") { return .resume }
-                            if t.contains("закреп") { return .reinforce }
-                            if t.contains("повтор") { return .resume }
-                            return .start
-                        }(),
-                        scale: .xs,
-                        showFavorite: true,
-                        showConsole: true,
-                        onPrimaryTap: { DispatchQueue.main.async { item.onTap?() } },
-                        isFavoriteActive: item.isFavorite,
-                        isConsoleEnabled: item.homeworkDone > 0,
-                        completionFraction: item.progress,
-                        onFavoriteTap: { item.onToggleFavorite?() },
-                        onConsoleTap: { item.onTapConsole?() },
-                        onSpeakerTap: item.onTapSpeaker,
-                        onTapInfo: item.onTapInfo,
-                        showsInlineProgress: true
-                    )
-                }
-                .padding(.top, CDLayout.sectionTitleToContent)
+        let sectionTitle = title.isEmpty ? "КУРСЫ" : title.uppercased()
+        CDSectionWithAction(sectionTitle) {
+            trailing()
+        } content: {
+            carouselBody
+        }
+    }
+
+    @ViewBuilder
+    private var carouselBody: some View {
+        if items.isEmpty {
+            Text("Ничего не найдено")
+                .font(CD.FontToken.body(14))
+                .foregroundColor(CD.ColorToken.textSecondary)
+                .padding(.horizontal, CD.Spacing.screen)
+                .padding(.vertical, 10)
+        } else {
+            CDLessonCarousel(
+                data: items,
+                cardWidth: CDCardWidth,
+                cardHeight: CDCardHeight,
+                spacing: CDCarouselSpacing,
+                initialIndex: initialCarouselIndex,
+                onTapScrollToCenter: true,
+                loop: false
+            ) { item in
+                CourseLessonCard(
+                    title: item.title,
+                    subtitle: "",
+                    lessonsCount: item.lessons,
+                    durationText: "≈ \(item.durationMin) мин",
+                    statusKind: item.showProCrown ? nil : item.status.map { toAppStatus($0) },
+                    courseCategory: item.category,
+                    isPro: item.isPro,
+                    showProCrown: item.showProCrown,
+                    tags: [],
+                    sectionChrome: .none,
+                    primaryCTA: {
+                        let t = item.cta.lowercased()
+                        if t.contains("нач") { return .start }
+                        if t.contains("продолж") { return .resume }
+                        if t.contains("закреп") { return .reinforce }
+                        if t.contains("повтор") { return .resume }
+                        return .start
+                    }(),
+                    scale: .xs,
+                    showFavorite: true,
+                    showConsole: item.onTapConsole != nil,
+                    onPrimaryTap: { DispatchQueue.main.async { item.onTap?() } },
+                    isFavoriteActive: item.isFavorite,
+                    isConsoleEnabled: item.homeworkDone > 0,
+                    completionFraction: item.progress,
+                    statusStarsFraction: item.statusStarsFraction,
+                    pronunciationPercent: item.pronunciationPercent,
+                    flipEnabled: item.flipEnabled,
+                    courseKey: item.key,
+                    isProUser: item.isProUser,
+                    onBackSelectGameMode: item.onBackSelectGameMode,
+                    onFavoriteTap: { item.onToggleFavorite?() },
+                    onConsoleTap: { item.onTapConsole?() },
+                    onSpeakerTap: item.onTapSpeaker,
+                    onTapInfo: item.onTapInfo,
+                    showsInlineProgress: true
+                )
             }
         }
-        .padding(.top, CDLayout.sectionTop)
+    }
+}
+
+extension CDAllCoursesSection where Trailing == EmptyView {
+    public init(title: String = "", items: [CDCourseItem], initialCarouselIndex: Int? = nil) {
+        self.init(title: title, items: items, initialCarouselIndex: initialCarouselIndex, trailing: { EmptyView() })
+    }
+}
+
+// MARK: - Weekly rhythm (CourseView bottom) — айдентика с донатом, компактнее по высоте
+
+public struct CDWeeklyRhythmModel: Equatable {
+    public var lessons: Int
+    public var minutes: Int
+    public var words: Int
+    /// Цель минут за неделю для кольца (мягкая).
+    public var minuteGoal: Int
+
+    public init(lessons: Int, minutes: Int, words: Int, minuteGoal: Int = 45) {
+        self.lessons = max(0, lessons)
+        self.minutes = max(0, minutes)
+        self.words = max(0, words)
+        self.minuteGoal = max(1, minuteGoal)
+    }
+
+    public var minuteProgress: CGFloat {
+        CGFloat(min(1, Double(minutes) / Double(minuteGoal)))
+    }
+
+    public static let empty = CDWeeklyRhythmModel(lessons: 0, minutes: 0, words: 0)
+}
+
+/// «Твой ритм»: как «за неделю» на Main — просто значения, без рамки и без мини-карточек.
+public struct CDWeeklyRhythmSection: View {
+    public var model: CDWeeklyRhythmModel
+    public var windowLabel: String = "эта неделя"
+
+    @State private var displayLessons: Int = 0
+    @State private var displayMinutes: Int = 0
+    @State private var displayWords: Int = 0
+    @State private var appeared: Bool = false
+
+    public init(model: CDWeeklyRhythmModel, windowLabel: String = "эта неделя") {
+        self.model = model
+        self.windowLabel = windowLabel
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            TaikaSectionHeaderRow("ТВОЙ РИТМ") {
+                Text(windowLabel.uppercased())
+                    .taikaSubsectionStyle(accent: false)
+            }
+            .padding(.horizontal, CD.Spacing.screen)
+
+            HStack(alignment: .top, spacing: 0) {
+                rhythmValue(value: displayLessons, label: lessonWord(model.lessons))
+                rhythmValue(
+                    value: displayMinutes,
+                    label: "мин",
+                    footnote: "за неделю"
+                )
+                rhythmValue(value: displayWords, label: wordWord(model.words))
+            }
+            .padding(.horizontal, CD.Spacing.screen)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 6)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                "Твой ритм за неделю: \(model.lessons) \(lessonWord(model.lessons)), \(model.minutes) минут, \(model.words) \(wordWord(model.words))"
+            )
+        }
+        .padding(.top, 10)
+        .onAppear { animateIn() }
+        .onChange(of: model) { _, _ in animateIn(fromCurrent: true) }
+    }
+
+    private func rhythmValue(value: Int, label: String, footnote: String? = nil) -> some View {
+        VStack(spacing: 3) {
+            Text("\(value)")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundStyle(PD.ColorToken.text)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+            Text(label)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+            if let footnote {
+                Text(footnote)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.8))
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func animateIn(fromCurrent: Bool = false) {
+        if !fromCurrent {
+            displayLessons = 0
+            displayMinutes = 0
+            displayWords = 0
+            appeared = false
+        }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) {
+            appeared = true
+        }
+        withAnimation(.spring(response: 0.8, dampingFraction: 0.86).delay(0.05)) {
+            displayLessons = model.lessons
+            displayMinutes = model.minutes
+            displayWords = model.words
+        }
+    }
+
+    private func lessonWord(_ n: Int) -> String {
+        let mod10 = n % 10
+        let mod100 = n % 100
+        if mod100 >= 11 && mod100 <= 14 { return "уроков" }
+        switch mod10 {
+        case 1: return "урок"
+        case 2, 3, 4: return "урока"
+        default: return "уроков"
+        }
+    }
+
+    private func wordWord(_ n: Int) -> String {
+        let mod10 = n % 10
+        let mod100 = n % 100
+        if mod100 >= 11 && mod100 <= 14 { return "слов" }
+        switch mod10 {
+        case 1: return "слово"
+        case 2, 3, 4: return "слова"
+        default: return "слов"
+        }
+    }
+}
+
+/// Lightweight carousel for long "all courses" rows.
+/// No per-cell GeometryReader/depth transform; this avoids scroll jank in CourseView.
+fileprivate struct CDFlatCourseCarousel<Content: View>: View {
+    let items: [CDCourseItem]
+    let cardWidth: CGFloat
+    let cardHeight: CGFloat
+    let spacing: CGFloat
+    let initialIndex: Int?
+    @ViewBuilder let content: (CDCourseItem) -> Content
+
+    @State private var didInitialScroll = false
+
+    var body: some View {
+        GeometryReader { outer in
+            let cardW = min(cardWidth, outer.size.width - (CDCarouselPeekMin * 2))
+            let sideInset = max(0, (outer.size.width - cardW) / 2)
+            ScrollViewReader { proxy in
+                TaikaCarouselScroll {
+                    LazyHStack(spacing: spacing) {
+                        ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in
+                            content(item)
+                                .environment(\.stepCarouselCellSize, CGSize(width: cardW, height: cardHeight))
+                                .frame(width: cardW, height: cardHeight)
+                                .id(idx)
+                        }
+                    }
+                    .padding(.horizontal, sideInset)
+                    .padding(.vertical, CDLayout.carouselVPad)
+                }
+                .onAppear {
+                    guard !didInitialScroll else { return }
+                    didInitialScroll = true
+                    guard let idx = initialIndex, items.indices.contains(idx) else { return }
+                    DispatchQueue.main.async {
+                        withAnimation(.none) {
+                            proxy.scrollTo(idx, anchor: .center)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(height: cardHeight + CDLayout.carouselVPad * 2)
     }
 }
 
@@ -1630,9 +1942,13 @@ public struct CDLessonCarousel<Data: RandomAccessCollection, Content: View>: Vie
     private let initialIndex: Int?
     private let onTapScrollToCenter: Bool
     private let loop: Bool
+    /// Step / Main «Разминка»: ячейка строго квадратная (`height == width`). Иначе при узком хосте получалось `cardW × cardHeight` (портрет), хотя карточки pro в разминке — квадрат.
+    private let squareCells: Bool
+    private let onCenterIndexChange: ((Int) -> Void)?
     @ViewBuilder private let content: (Item) -> Content
 
     @State private var viewportWidth: CGFloat = UIScreen.main.bounds.width
+    @State private var lastCenterIndex: Int? = nil
 
     public init(
         data: Data,
@@ -1642,6 +1958,8 @@ public struct CDLessonCarousel<Data: RandomAccessCollection, Content: View>: Vie
         initialIndex: Int? = nil,
         onTapScrollToCenter: Bool = true,
         loop: Bool = false,
+        squareCells: Bool = false,
+        onCenterIndexChange: ((Int) -> Void)? = nil,
         @ViewBuilder content: @escaping (Item) -> Content
     ) {
         self.data = data
@@ -1651,13 +1969,18 @@ public struct CDLessonCarousel<Data: RandomAccessCollection, Content: View>: Vie
         self.initialIndex = initialIndex
         self.onTapScrollToCenter = onTapScrollToCenter
         self.loop = loop
+        self.squareCells = squareCells
+        self.onCenterIndexChange = onCenterIndexChange
         self.content = content
     }
 
     public var body: some View {
         GeometryReader { outer in
             let cardW = min(cardWidth, outer.size.width - (CDCarouselPeekMin * 2)) // enforce ≥24pt peek per side
-            let sideInset = max(0, (outer.size.width - cardW) / 2)
+            let cellH = squareCells ? cardW : cardHeight
+            let cellSizeForEnv: CGSize = CGSize(width: cardW, height: cellH)
+            let centeredInset = max(0, (outer.size.width - cardW) / 2)
+            let sideInset = loop ? centeredInset : Theme.Layout.pageHorizontal
             let base = Array(data)
             let renderedIndices: [Int] = {
                 guard loop, base.count > 1 else {
@@ -1667,37 +1990,25 @@ public struct CDLessonCarousel<Data: RandomAccessCollection, Content: View>: Vie
                 return indices + indices + indices
             }()
             ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: spacing) {
+                TaikaCarouselScroll {
+                    // Eager HStack: `LazyHStack` + `scrollTo` on appear often mis-measures before off-screen
+                    // cells exist — active card drifts sideways (esp. loop triple-buffer). Course/Step lists are small enough.
+                    HStack(spacing: spacing) {
                         ForEach(Array(renderedIndices.enumerated()), id: \.0) { (renderIndex, baseIndex) in
                             let item = base[baseIndex]
-                            GeometryReader { cellGeo in
-                                let viewportCenterX: CGFloat = outer.size.width / 2
-                                let cellCenterX: CGFloat = cellGeo.frame(in: .named("cdLessonCarousel")).midX
-                                let dist: CGFloat = abs(cellCenterX - viewportCenterX)
-                                let norm: CGFloat = min(1.0, dist / max(1.0, outer.size.width * CDDepthNormWidthFactor))
-                                // мягкий календарный эффект
-                                let vScale: CGFloat = CDDepthScaleSide + (CDDepthScaleCenter - CDDepthScaleSide) * (1.0 - norm)
-                                let vOpacity: CGFloat = CDDepthOpacitySide + (CDDepthOpacityCenter - CDDepthOpacitySide) * (1.0 - norm)
-                                let vYOffset: CGFloat = -(1.0 - norm) * CDDepthYOffsetMax
-
-                                content(item)
-                                    .scaleEffect(vScale)
-                                    .opacity(vOpacity)
-                                    .offset(y: vYOffset)
-                                    .frame(width: cardW, height: cardHeight)
-                                    .id(renderIndex)
-                                    .contentShape(Rectangle())
-                                    .simultaneousGesture(
-                                        TapGesture().onEnded {
-                                            guard onTapScrollToCenter else { return }
-                                            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-                                                proxy.scrollTo(renderIndex, anchor: .center)
-                                            }
+                            content(item)
+                                .environment(\.stepCarouselCellSize, cellSizeForEnv)
+                                .frame(width: cardW, height: cellH)
+                                .id(renderIndex)
+                                .contentShape(Rectangle())
+                                .simultaneousGesture(
+                                    TapGesture().onEnded {
+                                        guard onTapScrollToCenter else { return }
+                                        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                                            proxy.scrollTo(renderIndex, anchor: .center)
                                         }
-                                    )
-                            }
-                            .frame(width: cardW, height: cardHeight)
+                                    }
+                                )
                         }
                     }
                     .frame(minHeight: outer.size.height)
@@ -1731,16 +2042,58 @@ public struct CDLessonCarousel<Data: RandomAccessCollection, Content: View>: Vie
                         targetRenderIndex = targetBaseIndex
                     }
 
-                    // Без loop первая карточка — по ведущему краю, иначе она уезжает влево и обрезается
-                    let anchor: UnitPoint = (!loop && targetRenderIndex == 0) ? .leading : .center
+                    // Keep the same alignment contract as Favorites carousels.
+                    let anchor: UnitPoint = .center
+                    withAnimation(.none) {
+                        proxy.scrollTo(targetRenderIndex, anchor: anchor)
+                    }
+                    DispatchQueue.main.async {
+                        withAnimation(.none) {
+                            proxy.scrollTo(targetRenderIndex, anchor: anchor)
+                        }
+                    }
+                }
+                // Синхронизация при смене индекса снаружи (прогресс, восстановление). Без spring — не драться со свайпом.
+                .onChange(of: initialIndex ?? -1) { old, new in
+                    guard old != new, !base.isEmpty else { return }
+                    let baseCount = base.count
+                    let targetBaseIndex: Int
+                    if let idx = initialIndex, base.indices.contains(idx) {
+                        targetBaseIndex = idx
+                    } else {
+                        targetBaseIndex = 0
+                    }
+                    let targetRenderIndex: Int
+                    if loop, baseCount > 1 {
+                        let middleBlockStart = baseCount
+                        targetRenderIndex = middleBlockStart + targetBaseIndex
+                    } else {
+                        targetRenderIndex = targetBaseIndex
+                    }
+                    let anchor: UnitPoint = .center
                     withAnimation(.none) {
                         proxy.scrollTo(targetRenderIndex, anchor: anchor)
                     }
                 }
             }
+            // Стабильная высота секционного слота: композиция Main/Course строится от `cardHeight`.
+            .frame(height: cardHeight)
+            .padding(.vertical, CDLayout.carouselVPad)
         }
-        .padding(.vertical, CDLayout.carouselVPad)
-        .frame(height: cardHeight)
+        // `GeometryReader` в вертикальном `ScrollView` без фикс. высоты раздувает соседние секции.
+        .frame(height: cardHeight + CDLayout.carouselVPad * 2)
+    }
+}
+
+fileprivate struct CDLessonCarouselCenterCandidate: Equatable {
+    let baseIndex: Int
+    let norm: CGFloat
+}
+
+fileprivate struct CDLessonCarouselCenterPreferenceKey: PreferenceKey {
+    static var defaultValue: [CDLessonCarouselCenterCandidate] = []
+    static func reduce(value: inout [CDLessonCarouselCenterCandidate], nextValue: () -> [CDLessonCarouselCenterCandidate]) {
+        value.append(contentsOf: nextValue())
     }
 }
 
@@ -1821,7 +2174,7 @@ struct CourseDSPreviewHost: View {
             CD.ColorToken.background.ignoresSafeArea()
 
             // Main scroll content sits under header; give it a small top padding so it doesn't stick to it
-            ScrollView {
+            TaikaRootVerticalScroll {
                 VStack(spacing: CD.Spacing.inner) {
 
                     // БАЗА (demo reel)
@@ -1998,9 +2351,12 @@ struct CourseDSPreviewHost: View {
             }
 
             // Sticky transparent header on top
-            CDAppHeader(
+            AppHeader(
+                showSearch: true,
+                showHeart: true,
+                showProfile: true,
                 onTapSearch: { print("search tapped") },
-                onTapFavorites: { print("favorites tapped") },
+                onTapHeart: { print("favorites tapped") },
                 onTapProfile: { print("profile tapped") }
             )
             .frame(height: 44)
@@ -2011,7 +2367,6 @@ struct CourseDSPreviewHost: View {
 #Preview("Course DS") {
     CourseDSPreviewHost()
         .environmentObject(ThemeManager.shared)
-        .preferredColorScheme(.dark)
 }
 
 

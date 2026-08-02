@@ -5,6 +5,167 @@
 //  Created by product on 03.09.2025.
 //
 import Foundation
+
+/// Unified source of favorites cards for games.
+/// Used both by pre-check UI (can start game?) and by actual game data build.
+@MainActor
+public enum FavoritesGameSource {
+    public typealias Triple = HomeTaskManager.LearnedTriple
+
+    /// Parse step ref from favorites id variants:
+    /// - card:step:courseId:lessonId:idxN
+    /// - step:courseId:lessonId:idxN
+    /// - step:course.lesson.slug
+    /// - course.lesson.slug
+    private static func parseStepRefId(_ ref: String) -> (courseId: String, lessonId: String, index: Int)? {
+        let normalized = ref.lowercased()
+        let parts = normalized.split(separator: ":").map(String.init)
+
+        if parts.count >= 5, parts[0] == "card", parts[1] == "step" {
+            let digits = parts[4].filter { $0.isNumber }
+            guard let index = Int(digits) else { return nil }
+            return (parts[2], parts[3], index)
+        }
+
+        if parts.count >= 4, parts[0] == "step" {
+            if parts[1].contains("."), !parts[2].isEmpty, !parts[3].isEmpty, !parts[3].contains("idx") {
+                let dotted = parts[1].split(separator: ".").map(String.init)
+                guard dotted.count >= 2 else { return nil }
+                return (dotted[0], dotted[1], 0)
+            }
+            let digits = parts[3].filter { $0.isNumber }
+            guard let index = Int(digits) else { return nil }
+            return (parts[1], parts[2], index)
+        }
+
+        if normalized.contains(".") {
+            let dotted = normalized.split(separator: ".").map(String.init)
+            if dotted.count >= 2 {
+                return (dotted[0], dotted[1], 0)
+            }
+        }
+        return nil
+    }
+
+    private static func normalizedFavoriteRefKey(_ raw: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if s.hasPrefix("card:") { s.removeFirst("card:".count) }
+        return s
+    }
+
+    private static func lessonIdCandidatesForResolve(_ normalizedLessonId: String, stepData: StepData) -> [String] {
+        var seen = Set<String>()
+        var candidates: [String] = []
+        func add(_ s: String) {
+            guard !s.isEmpty, seen.insert(s).inserted else { return }
+            candidates.append(s)
+        }
+        if let exact = stepData.lessonIdForCaseInsensitiveLookup(normalizedLessonId) { add(exact) }
+        add(normalizedLessonId)
+        add(normalizedLessonId.replacingOccurrences(of: "_", with: "-"))
+        add(normalizedLessonId.replacingOccurrences(of: "-", with: "_"))
+        return candidates
+    }
+
+    public static func triples() -> [Triple] {
+        let manager = FavoriteManager.shared
+        var refIds = manager.speakerStepIds()
+        if refIds.isEmpty {
+            refIds = manager.cardsDTO.map(\.sourceId)
+        }
+        guard !refIds.isEmpty else { return [] }
+
+        let stepData = StepData.shared
+        let cardsByKey: [String: FDCardDTO] = Dictionary(
+            uniqueKeysWithValues: manager.cardsDTO.map { (normalizedFavoriteRefKey($0.sourceId), $0) }
+        )
+        var result: [Triple] = []
+        var seen = Set<String>()
+
+        for ref in refIds {
+            guard let key = parseStepRefId(ref) else { continue }
+            let lessonIds = lessonIdCandidatesForResolve(key.lessonId, stepData: stepData)
+            var resolved: StepData.SpeakerResolved?
+            var resolvedLessonId: String?
+            for lid in lessonIds {
+                resolved = stepData.speakerResolved(courseId: key.courseId, lessonId: lid, index: key.index)
+                if resolved != nil {
+                    resolvedLessonId = lid
+                    break
+                }
+            }
+            if let r = resolved {
+                let ru = r.face.titleRU.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !ru.isEmpty else { continue }
+                let th = r.face.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines)
+                let phRaw = r.face.phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+                let ph = phRaw.isEmpty ? ru : phRaw
+                if seen.insert(ru.lowercased()).inserted {
+                    let lid = (resolvedLessonId ?? key.lessonId).trimmingCharacters(in: .whitespacesAndNewlines)
+                    result.append(.init(ru: ru, th: th, ph: ph, lessonId: lid.isEmpty ? nil : lid))
+                }
+                continue
+            }
+
+            let canonicalStep = "step:\(key.courseId):\(key.lessonId):idx\(key.index)"
+            let dto = cardsByKey[normalizedFavoriteRefKey(ref)] ?? cardsByKey[normalizedFavoriteRefKey(canonicalStep)]
+            guard let dto else { continue }
+            let ru = dto.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !ru.isEmpty else { continue }
+            let th = dto.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+            let phRaw = dto.meta.trimmingCharacters(in: .whitespacesAndNewlines)
+            let ph = phRaw.isEmpty ? ru : phRaw
+            if seen.insert(ru.lowercased()).inserted {
+                result.append(.init(ru: ru, th: th, ph: ph, lessonId: nil))
+            }
+        }
+
+        if !result.isEmpty { return result }
+
+        // Hard fallback: visible favorites cards only.
+        for dto in manager.cardsDTO {
+            let sid = dto.sourceId.lowercased()
+            let meta = dto.meta.lowercased()
+            if sid.hasPrefix("hack:") || meta.hasPrefix("hack:") { continue }
+            let ru = dto.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !ru.isEmpty else { continue }
+            let th = dto.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+            let phRaw = dto.meta.trimmingCharacters(in: .whitespacesAndNewlines)
+            let ph = phRaw.isEmpty ? ru : phRaw
+            if seen.insert(ru.lowercased()).inserted {
+                result.append(.init(ru: ru, th: th, ph: ph, lessonId: nil))
+            }
+        }
+
+        return result
+    }
+}
+
+/// Псевдо-курс игрового парка с Main: все выученные карточки по всем курсам.
+@MainActor
+public enum LearnedGameSource {
+    public static let pseudoCourseId = "__learned__"
+
+    public typealias Triple = HomeTaskManager.LearnedTriple
+
+    public static func isPseudoCourseId(_ raw: String) -> Bool {
+        let c = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return c == pseudoCourseId || c == "--learned--"
+    }
+
+    /// Все валидные тройки (ru + фонетика) из ProgressManager — пул матча/викторины/Audio Recall с Main.
+    public static func triples() -> [Triple] {
+        HomeTaskManager().allLearnedUserTriples()
+    }
+
+    public static var hasPlayableCards: Bool {
+        triples().contains {
+            !$0.ru.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !$0.ph.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+}
+
 @MainActor
 public final class HomeTaskManager: ObservableObject {
     @Published public private(set) var tasksByCourse: [String: [HTask]] = [:]
@@ -44,8 +205,13 @@ public final class HomeTaskManager: ObservableObject {
         public let ru: String
         public let th: String
         public let ph: String
-        public init(ru: String, th: String, ph: String) {
-            self.ru = ru; self.th = th; self.ph = ph
+        /// Урок-источник карточки (для чипа на карточке в recall при игре по всему курсу).
+        public let lessonId: String?
+        public init(ru: String, th: String, ph: String, lessonId: String? = nil) {
+            self.ru = ru
+            self.th = th
+            self.ph = ph
+            self.lessonId = lessonId
         }
     }
 
@@ -186,42 +352,59 @@ public final class HomeTaskManager: ObservableObject {
     // MARK: - Data collection from progress / steps
 
     /// Parse step ref from FavoriteManager (step:courseId:lessonId:idxN) for favorites triples.
+    /// Also accepts legacy/expanded forms like:
+    /// - card:step:courseId:lessonId:idxN
+    /// - step:course.lesson.slug
+    /// - course.lesson.slug
     private func parseStepRefId(_ ref: String) -> (courseId: String, lessonId: String, index: Int)? {
-        let parts = ref.split(separator: ":").map(String.init)
-        guard parts.count >= 4, parts[0] == "step" else { return nil }
-        let courseId = parts[1]
-        let lessonId = parts[2]
-        let digits = parts[3].filter { $0.isNumber }
-        guard let index = Int(digits) else { return nil }
-        return (courseId, lessonId, index)
+        let normalized = ref.lowercased()
+        let parts = normalized.split(separator: ":").map(String.init)
+
+        if parts.count >= 5, parts[0] == "card", parts[1] == "step" {
+            let courseId = parts[2]
+            let lessonId = parts[3]
+            let digits = parts[4].filter { $0.isNumber }
+            guard let index = Int(digits) else { return nil }
+            return (courseId, lessonId, index)
+        }
+
+        if parts.count >= 4, parts[0] == "step" {
+            // canonical step:course:lesson:idxN
+            if parts[1].contains("."), parts[2].isEmpty == false, parts[3].isEmpty == false, parts[3].contains("idx") == false {
+                // legacy step:course.lesson.slug
+                let dotted = parts[1].split(separator: ".").map(String.init)
+                guard dotted.count >= 2 else { return nil }
+                let courseId = dotted[0]
+                let lessonId = dotted[1]
+                let index = 0
+                return (courseId, lessonId, index)
+            }
+            let courseId = parts[1]
+            let lessonId = parts[2]
+            let digits = parts[3].filter { $0.isNumber }
+            guard let index = Int(digits) else { return nil }
+            return (courseId, lessonId, index)
+        }
+
+        if normalized.contains(".") {
+            let dotted = normalized.split(separator: ".").map(String.init)
+            if dotted.count >= 2 {
+                return (dotted[0], dotted[1], 0)
+            }
+        }
+        return nil
+    }
+
+    /// Normalize mixed favorite ids (`card:step:...`, `step:...`) to one compare key.
+    private func normalizedFavoriteRefKey(_ raw: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if s.hasPrefix("card:") { s.removeFirst("card:".count) }
+        return s
     }
 
     @MainActor
     private func favoritesTriples() -> [LearnedTriple] {
-        let refIds = FavoriteManager.shared.speakerStepIds()
-        guard !refIds.isEmpty else { return [] }
-        let stepData = StepData.shared
-        var result: [LearnedTriple] = []
-        var seen = Set<String>()
-        for ref in refIds {
-            guard let key = parseStepRefId(ref) else { continue }
-            let lessonIdCandidates = lessonIdCandidatesForResolve(key.lessonId, stepData: stepData)
-            var r: StepData.SpeakerResolved?
-            for lessonId in lessonIdCandidates {
-                r = stepData.speakerResolved(courseId: key.courseId, lessonId: lessonId, index: key.index)
-                if r != nil { break }
-            }
-            guard let r = r else { continue }
-            let ru = r.face.titleRU.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !ru.isEmpty else { continue }
-            let th = r.face.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines)
-            let phRaw = r.face.phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
-            let ph = phRaw.isEmpty ? ru : phRaw
-            if seen.insert(ru.lowercased()).inserted {
-                result.append(.init(ru: ru, th: th, ph: ph))
-            }
-        }
-        return result
+        FavoritesGameSource.triples()
     }
 
     /// Варианты lessonId для резолва (case-insensitive + underscore/dash), чтобы избранное работало при разном формате ключей в steps.json.
@@ -252,7 +435,7 @@ public final class HomeTaskManager: ObservableObject {
                 if let ru = it.ru {
                     let th = it.thai ?? ""
                     let ph = it.phonetic ?? ""
-                    out.append(.init(ru: ru, th: th, ph: ph))
+                    out.append(.init(ru: ru, th: th, ph: ph, lessonId: lessonId))
                 }
             default: continue
             }
@@ -304,7 +487,7 @@ public final class HomeTaskManager: ObservableObject {
                 switch taskIndex % 3 {
                 case 1: gameType = .match
                 case 2: gameType = .recall
-                default: gameType = .builder
+                default: gameType = .audioRecall
                 }
 
                 var task = makeTask(title, picked, taskIndex)
@@ -325,7 +508,8 @@ public final class HomeTaskManager: ObservableObject {
             let picked = sample(pool, count: max(samplePerTask, 12))
             let title = "Итоговая практика"
             var task = makeTask(title, picked, (produced.count + 1))
-            task.gameType = .builder
+            // Grand Dialogue спрятан до доработки → итоговая = Audio Recall.
+            task.gameType = TaikaReleaseFlags.showGrandDialogue ? .grandDialogue : .audioRecall
             produced.append(task)
             triplesByTask[task.id] = picked
         }
@@ -451,11 +635,14 @@ public final class HomeTaskManager: ObservableObject {
         /// Correct clean syllables in order (for validation)
         public let correctPieces: [String]
         public let audioText: String?
+        public let lessonId: String?
         public var slotCount: Int { segments.count }
     }
 
     @Published public private(set) var currentBuilderRound: BuilderRound?
     @Published public private(set) var builderAttemptCount: Int = 0
+    /// Только неверные проверки (не путать с attemptCount).
+    @Published public private(set) var builderMistakeCount: Int = 0
     @Published public private(set) var builderReinforcementScore: Int = 0
     @Published public private(set) var builderState: BuilderState = .idle
     @Published public var assembledBuilder: [String] = []
@@ -518,17 +705,19 @@ public final class HomeTaskManager: ObservableObject {
         return assembledBuilder.count == round.correctPieces.count
     }
 
-    /// Start multi-round builder game from triples pool (до 20 раундов за сессию; все карточки в карусели).
-    /// Excludes triples with >6 syllables per EPIC 2.
+    /// Start multi-round builder game from triples pool.
+    /// For unified reinforcement logic across games we do NOT cap the queue and
+    /// we do not exclude by syllable count here (all eligible learned cards should be included).
     @MainActor
     public func startBuilderRound(from triples: [LearnedTriple]) {
-        let valid = triples.filter { syllableCount(fromPhonetic: $0.ph) <= 6 && !$0.ph.trimmingCharacters(in: .whitespaces).isEmpty }
+        let valid = triples.filter { !$0.ph.trimmingCharacters(in: .whitespaces).isEmpty }
         guard !valid.isEmpty else { return }
 
-        builderQueue = Array(valid.shuffled().prefix(min(20, valid.count)))
+        builderQueue = Array(valid.shuffled())
         builderIndex = 0
         builderScore = 0
         builderAttemptCount = 0
+        builderMistakeCount = 0
         assembledBuilder = []
         builderState = .idle
 
@@ -568,7 +757,8 @@ public final class HomeTaskManager: ObservableObject {
             segments: segments,
             syllables: finalPool,
             correctPieces: correctPieces,
-            audioText: triple.th.trimmingCharacters(in: .whitespaces).isEmpty ? nil : triple.th
+            audioText: triple.th.trimmingCharacters(in: .whitespaces).isEmpty ? nil : triple.th,
+            lessonId: triple.lessonId
         )
 
         assembledBuilder = []
@@ -591,6 +781,7 @@ public final class HomeTaskManager: ObservableObject {
                     builderReinforcementScore += 1
                 } else {
                     builderState = .wrong
+                    builderMistakeCount += 1
                 }
             } else {
                 builderState = .assembling
@@ -620,6 +811,7 @@ public final class HomeTaskManager: ObservableObject {
             // do NOT advance index here — wait for explicit advanceBuilderRound()
         } else {
             builderState = .wrong
+            builderMistakeCount += 1
             // keep assembled pieces so UI can highlight mismatch,
             // reset will be handled explicitly by UI or next attempt
         }
@@ -630,9 +822,32 @@ public final class HomeTaskManager: ObservableObject {
     public func removeLastBuilderPiece() {
         if !assembledBuilder.isEmpty {
             assembledBuilder.removeLast()
+            builderSelectedSlotForReplacement = nil
             if builderState == .wrong {
                 builderState = .assembling
             }
+        }
+    }
+
+    /// Снять последнее вхождение слога (повторный тап по чипу в пуле).
+    @MainActor
+    public func removeLastBuilderPiece(matching piece: String) {
+        guard let idx = assembledBuilder.lastIndex(of: piece) else { return }
+        assembledBuilder.remove(at: idx)
+        builderSelectedSlotForReplacement = nil
+        if builderState == .wrong || builderState == .assembling {
+            builderState = assembledBuilder.isEmpty ? .idle : .assembling
+        }
+    }
+
+    /// Снять слог в конкретном слоте (тап по заполненному слоту).
+    @MainActor
+    public func removeBuilderPiece(at index: Int) {
+        guard assembledBuilder.indices.contains(index) else { return }
+        assembledBuilder.remove(at: index)
+        builderSelectedSlotForReplacement = nil
+        if builderState == .wrong || builderState == .assembling {
+            builderState = assembledBuilder.isEmpty ? .idle : .assembling
         }
     }
 
@@ -746,6 +961,7 @@ public final class HomeTaskManager: ObservableObject {
     /// Clean user-facing triples: remove duplicates and fallback phonetic to RU if missing
     @MainActor
     public func userTriples(for courseId: String, lessonId: String) -> [LearnedTriple] {
+        if LearnedGameSource.isPseudoCourseId(courseId) { return allLearnedUserTriples() }
         if courseId == "__favorites__" { return favoritesTriples() }
         let raw = learnedTriples(courseId: courseId, lessonId: lessonId)
         var seen = Set<String>()
@@ -757,7 +973,7 @@ public final class HomeTaskManager: ObservableObject {
             guard !ru.isEmpty else { continue }
             let ph = phRaw.isEmpty ? ru : phRaw
             if seen.insert(ru.lowercased()).inserted {
-                result.append(.init(ru: ru, th: th, ph: ph))
+                result.append(.init(ru: ru, th: th, ph: ph, lessonId: t.lessonId))
             }
         }
         return result
@@ -769,6 +985,7 @@ public final class HomeTaskManager: ObservableObject {
         courseId: String,
         lessonIds: [String]
     ) -> [LearnedTriple] {
+        if LearnedGameSource.isPseudoCourseId(courseId) { return allLearnedUserTriples() }
         if courseId == "__favorites__" { return favoritesTriples() }
         var raw: [LearnedTriple] = []
         for lid in lessonIds {
@@ -785,10 +1002,32 @@ public final class HomeTaskManager: ObservableObject {
             guard !ru.isEmpty else { continue }
             let ph = phRaw.isEmpty ? ru : phRaw
             if seen.insert(ru.lowercased()).inserted {
-                result.append(.init(ru: ru, th: th, ph: ph))
+                result.append(.init(ru: ru, th: th, ph: ph, lessonId: t.lessonId))
             }
         }
 
+        return result
+    }
+
+    /// Все выученные карточки по всем курсам (игровой парк с Main).
+    @MainActor
+    public func allLearnedUserTriples() -> [LearnedTriple] {
+        var raw: [LearnedTriple] = []
+        for (key, indices) in ProgressManager.shared.learnedSteps where !indices.isEmpty {
+            raw.append(contentsOf: learnedTriples(courseId: key.courseId, lessonId: key.lessonId))
+        }
+        var seen = Set<String>()
+        var result: [LearnedTriple] = []
+        for t in raw {
+            let ru = t.ru.trimmingCharacters(in: .whitespacesAndNewlines)
+            let th = t.th.trimmingCharacters(in: .whitespacesAndNewlines)
+            let phRaw = t.ph.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !ru.isEmpty else { continue }
+            let ph = phRaw.isEmpty ? ru : phRaw
+            if seen.insert(ru.lowercased()).inserted {
+                result.append(.init(ru: ru, th: th, ph: ph, lessonId: t.lessonId))
+            }
+        }
         return result
     }
 

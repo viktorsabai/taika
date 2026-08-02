@@ -92,6 +92,7 @@ ProgressManager:
 - **Агрегаты урока/курса (проценты):** курс-процент для дашборда считается в ProgressManager.progress(for: courseId, lessonId: nil) по learnedSteps + lessonMetaProvider (LessonsData/StepData). LessonsManager хранит агрегаты для экранов Course/Lessons; при старте они пересобираются из ProgressManager (rebuildAggregatesFromProgressManager), чтобы персист LM не расходился с PM.
 - **Кто откуда читает:** MainView/MainManager — ProgressManager.progress(for:); CourseView/LessonsView — LessonsManager.coursePercent/lessonProgress; ProfileManager — ProgressManager.progress; Speaker — UserSession.snapshot.learnedSteps.
 - **Диапазон:** все публичные API прогресса возвращают значение в [0, 1].
+- **Персист и миграции:** схема шагов «выучено» живёт в `ProgressManager` (внутренний `PMStore` в `ProgressManager.swift`). `LessonsManager` дополнительно кодирует агрегаты в UserDefaults (`LessonsManager.progress.v1`, `LessonsManager.started.v1`); при каждом `load()` после декода вызывается `rebuildAggregatesFromProgressManager()`, чтобы выровнять проценты с PM. Менять ключ LM без явной миграции — только осознанно: первый кадр может кратко показать старый снимок до пересчёта.
 
 ---
 
@@ -226,6 +227,10 @@ are FUTURE scope and intentionally excluded from MVP.
 ---
 
 ## 12. CHANGELOG
+
+**2026-03-31 (March Epic — Profile Metrics Contract)**  
+- Profile dashboard contract aligned to canonical pipeline: `ProfileManager` now reads canonical metrics from `ProgressManager.publishedState` (after refresh), reducing parallel-formula drift risk.  
+- Session/Progress responsibility boundary remains unchanged: identity/session in UserSession, metric computation in ProgressManager, presentation in Profile layer.
 
 **2026-02-21 (EPIC 4 — Progress Consistency)**  
 - ProgressManager.lessonMetaProvider подключён из LessonsData/StepData при инициализации; курс-процент считается из learnedSteps по одной формуле, без fallback на LM для дашборда.  

@@ -70,13 +70,18 @@ uvicorn api:app --host 0.0.0.0 --port 8000
 
 **Вариант A — Railway:**
 
-1. [railway.app](https://railway.app) → New Project → Deploy from GitHub
-2. Root directory: `scripts/thai_tone_assessment`
-3. Variables:  
-   `TAIKA_STEPS_JSON` — путь к steps.json (или положить рядом и не задавать)
-4. Build: `pip install -r requirements.txt`
-5. Start: `uvicorn api:app --host 0.0.0.0 --port $PORT`
-6. Railway даст URL вида `https://xxx.up.railway.app`
+1. [railway.app](https://railway.app) → проект → сервис **taika**
+2. **Settings → Source → Root Directory** — оставь **пустым** (корень репо).  
+   Не `scripts/thai_tone_assessment`: Dockerfile копирует `steps.json` из корня репо.
+3. **Settings → Build → Builder** — **Dockerfile** (не Railpack).
+4. **Settings → Build → Dockerfile path** — `scripts/thai_tone_assessment/Dockerfile`  
+   (или положись на `railway.json` в корне — там `"builder": "DOCKERFILE"`).
+5. **Variables:**
+   - `OPENAI_API_KEY` — ключ OpenAI (для новых фраз)
+   - `TAIKA_SMART_MODEL` — `gpt-4o-mini` (опционально)
+6. **Deploy** → Redeploy (старый failed deploy 3 месяца назад не перезапустится сам — нужен новый деплой после push в GitHub).
+
+Если видишь **«Error creating build plan with Railpack»** — Railway игнорирует Dockerfile. Проверь п.2–4 и что в репо есть актуальный `railway.json` с `"builder": "DOCKERFILE"`.
 
 **Вариант B — Docker:**
 
@@ -151,3 +156,37 @@ static var toneAssessmentBaseURL: String? = {
 - [ ] Smart Speaker отвечает на `POST /smart_speaker` (проверить curl)
 - [ ] `TaikaAPIBaseURL` в Info.plist или коде для Release
 - [ ] Собрана Release-сборка, Smart Speaker работает на TestFlight-установке
+
+---
+
+## Диагностика Smart Speaker
+
+Проверка с Mac (подставь свой URL из Railway):
+
+```bash
+# 1. Сервер жив?
+curl -s https://taika-production.up.railway.app/health
+
+# Ожидается: {"status":"ok","steps_json":true,"openai_configured":true,"model":"gpt-4o-mini"}
+# Если {"message":"Application not found"} — проект на Railway удалён или спит; нужен передеплой.
+
+# 2. Перевод фразы из steps.json (без OpenAI)
+curl -s -X POST https://taika-production.up.railway.app/smart_speaker \
+  -H "Content-Type: application/json" \
+  -d '{"text_ru":"Привет","politeness":"female"}'
+
+# 3. Произвольная фраза (нужен OPENAI_API_KEY в Railway Variables)
+curl -s -X POST https://taika-production.up.railway.app/smart_speaker \
+  -H "Content-Type: application/json" \
+  -d '{"text_ru":"Привет как дела","politeness":"female"}'
+```
+
+**Переменные Railway (обязательно для новых фраз):**
+
+| Variable | Значение |
+|----------|----------|
+| `OPENAI_API_KEY` | ключ OpenAI |
+| `TAIKA_SMART_MODEL` | `gpt-4o-mini` (опционально) |
+| `TAIKA_STEPS_JSON` | `/app/steps.json` (уже в Dockerfile) |
+
+После добавления переменных — **Redeploy** сервиса. Docker слушает `$PORT` (Railway подставляет автоматически).

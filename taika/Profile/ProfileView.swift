@@ -9,130 +9,304 @@ import SwiftUI
 import UIKit
 
 struct ProfileView: View {
-    @ObservedObject private var progress = ProgressManager.shared
     @ObservedObject private var pro = ProManager.shared
     @ObservedObject private var auth = AuthService.shared
     @EnvironmentObject private var theme: ThemeManager
-    @EnvironmentObject private var nav: NavigationIntent
+    @EnvironmentObject private var overlay: OverlayPresenter
 
     @State private var showResetAllConfirm = false
     @State private var viewReloadToken = UUID()
-    @State private var showPROView = false
     @State private var showSettingsSheet = false
     @State private var authInProgress = false
     @State private var authErrorMessage: String?
+    @State private var storeRestoreMessage: String?
+    @State private var restoreInFlight = false
 
-    private var state: ProfileDashboardState { progress.publishedState }
-    private var pronunciationScore: Int? { state.averagePronunciationScore }
+    private var listRowInsets: EdgeInsets {
+        EdgeInsets(top: 10, leading: PD.Spacing.screen, bottom: 10, trailing: PD.Spacing.screen)
+    }
+
+    @ViewBuilder
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(PD.ColorToken.textSecondary)
+            .textCase(.uppercase)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private func profileLinkRow(title: String, subtitle: String? = nil, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(alignment: subtitle == nil ? .center : .top, spacing: 14) {
+                Image(systemName: systemImage)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .frame(width: 24, alignment: .center)
+                    .padding(.top, subtitle == nil ? 0 : 2)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.body)
+                        .foregroundStyle(PD.ColorToken.text)
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.92))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.55))
+                    .padding(.top, subtitle == nil ? 0 : 2)
+            }
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(listRowInsets)
+        .listRowBackground(PD.ColorToken.card.opacity(0.35))
+    }
+
+    @ViewBuilder
+    private func profileValueRow(title: String, systemImage: String, value: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: systemImage)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .frame(width: 24, alignment: .center)
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(PD.ColorToken.text)
+                Spacer()
+                Text(value)
+                    .font(.body)
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(listRowInsets)
+        .listRowBackground(PD.ColorToken.card.opacity(0.35))
+    }
 
     private func performFullReset() {
-        // 1) All progress stores in sync (single source of truth chain)
         ProgressManager.shared.resetAll()
-        UserSession.shared.resetAllProgress()  // LessonsManager + UserSession snapshot + FavoriteManager.clearAll()
-        StepManager.shared.resetAll()         // in-memory learned so CourseView/Lesson cards show 0
+        UserSession.shared.resetAllProgress()
+        StepManager.shared.resetAll()
         FavoriteManager.shared.resetAll()
         StepData.shared.resetDailyPicksCache()
-        SpeakerAttemptsStore.clearAll()      // pronunciation scores so Speaker starts clean
+        SpeakerAttemptsStore.clearAll()
 
-        // 2) broadcast changes so views/managers refresh
         NotificationCenter.default.post(name: .init("ProgressDidChange"), object: nil)
         NotificationCenter.default.post(name: .init("FavoritesDidChange"), object: nil)
         NotificationCenter.default.post(name: .init("DailyPicksDidReset"), object: nil)
         NotificationCenter.default.post(name: .init("AppResetAll"), object: nil)
 
-        // 3) light UI reload
         viewReloadToken = UUID()
-
-        // 4) success haptic
-        let gen = UINotificationFeedbackGenerator(); gen.notificationOccurred(.success)
+        let gen = UINotificationFeedbackGenerator()
+        gen.notificationOccurred(.success)
     }
 
     var body: some View {
         ZStack {
             PD.ColorToken.background
                 .ignoresSafeArea()
+
             VStack(spacing: 0) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        let accent = AnyShapeStyle(theme.currentAccentFill)
+                TaikaScreenPageTitle(title: "Профиль")
+                    .padding(.top, 4)
+                    .padding(.bottom, 4)
 
-                        // 1. Аккаунт — вверху
-                        PDSection("Аккаунт") {
-                            accountBlock(accent: accent)
+                List {
+                Section {
+                    TaikaFMRow(scope: .profile, mode: .typing, showBubble: false, repeats: true)
+                        .listRowInsets(EdgeInsets(top: 8, leading: PD.Spacing.screen, bottom: 8, trailing: PD.Spacing.screen))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                } header: {
+                    sectionHeader("ТАЙКА FM")
+                }
+
+                Section {
+                    if auth.isLoggedIn {
+                        if let name = auth.displayName, !name.isEmpty {
+                            Text(name)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(PD.ColorToken.text)
+                                .listRowInsets(listRowInsets)
+                                .listRowBackground(PD.ColorToken.card.opacity(0.35))
                         }
-
-                        // 2. Один якорный блок: как ты звучишь
-                        VStack(alignment: .leading, spacing: Theme.Layout.sectionTitleToContent) {
-                            pronunciationCard(accent: accent)
+                        Button("Выйти", role: .destructive) {
+                            try? auth.signOut()
+                            ProManager.shared.reset()
                         }
-                        .padding(.top, Theme.Layout.sectionTop)
-
-                        // 3. Кнопка: улучшить произношение → Speaker
-                        Button(action: {
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            nav.requestTab(2)
-                        }) {
-                            HStack(spacing: PD.Spacing.inner) {
-                                Image(systemName: "waveform.circle.fill")
-                                    .font(.system(size: 20))
-                                Text("Улучшить произношение")
-                                    .font(PD.FontToken.body(17, weight: .medium))
+                        .listRowInsets(listRowInsets)
+                        .listRowBackground(PD.ColorToken.card.opacity(0.35))
+                    } else {
+                        Button {
+                            signInWithAppleTapped()
+                        } label: {
+                            HStack(spacing: 14) {
+                                Image(systemName: "apple.logo")
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(PD.ColorToken.textSecondary)
+                                Text("Привязать Apple ID")
+                                    .font(.body)
+                                    .foregroundStyle(PD.ColorToken.text)
+                                if authInProgress {
+                                    Spacer(minLength: 8)
+                                    ProgressView()
+                                }
                             }
-                            .foregroundStyle(PD.ColorToken.text)
-                            .frame(maxWidth: .infinity)
-                            .padding(PD.Spacing.inner)
-                            .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
-                            .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
                         }
                         .buttonStyle(.plain)
-                        .padding(.horizontal, PD.Spacing.screen)
-                        .padding(.top, 8)
+                        .disabled(authInProgress)
+                        .listRowInsets(listRowInsets)
+                        .listRowBackground(PD.ColorToken.card.opacity(0.35))
+                    }
+                } header: {
+                    sectionHeader("Аккаунт")
+                }
 
-                        // 4. Настройки — в конец, минимально
-                        PDSection("Настройки") {
-                            VStack(spacing: Theme.Layout.Section.itemGap) {
-                                settingsRow(icon: "globe", title: "Язык интерфейса", showChevron: true) { showSettingsSheet = true }
-                                settingsRowTheme()
-                                settingsRow(icon: "questionmark.circle", title: "Поддержка", showChevron: true, action: openSupportURL)
+                if let msg = authErrorMessage, !auth.isLoggedIn {
+                    Section {
+                        Text(msg)
+                            .font(.footnote)
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .listRowInsets(listRowInsets)
+                            .listRowBackground(PD.ColorToken.card.opacity(0.35))
+                    }
+                }
+
+                Section {
+                    if pro.isPro {
+                        HStack(spacing: 14) {
+                            Image(systemName: "crown.fill")
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(theme.currentAccentFill)
+                                .frame(width: 24, alignment: .center)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Taika+ активен")
+                                    .font(.body)
+                                    .foregroundStyle(PD.ColorToken.text)
+                                Text("Расширенная разминка, курсы и Спикер")
+                                    .font(.caption)
+                                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.92))
                             }
-                            .padding(.horizontal, PD.Spacing.screen)
+                            Spacer(minLength: 0)
+                        }
+                        .listRowInsets(listRowInsets)
+                        .listRowBackground(PD.ColorToken.card.opacity(0.35))
+                    } else {
+                        profileLinkRow(
+                            title: "Открыть Taika+",
+                            subtitle: "10 карточек в день, курсы и Спикер",
+                            systemImage: "crown.fill"
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            overlay.presentPro(reason: .general)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, Theme.Layout.sectionGap)
-                    .safeAreaPadding(.bottom, Theme.Layout.pageBottomSafeGap)
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        Task { await restorePurchasesTapped() }
+                    } label: {
+                        HStack(spacing: 14) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(PD.ColorToken.textSecondary)
+                                .frame(width: 24, alignment: .center)
+                            Text(restoreInFlight ? "Восстановление…" : "Восстановить покупки")
+                                .font(.body)
+                                .foregroundStyle(PD.ColorToken.text)
+                            Spacer()
+                            if restoreInFlight {
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(restoreInFlight)
+                    .listRowInsets(listRowInsets)
+                    .listRowBackground(PD.ColorToken.card.opacity(0.35))
+                } header: {
+                    sectionHeader("Taika+")
                 }
-                .scrollIndicators(.hidden)
+
+                Section {
+                    profileLinkRow(title: "Поддержка", systemImage: "questionmark.circle") {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        openSupportURL()
+                    }
+                    #if DEBUG
+                    profileLinkRow(title: "Отладка", systemImage: "wrench.and.screwdriver") {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showSettingsSheet = true
+                    }
+                    #endif
+                } header: {
+                    sectionHeader("Основное")
+                }
             }
             .id(viewReloadToken)
-            .sheet(isPresented: $showSettingsSheet) {
-                ProfileSettingsSheet(
-                    showResetAllConfirm: $showResetAllConfirm,
-                    performFullReset: performFullReset
-                )
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .listSectionSpacing(14)
+            .listRowSeparatorTint(PD.ColorToken.stroke.opacity(0.45))
             }
+            .padding(.top, Theme.Layout.rootHeaderClearance)
         }
-        .task {
-            progress.refreshProfileState()
+        .alert("Покупки", isPresented: Binding(
+            get: { storeRestoreMessage != nil },
+            set: { if !$0 { storeRestoreMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { storeRestoreMessage = nil }
+        } message: {
+            Text(storeRestoreMessage ?? "")
+        }
+        .sheet(isPresented: $showSettingsSheet) {
+            ProfileSettingsSheet(
+                showResetAllConfirm: $showResetAllConfirm,
+                performFullReset: performFullReset
+            )
+            .environmentObject(theme)
         }
         .onAppear {
             if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
                let window = scene.windows.first(where: { $0.isKeyWindow }) {
                 AuthService.presentationWindow = window
             }
-            progress.refreshProfileState()
-            Task { @MainActor in AuthSoftWallState.tryPresentSoftWall(calledFromProfile: true) }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .progressDidChange)) { _ in
-            progress.refreshProfileState()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ProgressDidChange"))) { _ in
-            progress.refreshProfileState()
-        }
-        .fullScreenCover(isPresented: $showPROView) {
-            PROView(courseId: nil, initialPage: 0) {
-                showPROView = false
+            Task { @MainActor in
+                AuthSoftWallState.tryPresentSoftWall(calledFromProfile: true)
             }
+        }
+    }
+
+    @MainActor
+    private func restorePurchasesTapped() async {
+        storeRestoreMessage = nil
+        guard !restoreInFlight else { return }
+
+        if !auth.isLoggedIn {
+            storeRestoreMessage = "Войди в аккаунт, чтобы восстановить подписку."
+            return
+        }
+
+        restoreInFlight = true
+        defer { restoreInFlight = false }
+
+        do {
+            await ProManager.shared.syncRevenueCatIdentity(userId: auth.currentUserID)
+            try await ProManager.shared.restorePurchases()
+            if pro.isPro {
+                storeRestoreMessage = "Подписка восстановлена — Taika+ снова активен."
+            } else {
+                storeRestoreMessage = "Активных покупок не найдено."
+            }
+        } catch {
+            storeRestoreMessage = error.localizedDescription
         }
     }
 
@@ -153,162 +327,6 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - MVP blocks
-
-    @ViewBuilder
-    private func accountBlock(accent: AnyShapeStyle) -> some View {
-        Group {
-            if auth.isLoggedIn {
-                VStack(alignment: .leading, spacing: 8) {
-                    if let name = auth.displayName, !name.isEmpty {
-                        Text(name)
-                            .font(PD.FontToken.body(18, weight: .semibold))
-                            .foregroundStyle(PD.ColorToken.text)
-                    }
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(PD.ColorToken.accent)
-                        Text("Аккаунт привязан")
-                            .font(PD.FontToken.body(17, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.text)
-                    }
-                    HStack(spacing: 6) {
-                        Image(systemName: "icloud.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                        Text("В облаке")
-                            .font(PD.FontToken.caption(15, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                    }
-                    HStack {
-                        Spacer()
-                        Button("Выйти") {
-                            try? auth.signOut()
-                            ProManager.shared.reset()
-                        }
-                        .font(PD.FontToken.caption(13, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                    }
-                }
-                .padding(PD.Spacing.inner)
-                .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
-                .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
-            } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    Button(action: signInWithAppleTapped) {
-                        HStack(spacing: PD.Spacing.inner) {
-                            if authInProgress {
-                                TaikaLoadingView(label: "", compact: true)
-                            } else {
-                                Image(systemName: "apple.logo")
-                                    .font(.system(size: 18, weight: .semibold))
-                                Text("Привязать Apple ID")
-                                    .font(PD.FontToken.body(17, weight: .medium))
-                            }
-                        }
-                        .foregroundStyle(PD.ColorToken.text)
-                        .frame(maxWidth: .infinity)
-                        .padding(PD.Spacing.inner)
-                        .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
-                        .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(authInProgress)
-                    if let msg = authErrorMessage {
-                        Text(msg)
-                            .font(PD.FontToken.caption(13, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, PD.Spacing.screen)
-    }
-
-    private func pronunciationCard(accent: AnyShapeStyle) -> some View {
-        let shape = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-        let scoreText: String = pronunciationScore.map { "\($0)%" } ?? "—"
-        return ZStack {
-            Theme.Surfaces.card(shape)
-            VStack(spacing: 12) {
-                Text(scoreText)
-                    .font(.system(size: 52, weight: .bold, design: .rounded))
-                    .foregroundStyle(accent)
-                    .monospacedDigit()
-                Text("средний балл произношения")
-                    .font(PD.FontToken.caption(13, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                if !pro.isPro {
-                    HStack(spacing: 6) {
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: 12))
-                        Text("разбор произношения в PRO")
-                            .font(PD.FontToken.caption(12, weight: .medium))
-                    }
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                }
-            }
-            .padding(24)
-        }
-        .overlay(shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
-        .clipShape(shape)
-        .padding(.horizontal, PD.Spacing.screen)
-    }
-
-    private func settingsRow(icon: String, title: String, showChevron: Bool = true, action: @escaping () -> Void) -> some View {
-        Button(action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            action()
-        }) {
-            HStack(spacing: PD.Spacing.inner) {
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(PD.ColorToken.text)
-                Text(title)
-                    .font(PD.FontToken.body(17, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.text)
-                Spacer()
-                if showChevron {
-                    Image(systemName: "chevron.forward")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                }
-            }
-            .padding(.vertical, 14)
-            .padding(.horizontal, PD.Spacing.inner)
-            .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
-            .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func settingsRowTheme() -> some View {
-        let isDark = theme.preferredScheme == .dark
-        return Button(action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            theme.toggleTheme()
-        }) {
-            HStack(spacing: PD.Spacing.inner) {
-                Image(systemName: isDark ? "moon.fill" : "sun.max.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(PD.ColorToken.text)
-                Text("Тема")
-                    .font(PD.FontToken.body(17, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.text)
-                Spacer()
-                Text(isDark ? "Тёмная" : "Светлая")
-                    .font(PD.FontToken.caption(15, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-            }
-            .padding(.vertical, 14)
-            .padding(.horizontal, PD.Spacing.inner)
-            .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
-            .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// Поддержка: Telegram (фидбек-канал для фаундера)
     private func openSupportURL() {
         if let url = URL(string: "https://t.me/taika_support") {
             UIApplication.shared.open(url)
@@ -318,191 +336,79 @@ struct ProfileView: View {
     }
 }
 
-
-// MARK: - Settings sheet (шестерёнка: настройки + админ в DEBUG)
+// MARK: - Sheet: отладка (DEBUG)
 private struct ProfileSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var theme: ThemeManager
     @ObservedObject private var pro = ProManager.shared
     @Binding var showResetAllConfirm: Bool
     let performFullReset: () -> Void
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Button(action: {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    openSupportURL()
-                }) {
-                    HStack {
-                        Image(systemName: "questionmark.circle")
-                        Text("Поддержка")
-                            .font(PD.FontToken.body(17, weight: .medium))
-                    }
-                    .foregroundStyle(PD.ColorToken.text)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                }
-                .buttonStyle(.plain)
-
+            List {
                 #if DEBUG
-                VStack(spacing: 0) {
-                    AdminToggleRow(
-                        icon: "crown.fill",
-                        title: "pro режим",
-                        subtitle: "тест: free ↔ pro",
-                        isOn: Binding(
-                            get: { pro.isPro },
-                            set: { newValue in
-                                pro.setDebugPro(newValue)
-                                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                            }
-                        )
-                    )
-                    AdminDivider()
-                    AdminActionRow(icon: "trash", title: "сбросить всё", subtitle: "прогресс, лайки, daily picks", onTap: { showResetAllConfirm = true })
-                    AdminDivider()
-                    AdminActionRow(icon: "clock.arrow.circlepath", title: "сбросить подборку дня", subtitle: "очистить кэш daily picks", onTap: {
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { pro.isPro },
+                        set: { newValue in
+                            pro.setDebugPro(newValue)
+                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        }
+                    )) {
+                        Text("Taika+ режим (тест)")
+                            .foregroundStyle(PD.ColorToken.text)
+                    }
+                    .tint(theme.currentAccentFill)
+                    .listRowBackground(PD.ColorToken.background)
+                    Button("Сбросить всё", role: .destructive) {
+                        showResetAllConfirm = true
+                    }
+                    .listRowBackground(PD.ColorToken.background)
+                    Button("Сбросить подборку дня") {
                         StepData.shared.resetDailyPicksCache()
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
-                    })
+                    }
+                    .foregroundStyle(PD.ColorToken.text)
+                    .listRowBackground(PD.ColorToken.background)
+                } header: {
+                    Text("Отладка")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .textCase(.uppercase)
                 }
-                .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
-                .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
-                .padding(.horizontal)
                 #endif
             }
-            .padding(.vertical)
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .listRowSeparatorTint(PD.ColorToken.stroke.opacity(0.35))
+            .background(PD.ColorToken.background)
             .navigationTitle("Настройки")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") {
-                        dismiss()
-                    }
-                    .foregroundStyle(PD.ColorToken.text)
+                    Button("Готово") { dismiss() }
                 }
             }
         }
-        .alert("сбросить всё?", isPresented: $showResetAllConfirm) {
-            Button("отмена", role: .cancel) {}
-            Button("сбросить", role: .destructive) {
+        .alert("Сбросить всё?", isPresented: $showResetAllConfirm) {
+            Button("Отмена", role: .cancel) {}
+            Button("Сбросить", role: .destructive) {
                 performFullReset()
                 showResetAllConfirm = false
                 dismiss()
             }
         } message: {
-            Text("удалим прогресс, лайки, кэш подборки дня и перезапустим ui")
-        }
-    }
-
-    private func openSupportURL() {
-        if let url = URL(string: "https://t.me/taika_support") {
-            UIApplication.shared.open(url)
+            Text("Удалим прогресс, избранное и кэш подборки дня.")
         }
     }
 }
-
-// MARK: - Admin rows (ProfileView local)
-private struct AdminToggleRow: View {
-    var icon: String
-    var title: String
-    var subtitle: String
-    var isOn: Binding<Bool>
-
-    var body: some View {
-        HStack(spacing: PD.Spacing.inner) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(PD.ColorToken.chip)
-                    .frame(width: 42, height: 42)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(PD.ColorToken.stroke, lineWidth: 1)
-                    )
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(PD.ColorToken.text)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(PD.FontToken.body(17, weight: .regular))
-                    .foregroundColor(PD.ColorToken.text)
-                Text(subtitle)
-                    .font(PD.FontToken.caption(13, weight: .medium))
-                    .foregroundColor(PD.ColorToken.textSecondary)
-            }
-
-            Spacer(minLength: 0)
-
-            Toggle("", isOn: isOn)
-                .labelsHidden()
-        }
-        .padding(.horizontal, PD.Spacing.inner)
-        .padding(.vertical, 14)
-    }
-}
-
-private struct AdminActionRow: View {
-    var icon: String
-    var title: String
-    var subtitle: String
-    var onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: PD.Spacing.inner) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(PD.ColorToken.chip)
-                        .frame(width: 42, height: 42)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(PD.ColorToken.stroke, lineWidth: 1)
-                        )
-                    Image(systemName: icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(PD.ColorToken.text)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(PD.FontToken.body(17, weight: .regular))
-                        .foregroundColor(PD.ColorToken.text)
-                    Text(subtitle)
-                        .font(PD.FontToken.caption(13, weight: .medium))
-                        .foregroundColor(PD.ColorToken.textSecondary)
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.forward")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(PD.ColorToken.textSecondary)
-            }
-            .padding(.horizontal, PD.Spacing.inner)
-            .padding(.vertical, 14)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct AdminDivider: View {
-    var body: some View {
-        Rectangle()
-            .fill(PD.ColorToken.stroke)
-            .frame(height: 1)
-            .padding(.leading, 68)
-    }
-}
-
 
 // MARK: - Preview
 #Preview("Profile View") {
     NavigationStack {
         ProfileView()
             .environmentObject(ThemeManager.shared)
-            .environmentObject(NavigationIntent())
+            .environmentObject(OverlayPresenter.shared)
     }
-    .preferredColorScheme(.dark)
 }

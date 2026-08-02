@@ -34,6 +34,9 @@ public extension Notification.Name {
     // legacy aliases for backward compatibility with existing listeners
     static let lessonProgressDidReset = Notification.Name("lessonProgressDidReset")
     static let courseProgressDidReset = Notification.Name("courseProgressDidReset")
+
+    /// Unified progress signal for LessonsManager, StepView, ProfileManager (historical raw name: `"Step.progressDidChange"`).
+    static let stepProgressDidChange = Notification.Name("Step.progressDidChange")
 }
 // MARK: - Persistence DTO
 
@@ -163,7 +166,16 @@ public final class ProgressManager: ObservableObject {
         load()
         // EPIC 4: single source for course progress — compute from learnedSteps + LessonsData/StepData meta
         lessonMetaProvider = { courseId in
-            let lessons = LessonsData.shared.lessons(for: courseId)
+            // Be defensive about courseId formatting (dash vs underscore).
+            // Different entry points can pass either variant, while LessonsData/steps.json
+            // typically use one canonical form.
+            var lessons = LessonsData.shared.lessons(for: courseId)
+            if lessons.isEmpty {
+                lessons = LessonsData.shared.lessons(for: courseId.replacingOccurrences(of: "_", with: "-"))
+            }
+            if lessons.isEmpty {
+                lessons = LessonsData.shared.lessons(for: courseId.replacingOccurrences(of: "-", with: "_"))
+            }
             return lessons.map { lesson in
                 let items = StepData.shared.items(for: lesson.lessonID)
                 var tipIndexes = Set<Int>()
@@ -179,6 +191,77 @@ public final class ProgressManager: ObservableObject {
         // Не вызываем rebuildProfileDashboardState() здесь: UserSession.shared в цепочке → возможный цикл при старте.
         // Первый пересчёт — из ProfileView.task или при первом emitChange().
     }
+
+    // MARK: - Debug: cross-cutting progress audit
+    #if DEBUG
+    private static var didRunDebugAudit: Bool = false
+
+    /// One-shot integrity audit for learned/progress. Enabled by UserDefaults flag:
+    /// `taika.debug.progressAudit = true`
+    ///
+    /// Prints only anomalies (invalid indices, learned includes tips/excluded, learned > effective total).
+    public func debugAuditProgressIfEnabled() {
+        guard !Self.didRunDebugAudit else { return }
+        guard UserDefaults.standard.bool(forKey: "taika.debug.progressAudit") else { return }
+        Self.didRunDebugAudit = true
+
+        StepData.shared.preload()
+
+        var issues: [String] = []
+        issues.reserveCapacity(64)
+
+        let snap = learnedSteps
+        if snap.isEmpty {
+            print("[ProgressAudit] learnedSteps is empty (no progress stored).")
+            return
+        }
+
+        for (key, learned) in snap {
+            let courseId = key.courseId
+            let lessonId = key.lessonId
+
+            let items = StepData.shared.items(for: lessonId)
+            let totalSteps = items.count
+
+            // Rebuild tip/excluded sets exactly like meta provider does
+            var tipIndexes = Set<Int>()
+            tipIndexes.reserveCapacity(8)
+            for (idx, item) in items.enumerated() {
+                if item.kind == .tip || item.kind == .dialog { tipIndexes.insert(idx) }
+            }
+            let excluded = StepData.shared.invalidProgressIndices(for: lessonId)
+
+            let invalid = learned.filter { $0 < 0 || $0 >= totalSteps }
+            if !invalid.isEmpty {
+                issues.append("[ProgressAudit] invalid indices course=\(courseId) lesson=\(lessonId) total=\(totalSteps) invalid=\(Array(invalid).sorted()) learnedCount=\(learned.count)")
+            }
+
+            let learnedTips = learned.intersection(tipIndexes)
+            if !learnedTips.isEmpty {
+                issues.append("[ProgressAudit] learned contains tips/dialog course=\(courseId) lesson=\(lessonId) tips=\(Array(learnedTips).sorted())")
+            }
+
+            let learnedExcluded = learned.intersection(excluded)
+            if !learnedExcluded.isEmpty {
+                issues.append("[ProgressAudit] learned contains excluded indices course=\(courseId) lesson=\(lessonId) excluded=\(Array(learnedExcluded).sorted())")
+            }
+
+            let effectiveTotal = max(0, totalSteps - tipIndexes.count - excluded.count)
+            let effectiveLearned = learned.subtracting(tipIndexes).subtracting(excluded).filter { $0 >= 0 && $0 < totalSteps }
+            if effectiveLearned.count > effectiveTotal {
+                issues.append("[ProgressAudit] learned > totalEff course=\(courseId) lesson=\(lessonId) learnedEff=\(effectiveLearned.count) totalEff=\(effectiveTotal) total=\(totalSteps) tips=\(tipIndexes.count) excluded=\(excluded.count)")
+            }
+        }
+
+        if issues.isEmpty {
+            print("[ProgressAudit] OK: no anomalies across \(snap.count) lessons.")
+        } else {
+            print("[ProgressAudit] FOUND \(issues.count) issue(s):")
+            for line in issues.prefix(80) { print(line) }
+            if issues.count > 80 { print("[ProgressAudit] (truncated; \(issues.count - 80) more)") }
+        }
+    }
+    #endif
 
     // MARK: Read
     public func learnedSet(courseId: String, lessonId: String) -> Set<Int> {
@@ -253,7 +336,7 @@ public final class ProgressManager: ObservableObject {
         scheduleSave(immediate: true)
         emitChange()
         NotificationCenter.default.post(
-            name: Notification.Name("stepProgressDidChange"),
+            name: .stepProgressDidChange,
             object: self,
             userInfo: [
                 "courseId": courseId,
@@ -304,7 +387,7 @@ public final class ProgressManager: ObservableObject {
                 scheduleSave()
                 emitChange()
                 NotificationCenter.default.post(
-                    name: Notification.Name("stepProgressDidChange"),
+                    name: .stepProgressDidChange,
                     object: self,
                     userInfo: [
                         "courseId": courseId,
@@ -320,7 +403,7 @@ public final class ProgressManager: ObservableObject {
                 scheduleSave()
                 emitChange()
                 NotificationCenter.default.post(
-                    name: Notification.Name("stepProgressDidChange"),
+                    name: .stepProgressDidChange,
                     object: self,
                     userInfo: [
                         "courseId": courseId,
@@ -471,6 +554,8 @@ public final class ProgressManager: ObservableObject {
         scheduleSave(immediate: true)
         emitChange()
         NotificationCenter.default.post(name: .progressDidChange, object: self)
+        // Список уроков / профиль: полный ребилд агрегатов (userInfo без courseId → LessonsManager.refreshFromProgressManager).
+        NotificationCenter.default.post(name: .stepProgressDidChange, object: self, userInfo: nil)
     }
 
     // MARK: Persistence

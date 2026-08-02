@@ -29,9 +29,7 @@ public final class ThemeManager: ObservableObject {
     @Published public var accent: Accent {
         didSet {
             storedAccentKey = accent.rawValue
-            DispatchQueue.main.async {
-                self.objectWillChange.send()
-            }
+            // @Published already triggers SwiftUI updates; avoid extra async re-emits.
         }
     }
     
@@ -85,8 +83,18 @@ extension ThemeManager {
         }
     }
 
-    /// Color/gradient to fill controls. For now we reuse the gradient; if a solid color is needed, map here.
+    /// Color/gradient to fill controls.
     public var currentAccentFill: LinearGradient { currentAccentGradient }
+
+    /// Solid tint sampled from the active accent — for glass washes.
+    public var currentAccentTintColor: Color {
+        switch accent {
+        case .pink:  return Color(red: 0.95, green: 0.36, blue: 0.65)
+        case .azure: return Color(red: 0.28, green: 0.72, blue: 0.98)
+        case .sun:   return Color(red: 0.98, green: 0.72, blue: 0.22)
+        case .thai:  return Color(red: 0.95, green: 0.36, blue: 0.65)
+        }
+    }
 }
 
 // MARK: - Accent Picker (inline panel)
@@ -131,14 +139,7 @@ struct AccentPickerPanel: View {
                 .padding(.bottom, 8)
         }
         .padding(.horizontal, 24)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                )
-        )
+        .taikaBlackGlassBackground(cornerRadius: 16)
         .padding()
     }
 }
@@ -202,6 +203,5 @@ extension ThemeManager.Accent {
         Theme.Colors.backgroundPrimary.ignoresSafeArea()
         AccentPickerPanel()
             .environmentObject(ThemeManager.shared)
-            .preferredColorScheme(.dark)
     }
 }

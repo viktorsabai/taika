@@ -66,6 +66,14 @@ final class LessonsData: ObservableObject {
         return bundle.courses.first { $0.courseID == id }
     }
 
+    /// Навигация и разные JSON могут отличаться (`a_b` vs `a-b`). Возвращает курс из каталога или nil.
+    func courseBundle(matchingAnyId raw: String) -> CourseBundle? {
+        ensureLoaded()
+        if let c = course(id: raw) { return c }
+        let norm = Self.normalizeCourseIdKey(raw)
+        return bundle.courses.first { Self.normalizeCourseIdKey($0.courseID) == norm }
+    }
+
     func lessons(for courseID: String) -> [LessonBundle] {
         course(id: courseID)?.lessons ?? []
     }
@@ -76,6 +84,9 @@ final class LessonsData: ObservableObject {
 
     /// Returns the localized title for a lesson by its lessonID across all courses.
     func lessonTitle(for lessonID: String) -> String? {
+        if lessonID == PersonalPackManager.lessonId {
+            return PersonalPackManager.lessonTitle
+        }
         ensureLoaded()
         for course in bundle.courses {
             if let lesson = course.lessons.first(where: { $0.lessonID == lessonID }) {
@@ -83,6 +94,12 @@ final class LessonsData: ObservableObject {
             }
         }
         return nil
+    }
+
+    private static func normalizeCourseIdKey(_ s: String) -> String {
+        s.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "-")
     }
 
     // ----------------------------------------------------------------------
@@ -103,7 +120,8 @@ enum LessonsLoader {
         }
         print("[LessonsLoader] using: \(url.path)")
 
-        let data = try Data(contentsOf: url)
+        var data = try Data(contentsOf: url)
+        while data.last == 0 { data.removeLast() }
         if let head = String(data: data.prefix(200), encoding: .utf8) {
             print("[LessonsLoader] head: \(head)")
         }

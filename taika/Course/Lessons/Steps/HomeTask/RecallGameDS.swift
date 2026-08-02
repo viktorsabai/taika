@@ -8,6 +8,15 @@ public struct RecallSyllableItem: Identifiable {
     public let id: Int
     public let text: String
     public let isSelectable: Bool
+    /// Этот экземпляр чипа уже стоит в сборке (визуально «выбран», повторный тап снимает).
+    public let isInUse: Bool
+
+    public init(id: Int, text: String, isSelectable: Bool, isInUse: Bool = false) {
+        self.id = id
+        self.text = text
+        self.isSelectable = isSelectable
+        self.isInUse = isInUse
+    }
 }
 
 /// Один раунд для карусели (карточки урока / выученные).
@@ -19,6 +28,11 @@ public struct RecallRoundDisplay: Identifiable {
 }
 
 public struct RecallGameView: View {
+
+    @State private var assembleSuccessScale: CGFloat = 1.0
+    @State private var assembleSuccessGlow: Double = 0
+    @State private var revealedSyllableCount: Int = 0
+    @State private var syllableRevealToken: Int = 0
 
     public let question: String
     public let phoneticDisplay: String?
@@ -34,7 +48,8 @@ public struct RecallGameView: View {
     public let selectedSlotForReplacement: Int?
     public let onTapSlot: ((Int) -> Void)?
     public let audioText: String?
-    public let onTapSyllable: (String) -> Void
+    /// (текст слога, уже в сборке?) — повторный тап по in-use снимает выбор.
+    public let onTapSyllable: (String, Bool) -> Void
     public let onPlayAudio: (() -> Void)?
     public let onRemoveLast: () -> Void
     public let onReset: () -> Void
@@ -48,6 +63,11 @@ public struct RecallGameView: View {
     public let onSelectRound: ((Int) -> Void)?
     /// Чип на карточке (название урока или курса), как в FDMiniCardV.
     public let lessonTitle: String?
+    /// Статус в теле экрана (не в хедере).
+    public let statusTimeText: String?
+    public let statusProgressText: String?
+    public let statusMistakes: Int
+    public let statusScore: Int
 
     public init(
         question: String,
@@ -63,7 +83,7 @@ public struct RecallGameView: View {
         selectedSlotForReplacement: Int? = nil,
         onTapSlot: ((Int) -> Void)? = nil,
         audioText: String? = nil,
-        onTapSyllable: @escaping (String) -> Void,
+        onTapSyllable: @escaping (String, Bool) -> Void,
         onPlayAudio: (() -> Void)? = nil,
         onRemoveLast: @escaping () -> Void,
         onReset: @escaping () -> Void,
@@ -75,7 +95,11 @@ public struct RecallGameView: View {
         roundDisplays: [RecallRoundDisplay]? = nil,
         currentRoundIndex: Int = 0,
         onSelectRound: ((Int) -> Void)? = nil,
-        lessonTitle: String? = nil
+        lessonTitle: String? = nil,
+        statusTimeText: String? = nil,
+        statusProgressText: String? = nil,
+        statusMistakes: Int = 0,
+        statusScore: Int = 0
     ) {
         self.question = question
         self.phoneticDisplay = phoneticDisplay
@@ -103,146 +127,192 @@ public struct RecallGameView: View {
         self.currentRoundIndex = currentRoundIndex
         self.onSelectRound = onSelectRound
         self.lessonTitle = lessonTitle
+        self.statusTimeText = statusTimeText
+        self.statusProgressText = statusProgressText
+        self.statusMistakes = statusMistakes
+        self.statusScore = statusScore
+    }
+
+    /// Единый brand accent (как стрелки слогов) — не смешиваем tint и fill.
+    private var brandAccent: AnyShapeStyle {
+        AnyShapeStyle(ThemeManager.shared.currentAccentFill)
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            roundCarouselOrCard
-                .padding(.bottom, 12)
+        VStack(spacing: 10) {
+            if let time = statusTimeText {
+                TaikaGameStatusStrip(
+                    timeText: time,
+                    progressText: statusProgressText,
+                    mistakes: statusMistakes,
+                    score: statusScore
+                )
+                .padding(.horizontal, CD.Spacing.screen)
+            }
 
-            Spacer(minLength: 8)
+            // Два Spacer делят воздух сверху/снизу — без дыры между карточкой и сборкой.
+            Spacer(minLength: 6)
 
-            assembleZone
-
-            Spacer(minLength: 12)
-
-            syllableCarousel
-
-            Spacer(minLength: 12)
-
-            feedbackRow
+            VStack(spacing: 8) {
+                roundCardCoverflow
+                recallAudioControl
+                playfield
+            }
+            .padding(.horizontal, CD.Spacing.screen)
 
             Spacer(minLength: 0)
-
-            recallGameBar
         }
-        .frame(maxWidth: .infinity)
-        .frame(maxHeight: .infinity)
-        .padding(.horizontal, CD.Spacing.screen)
-        .padding(.top, 12)
-        .padding(.bottom, 0)
-    }
-
-    // MARK: - Round carousel (как SpeakerDS) или одна карточка
-
-    @ViewBuilder
-    private var roundCarouselOrCard: some View {
-        if let rounds = roundDisplays, !rounds.isEmpty {
-            recallRoundCarousel(rounds: rounds)
-        } else {
-            questionCard
+        .padding(.top, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            recallBottomChrome
+        }
+        .onAppear {
+            staggerRevealSyllables()
+        }
+        .onChange(of: currentRoundIndex) { _, _ in
+            staggerRevealSyllables()
+        }
+        .onChange(of: syllableItems.count) { _, _ in
+            staggerRevealSyllables()
+        }
+        .onChange(of: assembled.count) { _, _ in
+            // Авто-проверка, когда слоты заполнены — без лишней кнопки.
+            guard !isLocked, isCorrect == nil, assembled.count == slotCount, slotCount > 0 else { return }
+            onCheck()
+        }
+        .onChange(of: isCorrect) { _, new in
+            guard new == true else {
+                assembleSuccessGlow = 0
+                assembleSuccessScale = 1.0
+                return
+            }
+            withAnimation(.easeOut(duration: 0.22)) {
+                assembleSuccessGlow = 1
+            }
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                assembleSuccessScale = 1.04
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) {
+                    assembleSuccessScale = 1.0
+                }
+            }
+            // Красивая карточка → озвучка (снаружи) → сама листает дальше.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) {
+                onNextRound?()
+            }
         }
     }
 
-    private var questionCard: some View {
-        RecallMiniCard(
-            title: question,
-            translit: phoneticDisplay ?? "",
-            thai: audioText ?? "",
-            translitRevealed: isCorrect == true,
-            onPlay: (audioText?.isEmpty == false) ? onPlayAudio : nil,
-            lessonTitle: lessonTitle
-        )
-        .frame(maxWidth: .infinity)
-        .disabled(isLocked)
-    }
+    // MARK: - Layout zones
 
-    /// Карусель раундов — 1:1 как в FavoriteDS (FDFavReels): ScrollView, 268×196, scale/opacity/yOffset по расстоянию от центра.
-    private func recallRoundCarousel(rounds: [RecallRoundDisplay]) -> some View {
-        let cardWidth: CGFloat = 268
-        let cardHeight: CGFloat = 196
-        let spacing: CGFloat = 14
-        let sideInset: CGFloat = CD.Spacing.screen
-        let currentIndex = min(max(0, currentRoundIndex), rounds.count - 1)
-        let reelRounds: [RecallRoundDisplay] = rounds.isEmpty ? [] : (rounds + rounds + rounds)
-        let centerIndex = rounds.count
+    /// Карусель 1:1 как Speaker training: 268×196, 3D yaw, peek соседа.
+    private var roundCardCoverflow: some View {
+        let rounds = roundDisplays ?? [
+            RecallRoundDisplay(id: 0, question: question, target: phoneticDisplay ?? "", thai: audioText ?? "")
+        ]
+        let current = min(max(0, currentRoundIndex), max(0, rounds.count - 1))
+        let itemW = TaikaGameCoverflowMetrics.cardW
+        let itemH = TaikaGameCoverflowMetrics.cardH
+        let stepX = itemW * TaikaGameCoverflowMetrics.peekStepFactor
 
-        return GeometryReader { geo in
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: spacing) {
-                        ForEach(Array(reelRounds.enumerated()), id: \.offset) { idx, display in
-                            let realIndex = idx % rounds.count
-                            let isCurrent = (realIndex == currentIndex)
-                            GeometryReader { itemGeo in
-                                let midX = itemGeo.frame(in: .global).midX
-                                let containerMidX = geo.frame(in: .global).midX
-                                let distance = abs(midX - containerMidX)
-                                let maxDistance = cardWidth + spacing
-                                let t = min(distance / maxDistance, 1)
-                                let scale: CGFloat = 0.9 + (1 - t) * 0.12
-                                let opacity: Double = 0.45 + (1 - t) * 0.55
-                                let yOffset: CGFloat = t * 18
-
-                                RecallRoundCard(
-                                    question: display.question,
-                                    target: display.target,
-                                    thai: display.thai,
-                                    isCurrent: isCurrent,
-                                    translitRevealed: isCurrent && (isCorrect == true),
-                                    onPlay: (isCurrent && (audioText?.isEmpty == false)) ? onPlayAudio : nil,
-                                    lessonTitle: lessonTitle
-                                )
-                                .scaleEffect(scale)
-                                .opacity(opacity)
-                                .offset(y: yOffset)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    guard realIndex != currentIndex, let onSelect = onSelectRound else { return }
-                                    onSelect(realIndex)
-                                }
-                            }
-                            .frame(width: cardWidth, height: cardHeight)
-                            .id(idx)
-                        }
-                    }
-                    .padding(.horizontal, sideInset)
-                    .padding(.vertical, 4)
-                    .frame(height: cardHeight + 36)
-                }
-                .onAppear {
-                    if !reelRounds.isEmpty {
-                        proxy.scrollTo(centerIndex + currentIndex, anchor: .center)
-                    }
-                }
-                .onChange(of: currentRoundIndex) { _, newIdx in
-                    withAnimation(.easeInOut(duration: 0.35)) {
-                        proxy.scrollTo(centerIndex + newIdx, anchor: .center)
-                    }
+        return ZStack {
+            ForEach(Array(rounds.enumerated()), id: \.element.id) { index, display in
+                let rel = index - current
+                recallRoundCard(
+                    display: display,
+                    isActive: rel == 0,
+                    succeeded: rel == 0 && isCorrect == true
+                )
+                .scaleEffect((rel == 0 ? 1.0 : 0.82) * (rel == 0 ? assembleSuccessScale : 1))
+                .rotation3DEffect(
+                    .degrees(Double(rel) * -18),
+                    axis: (x: 0, y: 1, z: 0),
+                    perspective: 0.7
+                )
+                .opacity(abs(rel) > 2 ? 0 : (rel == 0 ? 1.0 : 0.45))
+                .offset(x: CGFloat(rel) * stepX)
+                .zIndex(rel == 0 ? 10 : Double(10 - abs(rel)))
+                .allowsHitTesting(abs(rel) <= 1 && !isLocked)
+                .onTapGesture {
+                    guard index != current, !isLocked else { return }
+                    onSelectRound?(index)
                 }
             }
         }
-        .frame(height: cardHeight + 36)
+        .frame(height: itemH + 12)
         .frame(maxWidth: .infinity)
-        .disabled(isLocked)
+        .animation(.easeInOut(duration: 0.35), value: currentRoundIndex)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: assembleSuccessScale)
+    }
+
+    /// Аудио под карточкой — как панель спикера, не внутри chrome карточки.
+    private var recallAudioControl: some View {
+        TaikaGameBareSpeakerButton(
+            disabled: audioText?.isEmpty ?? true,
+            action: { onPlayAudio?() }
+        )
+        .opacity(isLocked ? 0.35 : 1)
+        .accessibilityHint("Прослушать фразу")
+    }
+
+    private func recallRoundCard(display: RecallRoundDisplay, isActive: Bool, succeeded: Bool) -> some View {
+        // Адаптация спикера под сборку: RU на месте транслита (не спойлерим слоги), тайский — footnote.
+        // На успехе тайский подсвечиваем accent через secondary.
+        TaikaGameSpeakerStyleCard(
+            lessonTitle: (isActive && !(lessonTitle ?? "").isEmpty) ? lessonTitle : nil,
+            hero: display.question,
+            secondary: (succeeded && !display.thai.isEmpty) ? display.thai : nil,
+            tertiary: (!succeeded && !display.thai.isEmpty) ? display.thai : nil,
+            secondaryIsAccent: succeeded,
+            succeeded: succeeded,
+            successGlow: assembleSuccessGlow,
+            showsPlayControl: false
+        )
+    }
+
+    private var playfield: some View {
+        VStack(spacing: 12) {
+            assemblyBoard
+            syllablePool
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var assemblyBoard: some View {
+        VStack(spacing: 8) {
+            TaikaSectionLabel(title: "собери по слогам")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            assembleZone
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var syllablePool: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TaikaSectionLabel(title: "слоги")
+            syllableCarousel
+        }
     }
 
     // MARK: - Assemble Zone (как в Speaker: только слоги по центру, без рамок)
 
     private var assembleZone: some View {
         assemblyMaskRow
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
+            .scaleEffect(assembleSuccessScale)
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: assembleSuccessScale)
             .frame(maxWidth: .infinity)
     }
 
-    private let assemblySpacing: CGFloat = 4
-    /// Минимальная ширина на один слог (слот + тон/точка) для расчёта переноса — только перенос, без масштаба.
-    private let minSegmentWidth: CGFloat = 56
+    private let assemblySpacing: CGFloat = 8
+    /// Минимальная ширина на один слог (слот + тон/точка) для расчёта переноса.
+    private let minSegmentWidth: CGFloat = 68
 
     /// Число сегментов в строке по доступной ширине (умный перенос целыми слогами).
     private func segmentsPerLine(containerWidth: CGFloat) -> Int {
-        max(1, Int(containerWidth / minSegmentWidth))
+        let fitted = max(1, Int(containerWidth / minSegmentWidth))
+        return min(4, fitted)
     }
 
     private func assemblySegmentRows(containerWidth: CGFloat) -> [[(offset: Int, segment: HomeTaskManager.PhoneticSegment)]] {
@@ -254,43 +324,39 @@ public struct RecallGameView: View {
         }
     }
 
-    /// Assembly: только умный перенос по строкам (целыми слогами). Без масштабирования — остальная вёрстка не смещается.
+    /// Assembly: перенос по строкам без GeometryReader (иначе съедает всю высоту экрана в VStack).
     private var assemblyMaskRow: some View {
-        GeometryReader { geo in
-            let width = max(1, geo.size.width - (CD.Spacing.tiny * 2))
-            let rows = assemblySegmentRows(containerWidth: width)
-            VStack(alignment: .center, spacing: 8) {
-                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                    HStack(spacing: assemblySpacing) {
-                        ForEach(Array(row.enumerated()), id: \.element.offset) { _, item in
-                            let index = item.offset
-                            let seg = item.segment
-                            let isFilled = index < assembled.count
-                            let isWrong = wrongSlotIndices.contains(index)
-                            let isSelected = (selectedSlotForReplacement == index)
-                            HStack(spacing: assemblySpacing) {
-                                minimalSlot(index: index, isFilled: isFilled, isWrong: isWrong, isSelected: isSelected)
-                                if let tone = seg.toneAfter {
-                                    Text(tone)
-                                        .font(CD.FontToken.body(20, weight: .semibold))
-                                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                                        .lineLimit(1)
-                                } else if index < effectiveSegments.count - 1 && !segments.isEmpty {
-                                    Text("·")
-                                        .font(CD.FontToken.body(14, weight: .medium))
-                                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.5))
-                                }
-                            }
-                        }
+        let width = min(360, max(1, UIScreen.main.bounds.width - CD.Spacing.screen * 2 - 24))
+        let rows = assemblySegmentRows(containerWidth: width)
+
+        return VStack(alignment: .center, spacing: 12) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                HStack(alignment: .bottom, spacing: assemblySpacing) {
+                    ForEach(Array(row.enumerated()), id: \.element.offset) { _, item in
+                        let index = item.offset
+                        let seg = item.segment
+                        let isFilled = index < assembled.count
+                        let isWrong = wrongSlotIndices.contains(index)
+                        let isSelected = (selectedSlotForReplacement == index)
+
+                        // Стрелка тона в одной строке со слогом; подчёркивание только под слогом.
+                        minimalSlot(
+                            index: index,
+                            isFilled: isFilled,
+                            isWrong: isWrong,
+                            isSelected: isSelected,
+                            assemblySucceeded: isCorrect == true,
+                            toneAfter: seg.toneAfter
+                        )
                     }
-                    .frame(maxWidth: .infinity)
                 }
+                .frame(maxWidth: .infinity, alignment: .center)
             }
-            .frame(maxWidth: .infinity)
         }
-        .frame(minHeight: 44)
-        .padding(.horizontal, CD.Spacing.tiny)
-        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 2)
+        .padding(.vertical, 4)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var effectiveSegments: [HomeTaskManager.PhoneticSegment] {
@@ -299,364 +365,257 @@ public struct RecallGameView: View {
     }
 
     @ViewBuilder
-    private func minimalSlot(index: Int, isFilled: Bool, isWrong: Bool = false, isSelected: Bool = false) -> some View {
-        let content: some View = Group {
-            if isFilled, index < assembled.count {
-                Text(assembled[index])
-                    .font(CD.FontToken.body(22, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .foregroundStyle(isWrong ? AnyShapeStyle(Color.red) : AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                    .underline(isWrong, color: Color.red)
-            } else {
-                Text("–")
-                    .font(CD.FontToken.body(22, weight: .medium))
-                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.4))
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+    private func minimalSlot(
+        index: Int,
+        isFilled: Bool,
+        isWrong: Bool = false,
+        isSelected: Bool = false,
+        assemblySucceeded: Bool = false,
+        toneAfter: String? = nil
+    ) -> some View {
+        let textColor: AnyShapeStyle = {
+            if isWrong { return AnyShapeStyle(Color.red.opacity(0.92)) }
+            if isFilled { return AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.96)) }
+            return AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.30))
+        }()
 
-        if isWrong, let onTap = onTapSlot {
-            Button { onTap(index) } label: { content }
-                .buttonStyle(.plain)
+        let underlineColor: AnyShapeStyle = {
+            if isWrong { return AnyShapeStyle(Color.red.opacity(0.72)) }
+            if isSelected { return AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.62)) }
+            if assemblySucceeded, isFilled { return AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.58 + 0.16 * assembleSuccessGlow)) }
+            if isFilled { return AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.34)) }
+            return AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.18))
+        }()
+
+        let toneColor: AnyShapeStyle = {
+            if isWrong { return AnyShapeStyle(Color.red.opacity(0.72)) }
+            return AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.62))
+        }()
+
+        let syllableText: String = {
+            if isFilled, index < assembled.count { return assembled[index] }
+            return " "
+        }()
+
+        let content = VStack(alignment: .center, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                ZStack(alignment: .topTrailing) {
+                    Text(syllableText)
+                        .font(.system(size: 20, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.55)
+                        .foregroundStyle(textColor)
+                        .opacity(isFilled ? 1 : 0.001)
+                        .frame(minWidth: 32, minHeight: 28)
+
+                    if isFilled, !isLocked, isCorrect == nil, !isWrong {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.55))
+                            .offset(x: 8, y: -6)
+                            .accessibilityHidden(true)
+                    }
+                }
+
+                if let tone = toneAfter {
+                    Text(tone)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(toneColor)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+            }
+
+            Rectangle()
+                .fill(underlineColor)
+                .frame(
+                    width: max(32, isFilled && index < assembled.count ? CGFloat(assembled[index].count) * 12 : 36),
+                    height: isWrong ? 2.5 : (isSelected || isFilled ? 2 : 1.75)
+                )
+        }
+        .frame(minHeight: 44)
+        .padding(.horizontal, 2)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .scaleEffect(isSelected ? 1.06 : 1.0)
+        .animation(.spring(response: 0.28, dampingFraction: 0.82), value: isSelected)
+        .shadow(color: isSelected ? ThemeManager.shared.currentAccentTintColor.opacity(0.22) : Color.clear, radius: 10, x: 0, y: 0)
+
+        // Тап: красный слот → замена; обычный заполненный → снять слог.
+        if !isLocked, let onTap = onTapSlot {
+            if isWrong || (isFilled && isCorrect == nil) {
+                Button { onTap(index) } label: { content }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(isWrong ? "Заменить слог" : "Снять слог")
+                    .accessibilityHint(isWrong ? "Выбери другой слог из пула" : "Тап снимает слог")
+            } else {
+                content
+            }
         } else {
             content
         }
     }
 
-    // MARK: - Feedback Row (заметный баннер: верно! / исправь слоги)
+    // MARK: - Syllable Pool (тактильные chips, адаптивная сетка без вложенного скролла)
 
-    @ViewBuilder
-    private var feedbackRow: some View {
-        if isCorrect == true {
-            feedbackBanner(isCorrect: true)
-        } else if isCorrect == false {
-            feedbackBanner(isCorrect: false)
-        }
+    private let syllableSpacing: CGFloat = 10
+    private let syllableChipHeight: CGFloat = 52
+
+    private var syllableColumnCount: Int {
+        min(4, max(2, syllableItems.count <= 4 ? syllableItems.count : 4))
     }
-
-    /// Реакция на сборку: не кнопка, а компактное сообщение (как в игре).
-    private func feedbackBanner(isCorrect: Bool) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .font(.system(size: 16))
-                .foregroundStyle(isCorrect ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(Color.red))
-            Text(isCorrect ? "Верно!" : "Исправь")
-                .font(CD.FontToken.body(15, weight: .semibold))
-                .foregroundStyle(CD.ColorToken.text)
-        }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 16)
-        .background(
-            Capsule(style: .continuous)
-                .fill(isCorrect ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.15)) : AnyShapeStyle(Color.red.opacity(0.12)))
-        )
-    }
-
-    // MARK: - Syllable Pool (умная адаптация: по ширине экрана, без переносов текста в чипах)
-    private let syllableGridMaxHeight: CGFloat = 260
-    private let syllableSpacing: CGFloat = 12
-    private let minChipWidth: CGFloat = 64
 
     private var syllableCarousel: some View {
-        VStack(alignment: .center, spacing: CD.Spacing.inner) {
-            GeometryReader { geo in
-                let availableWidth = geo.size.width - (CD.Spacing.screen * 2)
-                let cols = max(3, min(5, Int(availableWidth / (minChipWidth + syllableSpacing))))
-                let columns = Array(repeating: GridItem(.flexible(), spacing: syllableSpacing), count: cols)
-                ScrollView(.vertical, showsIndicators: false) {
-                    LazyVGrid(columns: columns, alignment: .center, spacing: syllableSpacing) {
-                        ForEach(syllableItems) { item in
-                            recallSyllableChip(item: item)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                }
-                .frame(maxWidth: .infinity)
+        LazyVGrid(
+            columns: Array(
+                repeating: GridItem(.flexible(), spacing: syllableSpacing),
+                count: syllableColumnCount
+            ),
+            spacing: syllableSpacing
+        ) {
+            ForEach(Array(syllableItems.enumerated()), id: \.element.id) { index, item in
+                recallSyllableChip(item: item, index: index)
             }
-            .frame(maxWidth: .infinity)
-            .frame(maxHeight: syllableGridMaxHeight)
         }
         .frame(maxWidth: .infinity)
+        .padding(.vertical, 2)
     }
 
-    private func recallSyllableChip(item: RecallSyllableItem) -> some View {
-        Button {
-            onTapSyllable(item.text)
+    private func recallSyllableChip(item: RecallSyllableItem, index: Int) -> some View {
+        let selectable = item.isSelectable && !isLocked
+        let isRevealed = index < revealedSyllableCount
+
+        return Button {
+            onTapSyllable(item.text, item.isInUse)
         } label: {
-            Text(item.text)
-                .font(.system(size: 18, weight: .semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .foregroundStyle(item.isSelectable ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.7)))
-                .frame(minWidth: minChipWidth, minHeight: 48)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(CD.ColorToken.card.opacity(0.9))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(
-                            item.isSelectable ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.6)) : AnyShapeStyle(Theme.Strokes.strokeSubtle),
-                            lineWidth: 1.5
-                        )
-                )
+            recallSyllableChipLabel(text: item.text, inUse: item.isInUse, selectable: selectable)
         }
-        .buttonStyle(.plain)
-        .disabled(isLocked || !item.isSelectable)
-        .opacity((isLocked || !item.isSelectable) ? 0.65 : 1)
+        .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+        .disabled(!selectable)
+        .opacity(isRevealed ? (selectable ? 1 : 0.42) : 0)
+        .offset(y: isRevealed ? 0 : 28)
+        .scaleEffect(isRevealed ? 1 : 0.88, anchor: .bottom)
+        .rotation3DEffect(
+            .degrees(isRevealed ? 0 : 10),
+            axis: (x: 1, y: 0, z: 0),
+            perspective: 0.65
+        )
+        .blur(radius: isRevealed ? 0 : 2)
+        .animation(
+            .spring(response: 0.5, dampingFraction: 0.76).delay(Double(index) * 0.05),
+            value: isRevealed
+        )
+        .animation(.easeOut(duration: 0.2), value: item.isInUse)
+        .animation(.easeOut(duration: 0.2), value: selectable)
     }
 
-    // MARK: - Recall Game Bar (внизу экрана, как Speaker — обводка/заливка в айдентике)
+    private func staggerRevealSyllables() {
+        revealedSyllableCount = 0
+        syllableRevealToken += 1
+        let token = syllableRevealToken
+        let total = syllableItems.count
+        guard total > 0 else { return }
+        for i in 0..<total {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04 + Double(i) * 0.065) {
+                guard token == syllableRevealToken else { return }
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.76)) {
+                    revealedSyllableCount = i + 1
+                }
+            }
+        }
+    }
+
+    private func recallSyllableChipLabel(text: String, inUse: Bool, selectable: Bool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return Text(text)
+            .font(.system(size: 17, weight: .semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .foregroundStyle(
+                inUse
+                ? brandAccent
+                : AnyShapeStyle(selectable ? CD.ColorToken.text : CD.ColorToken.textSecondary.opacity(0.7))
+            )
+            .frame(maxWidth: .infinity)
+            .frame(height: syllableChipHeight)
+            .background(
+                shape.fill(
+                    inUse
+                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.18))
+                    : AnyShapeStyle(CD.ColorToken.card.opacity(0.96))
+                )
+            )
+            .overlay(
+                shape.stroke(
+                    inUse ? brandAccent : AnyShapeStyle(Theme.Strokes.strokeSubtle),
+                    lineWidth: inUse ? 1.4 : Theme.Strokes.strokeLineWidth
+                )
+            )
+            .shadow(
+                color: Color.black.opacity(inUse ? 0.16 : 0.12),
+                radius: inUse ? 8 : 4,
+                y: inUse ? 2 : 1
+            )
+            .contentShape(shape)
+    }
+
+    // MARK: - Bottom chrome: только undo/reset + воздух (статус выше, стрелка «дальше» не нужна)
+
+    private var recallBottomChrome: some View {
+        VStack(spacing: 0) {
+            recallGameBar
+                .padding(.horizontal, CD.Spacing.screen)
+                .padding(.top, 14)
+                .padding(.bottom, 22)
+        }
+        .background(Color.clear)
+    }
 
     private var recallGameBar: some View {
-        VStack(spacing: 14) {
-            // Назад = выйти из игры; Сброс = очистить и начать раунд заново
-            HStack(spacing: 12) {
-                Button(action: onRemoveLast) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.uturn.backward")
-                            .font(.system(size: 18, weight: .semibold))
-                        Text("Назад")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Capsule(style: .continuous).fill(Color.clear))
-                    .overlay(Capsule(style: .continuous).stroke(ThemeManager.shared.currentAccentFill, lineWidth: 1.5))
-                }
-                .buttonStyle(.plain)
-                .opacity(isLocked ? 0.5 : 1)
-                .disabled(isLocked)
-
-                Button(action: onReset) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 18, weight: .semibold))
-                        Text("Сброс")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Capsule(style: .continuous).fill(Color.clear))
-                    .overlay(Capsule(style: .continuous).stroke(ThemeManager.shared.currentAccentFill, lineWidth: 1.5))
-                }
-                .buttonStyle(.plain)
-                .opacity(isLocked ? 0.5 : 1)
-                .disabled(isLocked)
-            }
-
-            if assembled.count == slotCount && slotCount > 0 {
-                if isCorrect == true {
-                    Button(action: { onNextRound?() }) {
-                        HStack(spacing: 8) {
-                            Text("Дальше")
-                                .font(.system(size: 16, weight: .semibold))
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 15, weight: .semibold))
-                        }
-                        .foregroundStyle(Color(white: 0.14))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
-                    }
-                    .buttonStyle(.plain)
-                } else if isCorrect == nil || isCorrect == false {
-                    Button(action: onCheck) {
-                        HStack(spacing: 8) {
-                            Text("Проверить")
-                                .font(.system(size: 16, weight: .semibold))
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 15, weight: .semibold))
-                        }
-                        .foregroundStyle(Color(white: 0.14))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(isLocked)
-                }
-            }
-        }
-        .padding(.horizontal, CD.Spacing.screen)
-        .padding(.top, 16)
-        .padding(.bottom, 24)
-        .background(
-            PD.ColorToken.background
-                .overlay(
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundStyle(PD.ColorToken.stroke.opacity(0.5)),
-                    alignment: .top
+        HStack(alignment: .center, spacing: 14) {
+            if !isLocked {
+                recallIconButton(
+                    icon: "arrow.uturn.backward",
+                    accessibility: "Назад",
+                    action: onRemoveLast
                 )
-        )
-    }
-
-}
-
-// MARK: - RecallRoundCard (1:1 как FDMiniCardV: taikA, центр, bottomBar = AppCardIconButton listen + чип урока)
-
-private struct RecallRoundCard: View {
-    let question: String
-    let target: String
-    let thai: String
-    let isCurrent: Bool
-    let translitRevealed: Bool
-    let onPlay: (() -> Void)?
-    let lessonTitle: String?
-
-    var body: some View {
-        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-        VStack(alignment: .center, spacing: 10) {
-            HStack(alignment: .center, spacing: 8) {
-                Text("taikA")
-                    .font(Font.custom("ONMARK Trial", size: 14))
-                    .foregroundStyle(PD.ColorToken.text)
-                Spacer(minLength: 0)
+                recallIconButton(
+                    icon: "arrow.counterclockwise",
+                    accessibility: "Сброс",
+                    action: onReset
+                )
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
 
-            VStack(alignment: .center, spacing: 8) {
-                if isCurrent && translitRevealed && !target.isEmpty {
-                    Text(target)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.80)
-                        .multilineTextAlignment(.center)
-                }
-                Text(question.isEmpty ? "—" : question)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(PD.ColorToken.text)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.80)
-                    .multilineTextAlignment(.center)
-                if !thai.isEmpty {
-                    Text(thai)
-                        .font(.footnote)
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .opacity(0.86)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.90)
-                }
+            if isCorrect == true {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(brandAccent)
+                    .accessibilityLabel("Верно")
+            } else if isCorrect == false {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.red.opacity(0.85))
+                    .accessibilityLabel("Исправь красные слоги")
+            } else {
+                Text("\(assembled.count)/\(max(slotCount, 1))")
+                    .font(.system(size: 14, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
             }
-            .frame(maxWidth: .infinity)
-
-            Spacer(minLength: 0)
-
-            HStack {
-                if onPlay != nil {
-                    AppCardIconButton(kind: .listen, forceAccent: true, onTap: { onPlay?() })
-                }
-                Spacer(minLength: 10)
-                if let title = lessonTitle, !title.isEmpty {
-                    HStack(spacing: 5) {
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text(title)
-                            .font(.caption2.weight(.semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .truncationMode(.tail)
-                    }
-                    .foregroundStyle(Color.black.opacity(0.9))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill)))
-                    .overlay(Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
-                    .allowsHitTesting(false)
-                }
-            }
-            .frame(maxWidth: .infinity)
         }
-        .padding(16)
-        .frame(width: 268, height: 196, alignment: .top)
-        .background(Theme.Surfaces.card(round))
-        .overlay(round.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
-        .contentShape(round)
     }
-}
 
-// MARK: - RecallMiniCard (как FDMiniCardV: listen-кнопка + чип урока)
-
-private struct RecallMiniCard: View {
-    let title: String
-    let translit: String
-    let thai: String
-    let translitRevealed: Bool
-    let onPlay: (() -> Void)?
-    let lessonTitle: String?
-
-    var body: some View {
-        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-        VStack(alignment: .center, spacing: 10) {
-            HStack(alignment: .center) {
-                Text("taikA")
-                    .font(Font.custom("ONMARK Trial", size: 14))
-                    .foregroundStyle(PD.ColorToken.text)
-                Spacer(minLength: 8)
-            }
-
-            VStack(alignment: .center, spacing: 4) {
-                Text(title)
-                    .font(CD.FontToken.body(16, weight: .semibold))
-                    .foregroundStyle(CD.ColorToken.text)
-                    .lineLimit(Theme.TextBlock.cardTitleLines)
-                    .minimumScaleFactor(Theme.TextBlock.titleMinimumScale)
-                    .multilineTextAlignment(.center)
-
-                if !translit.isEmpty && translitRevealed {
-                    Text(translit)
-                        .font(CD.FontToken.caption(14, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                }
-
-                if !thai.isEmpty {
-                    Text(thai)
-                        .font(CD.FontToken.caption(12, weight: .regular))
-                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
-                        .lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity)
-
-            HStack {
-                if onPlay != nil {
-                    AppCardIconButton(kind: .listen, forceAccent: true, onTap: { onPlay?() })
-                }
-                Spacer(minLength: 10)
-                if let t = lessonTitle, !t.isEmpty {
-                    HStack(spacing: 5) {
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text(t)
-                            .font(.caption2.weight(.semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .truncationMode(.tail)
-                    }
-                    .foregroundStyle(Color.black.opacity(0.9))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill)))
-                    .overlay(Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
-                    .allowsHitTesting(false)
-                }
-            }
-            .frame(maxWidth: .infinity)
+    private func recallIconButton(icon: String, accessibility: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
+                .frame(width: 40, height: 40)
+                .contentShape(Rectangle())
         }
-        .padding(16)
-        .frame(maxWidth: .infinity)
-        .background(Theme.Surfaces.card(round))
-        .overlay(round.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibility)
     }
+
 }

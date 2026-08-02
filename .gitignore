@@ -27,3 +27,7 @@ fastlane/test_output
 *.env
 *.p12
 *.mobileprovision
+
+.spm-cache/
+.cursor/
+.sync-backup-*/

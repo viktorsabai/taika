@@ -19,6 +19,8 @@ struct SpeakerAttemptResult: Codable, Equatable {
     let heardThai: String?
     let heardTranslit: String?
     let heardConfidence: Int
+    /// Optional advanced score (0...100) when Pro breakdown/hybrid is available.
+    let advancedScore: Int?
     let attemptCount: Int
     let lastAttemptURL: String? // stored as path string
     
@@ -55,6 +57,7 @@ struct SpeakerAttemptsStore {
         do {
             let data = try JSONEncoder().encode(attempts)
             UserDefaults.standard.set(data, forKey: speakerAttemptsStoreKey)
+            NotificationCenter.default.post(name: .init("TaikaSpeakerAttemptsDidUpdate"), object: nil)
         } catch {
             // silent fail in production
         }
@@ -114,25 +117,55 @@ public final class SpeakerDailyAttemptsStore: ObservableObject {
     public static let shared = SpeakerDailyAttemptsStore()
 
     @Published public private(set) var remainingToday: Int
+    /// Raw count of attempts today, tracked for Pro too (unlike `remainingToday`, which only gates free users).
+    /// Source for "N фраз ≈ M минут, X% сегодня" on the training launcher screen.
+    @Published public private(set) var usedToday: Int
 
     private let limit: Int
 
     public init(limit: Int = 10) {
         self.limit = limit
         self.remainingToday = limit
+        self.usedToday = 0
         ensureDayReset()
-        remainingToday = max(0, limit - Self.loadUsedToday())
+        let used = Self.loadUsedToday()
+        usedToday = used
+        remainingToday = max(0, limit - used)
     }
 
-    /// Call when user completes a mic recording in Speaker. PRO users are not limited.
+    /// Call when user completes a mic recording in Speaker. PRO users are not limited but still tracked.
     public func consume() {
-        if ProManager.shared.isPro { return }
         ensureDayReset()
         var used = Self.loadUsedToday()
+        if ProManager.shared.isPro {
+            used += 1
+            Self.saveUsedToday(used)
+            usedToday = used
+            return
+        }
         guard used < limit else { return }
         used += 1
         Self.saveUsedToday(used)
+        usedToday = used
         remainingToday = max(0, limit - used)
+    }
+
+    public var canRecord: Bool { remainingToday > 0 || ProManager.shared.isPro }
+
+    public func refreshDayIfNeeded() {
+        ensureDayReset()
+        let used = Self.loadUsedToday()
+        usedToday = used
+        remainingToday = max(0, limit - used)
+    }
+
+    /// Product decision: if user explicitly clears all recordings in current block,
+    /// return free attempts for today (onboarding-friendly behavior).
+    public func restoreAllForToday() {
+        ensureDayReset()
+        Self.saveUsedToday(0)
+        remainingToday = limit
+        usedToday = 0
     }
 
     private func ensureDayReset() {
@@ -210,21 +243,82 @@ public final class SpeakerConversationAttemptsStore: ObservableObject {
     }
 }
 
+// MARK: - Training launcher: course picker for "По фразам" idle screen (mult-select before starting a session)
+
+/// One selectable course row on the training launcher — course id/title + how many phrases are ready to practice.
+public struct SpeakerTrainingCourseOption: Identifiable, Equatable {
+    public let id: String
+    public let title: String
+    public let count: Int
+}
+
+/// Одна фраза в ленте «Своя речь» (как история Google Translate).
+public struct SpeakerConversationHistoryItem: Identifiable, Equatable, Codable {
+    public let id: UUID
+    public let russian: String
+    public let thai: String
+    public let phonetic: String
+    public let createdAt: Date
+
+    public init(
+        id: UUID = UUID(),
+        russian: String,
+        thai: String,
+        phonetic: String,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.russian = russian
+        self.thai = thai
+        self.phonetic = phonetic
+        self.createdAt = createdAt
+    }
+}
+
+/// Персист ленты «Своя речь» — сессия не пропадает при уходе с таба.
+enum SpeakerConversationHistoryStore {
+    private static let key = "taika.speaker.conversationHistory.v1"
+
+    static func load() -> [SpeakerConversationHistoryItem] {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return [] }
+        return (try? JSONDecoder().decode([SpeakerConversationHistoryItem].self, from: data)) ?? []
+    }
+
+    static func save(_ items: [SpeakerConversationHistoryItem]) {
+        guard let data = try? JSONEncoder().encode(items) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+}
+
 // MARK: - Request Speaker opened from course card (show only cards from this course)
 @MainActor
 public final class SpeakerRequestedCourseId: ObservableObject {
     public static let shared = SpeakerRequestedCourseId()
     @Published public var courseId: String?
+    /// Optional lesson scope — when set, Speaker opens only learned cards from this lesson.
+    @Published public var lessonId: String?
     private init() {}
-    public func set(_ id: String?) { courseId = id }
-    public func consume() -> String? {
-        let v = courseId
+
+    public func set(_ id: String?, lessonId: String? = nil) {
+        courseId = id
+        self.lessonId = lessonId
+    }
+
+    public func consume() -> (courseId: String, lessonId: String?)? {
+        guard let cid = courseId else { return nil }
+        let lid = lessonId
         courseId = nil
-        return v
+        lessonId = nil
+        return (cid, lid)
     }
 }
 
-// MARK: - Return context when Speaker was opened via CTA (e.g. from Lessons/Step) — show back to restore tab + path
+// MARK: - Return context when Speaker was opened from a pushed screen (lesson/course) — back restores tab + path.
+// Root tab ↔ tab (Избранное → Спикер) не сохраняем: иначе ложный back на одном уровне.
 @MainActor
 public final class SpeakerReturnContext: ObservableObject {
     public static let shared = SpeakerReturnContext()
@@ -233,8 +327,13 @@ public final class SpeakerReturnContext: ObservableObject {
     private init() {}
     public var hasContext: Bool { savedTab != nil }
     public func save(tab: Int, path: [NavigationIntent.Route]) {
+        guard !path.isEmpty else { return }
         savedTab = tab
         savedPath = path
+    }
+    public func clear() {
+        savedTab = nil
+        savedPath = []
     }
     public func consume() -> (tab: Int, path: [NavigationIntent.Route])? {
         guard let tab = savedTab else { return nil }

@@ -271,7 +271,6 @@ final class StepManager: ObservableObject {
         // Use excludedProgressIndexes to stay consistent with eligibility logic
         let lifehackCount = excludedProgressIndexes.count
         #if DEBUG
-        print("[StepManager] progress course=\(courseId) lesson=\(lessonId) learned=\(learnedProgressCount)/\(progressTotal) totalAll=\(totalSteps) lifehacks=\(lifehackCount)")
         if progressTotal == 0 {
             print("[StepManager] warning: progressTotal is 0 (no learnable cards) — header won’t advance")
         }
@@ -296,15 +295,7 @@ final class StepManager: ObservableObject {
                 "lifehackCount": hacksIdx.count
             ]
         )
-        // Use StepData as source of truth for denominator so % is learned / all learnable steps in lesson
-        let (totalLearnable, totalLifehack) = StepData.shared.progressCounts(for: lessonId)
-        LessonsManager.shared.updateLessonProgress(
-            courseId: courseId,
-            lessonId: lessonId,
-            learnedCount: learnedProgressCount,
-            total: totalLearnable + totalLifehack,
-            lifehackCount: totalLifehack
-        )
+        // Агрегат списка уроков — из ProgressManager в LessonsManager.syncLessonFromProgressManager (по нотификации).
         // Also keep completion flag in sync when counts change not from a direct toggle
         ProgressManager.shared.markCompletedIfNeeded(
             courseId: courseId,
@@ -316,13 +307,15 @@ final class StepManager: ObservableObject {
     /// Preview-only mirror; source of truth lives in FavoriteManager
     @Published var favorites: Set<Int> = []
 
-    /// Показывать переключатель Лайфхаки/Карточки в app header (только когда урок имеет оба типа).
+    /// Показывать переключатель Лайфхаки/Карточки в app header (deprecated — чипы в теле Step).
     @Published var stepHeaderShowsSegment: Bool = false
-    /// 0 = Лайфхаки, 1 = Карточки; синхронизируется с StepView и с иконками в хедере. По умолчанию карточки.
+    /// 0 = Лайфхаки, 1 = Карточки; синхронизируется с StepView.
     @Published var stepHeaderSegment: Int = 1
-    /// Количество лайфхаков / карточек для отображения в хедере (например «Лайфхаки 3», «Карточки 5»).
     @Published var stepHeaderTipCount: Int = 0
     @Published var stepHeaderCardCount: Int = 0
+    /// Название урока и таймер сессии — в shell-хедере Step.
+    @Published var stepHeaderLessonTitle: String = ""
+    @Published var stepHeaderTimerText: String = ""
 
     // MARK: - External resets (used by LessonsManager)
     /// Ensure persistent storage is cleared too (ProgressManager) — defensive, even if upper layer resets as well
@@ -440,8 +433,13 @@ final class StepManager: ObservableObject {
 /// and return routing tuple for StepView/MiniStep.
 public func resolveRoute(fromFavoriteId fid: String) -> (courseId: String, lessonId: String, stepIndex: Int)? {
 #if DEBUG
+    // Debug spam guard: enable only when actively diagnosing route parsing.
+    let debugResolveLogsEnabled = UserDefaults.standard.bool(forKey: "taika.debug.resolveRouteLogs")
     let rk = fid
-    if rk != lastResolveKey { print("[StepManager] resolveRoute in:", fid); lastResolveKey = rk }
+    if debugResolveLogsEnabled, rk != lastResolveKey {
+        print("[StepManager] resolveRoute in:", fid)
+        lastResolveKey = rk
+    }
 #endif
     // Make sure step data is ready so we can clamp index deterministically
     StepData.shared.preload()
@@ -501,7 +499,10 @@ public func resolveRoute(fromFavoriteId fid: String) -> (courseId: String, lesso
         let clamped = max(0, min(idx, max(0, count - 1)))
         #if DEBUG
         let key = "\(course).\(lesson).\(idx)"
-        if key != lastResolveKey { print("[StepManager] resolveRoute clamp:", course, lesson, "idx=", idx, "→", clamped, "(count=", count, ")"); lastResolveKey = key }
+        if debugResolveLogsEnabled, key != lastResolveKey {
+            print("[StepManager] resolveRoute clamp:", course, lesson, "idx=", idx, "→", clamped, "(count=", count, ")")
+            lastResolveKey = key
+        }
         #endif
         return clamped
     }
@@ -534,7 +535,10 @@ public func resolveRoute(fromFavoriteId fid: String) -> (courseId: String, lesso
             }()
             #if DEBUG
             let ok = "out:\(course).\(lesson).\(finalIdx)"
-            if ok != lastResolveKey { print("[StepManager] resolveRoute out:", course, lesson, finalIdx); lastResolveKey = ok }
+            if debugResolveLogsEnabled, ok != lastResolveKey {
+                print("[StepManager] resolveRoute out:", course, lesson, finalIdx)
+                lastResolveKey = ok
+            }
             #endif
             return (course, lesson, finalIdx)
         }
@@ -564,13 +568,18 @@ public func resolveRoute(fromFavoriteId fid: String) -> (courseId: String, lesso
         }()
         #if DEBUG
         let ok = "out:\(course).\(lesson).\(finalIdx)"
-        if ok != lastResolveKey { print("[StepManager] resolveRoute out:", course, lesson, finalIdx); lastResolveKey = ok }
+        if debugResolveLogsEnabled, ok != lastResolveKey {
+            print("[StepManager] resolveRoute out:", course, lesson, finalIdx)
+            lastResolveKey = ok
+        }
         #endif
         return (course, lesson, finalIdx)
     }
 
     #if DEBUG
-    print("[StepManager] resolveRoute: nil for", fid)
+    if debugResolveLogsEnabled {
+        print("[StepManager] resolveRoute: nil for", fid)
+    }
     #endif
     return nil
 }
@@ -593,8 +602,9 @@ public func resolveRoute(fromFavoriteId fid: String) -> (courseId: String, lesso
                 return "card:" + (s.transcriptionRu ?? "")
             }
         }()
+        let bareStep = "step:\(courseId):\(lessonId):idx\(index)"
         return StepFavoritable(
-            favoriteId: "step:\(courseId):\(lessonId):idx\(index)",
+            favoriteId: isHack ? "hack:\(bareStep)" : bareStep,
             favoriteTitle: isHack ? (s.thai ?? s.title) : s.title,
             favoriteSubtitle: (s.thai ?? ""),
             favoriteMeta: meta,
@@ -605,52 +615,19 @@ public func resolveRoute(fromFavoriteId fid: String) -> (courseId: String, lesso
 
     func isFavorite(index: Int) -> Bool {
         guard steps.indices.contains(index) else { return false }
+        let fm = FavoriteManager.shared
+        if steps[index].kind == .lifehack {
+            return fm.containsHack(courseId: courseId, lessonId: lessonId, index: index)
+                || fm.contains(stepId: "step:\(courseId):\(lessonId):idx\(index)")
+        }
         let stepId = "step:\(courseId):\(lessonId):idx\(index)"
-        // For lifehacks, normalize id by stripping "hack:" if present
-        func normalize(_ s: String) -> String {
-            if s.lowercased().hasPrefix("hack:") {
-                return String(s.dropFirst("hack:".count))
-            }
-            return s
-        }
-        return FavoriteManager.shared.items.contains {
-            normalize($0.id) == stepId ||
-            normalize($0.phonetic) == stepId
-        }
+        return fm.contains(stepId: stepId)
     }
 
     // MARK: - Actions
-    // Favorite bridge helper (actor-isolated)
+    // Favorite bridge: лайфхаки уходят с префиксом hack: — FM кладёт их во вкладку «Лайфхаки».
     func toggleFavorite(_ fav: Favoritable) {
-        // For lifehacks, normalize id/meta to store as "step:..." not "hack:step:..."
-        var item = fav
-        if fav.favoriteMeta.hasPrefix("hack:") {
-            var id = fav.favoriteId
-            if id.hasPrefix("hack:") {
-                id = String(id.dropFirst("hack:".count))
-            }
-            var meta = fav.favoriteMeta
-            if meta.hasPrefix("hack:") {
-                meta = String(meta.dropFirst("hack:".count))
-            }
-            struct MutFavoritable: Favoritable {
-                var favoriteId: String
-                var favoriteTitle: String
-                var favoriteSubtitle: String
-                var favoriteMeta: String
-                var favoriteCourseId: String
-                var favoriteLessonId: String
-            }
-            item = MutFavoritable(
-                favoriteId: id,
-                favoriteTitle: fav.favoriteTitle,
-                favoriteSubtitle: fav.favoriteSubtitle,
-                favoriteMeta: meta,
-                favoriteCourseId: fav.favoriteCourseId,
-                favoriteLessonId: fav.favoriteLessonId
-            )
-        }
-        FavoriteManager.shared.toggle(item: item)
+        FavoriteManager.shared.toggle(item: fav)
         NotificationCenter.default.post(name: .favoritesDidChange, object: nil)
         NotificationCenter.default.post(name: .favoritesDidUpdate, object: nil)
     }
@@ -747,13 +724,6 @@ public func resolveRoute(fromFavoriteId fid: String) -> (courseId: String, lesso
         let learnedSet = ProgressManager.shared.learnedSet(courseId: courseId, lessonId: lessonId)
         let learnedCount = learnedSet.intersection(eligible).count
         let lifehackCount = lifehacks.count
-        LessonsManager.shared.updateLessonProgress(
-            courseId: courseId,
-            lessonId: lessonId,
-            learnedCount: learnedCount,
-            total: eligible.count,
-            lifehackCount: lifehackCount
-        )
         NotificationCenter.default.post(
             name: .stepProgressDidChange,
             object: nil,

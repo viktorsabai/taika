@@ -10,6 +10,7 @@ import SwiftUI
 /// host screen (assembly + navigation only). visuals live in speaker ds.
 struct SpeakerView: View {
     @EnvironmentObject private var overlay: OverlayPresenter
+    @EnvironmentObject private var nav: NavigationIntent
     @ObservedObject private var speakerFilterState = SpeakerFilterState.shared
     @ObservedObject private var speaker = SpeakerManager.shared
     @ObservedObject private var conversationAttempts = SpeakerConversationAttemptsStore.shared
@@ -18,9 +19,15 @@ struct SpeakerView: View {
     @State private var isRecordingFromBreakdown = false
     /// When non-nil, shell switched to Speaker tab from course card; we load this course and clear. (Fixes onAppear not running in time.)
     @Binding var pendingCourseId: String?
+    /// Optional lesson scope when opened from Step summary / lesson CTA.
+    @Binding var pendingLessonId: String?
 
-    init(pendingCourseId: Binding<String?> = .constant(nil)) {
+    init(
+        pendingCourseId: Binding<String?> = .constant(nil),
+        pendingLessonId: Binding<String?> = .constant(nil)
+    ) {
         _pendingCourseId = pendingCourseId
+        _pendingLessonId = pendingLessonId
         _speakerFilterState = ObservedObject(wrappedValue: SpeakerFilterState.shared)
         _speaker = ObservedObject(wrappedValue: SpeakerManager.shared)
         _showSpeakerBreakdown = State(initialValue: false)
@@ -55,7 +62,23 @@ struct SpeakerView: View {
         }
     }
 
+    private func openConversationBreakdownIfNeeded(force: Bool) {
+        guard force || !showSpeakerBreakdown else { return }
+        showSpeakerBreakdown = true
+        speaker.refreshConversationUserPhoneticFromASRIfNeeded()
+        guard pro.can(.speakerAdvanced) else { return }
+        let thaiSnap = speaker.conversationExpectedThai?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let phSnap = speaker.conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines)
+        speaker.requestToneBreakdownFromAPI(
+            expectedThaiForAssess: (thaiSnap?.isEmpty == false) ? thaiSnap : nil,
+            expectedPhoneticForTones: (phSnap?.isEmpty == false) ? phSnap : nil,
+            completion: {}
+        )
+    }
+
     private func onPlayReference() {
+        // Умный спикер: эталон в разборе — переведённая фраза, не выбранная карточка карусели.
+        if speaker.playReferenceConversationExpectedIfNeeded() { return }
         ensureActiveSelection()
         if let sel = speaker.selectedId {
             speaker.playReference(for: sel)
@@ -169,12 +192,7 @@ struct SpeakerView: View {
             lessonTitleForLessonId: lessonTitle,
             showBreakdownOverlay: $showSpeakerBreakdown,
             onRequestBreakdown: {
-                if pro.can(.speakerAdvanced) {
-                    showSpeakerBreakdown = true
-                    speaker.requestToneBreakdownFromAPI { }
-                } else {
-                    overlay.present(.speakerPaywall)
-                }
+                openConversationBreakdownIfNeeded(force: true)
             },
             onRecordAgainFromBreakdown: {
                 isRecordingFromBreakdown = true
@@ -204,18 +222,44 @@ struct SpeakerView: View {
             courseContextCardCount: speaker.speakerContextCourseId != nil ? speaker.queue.count : 0,
             courseContextAttemptCount: speaker.speakerContextCourseId != nil ? speaker.attemptCount : 0,
             courseContextAvgScore: speaker.speakerContextCourseId != nil ? speaker.averageScore : 0,
+            onExitCourseContext: {
+                pendingCourseId = nil
+                speaker.returnToTrainingHome()
+                speakerFilterState.selectedFilterId = nil
+            },
+            onOpenCourses: {
+                nav.popToRoot()
+                nav.requestTab(1)
+            },
+            trainingCourseOptions: speaker.learnedTrainingCourseOptions(),
+            // Не синкаем speakerFilterState.selectedFilterId здесь: он привязан к .onChange → applyFilter(id),
+            // а applyFilter(.learned) перезаписал бы наш подвыбор курсов общей очередью «все выученные».
+            onStartCourseTraining: { speaker.startTraining(withCourseIds: $0) },
             speakerUIMode: speaker.speakerUIMode,
-            onSpeakerUIModeChange: { speaker.setSpeakerUIMode($0) },
+            onSpeakerUIModeChange: { mode in
+                speaker.setSpeakerUIMode(mode)
+                if mode == .training,
+                   SpeakerRequestedCourseId.shared.courseId == nil,
+                   pendingCourseId == nil,
+                   speaker.speakerContextCourseId == nil {
+                    speaker.returnToTrainingHome()
+                    speakerFilterState.selectedFilterId = nil
+                }
+            },
             onPlayConversationTTS: { speaker.playConversationTTS() },
             onConversationRepeat: { speaker.conversationRepeat() },
+            onConversationDemoPhrase: { speaker.startConversationDemoPhrase($0) },
+            isProUser: pro.isPro,
             conversationRemainingToday: conversationAttempts.remainingToday,
             conversationRecordingElapsed: speaker.conversationRecordingElapsed,
             conversationRecordingMaxDuration: speaker.conversationRecordingMaxDuration,
             conversationCanRecord: conversationAttempts.canRecord,
             conversationExpectedThai: speaker.conversationExpectedThai,
             conversationExpectedTranslitForFeedback: speaker.conversationExpectedTranslitForFeedback,
+            conversationHeardThaiASR: speaker.conversationHeardThaiASR,
+            conversationHeardPhoneticFromASR: speaker.conversationHeardPhoneticFromASR,
             onConversationRepeatAndCheck: { speaker.startConversationPronunciationCheck() },
-            smartSpeakerNeedsPoliteness: speaker.smartSpeakerNeedsPoliteness,
+            smartSpeakerPoliteness: speaker.smartSpeakerPoliteness,
             onSetSmartSpeakerPoliteness: { speaker.setSmartSpeakerPoliteness($0) },
             referencePlaybackProgress: speaker.referencePlaybackProgress,
             onBreakdownAppear: { speaker.resetReferenceProgress() }
@@ -228,34 +272,44 @@ struct SpeakerView: View {
         .onChange(of: speaker.phase) { _, newPhase in
             if isRecordingFromBreakdown, case .feedback = newPhase {
                 isRecordingFromBreakdown = false
-                speaker.requestToneBreakdownFromAPI { }
+            }
+            // Тренировка «Своя речь»: сразу разбор, без промежуточной полупустой карточки.
+            if case .feedback = newPhase,
+               speaker.speakerUIMode == .conversation,
+               speaker.conversationExpectedThai != nil {
+                openConversationBreakdownIfNeeded(force: true)
+            }
+        }
+        .onChange(of: speaker.conversationHeardThaiASR) { _, newVal in
+            if newVal != nil {
+                speaker.refreshConversationUserPhoneticFromASRIfNeeded()
             }
         }
         .onChange(of: pendingCourseId) { _, newValue in
             if let cid = newValue {
-                speaker.loadQueueForCourse(cid)
+                speaker.loadQueueForCourse(cid, lessonId: pendingLessonId)
                 pendingCourseId = nil
+                pendingLessonId = nil
             }
         }
         .onAppear {
-            // When opened from course card: apply course queue FIRST (so we never show "current lesson" 6 cards).
-            let courseId = pendingCourseId ?? SpeakerRequestedCourseId.shared.consume()
-            if let cid = courseId {
-                speaker.loadQueueForCourse(cid)
+            // Контекст из Step/курса → очередь урока. Иначе — лаунчер (или текущая сессия, если уже идёт).
+            let pending = pendingCourseId.map { ($0, pendingLessonId) }
+                ?? SpeakerRequestedCourseId.shared.consume().map { ($0.courseId, $0.lessonId) }
+            if let (cid, lid) = pending {
+                speaker.prepareTrainingPoolIfNeeded()
+                speaker.loadQueueForCourse(cid, lessonId: lid)
                 pendingCourseId = nil
+                pendingLessonId = nil
+                speakerFilterState.selectedFilterId = speaker.activeFilterId
             } else {
                 speaker.loadIfNeeded()
-                speaker.applyFilter(SpeakerMode.currentMode.id)
+                speakerFilterState.selectedFilterId = speaker.activeFilterId
             }
-            // Умный спикер: сбрасываем результат ПОСЛЕ loadIfNeeded, чтобы не показывать скор/«ты сказал» из тренажёра.
             if speaker.speakerUIMode == .conversation {
                 speaker.clearConversationResult()
             }
-            if courseId == nil {
-                speakerFilterState.selectedFilterId = speaker.activeFilterId
-            }
 
-            // log only once per screen presentation
             UserSession.shared.logActivity(
                 .speakerOpened,
                 courseId: speaker.current?.courseId,

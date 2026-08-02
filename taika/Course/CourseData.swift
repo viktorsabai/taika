@@ -1,6 +1,24 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Course UX kind (theory bonus vs practice)
+
+public enum CourseExperienceKind: Sendable {
+    /// Normal course: speaker, console, progress, games.
+    case standard
+    /// Tip-only intro (`course_b_0`): no practice affordances in UI.
+    case theoryBonus
+}
+
+public func courseExperienceKind(for courseId: String) -> CourseExperienceKind {
+    let c = courseId
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .lowercased()
+        .replacingOccurrences(of: "-", with: "_")
+    if c == "course_b_0" { return .theoryBonus }
+    return .standard
+}
+
 // MARK: - Models
 
 public struct LearningOutcome: Codable, Hashable, Identifiable {
@@ -158,7 +176,11 @@ public final class CourseData: ObservableObject {
                     self?.didLoad = true
                 }
             }
-            print("[CourseData] loaded: \(courses.count) courses → ids: \(courses.prefix(3).map{ $0.courseID })")
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "taika.debug.courseDataLogs") {
+                print("[CourseData] loaded: \(courses.count) courses → ids: \(courses.prefix(3).map{ $0.courseID })")
+            }
+            #endif
             return .success(courses)
         } catch {
             print("[CourseData] Failed to load \(filename).json: \(error)")
@@ -246,11 +268,23 @@ public final class CourseData: ObservableObject {
 
 // MARK: - JSON Helpers
 
+private extension Data {
+    /// Некоторые редакторы/облака дописывают нулевые байты в конец файла — JSONDecoder падает с «Unexpected character '\0' after top-level value».
+    func trimmingTrailingNULBytes() -> Data {
+        var end = count
+        while end > 0, self[end - 1] == 0 {
+            end -= 1
+        }
+        return prefix(end)
+    }
+}
+
 private extension CourseData {
     static func decode<T: Decodable>(_ type: T.Type, fromJSON name: String) throws -> T {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json") else {
             throw NSError(domain: "CourseData", code: 1, userInfo: [NSLocalizedDescriptionKey: "File \(name).json not found in bundle"]) }
-        let data = try Data(contentsOf: url)
+        let raw = try Data(contentsOf: url)
+        let data = raw.trimmingTrailingNULBytes()
         return try JSONDecoder.taika.decode(T.self, from: data)
     }
 }

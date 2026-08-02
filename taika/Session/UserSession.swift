@@ -348,78 +348,18 @@ public struct USSnapshot: Codable, Equatable {
             }
             .store(in: &bag)
 
-        // react to admin full reset (ProfileView posts "AppResetAll")
-        NotificationCenter.default.addObserver(forName: .init("AppResetAll"), object: nil, queue: .main) { [weak self] _ in
-            guard let self else { return }
-            self.objectWillChange.send()
-            self.snapshot = USSnapshot()
-            self.save()
+        // NotificationCenter closures are @Sendable (Swift 6). Queue is `.main`, so hop via
+        // MainActor.assumeIsolated — do not capture `self` in the Sendable wrapper.
+        NotificationCenter.default.addObserver(forName: .init("AppResetAll"), object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                UserSession.shared.handleAppResetAll()
+            }
         }
 
-        // unified activity logging (MainManager -> UserSession)
-        NotificationCenter.default.addObserver(forName: .init("ActivityLogRequested"), object: nil, queue: .main) { [weak self] n in
-            guard let self else { return }
-            let ui = n.userInfo ?? [:]
-
-            let kindRaw = (ui["kind"] as? String) ?? ""
-            let courseId = ui["courseId"] as? String
-            let lessonId = ui["lessonId"] as? String
-            let stepIndex = ui["stepIndex"] as? Int
-            let refId = ui["refId"] as? String
-            let ts = (ui["day"] as? Date) ?? Date()
-
-            // keep "last opened" pointers in sync with app navigation events
-            // (Speaker "current" filter relies on these; without them it falls back to lesson 1)
-            if kindRaw == "courseOpened", let cid = courseId {
-                self.objectWillChange.send()
-                self.snapshot.lastCourseId = cid
-                self.snapshot.startedCourses.insert(cid)
-                self.snapshot.lastEventAt = Date()
-                self.saveDebounced()
+        NotificationCenter.default.addObserver(forName: .init("ActivityLogRequested"), object: nil, queue: .main) { n in
+            MainActor.assumeIsolated {
+                UserSession.shared.handleActivityLogRequested(n)
             }
-
-            if kindRaw == "lessonOpened", let cid = courseId, let lid = lessonId {
-                self.objectWillChange.send()
-                self.snapshot.lastCourseId = cid
-                self.snapshot.lastLessonByCourse[cid] = lid
-                self.snapshot.startedCourses.insert(cid)
-                self.snapshot.startedLessons[cid, default: []].insert(lid)
-                self.snapshot.lastEventAt = Date()
-                self.saveDebounced()
-            }
-
-            if kindRaw == "stepProgressChanged", let cid = courseId, let lid = lessonId, let idx = stepIndex {
-                // best-effort: remember last interacted step for the lesson
-                self.objectWillChange.send()
-                self.snapshot.lastCourseId = cid
-                self.snapshot.lastLessonByCourse[cid] = lid
-                let key = self.compoundLessonKey(courseId: cid, lessonId: lid)
-                self.snapshot.lastStepByLesson[key] = idx
-                self.snapshot.lastEventAt = Date()
-                self.saveDebounced()
-            }
-
-            func k(_ v: Bool, yes: USActivityEventKind, no: USActivityEventKind) -> USActivityEventKind { v ? yes : no }
-
-            let kind: USActivityEventKind? = {
-                switch kindRaw {
-                case "coursePlannedAdded": return .coursePlannedAdded
-                case "coursePlannedRemoved": return .coursePlannedRemoved
-                case "courseOpened": return .courseOpened
-                case "lessonOpened": return .lessonOpened
-                case "stepProgressChanged":
-                    let isLearned = (ui["isLearned"] as? Bool) ?? false
-                    return k(isLearned, yes: .stepLearned, no: .stepUnlearned)
-                case "favoriteToggled":
-                    let isFavorite = (ui["isFavorite"] as? Bool) ?? false
-                    return k(isFavorite, yes: .favoriteAdded, no: .favoriteRemoved)
-                default:
-                    return nil
-                }
-            }()
-
-            guard let kind else { return }
-            self.logActivity(kind, courseId: courseId, lessonId: lessonId, stepIndex: stepIndex, refId: refId, ts: ts)
         }
 
         // learned steps sync (source can be Step/Progress layers)
@@ -430,26 +370,100 @@ public struct USSnapshot: Codable, Equatable {
         ]
 
         for name in learnedSetNames {
-            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] n in
-                guard let self else { return }
-                let ui = n.userInfo ?? [:]
-                guard let courseId = ui["courseId"] as? String,
-                      let lessonId = ui["lessonId"] as? String
-                else { return }
-
-                let learnedArr = (ui["learned"] as? [Int]) ?? []
-                let key = self.compoundLessonKey(courseId: courseId, lessonId: lessonId)
-
-                self.objectWillChange.send()
-                self.snapshot.learnedSteps[key] = Set(learnedArr)
-                if !learnedArr.isEmpty {
-                    self.snapshot.startedCourses.insert(courseId)
-                    self.snapshot.startedLessons[courseId, default: []].insert(lessonId)
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { n in
+                MainActor.assumeIsolated {
+                    UserSession.shared.handleLearnedSetDidChange(n)
                 }
-                self.snapshot.lastEventAt = Date()
-                self.saveDebounced()
             }
         }
+    }
+
+    private func handleAppResetAll() {
+        objectWillChange.send()
+        snapshot = USSnapshot()
+        save()
+    }
+
+    private func handleActivityLogRequested(_ n: Notification) {
+        let ui = n.userInfo ?? [:]
+
+        let kindRaw = (ui["kind"] as? String) ?? ""
+        let courseId = ui["courseId"] as? String
+        let lessonId = ui["lessonId"] as? String
+        let stepIndex = ui["stepIndex"] as? Int
+        let refId = ui["refId"] as? String
+        let ts = (ui["day"] as? Date) ?? Date()
+
+        // keep "last opened" pointers in sync with app navigation events
+        // (Speaker "current" filter relies on these; without them it falls back to lesson 1)
+        if kindRaw == "courseOpened", let cid = courseId {
+            objectWillChange.send()
+            snapshot.lastCourseId = cid
+            snapshot.startedCourses.insert(cid)
+            snapshot.lastEventAt = Date()
+            saveDebounced()
+        }
+
+        if kindRaw == "lessonOpened", let cid = courseId, let lid = lessonId {
+            objectWillChange.send()
+            snapshot.lastCourseId = cid
+            snapshot.lastLessonByCourse[cid] = lid
+            snapshot.startedCourses.insert(cid)
+            snapshot.startedLessons[cid, default: []].insert(lid)
+            snapshot.lastEventAt = Date()
+            saveDebounced()
+        }
+
+        if kindRaw == "stepProgressChanged", let cid = courseId, let lid = lessonId, let idx = stepIndex {
+            objectWillChange.send()
+            snapshot.lastCourseId = cid
+            snapshot.lastLessonByCourse[cid] = lid
+            let key = compoundLessonKey(courseId: cid, lessonId: lid)
+            snapshot.lastStepByLesson[key] = idx
+            snapshot.lastEventAt = Date()
+            saveDebounced()
+        }
+
+        func k(_ v: Bool, yes: USActivityEventKind, no: USActivityEventKind) -> USActivityEventKind { v ? yes : no }
+
+        let kind: USActivityEventKind? = {
+            switch kindRaw {
+            case "coursePlannedAdded": return .coursePlannedAdded
+            case "coursePlannedRemoved": return .coursePlannedRemoved
+            case "courseOpened": return .courseOpened
+            case "lessonOpened": return .lessonOpened
+            case "stepProgressChanged":
+                let isLearned = (ui["isLearned"] as? Bool) ?? false
+                return k(isLearned, yes: .stepLearned, no: .stepUnlearned)
+            case "favoriteToggled":
+                let isFavorite = (ui["isFavorite"] as? Bool) ?? false
+                return k(isFavorite, yes: .favoriteAdded, no: .favoriteRemoved)
+            default:
+                return nil
+            }
+        }()
+
+        guard let kind else { return }
+        logActivity(kind, courseId: courseId, lessonId: lessonId, stepIndex: stepIndex, refId: refId, ts: ts)
+    }
+
+    private func handleLearnedSetDidChange(_ n: Notification) {
+        let ui = n.userInfo ?? [:]
+        guard let courseId = ui["courseId"] as? String,
+              let lessonId = ui["lessonId"] as? String
+        else { return }
+
+        let learnedArr = (ui["learned"] as? [Int]) ?? []
+        let key = compoundLessonKey(courseId: courseId, lessonId: lessonId)
+
+        objectWillChange.send()
+        snapshot.learnedSteps[key] = Set(learnedArr)
+        if !learnedArr.isEmpty {
+            snapshot.startedCourses.insert(courseId)
+            snapshot.startedLessons[courseId, default: []].insert(lessonId)
+        }
+        snapshot.lastEventAt = Date()
+        saveDebounced()
     }
 
     // MARK: - Explicit event API (можно вызывать из StepManager и других слоёв)

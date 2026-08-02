@@ -1,12 +1,4 @@
-// Fallback DS tokens for Lessons (bridging to CourseDS/CardDS values)
-// Carousel tokens (single source of truth; mirror CourseDS)
-fileprivate let CDCarouselPeekMin: CGFloat = 22
-fileprivate let CDDepthYOffsetMax: CGFloat = 16
-// Unified horizontal spacing between carousel cards (mirror CourseDS)
-fileprivate let CDCarouselContainerHeight: CGFloat = CardDS.Metrics.courseCardHeight + CDDepthYOffsetMax * 2 + 20
-
 import SwiftUI
-import UIKit
 import UIKit
 
 // MARK: - Namespace
@@ -558,10 +550,10 @@ public struct LSProgressSlotsStrip: View {
                     .frame(width: geo.size.width, height: geo.size.height)
                 }
             }
+            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: fill)
             .contentShape(base)
             .onTapGesture { onTap?() }
             .allowsHitTesting(true)
-            .animation(.linear(duration: 0.16), value: fill)
         }
     }
 
@@ -964,6 +956,7 @@ public struct LSLessonAssistantCard: View {
                     .frame(width: 36, height: 36)
                     .clipShape(Circle())
                     .overlay(Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+                    .taikaMascotChrome()
 
                 VStack(alignment: .leading, spacing: 6) {
                     // reserve height by laying out the longest message invisibly
@@ -990,7 +983,7 @@ public struct LSLessonAssistantCard: View {
                                     HStack(spacing: 4) {
                                         ForEach(0..<3, id: \.self) { i in
                                             Circle()
-                                                .fill(Color.white.opacity(dotsPhase == i ? 0.9 : 0.35))
+                                                .fill(CD.ColorToken.textSecondary.opacity(dotsPhase == i ? 0.9 : 0.35))
                                                 .frame(width: 6, height: 6)
                                         }
                                     }
@@ -1122,6 +1115,16 @@ public struct LSLessonRow: View {
             }
         }()
         let durationText = "≈ \(item.durationMinutes) мин"
+        let starsFraction: Double? = {
+            switch item.status {
+            case .completed:
+                return 1.0
+            case .inProgress:
+                return item.progress ?? 0.0
+            case .locked:
+                return 0.0
+            }
+        }()
 
         return CourseLessonCard(
             title: item.title,
@@ -1130,7 +1133,7 @@ public struct LSLessonRow: View {
             durationText: durationText,
             statusKind: statusKind,
             isPro: item.isPro,
-            tags: item.tags,
+            tags: [],
             sectionChrome: .seps,
             primaryCTA: primaryCTA,
             scale: .s,
@@ -1141,6 +1144,7 @@ public struct LSLessonRow: View {
                 onTap(item)
             },
             completionFraction: (item.status == .completed ? 1.0 : nil),
+            statusStarsFraction: starsFraction,
             favoriteCount: item.favoriteCount
         )
     }
@@ -1161,10 +1165,7 @@ public struct LSLessonList: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(title.uppercased())
-                .font(.caption)
-                .fontWeight(.semibold)
-                .kerning(0.8)
-                .foregroundStyle(.secondary)
+                .taikaSectionTitleStyle()
 
             VStack(spacing: 14) {
                 ForEach(items) { it in
@@ -1363,6 +1364,18 @@ public struct LSLessonCardV: View {
         // Build duration text (same format, reused by CardDS)
         let durationText = "≈ \(item.durationMinutes) мин"
 
+        let reminderLines: [String] = {
+            guard item.status == .completed else { return [] }
+            var lines: [String] = []
+            lines.append("Открой консоль снизу: мини-игры и микрофон для этого урока.")
+            if let s = item.subtitle, !s.isEmpty { lines.append(s) }
+            if !item.tags.isEmpty {
+                lines.append(item.tags.prefix(3).joined(separator: " · "))
+            }
+            lines.append("Короткие повторы лучше, чем редкие «забеги».")
+            return Array(lines.prefix(4))
+        }()
+
         return CourseLessonCard(
             title: item.title,
             subtitle: item.subtitle,
@@ -1370,47 +1383,30 @@ public struct LSLessonCardV: View {
             durationText: durationText,
             statusKind: statusKind,
             isPro: item.isPro,
-            tags: item.tags,
+            tags: [],
             sectionChrome: .none,
             primaryCTA: primaryCTA,
             scale: .s,
             showFavorite: true,
-            showConsole: true,
+            showConsole: onConsole != nil,
             onPrimaryTap: {
                 LSLessonActivity.mark(item.id)
                 onTap(item)
             },
             isConsoleEnabled: item.status == .completed,
             completionFraction: item.progress,
+            flipEnabled: item.status == .completed,
+            backFaceKind: item.status == .completed ? .lessonReminders(lines: reminderLines) : .courseGradeSheet,
             favoriteCount: favoriteCount,
             onFavoriteTap: onFavorite,
             onConsoleTap: { onConsole?() },
-            onSpeakerTap: onSpeaker
+            onSpeakerTap: onSpeaker,
+            showsInlineProgress: true
         )
     }
 }
 
 // Reusable Console embed (from CardDS) to drop into any section
-
-
-// MARK: - Depth tokens (mirrored from CourseDS)
-private let CDDepthNormWidthFactor: CGFloat = 0.70
-private let CDDepthScaleSide:       CGFloat = 0.92
-private let CDDepthScaleCenter:     CGFloat = 1.04
-private let CDDepthOpacitySide:     CGFloat = 0.82
-private let CDDepthOpacityCenter:   CGFloat = 1.00
-
-// Track horizontal scroll offset for the carousel (like in CourseDS)
-private struct LSScrollXKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-private struct LSViewportMidXKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
-}
 
 public struct LSLessonReels: View {
     let title: String
@@ -1427,8 +1423,6 @@ public struct LSLessonReels: View {
 
     @State private var currentIndex: Int = 0
     @State private var isCollapsed: Bool
-    @State private var scrollX: CGFloat = 0
-    @State private var viewportMidX: CGFloat = 0
 
     public init(_ title: String,
                 items: [LS.Item],
@@ -1456,8 +1450,6 @@ public struct LSLessonReels: View {
     }
 
     public var body: some View {
-        let total = max(1, items.count)
-        let loopCount = max(1, total * 3)
         Group {
             if items.isEmpty {
                 EmptyView()
@@ -1483,76 +1475,30 @@ public struct LSLessonReels: View {
                         if isCollapsed {
                             EmptyView().frame(height: 0)
                         } else {
-                            GeometryReader { geometry in
-                                let width = geometry.size.width
-                                let cardW = width * CDDepthNormWidthFactor
-                                let spacing: CGFloat = CDCarouselSpacing
-                                let peekMin: CGFloat = CDCarouselPeekMin
-                                ScrollViewReader { proxy in
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: spacing) {
-                                            ForEach(0..<loopCount, id: \.self) { idx in
-                                                let sourceIndex = idx % total
-                                                let it = items[sourceIndex]
-                                                GeometryReader { cg in
-                                                    let cardMidX = cg.frame(in: .global).midX
-                                                    let dx = cardMidX - viewportMidX
-                                                    let norm = min(abs(dx / cardW), 1)
-
-                                                    let vScale   = CDDepthScaleSide + (CDDepthScaleCenter - CDDepthScaleSide) * (1 - norm)
-                                                    let vOpacity = CDDepthOpacitySide + (CDDepthOpacityCenter - CDDepthOpacitySide) * (1 - norm)
-                                                    let vYOffset = CDDepthYOffsetMax * norm
-
-                                                    ZStack {
-                                                        LSLessonCardV(
-                                                            item: it,
-                                                            onTap: onTap,
-                                                            onFavorite: onFavorite.map { cb in { cb(it) } },
-                                                            favoriteCount: it.favoriteCount,
-                                                            onConsole: { onTapAccessory?(it) },
-                                                            onSpeaker: onSpeaker.map { cb in { cb(it) } }
-                                                        )
-                                                    }
-                                                    .id(idx)
-                                                    .scaleEffect(vScale)
-                                                    .opacity(vOpacity)
-                                                    .offset(y: vYOffset)
-                                                    .zIndex(Double(1.0 - norm))
-                                                }
-                                                .frame(width: cardW)
-                                            }
-                                        }
-                                        .padding(.horizontal, peekMin)
-                                        .padding(.vertical, CDDepthYOffsetMax)
+                            CDLessonCarousel(
+                                data: items,
+                                cardWidth: CDLessonCarouselCanonical.cardWidth,
+                                cardHeight: CDLessonCarouselCanonical.courseLessonCardHeight,
+                                spacing: CDLessonCarouselCanonical.spacing,
+                                initialIndex: min(max(0, selectedIndex ?? currentIndex), max(0, items.count - 1)),
+                                onTapScrollToCenter: true,
+                                loop: false,
+                                onCenterIndexChange: { idx in
+                                    guard idx >= 0, idx < items.count else { return }
+                                    if idx != currentIndex {
+                                        currentIndex = idx
                                     }
-                                    .overlay(
-                                        GeometryReader { g in
-                                            Color.clear
-                                                .preference(key: LSScrollXKey.self,
-                                                            value: -g.frame(in: .named("LSCarousel")).minX)
-                                        }
-                                    )
-                                    .overlay(
-                                        GeometryReader { g in
-                                            Color.clear
-                                                .preference(key: LSViewportMidXKey.self,
-                                                            value: g.frame(in: .global).midX)
-                                        }
-                                    )
-                                    .coordinateSpace(name: "LSCarousel")
-                                    .onPreferenceChange(LSScrollXKey.self) { scrollX = $0 }
-                                    .onPreferenceChange(LSViewportMidXKey.self) { viewportMidX = $0 }
-                                    .onAppear {
-                                        // стартуем сразу с "среднего" блока, чтобы не было видимого начала/конца
-                                        if total > 1 {
-                                            let middle = total // вторая "полоса" из тройного массива
-                                            proxy.scrollTo(middle, anchor: .center)
-                                        }
-                                    }
-                                    .frame(height: CDCarouselContainerHeight)
                                 }
+                            ) { item in
+                                LSLessonCardV(
+                                    item: item,
+                                    onTap: onTap,
+                                    onFavorite: onFavorite.map { cb in { cb(item) } },
+                                    favoriteCount: item.favoriteCount,
+                                    onConsole: onTapAccessory.map { tap in { tap(item) } },
+                                    onSpeaker: onSpeaker.map { cb in { cb(item) } }
+                                )
                             }
-                            .frame(height: CDCarouselContainerHeight)
                             .transition(.opacity)
                         }
                     }
@@ -1582,88 +1528,174 @@ public struct LSCourseStats: Hashable {
     }
 }
 
-// MARK: - Course Overview (summary header)
+// MARK: - Course overview (minimal: no outer card; progress block + stats strip)
+
+private struct LSCourseStatColumn: View {
+    let value: String
+    let label: String
+    var accent: Bool = false
+
+    var body: some View {
+        VStack(spacing: 5) {
+            Text(value)
+                .font(.system(size: 19, weight: .semibold, design: .rounded))
+                .foregroundStyle(accent ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.text.opacity(0.92)))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.82))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct LSCourseStatsHairline: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.07))
+            .frame(width: 1, height: 32)
+    }
+}
+
+/// Оставшееся время курса: заметная «пилюля» в акценте (читается как таймер).
+private struct LSCourseETATimer: View {
+    let minutes: Int
+
+    private var mmss: String {
+        let m = max(0, minutes)
+        return String(format: "%d:%02d", m, 0)
+    }
+
+    private var accent: AnyShapeStyle {
+        AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "timer")
+                .font(.system(size: 12, weight: .semibold))
+            Text(mmss)
+                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .monospacedDigit()
+        }
+        .foregroundStyle(accent)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 7)
+        .background(
+            Capsule(style: .continuous)
+                .fill(ThemeManager.shared.currentAccentFill.opacity(0.2))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(ThemeManager.shared.currentAccentFill.opacity(0.45), lineWidth: 1)
+        )
+        .accessibilityLabel("Осталось примерно \(minutes) минут")
+    }
+}
+
 public struct LSCourseOverview: View {
     public let stats: LSCourseStats
+    /// Course title (displayed as main heading).
     public let category: String
+    public var etaMinutes: Int?
     public let onCTA: () -> Void
     public let onReset: () -> Void
     public var onSpeaker: (() -> Void)?
     public var onReinforce: (() -> Void)?
     public let showInlineProgress: Bool
 
-    private var progress: Double {
+    private var courseProgress: Double {
         guard stats.totalLessons > 0 else { return 0 }
         return min(1.0, max(0.0, Double(stats.completedLessons) / Double(stats.totalLessons)))
     }
 
-    private var grad: LinearGradient { ThemeManager.shared.currentAccentFill }
-    private var accentShape: AnyShapeStyle { AnyShapeStyle(grad) }
-
-    private func statChip(icon: String, text: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-            Text(text)
-                .lineLimit(1)
-        }
-        .font(.caption2.weight(.semibold))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Capsule().fill(Color.white.opacity(0.14)))
-        .foregroundStyle(Color.white.opacity(0.92))
-    }
-
-    /// Week-style chip: value + label (like Main "За неделю")
-    private func weekStyleChip(label: String, value: String, accent: Bool) -> some View {
-        let fill = accent ? accentShape : AnyShapeStyle(PD.ColorToken.textSecondary)
-        return VStack(spacing: 6) {
-            Text(value)
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(fill)
-            Text(label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(PD.ColorToken.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     public var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
-            HStack(alignment: .center, spacing: 8) {
-                Text("ИТОГИ КУРСА")
-                    .font(PD.FontToken.caption(12, weight: .semibold))
-                    .kerning(0.6)
-                    .foregroundColor(PD.ColorToken.textSecondary)
-                Spacer(minLength: 8)
-                if !category.isEmpty {
-                    Text(category)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(accentShape)
-                        .lineLimit(1)
+        VStack(alignment: .leading, spacing: 0) {
+            if !category.isEmpty {
+                Text(category)
+                    .font(PD.FontToken.body(18, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .lineLimit(2)
+                    .padding(.bottom, 14)
+            }
+
+            // Прогресс + сброс в одной панели
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .center, spacing: 10) {
+                    Text("ПРОГРЕСС")
+                        .taikaSectionTitleStyle()
+                    Spacer(minLength: 8)
+                    if let eta = etaMinutes, eta > 0 {
+                        LSCourseETATimer(minutes: eta)
+                    }
+                    Button(action: onReset) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("сброс")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .padding(.horizontal, 10)
+                        .frame(height: 28)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(PD.ColorToken.chip.opacity(0.9))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Сбросить прогресс курса")
                 }
-            }
 
-            HStack(spacing: PD.Spacing.inner) {
-                weekStyleChip(label: "уроков", value: "\(stats.completedLessons)/\(stats.totalLessons)", accent: true)
-                weekStyleChip(label: "слов", value: "\(stats.learnedWords)", accent: false)
-                weekStyleChip(label: "избранное", value: "\(stats.favorites)", accent: false)
-                weekStyleChip(label: "мин", value: "\(stats.timeMinutes)", accent: false)
+                AppProgressBar(value: CGFloat(courseProgress), height: 6)
+                    .padding(.trailing, 1)
+                    .animation(.spring(response: 0.42, dampingFraction: 0.86), value: courseProgress)
             }
-            .padding(.top, Theme.Layout.sectionTitleToContent)
+            .padding(.bottom, 18)
 
-            // Спикер, Закрепить, Сбросить — в хедере экрана (AppHeaderStyle.lessons).
+            Rectangle()
+                .fill(Color.white.opacity(0.08))
+                .frame(height: 1)
+                .padding(.bottom, 16)
+
+            // Инфографика в одну линию — без вложенных рамок
+            HStack(alignment: .top, spacing: 0) {
+                LSCourseStatColumn(
+                    value: "\(stats.completedLessons)/\(stats.totalLessons)",
+                    label: "уроки",
+                    accent: true
+                )
+                LSCourseStatsHairline()
+                LSCourseStatColumn(value: "\(stats.learnedWords)", label: "слова", accent: false)
+                LSCourseStatsHairline()
+                LSCourseStatColumn(value: "\(stats.favorites)", label: "избранное", accent: false)
+                LSCourseStatsHairline()
+                LSCourseStatColumn(value: "\(stats.timeMinutes)", label: "мин в курсе", accent: false)
+            }
         }
     }
 
-    public init(stats: LSCourseStats,
-                category: String,
-                onCTA: @escaping () -> Void,
-                onReset: @escaping () -> Void = {},
-                onSpeaker: (() -> Void)? = nil,
-                onReinforce: (() -> Void)? = nil,
-                showInlineProgress: Bool = false) {
+    public init(
+        stats: LSCourseStats,
+        category: String,
+        etaMinutes: Int? = nil,
+        onCTA: @escaping () -> Void,
+        onReset: @escaping () -> Void = {},
+        onSpeaker: (() -> Void)? = nil,
+        onReinforce: (() -> Void)? = nil,
+        showInlineProgress: Bool = false
+    ) {
         self.stats = stats
         self.category = category
+        self.etaMinutes = etaMinutes
         self.onCTA = onCTA
         self.onReset = onReset
         self.onSpeaker = onSpeaker
@@ -1680,10 +1712,7 @@ public struct LSSectionTitle: View {
     public var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(text.uppercased())
-                .font(.caption.weight(.semibold))
-                .kerning(0.8)
-                .foregroundStyle(.secondary) // unified gray, like in Favorites
-                .opacity(0.98)
+                .taikaSectionTitleStyle()
             Spacer(minLength: 0)
         }
     }
@@ -1729,6 +1758,7 @@ struct LSSampleData {
 public struct LSProgressSection: View {
     public let lessonsDone: Int
     public let lessonsTotal: Int
+    public let etaMinutes: Int?
 
     private var progress: Double {
         guard lessonsTotal > 0 else { return 0 }
@@ -1740,19 +1770,23 @@ public struct LSProgressSection: View {
             // Section header (LEFT: gray title, RIGHT: lessons label)
             HStack(alignment: .center) {
                 Text("ПРОГРЕСС")
-                    .font(PD.FontToken.caption(12, weight: .semibold))
-                    .kerning(0.6)
-                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .taikaSectionTitleStyle()
 
                 Spacer()
 
-                Text("уроков \(lessonsDone)/\(lessonsTotal)")
+                Text("\(lessonsDone)/\(lessonsTotal)")
                     .font(PD.FontToken.caption(12, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+            }
+
+            if let etaMinutes, etaMinutes > 0 {
+                Text("до завершения курса ≈ \(etaMinutes) мин")
+                    .font(PD.FontToken.caption(12, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.92))
             }
 
             // Single thin progress bar – reuse unified App progress widget
-            AppProgressBar(value: CGFloat(progress), height: 10)
+            AppProgressBar(value: CGFloat(progress), height: 8)
                 .padding(.trailing, 2)
         }
     }
@@ -1768,7 +1802,7 @@ private struct _ThemePreviewHost<Content: View>: View {
 #Preview("Lessons DS – List") {
     _ThemePreviewHost {
         NavigationStack {
-            ScrollView {
+            TaikaRootVerticalScroll {
                 VStack(spacing: 12) {
                     LSLessonHeader(
                         title: "Разговорный минимум",
@@ -1796,16 +1830,18 @@ private struct _ThemePreviewHost<Content: View>: View {
                     LSLessonReels("уроки", items: LSSampleData.list, collapsible: true, startExpanded: true, autoplay: false) { _ in }
                         .lsSectionPadding()
 
-                    // Progress Section (after lesson reels, before hometask)
-                    LSProgressSection(
-                        lessonsDone: 5,
-                        lessonsTotal: 8
-                    )
-                    .lsSectionPadding()
-
-
-                    LSSectionTitle("итоги курса")
-                        .lsSectionPadding(bottom: 0)
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text("ИТОГИ")
+                            .font(.caption.weight(.semibold))
+                            .kerning(0.8)
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 8)
+                        Text("Разговорный старт")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.text)
+                            .lineLimit(1)
+                    }
+                    .lsSectionPadding(bottom: 0)
                     LSCourseOverview(
                         stats: LSCourseStats(
                             completedLessons: 3,
@@ -1815,7 +1851,8 @@ private struct _ThemePreviewHost<Content: View>: View {
                             streakDays: 7,
                             timeMinutes: 120
                         ),
-                        category: "разговорный",
+                        category: "",
+                        etaMinutes: 22,
                         onCTA: {},
                         onReset: {},
                         showInlineProgress: false
@@ -1829,7 +1866,6 @@ private struct _ThemePreviewHost<Content: View>: View {
         .lsBackToCoursesToolbar(title: "Назад к курсам") {
             print("backToCourses tapped in preview")
         }
-        .preferredColorScheme(.dark)
     }
 }
 // MARK: - Content (section below assistant)
@@ -1954,7 +1990,7 @@ public struct LSContentReels: View {
                             // content cards should feel like a compact carousel, not full-width posters
                             let cardW = min(420, max(260, floor(width * 0.84)))
                             let spacing: CGFloat = 12
-                            ScrollView(.horizontal, showsIndicators: false) {
+                            TaikaCarouselScroll {
                                 HStack(spacing: spacing) {
                                     ForEach(items) { it in
                                         LSContentCard(item: it)

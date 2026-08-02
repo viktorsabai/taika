@@ -29,23 +29,30 @@ public struct SDStepProgressSegment: View {
 
         return ZStack {
             base
-                .fill(
-                    isLearned
-                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                    : AnyShapeStyle(.ultraThinMaterial.opacity(0.10))
-                )
+                .fill(AnyShapeStyle(.ultraThinMaterial.opacity(0.10)))
                 .frame(width: width, height: 36)
-                .overlay(base.stroke(PD.ColorToken.stroke, lineWidth: 1))
                 .overlay(
-                    Group {
-                        if isActive {
-                            base.stroke(PD.ColorToken.textSecondary, lineWidth: 2)
+                    base.stroke(
+                        isActive
+                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.85))
+                        : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.7)),
+                        lineWidth: isActive ? 1.5 : 1
+                    )
+                )
+
+            base
+                .fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                .frame(width: width, height: 36)
+                .mask(
+                    GeometryReader { geo in
+                        VStack(spacing: 0) {
+                            Spacer(minLength: 0)
+                            Rectangle()
+                                .frame(height: isLearned ? geo.size.height : 0)
                         }
                     }
                 )
-                .animation(.spring(response: 0.28, dampingFraction: 0.85), value: isActive)
-                .animation(.easeOut(duration: 0.18), value: isLearned)
-                .animation(.easeOut(duration: 0.18), value: isFavorite)
+                .opacity(isLearned ? 1 : 0)
 
             if isFavorite {
                 Group {
@@ -69,6 +76,9 @@ public struct SDStepProgressSegment: View {
         }
         .frame(width: width, height: 36)
         .contentShape(Rectangle())
+        .animation(.spring(response: 0.36, dampingFraction: 0.82), value: isLearned)
+        .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isActive)
+        .animation(.easeOut(duration: 0.18), value: isFavorite)
         .onTapGesture {
             if let idx = index {
                 onTap?(idx)
@@ -96,6 +106,8 @@ public struct SDStepItem: Identifiable, Hashable {
     public var titleRU: String            // «слово / фраза» на русском
     public var subtitleTH: String         // тайский / латиницей
     public var phonetic: String           // руссифицированная транскрипция по слогам
+    /// Канонический `order` из steps.json (для Progress/Speaker). -1 если неизвестен.
+    public var canonicalOrder: Int
     public var metaLearned: Int?
     public var metaFavorites: Int?
     public var isFavorite: Bool
@@ -108,6 +120,7 @@ public struct SDStepItem: Identifiable, Hashable {
         titleRU: String,
         subtitleTH: String,
         phonetic: String,
+        canonicalOrder: Int = -1,
         metaLearned: Int? = nil,
         metaFavorites: Int? = nil,
         isFavorite: Bool = false,
@@ -119,6 +132,7 @@ public struct SDStepItem: Identifiable, Hashable {
         self.titleRU = titleRU
         self.subtitleTH = subtitleTH
         self.phonetic = phonetic
+        self.canonicalOrder = canonicalOrder
         self.metaLearned = metaLearned
         self.metaFavorites = metaFavorites
         self.isFavorite = isFavorite
@@ -153,20 +167,17 @@ fileprivate var AccentGradient: LinearGradient {
 
 // Gradient helpers for icons/text
 
-// Shared helper to compute *final* visual card size by step kind. Фиксированная высота 290.
+/// Фразы — квадрат; лайфхаки — вертикальный портрет.
 fileprivate func stepCardSize(for kind: SDStepItem.Kind) -> CGSize {
     switch kind {
     case .tip:
         return CGSize(
-            width:  CardDS.Metrics.stepCardWidth,
-            height: CardDS.Metrics.stepLifehackCardHeight
+            width: CardDS.Metrics.stepLifehackWidth,
+            height: CardDS.Metrics.stepLifehackHeight
         )
-
     case .word, .phrase, .casual, .intro, .summary:
-        return CGSize(
-            width:  CardDS.Metrics.stepCardWidth,
-            height: CardDS.Metrics.stepWordCardHeight
-        )
+        let s = CardDS.Metrics.stepCarouselSquareSide
+        return CGSize(width: s, height: s)
     }
 }
 
@@ -438,6 +449,37 @@ public struct SDStepCard: View {
     @State private var bigLike: Bool = false
     private var isLearned: Bool
 
+    /// Лайфхак: `tip` → заголовок (`titleRU`); `text` → тело (`subtitleTH`).
+    /// Тело может начинаться с заголовка через `\n\n` (legacy) — тогда берём его из текста.
+    private static func lifehackHeadlineAndBody(from item: SDStepItem) -> (headline: String?, body: String) {
+        let tipTitle = item.titleRU.trimmingCharacters(in: .whitespacesAndNewlines)
+        let genericTitles: Set<String> = ["лайфхак", "лайфхаки", "сцена"]
+        let hasRealTitle = !tipTitle.isEmpty && !genericTitles.contains(tipTitle.lowercased())
+
+        let raw = (item.subtitleTH.isEmpty ? item.titleRU : item.subtitleTH)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return (nil, " ") }
+
+        let paragraphs = raw.components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if paragraphs.count >= 2 {
+            return (paragraphs[0], paragraphs.dropFirst().joined(separator: "\n\n"))
+        }
+
+        if let nl = raw.firstIndex(of: "\n") {
+            let h = String(raw[..<nl]).trimmingCharacters(in: .whitespacesAndNewlines)
+            let b = String(raw[raw.index(after: nl)...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            if h.count <= 88, !b.isEmpty { return (h, b) }
+        }
+
+        if hasRealTitle {
+            return (tipTitle, raw)
+        }
+
+        return (nil, raw)
+    }
+
     private func splitSubtitle(_ raw: String) -> (thai: String, latin: String) {
         // Expected formats: "ขอบคุณ (kh̄xbkhuṇ)" or just "ขอบคุณ"
         if let open = raw.firstIndex(of: "("), let close = raw.lastIndex(of: ")"), open < close {
@@ -491,9 +533,11 @@ public struct SDStepCard: View {
         let cardView: AnyView = {
             switch vkOuter {
             case .tip:
+                let hb = Self.lifehackHeadlineAndBody(from: item)
                 return AnyView(
                     StepLifehackCardLegacy(
-                        body: item.subtitleTH.isEmpty ? item.titleRU : item.subtitleTH,
+                        headline: hb.headline,
+                        body: hb.body,
                         label: labelFor(item: item),
                         size: cardSize,
                         sectionChrome: .seps,
@@ -516,18 +560,17 @@ public struct SDStepCard: View {
             default:
                 if item.isPro {
                     return AnyView(
-                        StepProGateCard(
-                            title: item.titleRU,
-                            subtitle: item.subtitleTH,
-                            footnote: item.phonetic.isEmpty ? "нужно pro" : item.phonetic,
-                            label: "pro",
-                            primaryTitle: "открыть pro",
+                        StepProTeaserCard(
+                            title: item.titleRU.isEmpty ? "ещё 5 карточек" : item.titleRU,
+                            subtitle: {
+                                let th = item.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if !th.isEmpty { return th }
+                                let ph = item.phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+                                return ph.isEmpty ? "расширь разминку с Taika+" : ph
+                            }(),
+                            ctaTitle: "открыть Taika+",
                             size: cardSize,
-                            sectionChrome: .seps,
-                            chromeStyle: .cards,
-                            onPrimaryTap: {
-                                onTap()
-                            }
+                            onOpen: onTap
                         )
                     )
                 }
@@ -570,12 +613,11 @@ public struct SDStepCard: View {
         }()
 
         return cardView
-            .contentShape(Rectangle())
+            .frame(width: cardSize.width, height: cardSize.height)
+            .contentShape(RoundedRectangle(cornerRadius: CardDS.Metrics.stepCardContentRadius, style: .continuous))
             .onTapGesture {
                 onTap()
             }
-            .frame(width: cardSize.width)
-            .frame(minHeight: cardSize.height)
             .animation(.none, value: isLearned)
             .animation(.none, value: isFav)
             .transaction { $0.animation = nil }
@@ -685,6 +727,7 @@ private struct _IntroPlaceholder: View {
                 .scaledToFit()
                 .frame(height: 88)
                 .opacity(0.75)
+                .taikaMascotChrome()
             Text("Вступление")
                 .font(PD.FontToken.body(18, weight: .semibold))
                 .foregroundColor(PD.ColorToken.textSecondary)
@@ -712,21 +755,7 @@ private struct _SummaryPlaceholder: View {
 }
 
 // Helper for detecting which step card is closest to center in the carousel
-fileprivate struct SDStepCarouselCenterCandidate: Equatable {
-    let index: Int
-    let norm: CGFloat
-    let carouselID: UUID
-}
-
-fileprivate struct SDStepCarouselCenterPreferenceKey: PreferenceKey {
-    static var defaultValue: [SDStepCarouselCenterCandidate] = []
-    static func reduce(value: inout [SDStepCarouselCenterCandidate],
-                       nextValue: () -> [SDStepCarouselCenterCandidate]) {
-        value.append(contentsOf: nextValue())
-    }
-}
-
-// MARK: - Carousel (горизонтальная) — интро/саммари из StepIntroSum
+// MARK: - Carousel (горизонтальная) — coverflow как Спикер (без ScrollView)
 public struct SDStepCarousel: View {
     public var title: String
     public var items: [SDStepItem]
@@ -754,10 +783,6 @@ public struct SDStepCarousel: View {
     /// Когда true — без вертикального паддинга секции (как Продолжить/Подборка дня на Main).
     public var compactSection: Bool
 
-    private let carouselID = UUID()
-    @State private var didInitialScroll: Bool = false
-    @State private var isProgrammaticScroll: Bool = false
-    
     public init(
         title: String,
         items: [SDStepItem],
@@ -806,262 +831,116 @@ public struct SDStepCarousel: View {
         self.compactSection = compactSection
     }
 
-    // TEMP: Back-compat overloads to keep old call-sites working while we migrate to explicit `isOverlay:`. Remove after rollout.
-    @available(*, deprecated, message: "Use init(..., isOverlay:) and pass isOverlay explicitly. This overload will be removed after call-sites are updated.")
-    public init(
-        title: String,
-        items: [SDStepItem],
-        activeIndex: Binding<Int>,
-        learned: Set<Int> = [],
-        favorites: Set<Int> = [],
-        onTap: @escaping (SDStepItem)->Void = {_ in},
-        onPlay: @escaping (SDStepItem)->Void = {_ in},
-        onFav: @escaping (SDStepItem)->Void = {_ in},
-        onDone: @escaping (SDStepItem)->Void = {_ in},
-        onActiveIndexChange: ((Int) -> Void)? = nil,
-        onNext: @escaping (SDStepItem) -> Void = { _ in },
-        introContentView: (() -> AnyView)? = nil,
-        summaryContentView: (() -> AnyView)? = nil,
-        introCTAView: (() -> AnyView)? = nil,
-        summaryCTAView: (() -> AnyView)? = nil
-    ) {
-        self.init(
-            title: title,
-            items: items,
-            activeIndex: activeIndex,
-            subtitle: nil,
-            learned: learned,
-            favorites: favorites,
-            onTap: onTap,
-            onPlay: onPlay,
-            onFav: onFav,
-            onDone: onDone,
-            onActiveIndexChange: onActiveIndexChange,
-            onNext: onNext,
-            onFavAt: nil,
-            onDoneAt: nil,
-            introContentView: introContentView,
-            summaryContentView: summaryContentView,
-            introCTAView: introCTAView,
-            summaryCTAView: summaryCTAView,
-            isOverlay: false,
-            allowLearning: true,
-            loop: false
-        )
-    }
-
-    @available(*, deprecated, message: "Use init(..., isOverlay:) and pass isOverlay explicitly. This overload will be removed after call-sites are updated.")
-    public init(
-        title: String,
-        items: [SDStepItem],
-        activeIndex: Binding<Int>
-    ) {
-        self.init(
-            title: title,
-            items: items,
-            activeIndex: activeIndex,
-            subtitle: nil,
-            learned: [],
-            favorites: [],
-            onTap: { _ in },
-            onPlay: { _ in },
-            onFav: { _ in },
-            onDone: { _ in },
-            onActiveIndexChange: nil,
-            onNext: { _ in },
-            onFavAt: nil,
-            onDoneAt: nil,
-            introContentView: nil,
-            summaryContentView: nil,
-            introCTAView: nil,
-            summaryCTAView: nil,
-            isOverlay: false,
-            allowLearning: true,
-            loop: false
-        )
-    }
-
-    @available(*, deprecated, message: "Use init(..., isOverlay:) and pass isOverlay explicitly. This overload will be removed after call-sites are updated.")
-    public init(
-        title: String,
-        items: [SDStepItem],
-        activeIndex: Binding<Int>,
-        subtitle: String?,
-        learned: Set<Int> = [],
-        favorites: Set<Int> = [],
-        onTap: @escaping (SDStepItem)->Void = {_ in},
-        onPlay: @escaping (SDStepItem)->Void = {_ in},
-        onFav: @escaping (SDStepItem)->Void = {_ in},
-        onDone: @escaping (SDStepItem)->Void = {_ in},
-        onActiveIndexChange: ((Int) -> Void)? = nil,
-        onNext: @escaping (SDStepItem) -> Void = { _ in },
-        introContentView: (() -> AnyView)? = nil,
-        summaryContentView: (() -> AnyView)? = nil,
-        introCTAView: (() -> AnyView)? = nil,
-        summaryCTAView: (() -> AnyView)? = nil
-    ) {
-        self.init(
-            title: title,
-            items: items,
-            activeIndex: activeIndex,
-            subtitle: subtitle,
-            learned: learned,
-            favorites: favorites,
-            onTap: onTap,
-            onPlay: onPlay,
-            onFav: onFav,
-            onDone: onDone,
-            onActiveIndexChange: onActiveIndexChange,
-            onNext: onNext,
-            onFavAt: nil,
-            onDoneAt: nil,
-            introContentView: introContentView,
-            summaryContentView: summaryContentView,
-            introCTAView: introCTAView,
-            summaryCTAView: summaryCTAView,
-            isOverlay: false,
-            allowLearning: true,
-            loop: false
-        )
-    }
-
     public var body: some View {
-        let baseHeight = max(CardDS.Metrics.stepWordCardHeight,
-                             CardDS.Metrics.stepLifehackCardHeight)
-        let slotHeight = baseHeight + 36
+        let tipsOnly = !items.isEmpty && items.allSatisfy { $0.kind == .tip }
+        let itemW = tipsOnly ? CardDS.Metrics.stepLifehackWidth : CardDS.Metrics.stepCarouselSquareSide
+        let itemH = tipsOnly ? CardDS.Metrics.stepLifehackHeight : CardDS.Metrics.stepCarouselSquareSide
+        let slotHeight = itemH + (compactSection ? 28 : 36)
         return VStack(alignment: .leading, spacing: 0) {
             if !title.isEmpty {
                 header
             }
-
-            GeometryReader { geo in
-                cardsHStack(geo: geo)
-                    .frame(maxWidth: .infinity,
-                           maxHeight: .infinity,
-                           alignment: .center)
-                    .padding(.top, compactSection ? 0 : 2)
-                    .padding(.bottom, compactSection ? 0 : PD.Spacing.block * 0.5)
-            }
-            .frame(height: slotHeight)
-            .padding(.vertical, compactSection ? 0 : Theme.Layout.carouselVPad)
+            coverflowCarousel(itemW: itemW, itemH: itemH)
+                .frame(height: slotHeight)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, compactSection ? 0 : Theme.Layout.carouselVPad)
         }
     }
 
+    /// Coverflow: фразы — привычный 3D; лайфхаки — спокойнее и центрированнее (презентационный фокус).
     @ViewBuilder
-    private func cardsHStack(geo: GeometryProxy) -> some View {
-        let baseSize = stepCardSize(for: .word)
-        let cardWidth: CGFloat = baseSize.width
-        let cardHeight: CGFloat = baseSize.height
-        let itemSpacing: CGFloat = 8
-        let n = items.count
-        let renderedIndices: [Int] = (loop && n > 1) ? (Array(0..<n) + Array(0..<n) + Array(0..<n)) : Array(0..<n)
-        let middleBlockStart = (loop && n > 1) ? n : 0
+    private func coverflowCarousel(itemW: CGFloat, itemH: CGFloat) -> some View {
+        let currentIndex = min(max(0, activeIndex), max(0, items.count - 1))
+        let tipsOnly = !items.isEmpty && items.allSatisfy { $0.kind == .tip }
+        let sideScale: CGFloat = tipsOnly ? 0.90 : 0.82
+        let yaw: Double = tipsOnly ? -8 : -14
+        let stepX = itemW * (tipsOnly ? 0.78 : 0.88)
+        let sideOpacity: Double = tipsOnly ? 0.38 : 0.45
 
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: itemSpacing) {
-                    ForEach(Array(renderedIndices.enumerated()), id: \.0) { (renderIndex, baseIndex) in
-                        let item = items[baseIndex]
-                        let isFav = favorites.contains(baseIndex)
-                        let effective = withFavorite(item, fav: isFav)
-                        let size = stepCardSize(for: item.visualKind)
+        ZStack {
+            ForEach(Array(items.indices), id: \.self) { index in
+                let rel = index - currentIndex
+                let item = items[index]
+                let isFav = favorites.contains(index)
+                let effective = withFavorite(item, fav: isFav)
 
-                        GeometryReader { itemGeo in
-                            let frame = itemGeo.frame(in: .named("carousel"))
-                            let viewportCenterX = geo.size.width / 2
-                            let centerX = frame.midX
-                            let distance = abs(centerX - viewportCenterX)
-                            let maxDistance = cardWidth + itemSpacing
-                            let t = min(distance / maxDistance, 1)
-                            let scale = 0.9 + (1 - t) * 0.12
-                            let opacity = 0.45 + (1 - t) * 0.55
-                            let yOffset = t * 18
-                            let norm = t
-
-                            carouselItemTransformed(
-                                effective: effective,
-                                idx: baseIndex,
-                                cardWidth: size.width,
-                                cardHeight: size.height,
-                                scale: scale,
-                                opacity: opacity,
-                                yOffset: yOffset,
-                                norm: norm
-                            )
-                            .frame(width: size.width, height: size.height)
-                            .background(
-                                Color.clear.preference(
-                                    key: SDStepCarouselCenterPreferenceKey.self,
-                                    value: [SDStepCarouselCenterCandidate(index: baseIndex, norm: norm, carouselID: carouselID)]
-                                )
-                            )
-                        }
-                        .frame(width: size.width, height: size.height)
-                        .id(renderIndex)
+                stepCardBody(for: effective, idx: index)
+                    .frame(width: itemW, height: itemH)
+                    .scaleEffect(rel == 0 ? 1.0 : sideScale)
+                    .rotation3DEffect(
+                        .degrees(Double(rel) * yaw),
+                        axis: (x: 0, y: 1, z: 0),
+                        perspective: tipsOnly ? 0.55 : 0.7
+                    )
+                    .opacity(abs(rel) > 2 ? 0 : (rel == 0 ? 1.0 : sideOpacity))
+                    .offset(x: CGFloat(rel) * stepX)
+                    .zIndex(rel == 0 ? 10 : Double(10 - abs(rel)))
+                    .allowsHitTesting(abs(rel) <= 1)
+                    .onTapGesture {
+                        guard index != currentIndex else { return }
+                        selectIndex(index)
                     }
-                }
-                .frame(minHeight: geo.size.height)
-                .padding(.horizontal, max(0, (geo.size.width - cardWidth) / 2))
-                .padding(.vertical, compactSection ? 4 : Theme.Layout.carouselVPad)
-            }
-            .coordinateSpace(name: "carousel")
-            .id(isOverlay ? "overlayCarousel" : "stepsCarousel")
-            .onAppear {
-                guard !didInitialScroll else { return }
-                guard items.indices.contains(activeIndex) else { return }
-                didInitialScroll = true
-                isProgrammaticScroll = true
-                let targetRenderIndex = middleBlockStart + activeIndex
-                let anchor: UnitPoint = (loop && n > 1) ? .center : (activeIndex == 0 ? .leading : .center)
-                DispatchQueue.main.async {
-                    proxy.scrollTo(targetRenderIndex, anchor: anchor)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        isProgrammaticScroll = false
-                    }
-                }
-            }
-            .onChange(of: items) { _, _ in
-                guard items.indices.contains(activeIndex) else { return }
-                didInitialScroll = true
-                isProgrammaticScroll = true
-                let targetRenderIndex = middleBlockStart + activeIndex
-                DispatchQueue.main.async {
-                    proxy.scrollTo(targetRenderIndex, anchor: .center)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        isProgrammaticScroll = false
-                    }
-                }
-            }
-            .onChange(of: activeIndex) { _, newValue in
-                guard items.indices.contains(newValue) else { return }
-                didInitialScroll = true
-                isProgrammaticScroll = true
-                let targetRenderIndex = middleBlockStart + newValue
-                DispatchQueue.main.async {
-                    proxy.scrollTo(targetRenderIndex, anchor: .center)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        isProgrammaticScroll = false
-                    }
-                }
-            }
-            .onPreferenceChange(SDStepCarouselCenterPreferenceKey.self) { candidates in
-                guard !candidates.isEmpty else { return }
-                guard items.count > 0 else { return }
-                guard didInitialScroll else { return }
-                guard !isProgrammaticScroll else { return }
-
-                let local = candidates.filter { $0.carouselID == carouselID }
-                guard !local.isEmpty else { return }
-
-                if let best = local.min(by: { $0.norm < $1.norm }) {
-                    let clamped = min(max(0, best.index), items.count - 1)
-                    if clamped != activeIndex {
-                        activeIndex = clamped
-                        onActiveIndexChange?(clamped)
-                    }
-                }
             }
         }
+        .frame(height: itemH + (tipsOnly ? 20 : 12))
+        .frame(maxWidth: .infinity)
+        .clipped()
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 24)
+                .onEnded { value in
+                    let dx = value.translation.width
+                    let dy = value.translation.height
+                    guard abs(dx) > 48, abs(dx) > abs(dy) * 1.15 else { return }
+                    if dx < 0 {
+                        goNext()
+                    } else {
+                        goPrev()
+                    }
+                }
+        )
+        .animation(.easeInOut(duration: 0.35), value: currentIndex)
+        .id(isOverlay ? "overlayCarousel" : "stepsCarousel")
+    }
+
+    private func selectIndex(_ index: Int) {
+        guard items.indices.contains(index) else { return }
+        guard index != activeIndex else { return }
+        activeIndex = index
+        onActiveIndexChange?(index)
+        onTap(items[index])
+    }
+
+    private func goNext() {
+        guard !items.isEmpty else { return }
+        if activeIndex + 1 < items.count {
+            let next = activeIndex + 1
+            activeIndex = next
+            onActiveIndexChange?(next)
+            // Не вызываем onNext: родительский handleNextItem тоже делает +1 → прыжок через карточку.
+        } else if loop, items.count > 1 {
+            activeIndex = 0
+            onActiveIndexChange?(0)
+        }
+    }
+
+    private func goPrev() {
+        guard !items.isEmpty else { return }
+        if activeIndex > 0 {
+            let prev = activeIndex - 1
+            activeIndex = prev
+            onActiveIndexChange?(prev)
+        } else if loop, items.count > 1 {
+            let last = items.count - 1
+            activeIndex = last
+            onActiveIndexChange?(last)
+        }
+    }
+
+    private func withFavorite(_ item: SDStepItem, fav: Bool) -> SDStepItem {
+        var c = item
+        c.isFavorite = fav || item.isFavorite
+        return c
     }
 
     private var header: some View {
@@ -1125,12 +1004,7 @@ public struct SDStepCarousel: View {
                 onDoneAt?(idx, effective)
             },
             onNext: {
-                let newIndex = min(max(0, idx + 1), items.count - 1)
-                if activeIndex != newIndex {
-                    activeIndex = newIndex
-                    onActiveIndexChange?(newIndex)
-                }
-                onNext(effective)
+                goNext()
             },
             initialLearned: learned.contains(idx),
             introContent: {
@@ -1151,69 +1025,8 @@ public struct SDStepCarousel: View {
             },
             isReadOnly: !allowLearning,
             isOverlay: isOverlay,
-            isActive: false
+            isActive: idx == activeIndex
         )
-    }
-
-    // Card-style depth transform — как в Course/Lesson: scale, opacity, yOffset (единая айдентика каруселей)
-    @ViewBuilder
-    private func carouselItemTransformed(
-        effective: SDStepItem,
-        idx: Int,
-        cardWidth: CGFloat,
-        cardHeight: CGFloat,
-        scale: CGFloat,
-        opacity: CGFloat,
-        yOffset: CGFloat,
-        norm: CGFloat
-    ) -> some View {
-        let base = AnyView(
-            stepCardBody(for: effective, idx: idx)
-                .frame(width: cardWidth)
-                .frame(minHeight: cardHeight)
-        )
-
-        let kindBaseScale: CGFloat = (effective.visualKind == .tip) ? 0.94 : 1.0
-        let finalScale = scale * kindBaseScale
-
-        base
-            .scaleEffect(finalScale)
-            .opacity(opacity)
-            .offset(y: yOffset)
-            .shadow(
-                color: Color.black.opacity(finalScale >= 1.0 ? 0.26 : 0.10),
-                radius: finalScale >= 1.0 ? 7 : 2,
-                x: 0,
-                y: finalScale >= 1.0 ? 3 : 1
-            )
-            .zIndex(Double(1.0 - norm))
-            .contentShape(Rectangle())
-    }
-
-    @ViewBuilder
-    private func carouselCustomTransformed(
-        view: AnyView,
-        cardWidth: CGFloat,
-        cardHeight: CGFloat,
-        scale: CGFloat,
-        opacity: CGFloat,
-        yOffset: CGFloat,
-        norm: CGFloat
-    ) -> some View {
-        view
-            .frame(width: cardWidth)
-            .frame(minHeight: cardHeight)
-            .scaleEffect(scale)
-            .opacity(opacity)
-            .offset(y: yOffset)
-            .shadow(
-                color: Color.black.opacity(scale >= 1.0 ? 0.26 : 0.10),
-                radius: scale >= 1.0 ? 7 : 2,
-                x: 0,
-                y: scale >= 1.0 ? 3 : 1
-            )
-            .zIndex(Double(1.0 - norm))
-            .contentShape(Rectangle())
     }
 }
 
@@ -1252,6 +1065,7 @@ public struct SDHintBubble: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 36, height: 36)
+                .taikaMascotChrome()
             Text(text)
                 .font(PD.FontToken.body(16, weight: .regular))
                 .foregroundColor(PD.ColorToken.text)
@@ -1392,19 +1206,21 @@ public struct SDStepProgress: View {
     public var favorites: Set<Int>
     public var tipIndices: Set<Int>
     public var onTap: ((Int) -> Void)?
+    public var onReset: (() -> Void)?
 
     public init(total: Int,
                 activeIndex: Int? = nil,
                 learned: Set<Int> = [],
                 favorites: Set<Int> = [],
                 tipIndices: Set<Int> = [],
-                onTap: ((Int) -> Void)? = nil) {
+                onTap: ((Int) -> Void)? = nil,
+                onReset: (() -> Void)? = nil) {
         self.total = total
         self.learned = learned
         self.favorites = favorites
         self.tipIndices = tipIndices
         self.onTap = onTap
-        // Clamp activeIndex into 0..<total if provided; allow nil (no highlight)
+        self.onReset = onReset
         if let idx = activeIndex, total > 0 {
             self.activeIndex = min(max(0, idx), total - 1)
         } else {
@@ -1413,29 +1229,41 @@ public struct SDStepProgress: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("ПРОГРЕСС")
-                .font(PD.FontToken.caption(12, weight: .semibold))
-                .foregroundColor(PD.ColorToken.textSecondary)
-                .padding(.horizontal, PD.Spacing.screen)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 10) {
+                TaikaSectionLabel(title: "Прогресс")
+                Spacer(minLength: 8)
+            }
 
-            // Decide: center bar (no scroll) if it fits; otherwise use scrollable bar
-            GeometryReader { geo in
-                let segmentWidth: CGFloat = 22
-                let spacing: CGFloat = 6
-                let horizontalPadding = PD.Spacing.screen * 2
-                let perRow = 10
-                let visibleInRow = min(total, perRow)
-                let needScroll = false // Always render as centered multi-row, no horizontal scroll
+            HStack(alignment: .center, spacing: 10) {
+                GeometryReader { geo in
+                    let segmentWidth: CGFloat = 22
+                    let spacing: CGFloat = 6
+                    let _ = geo.size.width
+                    let needScroll = false
 
-                if needScroll {
-                    scrollableBar(segmentWidth: segmentWidth, spacing: spacing)
-                } else {
-                    centeredBar(segmentWidth: segmentWidth, spacing: spacing)
+                    if needScroll {
+                        scrollableBar(segmentWidth: segmentWidth, spacing: spacing)
+                    } else {
+                        centeredBar(segmentWidth: segmentWidth, spacing: spacing)
+                    }
+                }
+                .frame(height: 36 + (total > 10 ? CGFloat((total - 1) / 10) * (36 + 6) : 0))
+
+                if let onReset {
+                    Button(action: onReset) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Сбросить прогресс урока")
                 }
             }
-            .frame(height: 36 + (total > 10 ? CGFloat((total - 1) / 10) * (36 + 6) : 0))
         }
+        .padding(.horizontal, PD.Spacing.screen)
     }
 
     // Helper: renders a single segment capsule for the progress bar
@@ -1545,17 +1373,7 @@ struct SDStep_Previews: PreviewProvider {
                 Spacer(minLength: PD.Spacing.block * 2)
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 #endif
-
-
-    // Helper to combine isFavorite state for effective display
-    private func withFavorite(_ item: SDStepItem, fav: Bool) -> SDStepItem {
-        var c = item
-        c.isFavorite = fav || item.isFavorite
-        return c
-    }
-
 

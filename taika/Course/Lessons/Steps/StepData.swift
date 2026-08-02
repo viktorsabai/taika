@@ -83,6 +83,9 @@ final class StepData {
     // Convenience: items for lesson, already sorted by order
     func items(for lessonId: String) -> [StepItem] {
         preload()
+        if lessonId == PersonalPackManager.lessonId {
+            return PersonalPackManager.stepItemsFromStorage()
+        }
         return stepsetsByLessonId[lessonId]?.items.sorted(by: { $0.order < $1.order }) ?? []
     }
 
@@ -137,6 +140,9 @@ final class StepData {
     // Convenience: Taika FM hints for lesson
     func hints(for lessonId: String) -> [String] {
         preload()
+        if lessonId == PersonalPackManager.lessonId {
+            return PersonalPackManager.hintsFromStorage()
+        }
         return stepsetsByLessonId[lessonId]?.hints ?? []
     }
 
@@ -177,30 +183,30 @@ final class StepData {
     public func speakerResolved(courseId: String, lessonId: String, index: Int) -> SpeakerResolved? {
         preload()
 
-        // steps.json uses `order` as the canonical key. callers may pass either 0-based or 1-based indexes.
-        // 1) try direct match (treat as canonical order)
-        // 2) if not found, try (index + 1) (treat input as 0-based)
-        guard let it = (resolveItem(lessonId: lessonId, order: index) ?? resolveItem(lessonId: lessonId, order: index + 1)) else {
-            return nil
-        }
+        // steps.json uses `order` as the canonical key. Callers may pass order or 0-based UI index.
+        // Skip tips/dialogs: if the first match isn't speakable, keep probing +1 (up to a small window).
+        for offset in 0..<4 {
+            let candidate = index + offset
+            guard let it = resolveItem(lessonId: lessonId, order: candidate)
+                    ?? (offset == 0 ? resolveItem(lessonId: lessonId, order: index + 1) : nil)
+            else { continue }
 
-        switch it.kind {
-        case .word, .phrase, .casual:
-            let face = face(for: it)
-            // Показываем все word/phrase/casual (кроме лайфхаков); пустые ru/thai допустимы — в UI покажем плейсхолдер.
-
-            // IMPORTANT: store the canonical steps.json order, not the incoming index
-            return SpeakerResolved(
-                courseId: courseId,
-                lessonId: lessonId,
-                index: it.order,
-                kind: it.kind,
-                face: face,
-                audioKey: it.audio
-            )
-        default:
-            return nil
+            switch it.kind {
+            case .word, .phrase, .casual:
+                let face = face(for: it)
+                return SpeakerResolved(
+                    courseId: courseId,
+                    lessonId: lessonId,
+                    index: it.order,
+                    kind: it.kind,
+                    face: face,
+                    audioKey: it.audio
+                )
+            default:
+                continue
+            }
         }
+        return nil
     }
 
     /// Parse a learnedSteps key from UserSession snapshot. Expected format: "<courseId>|<lessonId>".
@@ -646,6 +652,35 @@ struct StepItem: Decodable {
     // for dialog (optional support – won’t break if present)
     let scene: String?
     let lines: [DialogLine]?
+
+    /// Явная связка для игры «поток диалога»: `order` карточки-ответа после реплики-вопроса.
+    let conversation_next_order: Int?
+    /// Если true, эта карточка считается репликой-сигналом к ответу (без «?» в `ru`).
+    let conversation_is_prompt: Bool?
+    /// Grand Dialogue: реплика — вопрос/ход NPC, на который нужен ответ пользователя.
+    let is_question: Bool?
+    /// Grand Dialogue: эта карточка — ответ пользователя на реплику с `order == reply_to` (в том же уроке).
+    let reply_to: Int?
+}
+
+extension StepItem {
+    /// Карточка для Audio Recall из пула избранного (без steps.json); те же поля, что в `LearnedTriple` для матча/викторины.
+    init(favoritesAudioRecallOrder order: Int, ru: String, thai: String?, phonetic: String) {
+        self.order = order
+        self.kind = .phrase
+        self.ru = ru
+        self.thai = thai
+        self.phonetic = phonetic
+        self.audio = nil
+        self.tip = nil
+        self.text = nil
+        self.scene = nil
+        self.lines = nil
+        self.conversation_next_order = nil
+        self.conversation_is_prompt = nil
+        self.is_question = nil
+        self.reply_to = nil
+    }
 }
 
 struct DialogLine: Decodable {

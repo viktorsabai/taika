@@ -1,21 +1,22 @@
 
 import SwiftUI
+import UIKit
 
 // Temporary Theme shim for preview (maps to app tokens later)
 public enum Theme {
     public enum Colors {
-        public static let backgroundPrimary   = Color(red: 0.06, green: 0.06, blue: 0.07)
-        public static let backgroundSecondary = Color(red: 0.09, green: 0.09, blue: 0.10)
-        public static let card                = Color(red: 0.12, green: 0.12, blue: 0.13)
-        public static let accent              = Color(red: 0.96, green: 0.48, blue: 0.82) // TODO: bind to design token
-        public static let textPrimary         = Color(red: 0.93, green: 0.96, blue: 1.00) // cool off‑white for richer ink on dark bg
+        public static var backgroundPrimary: Color { TaikaDynamicColors.background }
+        public static var backgroundSecondary: Color { TaikaDynamicColors.backgroundSecondary }
+        public static var card: Color { TaikaDynamicColors.card }
+        public static var accent: Color { TaikaDynamicColors.accent }
+        public static var textPrimary: Color { TaikaDynamicColors.text }
     }
     // unified layout rhythm for screens (root views) — use instead of magic numbers
     public enum Layout {
         /// horizontal page padding for root screens
         public static let pageHorizontal: CGFloat = 16
         /// vertical gap between global header and the first section on root screens
-        public static let pageTopAfterHeader: CGFloat = 55
+        public static let pageTopAfterHeader: CGFloat = rootHeaderClearance
         public static let pageTopAfterBackHeader: CGFloat = 55
         /// default vertical gap between major sections
         public static let sectionGap: CGFloat = 16
@@ -24,16 +25,21 @@ public enum Theme {
         public static let headerToSection: CGFloat = 24
         /// inner padding for section containers (cards/panels)
         public static let sectionInner: CGFloat = 16
-        /// bottom safe gap (keeps content above bottom toolbar)
-        public static let pageBottomSafeGap: CGFloat = 44
+        /// bottom safe gap (keeps content above floating bottom toolbar)
+        public static let pageBottomSafeGap: CGFloat = bottomToolbarHeight
         /// legacy alias used by some screens
         public static let pageBottom: CGFloat = pageBottomSafeGap
 
         // MARK: - global bottom insets (avoid magic numbers in views)
         /// minimum bottom padding for scroll content
         public static let bottomInsetMin: CGFloat = 16
-        /// reserved height for the bottom tab bar (toolbar)
-        public static let bottomToolbarHeight: CGFloat = 56
+        /// top gutter under floating glass header (scroll content; header is overlay).
+        /// Однострочный хедер ≈ 56pt + небольшой зазор до заголовка страницы.
+        public static let rootHeaderClearance: CGFloat = 60
+        /// Двухстрочный игровой хедер (таймер + название урока).
+        public static let rootHeaderClearanceGame: CGFloat = 78
+        /// reserved height for the floating tab bar (capsule + bottom float)
+        public static let bottomToolbarHeight: CGFloat = 68
 
         // MARK: - paywall layout (glass)
         public static let paywallHPad: CGFloat = 16
@@ -66,10 +72,11 @@ public enum Theme {
         /// influence width factor for norm (0.6 = wider zone → stronger effect)
         public static let carouselDepthNormWidthFactor: CGFloat = 0.60
         public static let carouselDepthScaleSide: CGFloat = 0.85
-        public static let carouselDepthScaleCenter: CGFloat = 1.06
+        /// Согласовано с `CDLessonCarousel`: центр не > 1.0, иначе карта вылезает из фиксированного слота.
+        public static let carouselDepthScaleCenter: CGFloat = 1.0
         public static let carouselDepthOpacitySide: CGFloat = 0.45
         public static let carouselDepthOpacityCenter: CGFloat = 1.00
-        public static let carouselDepthYOffsetMax: CGFloat = 10
+        public static let carouselDepthYOffsetMax: CGFloat = 0
 
         // MARK: - intra-section (course ds)
         public static let rowV: CGFloat = 10
@@ -132,12 +139,28 @@ public enum Theme {
         public static let tapMinCard: CGFloat = 48
     }
 
-    /// EPIC 5: unified stroke tokens for buttons/chips — no heavy outlines; subtle only.
+    /// EPIC 5: unified stroke tokens — readable outlines for blank-brain affordance.
     public enum Strokes {
-        /// Light outline for icon buttons and chips (reference: Lessons heartBadge 0.12).
-        public static let strokeSubtle = Color.white.opacity(0.12)
-        /// Line width for subtle strokes (buttons, chips).
+        /// Outline for chips / icon buttons — adapts to light/dark.
+        public static var strokeSubtle: Color {
+            Color(uiColor: UIColor { tc in
+                switch tc.userInterfaceStyle {
+                case .dark: return UIColor(white: 1, alpha: 0.18)
+                default: return UIColor(white: 0, alpha: 0.22)
+                }
+            })
+        }
+        /// Stronger outline for primary interactive cards / CTA frames.
+        public static var strokeStrong: Color {
+            Color(uiColor: UIColor { tc in
+                switch tc.userInterfaceStyle {
+                case .dark: return UIColor(white: 1, alpha: 0.26)
+                default: return UIColor(white: 0, alpha: 0.28)
+                }
+            })
+        }
         public static let strokeLineWidth: CGFloat = 1
+        public static let strokeCardLineWidth: CGFloat = 1.25
     }
 
     /// EPIC 5: text block rules — avoid single-line ellipsis for user content; allow wrap + scale.
@@ -152,21 +175,25 @@ public enum Theme {
         public static let bodyMinimumScale: CGFloat = 0.80
     }
 
-    /// EPIC 5: step cards — фиксированная высота 290pt, текст за счёт вёрстки внутри (шрифты + лимиты строк).
+    /// EPIC 5: step cards — квадрат ~268pt; типографика и лимиты строк под узкий контент + нижний action bar.
     public enum StepCardText {
-        public static let titleLines: Int = 4
+        public static let titleLines: Int = 3
         public static let phoneticLines: Int = 3
-        public static let thaiLines: Int = 4
-        public static let lifehackLines: Int = 8
-        public static let titleScale: CGFloat = 0.72
-        public static let phoneticScale: CGFloat = 0.72
-        public static let thaiScale: CGFloat = 0.78
-        public static let lifehackScale: CGFloat = 0.76
-        public static let blockSpacing: CGFloat = 8
-        /// Размеры шрифтов под высоту 290pt (без увеличения карточки).
-        public static let titleFontSize: CGFloat = 21
-        public static let phoneticFontSize: CGFloat = 15
-        public static let thaiFontSize: CGFloat = 14
+        public static let thaiLines: Int = 3
+        public static let lifehackLines: Int = 16
+        public static let titleScale: CGFloat = 0.70
+        public static let phoneticScale: CGFloat = 0.70
+        public static let thaiScale: CGFloat = 0.76
+        public static let lifehackScale: CGFloat = 0.88
+        public static let blockSpacing: CGFloat = 10
+        public static let titleFontSize: CGFloat = 19
+        public static let lifehackTitleFontSize: CGFloat = 24
+        public static let phoneticFontSize: CGFloat = 14
+        public static let thaiFontSize: CGFloat = 13
+        /// Тело лайфхака — крупно, как презентация, не как footnote.
+        public static let lifehackBodyFontSize: CGFloat = 18
+        public static let lifehackTipFontSize: CGFloat = 16
+        public static let lifehackLineSpacing: CGFloat = 7
     }
 
     public enum Spacing {
@@ -244,31 +271,63 @@ public enum Theme {
     }
 
     public enum Surfaces {
-        /// Unified card surface: glassy, layered look
+        /// Unified card surface: заливка + читаемый контур + лёгкая тень.
         public static func card<S: Shape>(_ shape: S) -> some View {
             shape
-                .fill(Color.clear)
-                .background(
-                    .ultraThinMaterial
-                        .opacity(0.72)
-                )
-                .clipShape(shape)
-                .overlay(
+                .fill(TaikaDynamicColors.card)
+                .overlay(shape.stroke(TaikaDynamicColors.cardBorder, lineWidth: Theme.Strokes.strokeCardLineWidth))
+                .shadow(color: TaikaDynamicColors.cardShadowAmbient.opacity(0.78), radius: 8, x: 0, y: 3)
+                .shadow(color: TaikaDynamicColors.cardShadowTight.opacity(0.85), radius: 1.4, x: 0, y: 1)
+        }
+
+        /// Панель-секция (статы / ритм): мягкая тень без обводки — чище для blank-brain.
+        public static func panel<S: Shape>(_ shape: S) -> some View {
+            shape
+                .fill(TaikaDynamicColors.card.opacity(0.96))
+                .shadow(color: TaikaDynamicColors.cardShadowAmbient.opacity(0.45), radius: 5, x: 0, y: 2)
+        }
+
+        /// Жидкое глянцевое чёрное стекло: blur есть, серой «плёнки» нет.
+        /// Канон оверлеев / умного спикера / разбора / soft-wall / инфо-модалок.
+        public static func blackGlass<S: Shape>(_ shape: S) -> some View {
+            ZStack {
+                shape.fill(.ultraThinMaterial)
+                shape.fill(Color.black.opacity(0.78))
+                shape.fill(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.10),
-                            Color.white.opacity(0.02),
-                            .clear
+                            Color.white.opacity(0.16),
+                            Color.white.opacity(0.04),
+                            Color.clear
                         ],
                         startPoint: .top,
-                        endPoint: .bottom
+                        endPoint: UnitPoint(x: 0.5, y: 0.55)
                     )
-                    .blur(radius: 28)
-                    .mask(shape)
                 )
-                .overlay(
-                    shape.stroke(Color.white.opacity(0.05), lineWidth: 1)
+                .blendMode(.plusLighter)
+                shape.stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.28),
+                            Color.white.opacity(0.08),
+                            Color.white.opacity(0.14)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: Theme.Strokes.strokeLineWidth
                 )
+            }
+            .compositingGroup()
+            .shadow(color: Color.black.opacity(0.45), radius: 28, y: 16)
+        }
+
+        /// Backdrop модалок: тёмный blur без серого тумана.
+        public static var blackGlassScrim: some View {
+            ZStack {
+                Rectangle().fill(.ultraThinMaterial)
+                Color.black.opacity(0.58)
+            }
         }
     }
 
@@ -292,11 +351,92 @@ public enum Theme {
                 .contrast(1.04)
         }
     }
+
+    /// Белый маскот на «молочном» фоне: лёгкая глубина без перекраски ассета.
+    public struct TaikaMascotChromeModifier: ViewModifier {
+        @Environment(\.colorScheme) private var colorScheme
+        public init() {}
+        public func body(content: Content) -> some View {
+            let light = colorScheme == .light
+            content
+                .compositingGroup()
+                .shadow(color: Color.black.opacity(light ? 0.13 : 0.42), radius: light ? 11 : 8, x: 0, y: light ? 5 : 4)
+                .shadow(color: Color.black.opacity(light ? 0.05 : 0.22), radius: 2, x: 0, y: 1)
+        }
+    }
+}
+
+extension View {
+    public func taikaMascotChrome() -> some View {
+        modifier(Theme.TaikaMascotChromeModifier())
+    }
+
+    /// Канон всплытий: жидкое чёрное стекло вместо серого material.
+    public func taikaBlackGlassBackground(cornerRadius: CGFloat = 28) -> some View {
+        background {
+            Theme.Surfaces.blackGlass(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            )
+        }
+    }
+}
+
+/// Brand phonetic: accent only on stress / tone arrows (не вся строка).
+enum TaikaPhoneticText {
+    private static let toneArrows: Set<Character> = ["→", "↓", "↘", "↑", "↗"]
+    private static let accentScalars: Set<UnicodeScalar> = [
+        UnicodeScalar(0x0301)!, UnicodeScalar(0x00B4)!, UnicodeScalar(0x02CA)!,
+        UnicodeScalar(0x0300)!, UnicodeScalar(0x02CB)!, UnicodeScalar(0x0302)!,
+        UnicodeScalar(0x02C6)!, UnicodeScalar(0x0306)!, UnicodeScalar(0x02D8)!,
+        UnicodeScalar(0x030C)!, UnicodeScalar(0x02C7)!
+    ]
+
+    static func styled(
+        _ raw: String,
+        font: Font = .system(size: 15, weight: .semibold),
+        baseColor: Color = PD.ColorToken.text
+    ) -> Text {
+        var t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        for arrow in toneArrows {
+            t = t.replacingOccurrences(of: String(arrow) + "-", with: String(arrow) + " ")
+        }
+        guard !t.isEmpty else { return Text("").font(font) }
+
+        let separators: Set<Character> = [" ", "-", "·"]
+        var result = Text("")
+        var chunk = ""
+
+        func flush() {
+            guard !chunk.isEmpty else { return }
+            let hasAccent = chunk.unicodeScalars.contains { accentScalars.contains($0) }
+            let piece = Text(chunk).font(font)
+            if hasAccent {
+                result = result + piece.foregroundStyle(ThemeManager.shared.currentAccentFill)
+            } else {
+                result = result + piece.foregroundStyle(baseColor)
+            }
+            chunk = ""
+        }
+
+        for ch in t {
+            if toneArrows.contains(ch) {
+                flush()
+                result = result + Text(String(ch)).font(font).foregroundStyle(ThemeManager.shared.currentAccentFill)
+            } else if separators.contains(ch) {
+                flush()
+                result = result + Text(String(ch)).font(font).foregroundStyle(baseColor)
+            } else {
+                chunk.append(ch)
+            }
+        }
+        flush()
+        return result
+    }
 }
 
 struct ThemePreview: View {
     var body: some View {
-        ScrollView(showsIndicators: false) {
+        TaikaRootVerticalScroll {
             VStack(spacing: 24) {
                 // MARK: — Header
                 VStack(alignment: .leading, spacing: 6) {
@@ -651,6 +791,123 @@ extension View {
         modifier(Theme.AccentInlineText())
     }
 }
+
+// MARK: - Unified Section/Subsection text style
+extension Text {
+    /// Primary section label style (e.g. "ПОДБОРКА ДНЯ", "УРОКИ").
+    func taikaSectionTitleStyle() -> some View {
+        self
+            .font(PD.FontToken.caption(12, weight: .semibold))
+            .kerning(0.6)
+            .foregroundStyle(PD.ColorToken.textSecondary)
+            .textCase(.uppercase)
+    }
+
+    /// Secondary subsection label style (e.g. "ВСЕ КУРСЫ", lesson/course context).
+    func taikaSubsectionStyle(accent: Bool = true) -> some View {
+        self
+            .font(PD.FontToken.caption(11, weight: .semibold))
+            .kerning(0.5)
+            .foregroundStyle(accent ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary))
+            .textCase(.uppercase)
+    }
+}
+
+/// Заголовок секции с accent-pip слева — «это секция», не просто серый caps в пустоте.
+struct TaikaSectionLabel: View {
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Capsule(style: .continuous)
+                .fill(ThemeManager.shared.currentAccentFill)
+                .frame(width: 3, height: 12)
+            Text(title)
+                .taikaSectionTitleStyle()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
+    }
+}
+
+/// Ряд секции: pip+title слева, trailing справа (как в бланковых приложениях).
+struct TaikaSectionHeaderRow<Trailing: View>: View {
+    let title: String
+    @ViewBuilder var trailing: () -> Trailing
+
+    init(_ title: String) where Trailing == EmptyView {
+        self.title = title
+        self.trailing = { EmptyView() }
+    }
+
+    init(_ title: String, @ViewBuilder trailing: @escaping () -> Trailing) {
+        self.title = title
+        self.trailing = trailing
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            TaikaSectionLabel(title: title)
+            Spacer(minLength: 8)
+            trailing()
+        }
+    }
+}
+
+/// Крупный заголовок корневой вкладки; опционально — интерактивный фильтр справа (одна строка).
+struct TaikaScreenPageTitle<Trailing: View>: View {
+    let title: String
+    @ViewBuilder var trailing: () -> Trailing
+
+    init(title: String) where Trailing == EmptyView {
+        self.title = title
+        self.trailing = { EmptyView() }
+    }
+
+    init(title: String, @ViewBuilder trailing: @escaping () -> Trailing) {
+        self.title = title
+        self.trailing = trailing
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(title)
+                .font(CD.FontToken.title(28, weight: .bold))
+                .foregroundStyle(CD.ColorToken.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            trailing()
+        }
+        .padding(.horizontal, CD.Spacing.screen)
+    }
+}
+
+/// Иконка пустого экрана: контурный SF Symbol + акцент + мягкий pulse.
+struct TaikaEmptyStateIcon: View {
+    let systemName: String
+    var size: CGFloat = 30
+
+    @State private var pulse = false
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: size, weight: .semibold))
+            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            .symbolRenderingMode(.hierarchical)
+            .scaleEffect(pulse ? 1.08 : 1.0)
+            .opacity(pulse ? 1.0 : 0.82)
+            .symbolEffect(.pulse, options: .repeating.speed(0.55), isActive: true)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 1.15).repeatForever(autoreverses: true)) {
+                    pulse = true
+                }
+            }
+            .accessibilityHidden(true)
+    }
+}
+
 private struct GradientSwatch: View {
     let name: String
     let desc: String

@@ -51,6 +51,7 @@ public final class AuthService: NSObject, ObservableObject {
 
     private func updateState() {
         let user = Auth.auth().currentUser
+        let previousID = currentUserID
         currentUserID = user?.uid
         isLoggedIn = user != nil
         if user != nil {
@@ -59,6 +60,11 @@ public final class AuthService: NSObject, ObservableObject {
             }
         } else {
             displayName = nil
+        }
+        if previousID != currentUserID {
+            Task {
+                await ProManager.shared.syncRevenueCatIdentity(userId: currentUserID)
+            }
         }
     }
 

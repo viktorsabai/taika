@@ -80,6 +80,9 @@ final class SpeakerAPI {
 
     private init() {}
 
+    /// When true, `SpeakerManager` may call `assess` before on-device ASR (optional pronunciation pipeline).
+    var isConfigured: Bool { provider != nil }
+
     func configure(provider: SpeakerAssessmentProviding) {
         self.provider = provider
     }

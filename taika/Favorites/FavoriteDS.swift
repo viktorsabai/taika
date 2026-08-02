@@ -8,29 +8,22 @@ import UIKit
 import UniformTypeIdentifiers
 
 
-#if canImport(AppDS)
-import AppDS
-public typealias FDAppFilterItem = AppFilterItem
-public typealias FDAppFiltersBar = AppFiltersBar
-#else
-// Fallback (when AppDS module is not linked in the current target)
+/// Favorites filter chip row — AppDS identity (`AppFilterChip`).
 public struct FDAppFilterItem: Identifiable {
     public let id: String
     public let title: String
-    public let systemImage: String
     public let isSelected: Bool
     public let onTap: () -> Void
 
     public init(
         id: String,
         title: String,
-        systemImage: String,
+        systemImage: String = "",
         isSelected: Bool,
         onTap: @escaping () -> Void
     ) {
         self.id = id
         self.title = title
-        self.systemImage = systemImage
         self.isSelected = isSelected
         self.onTap = onTap
     }
@@ -38,49 +31,32 @@ public struct FDAppFilterItem: Identifiable {
 
 public struct FDAppFiltersBar: View {
     public let items: [FDAppFilterItem]
+    public var scale: AppFilterScale = .s
 
-    public init(items: [FDAppFilterItem]) {
+    public init(items: [FDAppFilterItem], scale: AppFilterScale = .s) {
         self.items = items
+        self.scale = scale
     }
 
     public var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+        TaikaCarouselScroll {
+            HStack(spacing: 10) {
                 ForEach(items) { item in
-                    Button(action: {
+                    AppFilterChip(
+                        title: item.title,
+                        isActive: item.isSelected,
+                        scale: scale
+                    ) {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         withAnimation(.easeInOut(duration: 0.15)) {
                             item.onTap()
                         }
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: item.systemImage)
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(item.title)
-                                .font(.subheadline.weight(.semibold))
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule().fill(
-                                item.isSelected
-                                ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                                : AnyShapeStyle(Color.white.opacity(0.10))
-                            )
-                        )
-                        .overlay(
-                            Capsule().stroke(item.isSelected ? Color.clear : Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                        )
-                        .foregroundStyle(item.isSelected ? Color.black.opacity(0.9) : Color.white.opacity(0.85))
                     }
-                    .buttonStyle(.plain)
-                    .contentShape(Capsule())
                 }
             }
         }
     }
 }
-#endif
 
 #if canImport(AVFoundation)
 import AVFoundation
@@ -128,9 +104,7 @@ struct FDSectionHeader: View {
     let title: String
     var body: some View {
         Text(title.uppercased())
-            .font(.caption.weight(.semibold))
-            .kerning(0.8)
-            .foregroundStyle(.secondary)
+            .taikaSectionTitleStyle()
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, PD.Spacing.screen)
     }
@@ -143,27 +117,27 @@ struct FDSectionHeaderBar: View {
     var body: some View {
         HStack(alignment: .center) {
             Text(title.uppercased())
-                .font(.caption.weight(.semibold))
-                .kerning(0.8)
-                .foregroundStyle(.secondary)
+                .taikaSectionTitleStyle()
             Spacer()
-            Button(action: {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                onShowAll?()
-            }) {
-                HStack(spacing: 6) {
-                    Text(count != nil ? "Показать все (\(count!))" : "Показать все")
-                        .font(.caption2.weight(.semibold))
-                    Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
+            if let onShowAll {
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onShowAll()
+                }) {
+                    HStack(spacing: 6) {
+                        Text(count != nil ? "Показать все (\(count!))" : "Показать все")
+                            .font(.caption2.weight(.semibold))
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    // цвет текста — фирменный градиент, без подложки
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
                 }
-                .padding(.horizontal, 4)
-                .padding(.vertical, 2)
-                // цвет текста — фирменный градиент, без подложки
-                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                .buttonStyle(.plain) // без системной подложки
+                .contentShape(Capsule()) // большая зона тапа
             }
-            .buttonStyle(.plain) // без системной подложки
-            .contentShape(Capsule()) // большая зона тапа
         }
         .padding(.horizontal, PD.Spacing.screen)
     }
@@ -173,14 +147,7 @@ struct FDChipPill: View {
     let title: String
     let isOn: Bool
     var body: some View {
-        Text(title)
-            .font(.subheadline.weight(.semibold))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                Capsule().fill(isOn ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(Color.white.opacity(0.10)))
-            )
-            .foregroundStyle(isOn ? Color.black.opacity(0.9) : Color.white.opacity(0.85))
+        AppFilterChip(title: title, isActive: isOn, scale: .xs)
     }
 }
 
@@ -190,36 +157,17 @@ struct FDFiltersBar: View {
     @Binding var selected: FDK
     var size: FDChipSize = .regular
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+        TaikaCarouselScroll {
+            HStack(spacing: 10) {
                 ForEach(FDK.allCases) { kind in
-                    Button(action: {
+                    AppFilterChip(
+                        title: kind.rawValue,
+                        isActive: kind == selected,
+                        scale: size == .large ? .s : .xs
+                    ) {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         withAnimation(.easeInOut(duration: 0.15)) { selected = kind }
-                    }) {
-                        let hPad: CGFloat = (size == .large) ? 16 : 12
-                        let vPad: CGFloat = (size == .large) ? 8 : 6
-                        let iconSize: CGFloat = (size == .large) ? 14 : 12
-                        let titleFont: Font = (size == .large) ? .callout.weight(.semibold) : .subheadline.weight(.semibold)
-
-                        HStack(spacing: 6) {
-                            Image(systemName: kind.icon)
-                                .font(.system(size: iconSize, weight: .semibold))
-                            Text(kind.rawValue)
-                                .font(titleFont)
-                        }
-                        .padding(.horizontal, hPad)
-                        .padding(.vertical, vPad)
-                        .background(
-                            Capsule().fill(kind == selected ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(Color.white.opacity(0.10)))
-                        )
-                        .overlay(
-                            Capsule().stroke(kind == selected ? Color.clear : Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                        )
-                        .foregroundStyle(kind == selected ? Color.black.opacity(0.9) : Color.white.opacity(0.85))
                     }
-                    .buttonStyle(.plain)
-                    .contentShape(Capsule())
                 }
             }
             .padding(.horizontal, PD.Spacing.screen)
@@ -236,7 +184,7 @@ struct FDSearchField: View {
                 .textInputAutocapitalization(.never)
         }
         .font(.body)
-        .foregroundStyle(.primary)
+        .foregroundStyle(PD.ColorToken.text)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(
@@ -244,21 +192,7 @@ struct FDSearchField: View {
                 .fill(PD.ColorToken.card)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.06),
-                                    .clear,
-                                    .black.opacity(0.10)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                        .stroke(PD.ColorToken.stroke, lineWidth: 1)
                 )
         )
         .padding(.horizontal, PD.Spacing.screen)
@@ -276,20 +210,11 @@ struct FDFavRow: View {
                     .fill(PD.ColorToken.card)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.06), .clear, .black.opacity(0.10)],
-                                    startPoint: .top, endPoint: .bottom
-                                )
-                            )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                            .stroke(PD.ColorToken.stroke, lineWidth: 1)
                     )
                 Image(systemName: item.kind.icon)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(PD.ColorToken.textSecondary)
             }
             .frame(width: 40, height: 40)
 
@@ -297,7 +222,7 @@ struct FDFavRow: View {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(item.title)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(PD.ColorToken.text)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                     if item.isPro {
@@ -305,119 +230,103 @@ struct FDFavRow: View {
                             .font(.caption2.weight(.black))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
-                            .background(PD.ColorToken.accent)
-                            .foregroundStyle(Color.white)
+                            .background(ThemeManager.shared.currentAccentFill)
+                            .foregroundStyle(PD.ColorToken.background)
                             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
                 }
                 Text(item.subtitle)
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(PD.ColorToken.textSecondary)
                     .lineLimit(2)
                 if !item.meta.isEmpty {
                     Text(item.meta)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
                 }
             }
             Spacer(minLength: 8)
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(PD.ColorToken.textSecondary)
         }
         .padding(.horizontal, PD.Spacing.screen)
         .padding(.vertical, 12)
-        .background(
-            round.fill(PD.ColorToken.card)
-                .overlay(
-                    round.fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.06), .clear, .black.opacity(0.10)],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    )
-                )
-        )
-        .overlay(round.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+        .background(round.fill(PD.ColorToken.card))
+        .overlay(round.stroke(PD.ColorToken.stroke, lineWidth: 1))
     }
 }
 
 
+fileprivate struct FDMiniStepBalancedChrome<Leading: View, Trailing: View>: View {
+    let leading: Leading
+    let trailing: Trailing
+    let sideSlotWidth: CGFloat
+
+    init(sideSlotWidth: CGFloat = 92, @ViewBuilder leading: () -> Leading, @ViewBuilder trailing: () -> Trailing) {
+        self.sideSlotWidth = sideSlotWidth
+        self.leading = leading()
+        self.trailing = trailing()
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            leading.frame(width: sideSlotWidth, alignment: .leading)
+            Spacer(minLength: 0)
+            trailing.frame(width: sideSlotWidth, alignment: .trailing)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
 // MARK: - Mini card for favorites (compact)
+/// Тот же атом, что учебная карточка в шаге (`StepWordCard`), но в mini-формате ленты избранного.
 struct FDMiniCardV: View {
     let item: FDCardDTO
+    var layoutWidth: CGFloat = 268
+    var layoutHeight: CGFloat = 196
     var onSpeak: (() -> Void)? = nil
     var onOpen: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
     @Binding var isEditing: Bool
     @State private var isJiggling = false
+    @State private var isLearnedState = false
     private var cleanMeta: String {
         if item.meta.hasPrefix("card:") { return String(item.meta.dropFirst("card:".count)) }
         return item.meta
     }
 
-    private var topRow: some View {
-        HStack(alignment: .center) {
-            Text("taikA")
-                .font(Font.custom("ONMARK Trial", size: 14))
-                .foregroundStyle(.secondary)
-            Spacer(minLength: 8)
-        }
+    /// В избранном для учебных карточек полезнее показывать контекст — название урока.
+    private var stepLabel: String {
+        let t = item.lessonTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return "урок" }
+        // Keep chip compact in mini-carousel to avoid layout drifting on long lesson names.
+        let maxLen = 16
+        if t.count <= maxLen { return t }
+        return String(t.prefix(maxLen - 1)) + "…"
     }
 
-    private var centerBlock: some View {
-        VStack(alignment: .center, spacing: 4) {
-            Text(item.title)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity)
-
-            if !cleanMeta.isEmpty {
-                Text(cleanMeta)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
-            }
-
-            Text(item.subtitle)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity)
-        }
-        .frame(maxWidth: .infinity)
+    private var miniStepSize: CGSize {
+        CGSize(width: layoutWidth, height: layoutHeight)
     }
 
-    private var bottomBar: some View {
-        HStack {
-            AppCardIconButton(kind: .listen, forceAccent: true, onTap: { onSpeak?() })
-            Spacer(minLength: 10)
-            if !item.lessonTitle.isEmpty {
-                HStack(spacing: 5) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text(item.lessonTitle)
-                        .font(.caption2.weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .truncationMode(.tail)
-                }
-                .foregroundStyle(Color.black.opacity(0.9))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(
-                    Capsule().fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                )
-                .overlay(Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
-                .allowsHitTesting(false)
-            }
+    private func refreshLearnedState() {
+        // Prefer canonical resolver: it handles card:/step:/legacy ids and idx normalization.
+        if let rr = StepManager.shared.resolveRoute(fromFavoriteId: item.sourceId) {
+            isLearnedState = ProgressManager.shared.learnedSet(courseId: rr.courseId, lessonId: rr.lessonId).contains(rr.stepIndex)
+            return
         }
-        .frame(maxWidth: .infinity)
+
+        // Fallback for already-canonical ids if resolver returned nil.
+        let low = item.sourceId.lowercased()
+        let parts = low.split(separator: ":").map(String.init)
+        if parts.count >= 4, parts[0] == "step" {
+            let idxRaw = parts[3]
+            let idx = Int(idxRaw.filter(\.isNumber)) ?? 0
+            isLearnedState = ProgressManager.shared.learnedSet(courseId: parts[1], lessonId: parts[2]).contains(idx)
+            return
+        }
+        isLearnedState = false
     }
 
     @ViewBuilder
@@ -428,8 +337,8 @@ struct FDMiniCardV: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 18, weight: .semibold))
                         .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(.white.opacity(0.95))
-                        .background(Circle().fill(Color.black.opacity(0.35)))
+                        .foregroundStyle(PD.ColorToken.text)
+                        .background(Circle().fill(TaikaDynamicColors.scrimPanel))
                 }
                 .buttonStyle(.plain)
                 .padding(10)
@@ -445,48 +354,197 @@ struct FDMiniCardV: View {
     }
 
     var body: some View {
-        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-        VStack(alignment: .leading, spacing: 10) {
-            topRow
-            Spacer(minLength: 0)
-            centerBlock
-            Spacer(minLength: 0)
-            bottomBar
-        }
-        .padding(16)
-        .frame(width: 268, height: 196, alignment: .topLeading)
-        .background(
-            Theme.Surfaces.card(round)
+        let round = RoundedRectangle(cornerRadius: CardDS.Metrics.stepCardContentRadius, style: .continuous)
+        StepWordCard(
+            title: item.title,
+            translit: cleanMeta,
+            thai: item.subtitle,
+            label: stepLabel,
+            size: miniStepSize,
+            sectionChrome: .seps,
+            chromeStyle: .cards,
+            phoneticView: nil,
+            isFavorite: true,
+            isLearned: isLearnedState,
+            allowLearn: false,
+            isAudioPlaying: false,
+            compactActionBar: true,
+            miniLearnedCheckmarkOnly: true,
+            onPlay: { onSpeak?() },
+            onFavorite: {},
+            onLearn: {}
         )
         .overlay(deleteButtonOverlay(round))
-        .rotationEffect(isJiggling ? .degrees(2) : .degrees(0), anchor: .center)
-        .animation(
-            isEditing
-            ? .easeInOut(duration: 0.12).repeatForever(autoreverses: true)
-            : .default,
-            value: isJiggling
-        )
         .contentShape(round)
         .onTapGesture {
             if isEditing {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    isEditing = false
-                }
+                isEditing = false
             } else {
                 onOpen?()
             }
         }
         .onLongPressGesture(minimumDuration: 0.35) {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isEditing.toggle()
-            }
+            isEditing.toggle()
         }
         .onChange(of: isEditing) { newValue in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isJiggling = newValue
+            isJiggling = newValue
+        }
+        .onAppear { refreshLearnedState() }
+    }
+}
+
+// MARK: - Phrase card for favorites grid (портрет, как лайфхаки/курсы)
+struct FDFavPhraseCard: View {
+    let item: FDCardDTO
+    var layoutWidth: CGFloat = 200
+    var layoutHeight: CGFloat = 286
+    var onSpeak: (() -> Void)? = nil
+    var onOpen: (() -> Void)? = nil
+    var onUnfavorite: (() -> Void)? = nil
+    @Binding var isEditing: Bool
+    @State private var isLearnedState = false
+
+    private var cleanMeta: String {
+        var m = item.meta
+        if m.hasPrefix("card:") { m = String(m.dropFirst("card:".count)) }
+        return m.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var lessonCaption: String {
+        let t = item.lessonTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? "урок" : t
+    }
+
+    private func refreshLearnedState() {
+        if let rr = StepManager.shared.resolveRoute(fromFavoriteId: item.sourceId) {
+            isLearnedState = ProgressManager.shared.learnedSet(courseId: rr.courseId, lessonId: rr.lessonId).contains(rr.stepIndex)
+            return
+        }
+        let low = item.sourceId.lowercased()
+        let parts = low.split(separator: ":").map(String.init)
+        if parts.count >= 4, parts[0] == "step" {
+            let idx = Int(parts[3].filter(\.isNumber)) ?? 0
+            isLearnedState = ProgressManager.shared.learnedSet(courseId: parts[1], lessonId: parts[2]).contains(idx)
+            return
+        }
+        isLearnedState = false
+    }
+
+    var body: some View {
+        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+        let thaiSize = min(22, max(16, layoutWidth * 0.105))
+
+        VStack(alignment: .leading, spacing: 12) {
+            Text("taikA")
+                .font(Font.custom("ONMARK Trial", size: 14))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+
+            Spacer(minLength: 0)
+
+            VStack(spacing: 6) {
+                Text(item.subtitle)
+                    .font(.system(size: thaiSize, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity)
+
+                Text(item.title)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.88)
+                    .frame(maxWidth: .infinity)
+
+                if !cleanMeta.isEmpty {
+                    Text(cleanMeta)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                        .frame(maxWidth: .infinity)
+                }
+
+                Text(lessonCaption)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.75))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 10) {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onSpeak?()
+                } label: {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .frame(minWidth: 34, minHeight: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onUnfavorite?()
+                } label: {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        .frame(minWidth: 34, minHeight: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
+
+                if isLearnedState {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        .frame(minWidth: 28, minHeight: 32)
+                        .allowsHitTesting(false)
+                }
             }
         }
+        .padding(16)
+        .frame(width: layoutWidth, height: layoutHeight, alignment: .topLeading)
+        .background(Theme.Surfaces.card(round))
+        .overlay {
+            if isEditing {
+                Button(action: { onUnfavorite?() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(PD.ColorToken.text)
+                        .background(Circle().fill(TaikaDynamicColors.scrimPanel))
+                }
+                .buttonStyle(.plain)
+                .padding(10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            }
+        }
+        .contentShape(round)
+        .onTapGesture {
+            if isEditing {
+                isEditing = false
+            } else {
+                onOpen?()
+            }
+        }
+        .onLongPressGesture(minimumDuration: 0.35) {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            isEditing.toggle()
+        }
+        .onAppear { refreshLearnedState() }
     }
 }
 
@@ -495,6 +553,20 @@ struct FDMiniHackCard: View {
     let item: FDHackDTO
     var onOpen: (() -> Void)? = nil
     var onUnfavorite: (() -> Void)? = nil
+    /// Без long‑press / jiggle (экран итогов урока и т.п.)
+    var readOnly: Bool = false
+    /// По умолчанию узкий прямоугольник для избранного; в «Итоги урока» — квадрат как у step (`stepCardWidth`).
+    var layoutWidth: CGFloat = 200
+    var layoutHeight: CGFloat = 286
+    /// Лента итогов урока: без больших `Spacer`, чтобы квадрат читался как квадрат, а не «плакат».
+    var lessonSummarySquare: Bool = false
+    /// В ленте избранного секция уже называется «Лайфхаки» — дублирующий чип справа сверху не нужен.
+    var showTopTrailingKindChip: Bool = true
+    /// Итоги урока: play + heart вместо одного чипа урока; тап по карточке отключён.
+    var summaryPlayAndFavorite: Bool = false
+    var onPlayInLesson: (() -> Void)? = nil
+    var onToggleFavorite: (() -> Void)? = nil
+    var isFavorite: Bool = false
     @Binding var isEditing: Bool
     @State private var isJiggling: Bool = false
 
@@ -506,8 +578,8 @@ struct FDMiniHackCard: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 18, weight: .semibold))
                         .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(.white.opacity(0.95))
-                        .background(Circle().fill(Color.black.opacity(0.35)))
+                        .foregroundStyle(PD.ColorToken.text)
+                        .background(Circle().fill(TaikaDynamicColors.scrimPanel))
                 }
                 .buttonStyle(.plain)
                 .padding(10)
@@ -529,145 +601,453 @@ struct FDMiniHackCard: View {
         let hackText: String = raw1.trimmingCharacters(in: .whitespacesAndNewlines)
         let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
 
-        VStack(alignment: .leading, spacing: 14) {
-            // brand
-            Text("taikA")
-                .font(Font.custom("ONMARK Trial", size: 14))
-                .foregroundStyle(.secondary)
-
-            // push content to vertical center between brand and bottom bar
-            Spacer(minLength: 0)
-
-            // main text — тело лайфхака с выделением [[...]] акцентом
-            VStack(alignment: .center, spacing: 8) {
-                taikaFMStyledText(hackText, baseColor: Color.white)
-                    .font(.system(.body, design: .rounded, weight: .medium))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(7)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-
-            Spacer(minLength: 6)
-
-            // bottom: компактная пилюля урока (открывает карусель по тапу)
-            HStack {
-                Spacer(minLength: 8)
-                Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onOpen?() }) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "heart.fill").font(.system(size: 11, weight: .semibold))
-                        if !item.lessonTitle.isEmpty {
-                            Text(item.lessonTitle)
-                                .font(.caption2.weight(.semibold))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                                .truncationMode(.tail)
-                        }
-                    }
-                    .foregroundStyle(Color.black.opacity(0.9))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule().fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                    )
-                    .overlay(Capsule().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
-                }
-                .buttonStyle(.plain)
+        let pillTitle = item.lessonTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "лайфхак"
+            : item.lessonTitle
+        let pill = HStack {
+            Spacer(minLength: 8)
+            AppMiniChip(title: pillTitle.lowercased(), style: .accent) {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                onOpen?()
             }
         }
-        .padding(16)
-        .frame(width: 200, height: 286, alignment: .topLeading)
+
+        Group {
+            if lessonSummarySquare {
+                VStack(alignment: .leading, spacing: 10) {
+                    FDMiniStepBalancedChrome {
+                        Text("taikA")
+                            .font(Font.custom("ONMARK Trial", size: 13))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
+                    } trailing: {
+                        Group {
+                            if showTopTrailingKindChip {
+                                AppMiniChip(title: "лайфхак", style: .neutral) { }
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                    }
+
+                    taikaFMStyledText(hackText, baseColor: PD.ColorToken.text.opacity(0.94))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .multilineTextAlignment(.leading)
+                        .lineSpacing(3)
+                        .lineLimit(8)
+                        .minimumScaleFactor(0.92)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Spacer(minLength: 0)
+
+                    if summaryPlayAndFavorite {
+                        HStack(spacing: 10) {
+                            Button(action: {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                onPlayInLesson?()
+                            }) {
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                    .frame(minWidth: 34, minHeight: 32)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            Spacer(minLength: 0)
+                            Button(action: {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                onToggleFavorite?()
+                            }) {
+                                Image(systemName: isFavorite ? "heart.fill" : "heart")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(
+                                        isFavorite
+                                            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                                            : AnyShapeStyle(PD.ColorToken.textSecondary)
+                                    )
+                                    .frame(minWidth: 34, minHeight: 32)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    } else {
+                        pill
+                    }
+                }
+                .padding(14)
+            } else if !showTopTrailingKindChip {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("taikA")
+                        .font(Font.custom("ONMARK Trial", size: 14))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+
+                    Spacer(minLength: 0)
+
+                    VStack(spacing: 8) {
+                        taikaFMStyledText(hackText, baseColor: PD.ColorToken.text)
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(7)
+                            .minimumScaleFactor(0.88)
+                            .frame(maxWidth: .infinity)
+
+                        Text(pillTitle)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.75))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+                .padding(16)
+            } else {
+                VStack(alignment: .center, spacing: 14) {
+                    FDMiniStepBalancedChrome {
+                        Text("taikA")
+                            .font(Font.custom("ONMARK Trial", size: 14))
+                            .foregroundStyle(.secondary)
+                    } trailing: {
+                        Group {
+                            if showTopTrailingKindChip {
+                                AppMiniChip(title: "лайфхак", style: .neutral) { }
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+
+                    VStack(alignment: .center, spacing: 8) {
+                        taikaFMStyledText(hackText, baseColor: PD.ColorToken.text)
+                            .font(.system(.body, design: .rounded, weight: .medium))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(7)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+
+                    Spacer(minLength: 6)
+
+                    pill
+                }
+                .padding(16)
+            }
+        }
+        .frame(width: layoutWidth, height: layoutHeight, alignment: .topLeading)
         .background(
             Theme.Surfaces.card(round)
         )
         .overlay(deleteButtonOverlay(round))
-        .rotationEffect(isJiggling ? .degrees(2) : .degrees(0), anchor: .center)
-        .animation(
-            isEditing
-            ? .easeInOut(duration: 0.12).repeatForever(autoreverses: true)
-            : .default,
-            value: isJiggling
-        )
         .contentShape(round)
-        .onTapGesture {
-            if isEditing {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    isEditing = false
-                }
+        .modifier(FDMiniHackCardGestures(
+            readOnly: readOnly,
+            isEditing: $isEditing,
+            isJiggling: $isJiggling,
+            onOpen: onOpen,
+            disableCardTap: summaryPlayAndFavorite
+        ))
+    }
+}
+
+/// Вынесено, чтобы `readOnly` не цеплял long‑press / onChange.
+private struct FDMiniHackCardGestures: ViewModifier {
+    let readOnly: Bool
+    @Binding var isEditing: Bool
+    @Binding var isJiggling: Bool
+    var onOpen: (() -> Void)?
+    var disableCardTap: Bool = false
+
+    func body(content: Content) -> some View {
+        if readOnly {
+            if disableCardTap {
+                content
             } else {
-                onOpen?()
+                content
+                    .onTapGesture { onOpen?() }
             }
+        } else {
+            content
+                .onTapGesture {
+                    if isEditing {
+                        isEditing = false
+                    } else {
+                        onOpen?()
+                    }
+                }
+                .onLongPressGesture(minimumDuration: 0.35) {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    isEditing.toggle()
+                }
+                .onChange(of: isEditing) { newValue in
+                    isJiggling = newValue
+                }
         }
-        .onLongPressGesture(minimumDuration: 0.35) {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isEditing.toggle()
-            }
-        }
-        .onChange(of: isEditing) { newValue in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isJiggling = newValue
+    }
+}
+
+// MARK: - Итоги урока: как `FDFavHacksReel` (200×286) + play и избранное на карточке
+struct FDLessonSummaryHacksReel: View {
+    let courseId: String
+    let lessonId: String
+    let entries: [(dto: FDHackDTO, orig: Int, stepItem: SDStepItem)]
+    var onPlayInLesson: ((FDHackDTO) -> Void)? = nil
+
+    @ObservedObject private var favManager = FavoriteManager.shared
+
+    var body: some View {
+        Group {
+            if entries.isEmpty {
+                EmptyView()
+            } else {
+                GeometryReader { geo in
+                    let cardWidth: CGFloat = 200
+                    let cardHeight: CGFloat = 286
+                    let spacing: CGFloat = 14
+                    let sideInset: CGFloat = PD.Spacing.screen
+
+                    TaikaCarouselScroll {
+                        HStack(alignment: .top, spacing: spacing) {
+                            ForEach(entries, id: \.dto.id) { entry in
+                                GeometryReader { itemGeo in
+                                    let midX = itemGeo.frame(in: .global).midX
+                                    let containerMidX = geo.frame(in: .global).midX
+                                    let distance = abs(midX - containerMidX)
+                                    let maxDistance = cardWidth + spacing
+                                    let t = min(distance / maxDistance, 1)
+                                    // Боковые карточки остаются читаемыми (раньше opacity доходила до ~0.45).
+                                    let scale: CGFloat = 0.94 + (1 - t) * 0.08
+                                    let opacity: Double = 0.76 + (1 - t) * 0.24
+                                    let yOffset: CGFloat = t * 10
+
+                                    FDMiniHackCard(
+                                        item: entry.dto,
+                                        onOpen: { onPlayInLesson?(entry.dto) },
+                                        onUnfavorite: nil,
+                                        readOnly: true,
+                                        layoutWidth: cardWidth,
+                                        layoutHeight: cardHeight,
+                                        lessonSummarySquare: true,
+                                        showTopTrailingKindChip: false,
+                                        summaryPlayAndFavorite: true,
+                                        onPlayInLesson: { onPlayInLesson?(entry.dto) },
+                                        onToggleFavorite: {
+                                            FavoriteManager.shared.toggle(step: entry.stepItem, courseId: courseId, lessonId: lessonId, order: entry.orig)
+                                        },
+                                        isFavorite: favManager.containsHack(courseId: courseId, lessonId: lessonId, index: entry.orig),
+                                        isEditing: .constant(false)
+                                    )
+                                    .scaleEffect(scale)
+                                    .opacity(opacity)
+                                    .offset(y: yOffset)
+                                }
+                                .frame(width: cardWidth, height: cardHeight)
+                            }
+                        }
+                        .padding(.horizontal, sideInset)
+                        .padding(.vertical, 4)
+                        .frame(height: cardHeight + 36)
+                    }
+                }
+                .frame(height: 286 + 36)
             }
         }
     }
 }
 
-// MARK: - Mini course card (подборка дня): чип категории сверху справа, только иконка play внизу
+// MARK: - Mini course card (подборка дня): категория сверху справа, outcomes под названием, мета+play внизу
 struct FDMiniCourseCard: View {
     let item: FDCourseDTO
+    var layoutWidth: CGFloat = 200
+    var layoutHeight: CGFloat = 286
+    var isPro: Bool = false
     var categoryChip: String? = nil
+    var learningOutcomes: [String] = []
+    var lessonCount: Int? = nil
+    var durationMinutes: Int? = nil
     var onOpen: (() -> Void)? = nil
+    /// Избранное: снять курс с избранного (как на старой `FDFavCourseCard`).
+    var onUnfavorite: (() -> Void)? = nil
 
     var body: some View {
         let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                Text("taikA")
-                    .font(Font.custom("ONMARK Trial", size: 14))
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 4)
-                if let chip = categoryChip, !chip.isEmpty {
-                    Text(chip)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.white.opacity(0.12)))
+        let tint = ThemeManager.shared.currentAccentTintColor
+        let accent = ThemeManager.shared.currentAccentFill
+
+        ZStack(alignment: .topTrailing) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 8) {
+                    Text("taikA")
+                        .font(Font.custom("ONMARK Trial", size: 14))
+                        .foregroundStyle(isPro ? AnyShapeStyle(accent) : AnyShapeStyle(Color.secondary))
+                    Spacer(minLength: 4)
+                    if isPro {
+                        AppProChip(scale: 0.82)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    if let chip = categoryChip?.trimmingCharacters(in: .whitespacesAndNewlines),
+                       !chip.isEmpty {
+                        Text(chip)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(accent)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .minimumScaleFactor(0.85)
+                            .allowsTightening(true)
+                            .allowsHitTesting(false)
+                    }
+                    Text(item.title)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(3)
+                    if isPro {
+                        Text(item.subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                             ? "Расширь практику с Taika+"
+                             : String(item.subtitle.prefix(72)))
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .lineLimit(2)
+                    } else if !learningOutcomes.isEmpty {
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(Array(learningOutcomes.prefix(2)), id: \.self) { outcome in
+                                Text("#\(outcome)")
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            }
+                        }
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .minimumScaleFactor(0.9)
+                        .padding(.top, 3)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Spacer(minLength: 6)
+
+                HStack(spacing: 10) {
+                    if isPro {
+                        Text("Открыть")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.black.opacity(0.88))
+                            .padding(.horizontal, 12)
+                            .frame(height: 30)
+                            .background(Capsule(style: .continuous).fill(accent))
+                    } else {
+                        Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onOpen?() }) {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(accent)
+                                .frame(width: 34, height: 34)
+                                .background(
+                                    Circle()
+                                        .fill(PD.ColorToken.chip)
+                                )
+                                .overlay(
+                                    Circle()
+                                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                                )
+                                .contentShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if let unfav = onUnfavorite {
+                        Button(action: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            unfav()
+                        }) {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(accent)
+                                .frame(minWidth: 34, minHeight: 32)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Spacer(minLength: 0)
+                    if !isPro {
+                        HStack(spacing: 10) {
+                            if let lc = lessonCount, lc > 0 {
+                                Label("\(lc)", systemImage: "square.stack.3d.up")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            if let dm = durationMinutes, dm > 0 {
+                                Label("\(dm)m", systemImage: "clock")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 }
             }
+            .padding(16)
+            .frame(width: layoutWidth, height: layoutHeight, alignment: .topLeading)
 
-            Spacer(minLength: 0)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(item.title)
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(3)
-                if !item.subtitle.isEmpty {
-                    Text(item.subtitle)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+            if isPro {
+                // Tech mesh wash — продающий баннер, не учебная карточка.
+                Canvas { context, size in
+                    for i in 0..<6 {
+                        let t = Double(i) / 5.0
+                        var path = Path()
+                        let y0 = size.height * (0.35 + t * 0.45)
+                        let amp = 8.0 + t * 10.0
+                        var x: CGFloat = 0
+                        while x <= size.width {
+                            let xn = Double(x / size.width)
+                            let y = y0 + sin((xn * 2.2 + t) * .pi * 2) * amp
+                            let pt = CGPoint(x: x, y: y)
+                            if x == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
+                            x += 4
+                        }
+                        context.stroke(
+                            path,
+                            with: .color(tint.opacity(0.10 + (1 - t) * 0.12)),
+                            lineWidth: 0.9
+                        )
+                    }
                 }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer(minLength: 6)
-
-            HStack {
-                Spacer(minLength: 8)
-                Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onOpen?() }) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                }
-                .buttonStyle(.plain)
+                .allowsHitTesting(false)
+                .mask(
+                    LinearGradient(
+                        colors: [.clear, .white.opacity(0.55), .white],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
             }
         }
-        .padding(16)
-        .frame(width: 200, height: 286, alignment: .topLeading)
-        .background(Theme.Surfaces.card(round))
+        .background {
+            ZStack {
+                Theme.Surfaces.card(round)
+                if isPro {
+                    round.fill(
+                        LinearGradient(
+                            colors: [
+                                tint.opacity(0.16),
+                                Color.clear,
+                                tint.opacity(0.10)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                }
+            }
+        }
+        .overlay(
+            Group {
+                if isPro {
+                    round.stroke(AnyShapeStyle(accent.opacity(0.9)), lineWidth: 1.5)
+                }
+            }
+        )
+        .shadow(color: isPro ? tint.opacity(0.28) : .clear, radius: isPro ? 14 : 0, y: isPro ? 6 : 0)
         .contentShape(round)
         .onTapGesture { onOpen?() }
     }
@@ -678,121 +1058,128 @@ struct FDContinueCourseCard: View {
     let courseName: String
     let lessonName: String
     let progress: Double
+    var layoutWidth: CGFloat = 200
+    var layoutHeight: CGFloat = 286
+    var lessonMinutes: Int? = nil
     var onOpen: (() -> Void)? = nil
 
     var body: some View {
         let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
         let clamped = max(0, min(1, progress))
+        let headline = lessonName.isEmpty ? courseName : lessonName
+        let showCourseCaption = !lessonName.isEmpty && !courseName.isEmpty
+
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Text("taikA")
-                    .font(Font.custom("ONMARK Trial", size: 14))
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
+            Text("taikA")
+                .font(Font.custom("ONMARK Trial", size: 14))
+                .foregroundStyle(PD.ColorToken.textSecondary)
 
             Spacer(minLength: 0)
-            VStack(alignment: .leading, spacing: 4) {
-                if !lessonName.isEmpty {
-                    Text(lessonName)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                }
-                Text(courseName)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                if clamped > 0 || progress > 0 {
-                    VStack(alignment: .leading, spacing: 4) {
-                        GeometryReader { g in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                    .fill(Color.white.opacity(0.15))
-                                    .frame(height: 4)
-                                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                    .fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                                    .frame(width: max(0, g.size.width * clamped), height: 4)
-                            }
-                        }
-                        .frame(height: 4)
-                        Text("\(Int(clamped * 100))% пройдено")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(headline)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.9)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(PD.ColorToken.textSecondary.opacity(0.2))
+                            .frame(height: 4)
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                            .frame(width: max(0, g.size.width * clamped), height: 4)
                     }
-                    .padding(.top, 6)
+                }
+                .frame(height: 4)
+
+                if showCourseCaption {
+                    Text(courseName)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.75))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
             }
-            .padding(.top, 2)
             .frame(maxWidth: .infinity, alignment: .leading)
+
             Spacer(minLength: 0)
 
-            HStack {
+            HStack(spacing: 10) {
                 Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onOpen?() }) {
                     Image(systemName: "play.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        .frame(minWidth: 34, minHeight: 32)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                Spacer(minLength: 10)
+                Spacer(minLength: 0)
+                HStack(spacing: 8) {
+                    if let minutes = lessonMinutes, minutes > 0 {
+                        Label("\(minutes)m", systemImage: "clock")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    Text("\(Int(clamped * 100))%")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .allowsHitTesting(false)
             }
         }
         .padding(16)
-        .frame(width: 268, height: 196, alignment: .topLeading)
+        .frame(width: layoutWidth, height: layoutHeight, alignment: .topLeading)
         .background(Theme.Surfaces.card(round))
         .contentShape(round)
         .onTapGesture { onOpen?() }
     }
 }
 
-// MARK: - Compact course card
+// MARK: - Compact course card (как «Подборка дня» на Main: `FDMiniCourseCard`)
 struct FDFavCourseCard: View {
     let item: FDCourseDTO
+    var layoutWidth: CGFloat = 200
+    var layoutHeight: CGFloat = 286
     var onOpen: (() -> Void)? = nil
     var onUnfavorite: (() -> Void)? = nil
 
-    var body: some View {
-        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-        VStack(alignment: .leading, spacing: 12) {
-            // top row: brand + pro badge
-            HStack(spacing: 8) {
-                Text("taikA")
-                    .font(Font.custom("ONMARK Trial", size: 14))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                // No isPro in DTO for now
-            }
+    private var catalogCourse: Course? {
+        CourseData.shared.course(with: item.courseId)
+    }
 
-            // centered title & meta block
-            Spacer(minLength: 0)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.title)
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                if !item.subtitle.isEmpty {
-                    Text(item.subtitle) // here we will pass "карточек: N • ~M мин" from FavoriteData
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            .padding(.top, 2)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Spacer(minLength: 0)
-
-            HStack {
-                AppCardIconButton(kind: .play, forceAccent: true, onTap: { onOpen?() })
-                Spacer(minLength: 10)
-                AppCardIconButton(kind: .favorite, isActive: true, onTap: { onUnfavorite?() })
-            }
+    private var fallbackLessonCount: Int {
+        var lessons = LessonsData.shared.lessons(for: item.courseId)
+        if lessons.isEmpty {
+            lessons = LessonsData.shared.lessons(for: item.courseId.replacingOccurrences(of: "_", with: "-"))
         }
-        .padding(16)
-        .frame(width: 268, height: 196, alignment: .topLeading)
-        .background(
-            Theme.Surfaces.card(round)
+        if lessons.isEmpty {
+            lessons = LessonsData.shared.lessons(for: item.courseId.replacingOccurrences(of: "-", with: "_"))
+        }
+        return lessons.count
+    }
+
+    private var outcomeStrings: [String] {
+        guard let c = catalogCourse else { return [] }
+        return c.learningOutcomes.map(\.type).filter { !$0.isEmpty }
+    }
+
+    var body: some View {
+        FDMiniCourseCard(
+            item: item,
+            layoutWidth: layoutWidth,
+            layoutHeight: layoutHeight,
+            isPro: catalogCourse?.isPro ?? false,
+            categoryChip: catalogCourse?.category,
+            learningOutcomes: outcomeStrings,
+            lessonCount: catalogCourse.map(\.lessonCount) ?? (fallbackLessonCount > 0 ? fallbackLessonCount : nil),
+            durationMinutes: nil,
+            onOpen: { onOpen?() },
+            onUnfavorite: onUnfavorite
         )
-        .contentShape(round)
     }
 }
 
@@ -806,7 +1193,7 @@ struct FDFavCoursesReel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            FDSectionHeaderBar(title: title, count: items.count, onShowAll: { onShowAll?() })
+            FDSectionHeaderBar(title: title, count: items.count, onShowAll: onShowAll)
 
             if items.isEmpty {
                 VStack(spacing: 10) {
@@ -821,41 +1208,24 @@ struct FDFavCoursesReel: View {
                 .padding(.vertical, 24)
             } else {
                 GeometryReader { geo in
-                    let cardWidth: CGFloat = 268
-                    let cardHeight: CGFloat = 196
+                    let cardWidth: CGFloat = 200
+                    let cardHeight: CGFloat = 286
                     let spacing: CGFloat = 14
                     let sideInset: CGFloat = PD.Spacing.screen
 
-                    let reelItems: [FDCourseDTO] = {
-                        guard !items.isEmpty else { return [] }
-                        return items + items + items
-                    }()
-                    let centerIndex = items.count
+                    let reelItems: [FDCourseDTO] = items
+                    let centerIndex = 0
 
                     ScrollViewReader { proxy in
-                        ScrollView(.horizontal, showsIndicators: false) {
+                        TaikaCarouselScroll {
                             HStack(alignment: .top, spacing: spacing) {
                                 ForEach(reelItems.indices, id: \.self) { idx in
                                     let it = reelItems[idx]
-                                    GeometryReader { itemGeo in
-                                        let midX = itemGeo.frame(in: .global).midX
-                                        let containerMidX = geo.frame(in: .global).midX
-                                        let distance = abs(midX - containerMidX)
-                                        let maxDistance = cardWidth + spacing
-                                        let t = min(distance / maxDistance, 1)
-                                        let scale: CGFloat = 0.9 + (1 - t) * 0.12
-                                        let opacity: Double = 0.45 + (1 - t) * 0.55
-                                        let yOffset: CGFloat = t * 18
-
-                                        FDFavCourseCard(
-                                            item: it,
-                                            onOpen: { onOpen?(it) },
-                                            onUnfavorite: { onUnfavorite?(it) }
-                                        )
-                                        .scaleEffect(scale)
-                                        .opacity(opacity)
-                                        .offset(y: yOffset)
-                                    }
+                                    FDFavCourseCard(
+                                        item: it,
+                                        onOpen: { onOpen?(it) },
+                                        onUnfavorite: { onUnfavorite?(it) }
+                                    )
                                     .frame(width: cardWidth, height: cardHeight)
                                 }
                             }
@@ -870,7 +1240,7 @@ struct FDFavCoursesReel: View {
                         }
                     }
                 }
-                .frame(height: 196 + 36)
+                .frame(height: 286 + 36)
             }
         }
     }
@@ -887,7 +1257,7 @@ struct FDFavHacksReel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            FDSectionHeaderBar(title: title, count: items.count, onShowAll: { onShowAll?() })
+            FDSectionHeaderBar(title: title, count: items.count, onShowAll: onShowAll)
 
             if items.isEmpty {
                 VStack(spacing: 10) {
@@ -907,37 +1277,21 @@ struct FDFavHacksReel: View {
                     let spacing: CGFloat = 14
                     let sideInset: CGFloat = PD.Spacing.screen
 
-                    let reelItems: [FDHackDTO] = {
-                        guard !items.isEmpty else { return [] }
-                        return items + items + items
-                    }()
-                    let centerIndex = items.count
+                    let reelItems: [FDHackDTO] = items
+                    let centerIndex = 0
 
                     ScrollViewReader { proxy in
-                        ScrollView(.horizontal, showsIndicators: false) {
+                        TaikaCarouselScroll {
                             HStack(alignment: .top, spacing: spacing) {
                                 ForEach(reelItems.indices, id: \.self) { idx in
                                     let it = reelItems[idx]
-                                    GeometryReader { itemGeo in
-                                        let midX = itemGeo.frame(in: .global).midX
-                                        let containerMidX = geo.frame(in: .global).midX
-                                        let distance = abs(midX - containerMidX)
-                                        let maxDistance = cardWidth + spacing
-                                        let t = min(distance / maxDistance, 1)
-                                        let scale: CGFloat = 0.9 + (1 - t) * 0.12
-                                        let opacity: Double = 0.45 + (1 - t) * 0.55
-                                        let yOffset: CGFloat = t * 18
-
-                                        FDMiniHackCard(
-                                            item: it,
-                                            onOpen: { onOpen?(it) },
-                                            onUnfavorite: { onUnfavorite?(it) },
-                                            isEditing: $isEditing
-                                        )
-                                        .scaleEffect(scale)
-                                        .opacity(opacity)
-                                        .offset(y: yOffset)
-                                    }
+                                    FDMiniHackCard(
+                                        item: it,
+                                        onOpen: { onOpen?(it) },
+                                        onUnfavorite: { onUnfavorite?(it) },
+                                        showTopTrailingKindChip: false,
+                                        isEditing: $isEditing
+                                    )
                                     .frame(width: cardWidth, height: cardHeight)
                                 }
                             }
@@ -967,19 +1321,25 @@ struct FDFavReels: View {
     var onUnfavorite: ((FDCardDTO) -> Void)? = nil
     var onShowAll: (() -> Void)? = nil
     var onOpen: ((FDCardDTO) -> Void)? = nil
+    /// Подпись при пустом списке (по умолчанию — избранное).
+    var emptyMessage: String = "здесь появятся ваши избранные карточки"
+    var emptySystemImage: String = "star.slash"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            FDSectionHeaderBar(title: title, count: items.count, onShowAll: { onShowAll?() })
+            if !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                FDSectionHeaderBar(title: title, count: items.count, onShowAll: onShowAll)
+            }
 
             if items.isEmpty {
                 VStack(spacing: 10) {
-                    Image(systemName: "star.slash")
+                    Image(systemName: emptySystemImage)
                         .font(.system(size: 28, weight: .semibold))
                         .foregroundStyle(.secondary)
-                    Text("здесь появятся ваши избранные карточки")
+                    Text(emptyMessage)
                         .font(.system(size: 15))
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
@@ -990,41 +1350,24 @@ struct FDFavReels: View {
                     let spacing: CGFloat = 14
                     let sideInset: CGFloat = PD.Spacing.screen
 
-                    let reelItems: [FDCardDTO] = {
-                        guard !items.isEmpty else { return [] }
-                        return items + items + items
-                    }()
-                    let centerIndex = items.count
+                    let reelItems: [FDCardDTO] = items
+                    let centerIndex = 0
 
                     ScrollViewReader { proxy in
-                        ScrollView(.horizontal, showsIndicators: false) {
+                        TaikaCarouselScroll {
                             HStack(alignment: .top, spacing: spacing) {
                                 ForEach(reelItems.indices, id: \.self) { idx in
                                     let it = reelItems[idx]
-                                    GeometryReader { itemGeo in
-                                        let midX = itemGeo.frame(in: .global).midX
-                                        let containerMidX = geo.frame(in: .global).midX
-                                        let distance = abs(midX - containerMidX)
-                                        let maxDistance = cardWidth + spacing
-                                        let t = min(distance / maxDistance, 1)
-                                        let scale: CGFloat = 0.9 + (1 - t) * 0.12
-                                        let opacity: Double = 0.45 + (1 - t) * 0.55
-                                        let yOffset: CGFloat = t * 18
-
-                                        FDMiniCardV(
-                                            item: it,
-                                            onSpeak: {
-                                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                                StepAudio.shared.speakThai(it.subtitle)
-                                            },
-                                            onOpen: { onOpen?(it) },
-                                            onDelete: { onUnfavorite?(it) },
-                                            isEditing: $isEditing
-                                        )
-                                        .scaleEffect(scale)
-                                        .opacity(opacity)
-                                        .offset(y: yOffset)
-                                    }
+                                    FDMiniCardV(
+                                        item: it,
+                                        onSpeak: {
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                            StepAudio.shared.speakThai(it.subtitle)
+                                        },
+                                        onOpen: { onOpen?(it) },
+                                        onDelete: { onUnfavorite?(it) },
+                                        isEditing: $isEditing
+                                    )
                                     .frame(width: cardWidth, height: cardHeight)
                                 }
                             }
@@ -1073,95 +1416,16 @@ struct FDDotsIndicator: View {
 // MARK: - Typewriter marquee used in "тайка фм"
 struct FDTypewriterMarquee: View {
     let messages: [String]
-    let typingSpeed: Double = 0.05   // seconds per char
-    let pauseBetween: Double = 1.2   // seconds between messages
-    let dotsDuration: Double = 1.2   // total time to show animated dots before text
-    let dotTick: Double = 0.35       // dot animation tick
-    // dynamic hold after the line is fully printed
-    let minHold: Double = 2.0   // minimum seconds to display
-    let perCharHold: Double = 0.065 // extra seconds per character
-    let maxHold: Double = 6.0   // cap so it doesn’t get too long
-    private let isPreview: Bool = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
-
-    @State private var messageIndex: Int = 0
-    @State private var charCount: Int = 0
-    @State private var isPaused: Bool = false
-    @State private var showDots: Bool = true
-    @State private var dotCount: Int = 1
-    @State private var typingTimer: Timer?
-
-    private var current: String { messages.isEmpty ? "" : messages[messageIndex % messages.count] }
-
-    private func holdDuration() -> Double {
-        let seconds = minHold + Double(current.count) * perCharHold
-        return min(maxHold, seconds)
-    }
 
     var body: some View {
-        Group {
-            if isPreview {
-                // In previews: render one line statically (no timers)
-                Text(messages.first ?? "")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-            } else if showDots {
-                FDDotsIndicator()
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Text(String(current.prefix(charCount)))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-            }
-        }
+        // Perf-critical: Favorites screen scroll must not be forced to re-render at 20fps by a typing timer.
+        // Keep Taika FM message static here (other screens use `TaikaFMBubbleTyping`).
+        Text(messages.first ?? "")
         .frame(maxWidth: .infinity, alignment: .leading)
-        .onAppear { startCycle() }
-        .onDisappear { cancelTimers() }
-    }
-
-    private func startCycle() {
-        if isPreview {
-            showDots = false
-            charCount = current.count
-            return
-        }
-        cancelTimers()
-        showDots = true
-        dotCount = 1
-        // show dots for the configured duration, then start typing
-        DispatchQueue.main.asyncAfter(deadline: .now() + dotsDuration) {
-            showDots = false
-            startTyping()
-        }
-    }
-
-    private func startTyping() {
-        if isPreview { return }
-        guard !messages.isEmpty else { return }
-        charCount = 0
-        isPaused = false
-        typingTimer = Timer.scheduledTimer(withTimeInterval: typingSpeed, repeats: true) { t in
-            if charCount < current.count {
-                charCount += 1
-            } else {
-                t.invalidate()
-                typingTimer = nil
-                // pause dynamically based on text length, then go to next message and start dots again
-                let delay = holdDuration()
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                    messageIndex = (messageIndex + 1) % max(1, messages.count)
-                    startCycle()
-                }
-            }
-        }
-    }
-
-    private func cancelTimers() {
-        typingTimer?.invalidate(); typingTimer = nil
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .lineLimit(2)
+            .multilineTextAlignment(.leading)
     }
 }
 
@@ -1180,6 +1444,7 @@ struct FDTaikaFMSection: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 56, height: 56)
+                    .taikaMascotChrome()
                     .padding(.leading, PD.Spacing.screen)
 
                 // Card only for text
@@ -1393,8 +1658,8 @@ public struct FavoriteDS: View {
             var seen = Set<String>()
             return combined.filter { if seen.insert($0.sourceId).inserted { return true } else { return false } }
         }()
-        ScrollView {
-            VStack(spacing: 24) {
+        TaikaRootVerticalScroll {
+            LazyVStack(spacing: 24) {
                 if selectedFilter == nil {
                     FDSectionHeader(title: "фильтры")
                     FDAppFiltersBar(
@@ -1513,7 +1778,6 @@ public struct FavoriteDS: View {
                     isEditing: $isEditing
                 )
             }
-            .preferredColorScheme(.dark)
         }
     }
 

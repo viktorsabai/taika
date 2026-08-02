@@ -70,8 +70,8 @@ public struct MPCardMini: View {
             .clipShape(RoundedRectangle(cornerRadius: CD.Radius.card, style: .continuous))
             .shadow(color: (isMatched || isActive) ? CD.ColorToken.accent.opacity(0.16) : .clear, radius: 10, x: 0, y: 6)
             .scaleEffect(isWrong ? 0.98 : (isActive ? 1.02 : 1.0))
-            .animation(.spring(response: 0.22, dampingFraction: 0.82), value: isActive)
-            .animation(.spring(response: 0.20, dampingFraction: 0.78), value: isWrong)
+            .animation(TaikaGameFeedbackMotion.pairSelectSpring, value: isActive)
+            .animation(TaikaGameFeedbackMotion.cardWrongSpring, value: isWrong)
     }
 }
 
@@ -198,10 +198,10 @@ public struct MPFlipCard: View {
                 radius: state == .matched ? 12 : (state == .selected ? 12 : 0), x: 0, y: 8)
         .scaleEffect(state == .wrong ? 0.96 : (state == .selected ? 1.04 : (state == .matched ? 1.02 : 1.0)))
         .scaleEffect(matchedFlash ? 1.04 : 1.0)
-        .modifier(ShakeEffect(pct: state == .wrong ? 1 : 0))
+        .modifier(TaikaGameShakeGeometryEffect(pct: state == .wrong ? 1 : 0))
         .animation(.easeInOut(duration: 0.34), value: isRevealed)
-        .animation(.linear(duration: 0.22), value: state == .wrong)
-        .animation(.spring(response: 0.28, dampingFraction: 0.78), value: state == .selected)
+        .animation(.linear(duration: TaikaGameFeedbackMotion.mismatchShakeDuration), value: state == .wrong)
+        .animation(TaikaGameFeedbackMotion.cardSelectSpring, value: state == .selected)
         .opacity(matchedFlash ? 0.9 : 1.0)
         .animation(.easeInOut(duration: 0.6), value: matchedFlash)
         .onChange(of: state) { _, newValue in
@@ -289,21 +289,6 @@ public struct MPCardBack: View {
 
 public struct MPCardBackLight: View { public var body: some View { MPCardBack(style: .light) } }
 public struct MPCardBackAccent: View { public var body: some View { MPCardBack(style: .accent) } }
-
-// MARK: - Shake Effect
-fileprivate struct ShakeEffect: GeometryEffect {
-    var pct: CGFloat // 0 → 1
-    var amplitude: CGFloat = 6
-    var shakes: CGFloat = 3
-    var animatableData: CGFloat {
-        get { pct }
-        set { pct = newValue }
-    }
-    func effectValue(size: CGSize) -> ProjectionTransform {
-        let translation = sin(pct * .pi * shakes) * amplitude
-        return ProjectionTransform(CGAffineTransform(translationX: translation, y: 0))
-    }
-}
 
 // MARK: - Two Columns Grid (left: phonetic, right: ru)
 public struct MPMatchPairsGrid: View {
@@ -426,6 +411,457 @@ fileprivate struct MPMatchHUD: View {
     }
 }
 
+// MARK: - Game status strip (все игры: ход / таймер / очки)
+
+/// Выразительные status-чипы: таймер / прогресс / очки [/ошибки]. Glass pills, не мелкий текст.
+public struct TaikaGameStatusStrip: View {
+    public var timeText: String
+    public var progressText: String?
+    public var mistakes: Int
+    public var score: Int
+
+    public init(
+        timeText: String,
+        progressText: String? = nil,
+        mistakes: Int = 0,
+        score: Int = 0
+    ) {
+        self.timeText = timeText
+        self.progressText = progressText
+        self.mistakes = mistakes
+        self.score = score
+    }
+
+    public var body: some View {
+        HStack(spacing: 8) {
+            statusChip(
+                icon: "timer",
+                text: timeText,
+                style: .neutral
+            )
+
+            if let progress = progressText?.trimmingCharacters(in: .whitespacesAndNewlines), !progress.isEmpty {
+                statusChip(
+                    icon: "list.number",
+                    text: progress,
+                    style: .neutral
+                )
+            }
+
+            statusChip(
+                icon: "star.fill",
+                text: "\(score)",
+                style: .neutral
+            )
+
+            if mistakes > 0 {
+                statusChip(
+                    icon: "xmark.circle.fill",
+                    text: "\(mistakes)",
+                    style: .wrong
+                )
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+    }
+
+    private enum ChipStyle {
+        case neutral
+        case score
+        case wrong
+    }
+
+    private func statusChip(icon: String, text: String, style: ChipStyle) -> some View {
+        let fg: Color = {
+            switch style {
+            case .wrong: return Color.red.opacity(0.95)
+            case .score: return ThemeManager.shared.currentAccentTintColor
+            case .neutral: return CD.ColorToken.text
+            }
+        }()
+        let fill: Color = {
+            switch style {
+            case .wrong: return Color.red.opacity(0.16)
+            case .score: return ThemeManager.shared.currentAccentTintColor.opacity(0.18)
+            case .neutral: return CD.ColorToken.card.opacity(0.92)
+            }
+        }()
+        let stroke: Color = {
+            switch style {
+            case .wrong: return Color.red.opacity(0.4)
+            case .score: return ThemeManager.shared.currentAccentTintColor.opacity(0.45)
+            case .neutral: return CD.ColorToken.stroke.opacity(0.4)
+            }
+        }()
+
+        return HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .bold))
+            Text(text)
+                .font(.system(size: 15, weight: .bold))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .foregroundStyle(fg)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(fill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(stroke, lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Canonical game chrome (как Speaker training)
+
+enum TaikaGameCoverflowMetrics {
+    /// 1:1 с `SpeakerTopCard` (268×196).
+    static let cardW: CGFloat = 268
+    static let cardH: CGFloat = 196
+    static let peekStepFactor: CGFloat = 0.92
+}
+
+/// Карточка раунда в играх — тот же chrome/ритм, что у Speaker training.
+struct TaikaGameSpeakerStyleCard: View {
+    var lessonTitle: String?
+    /// Главная строка (в спикере — транслит; в сборке — RU; в аудио — транслит).
+    var hero: String
+    /// Рендер hero через phonetic chrome (стрелки/тоны accent), как в спикере.
+    var heroIsPhonetic: Bool = false
+    /// Вторая строка (в спикере — RU).
+    var secondary: String?
+    /// Третья строка (в спикере — тайский footnote).
+    var tertiary: String?
+    var secondaryIsAccent: Bool = false
+    var succeeded: Bool = false
+    var successGlow: CGFloat = 0
+    var showsPlayControl: Bool = false
+    var playDisabled: Bool = true
+    var onPlay: (() -> Void)? = nil
+
+    private var brandAccent: AnyShapeStyle {
+        AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+    }
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: CD.Radius.card, style: .continuous)
+        let heroText = hero.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isLong = heroText.count > 22
+        let heroFont: Font = isLong
+            ? .system(size: 17, weight: .semibold)
+            : .system(size: 20, weight: .semibold)
+        let secondaryText = (secondary ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let tertiaryText = (tertiary ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 8) {
+                Text("taikA")
+                    .font(.custom("ONMARK Trial", size: 14))
+                    .tracking(0.6)
+                    .foregroundStyle(CD.ColorToken.text)
+                Spacer(minLength: 0)
+                if let lessonTitle, !lessonTitle.isEmpty {
+                    TaikaGameLessonPill(title: lessonTitle)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Group {
+                    if heroText.isEmpty {
+                        Text("—")
+                            .font(heroFont)
+                            .foregroundStyle(CD.ColorToken.textSecondary)
+                    } else if heroIsPhonetic {
+                        TaikaPhoneticText.styled(heroText, font: heroFont)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text(heroText)
+                            .font(heroFont)
+                            .foregroundStyle(CD.ColorToken.text)
+                    }
+                }
+                .lineLimit(2)
+                .allowsTightening(true)
+                .minimumScaleFactor(0.82)
+                .fixedSize(horizontal: false, vertical: true)
+                .opacity(heroText.isEmpty ? 0.45 : 1)
+                .padding(.bottom, 2)
+
+                if !secondaryText.isEmpty {
+                    Text(secondaryText)
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(
+                            secondaryIsAccent
+                            ? brandAccent
+                            : AnyShapeStyle(Theme.Colors.textPrimary)
+                        )
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.80)
+                        .padding(.top, 4)
+                }
+
+                if !tertiaryText.isEmpty {
+                    Text(tertiaryText)
+                        .font(.footnote)
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                        .opacity(0.86)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                }
+            }
+
+            if showsPlayControl {
+                HStack {
+                    TaikaGameBareSpeakerButton(
+                        disabled: playDisabled,
+                        action: { onPlay?() }
+                    )
+                    Spacer(minLength: 0)
+                }
+            } else {
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(16)
+        .frame(
+            width: TaikaGameCoverflowMetrics.cardW,
+            height: TaikaGameCoverflowMetrics.cardH,
+            alignment: .topLeading
+        )
+        .background(Theme.Surfaces.card(shape))
+        .overlay {
+            if succeeded {
+                shape.stroke(brandAccent, lineWidth: 2)
+            }
+        }
+        .shadow(
+            color: succeeded
+            ? ThemeManager.shared.currentAccentTintColor.opacity(0.28 * successGlow)
+            : .clear,
+            radius: succeeded ? 14 : 0,
+            y: succeeded ? 4 : 0
+        )
+        .contentShape(shape)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(heroText.isEmpty ? "Карточка" : heroText)
+    }
+}
+
+/// Outline-капсула урока — как на карточке Спикера.
+struct TaikaGameLessonPill: View {
+    let title: String
+
+    var body: some View {
+        let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !t.isEmpty {
+            HStack(spacing: 5) {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(t)
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(Capsule(style: .continuous).fill(Color.clear))
+            .overlay(
+                Capsule(style: .continuous)
+                    .strokeBorder(ThemeManager.shared.currentAccentFill, lineWidth: 1.2)
+            )
+        }
+    }
+}
+
+/// Динамик без кружка — меньше визуального шума.
+struct TaikaGameBareSpeakerButton: View {
+    var disabled: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "speaker.wave.2.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.35 : 1)
+        .accessibilityLabel("Прослушать")
+    }
+}
+
+// MARK: - Memory game prompt (игры 2–3: без StepWordCard, фокус на задании)
+
+public enum TaikaGameMemoryPromptMode {
+    /// Сборка: крупно RU, тайский приглушённо, транскрипция после успеха.
+    case buildFromMeaning
+    /// Аудио-квиз: крупно тайский + кнопка прослушивания.
+    case listenAndPick
+}
+
+public struct TaikaGameMemoryPrompt: View {
+    public var mode: TaikaGameMemoryPromptMode
+    public var title: String
+    public var subtitle: String?
+    public var phonetic: String?
+    public var playLabel: String?
+    public var isListening: Bool
+    public var compact: Bool
+    /// Показывать мелкий meta-лейбл («ПЕРЕВОД» / «СЛУШАЙ»). В играх обычно выключаем — меньше слов.
+    public var showsMetaLabel: Bool
+    public var onPlay: (() -> Void)?
+
+    public init(
+        mode: TaikaGameMemoryPromptMode,
+        title: String,
+        subtitle: String? = nil,
+        phonetic: String? = nil,
+        playLabel: String? = nil,
+        isListening: Bool = false,
+        compact: Bool = false,
+        showsMetaLabel: Bool = false,
+        onPlay: (() -> Void)? = nil
+    ) {
+        self.mode = mode
+        self.title = title
+        self.subtitle = subtitle
+        self.phonetic = phonetic
+        self.playLabel = playLabel
+        self.isListening = isListening
+        self.compact = compact
+        self.showsMetaLabel = showsMetaLabel
+        self.onPlay = onPlay
+    }
+
+    public var body: some View {
+        VStack(spacing: compact ? 8 : 12) {
+            if mode == .listenAndPick {
+                listenBody
+            } else {
+                buildBody
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var buildBody: some View {
+        let thai = subtitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let ru = title.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if showsMetaLabel {
+            promptMetaLabel("ПЕРЕВОД")
+        }
+
+        Text(ru.isEmpty ? "—" : ru)
+            .font(.system(size: compact ? 22 : 28, weight: .semibold))
+            .foregroundStyle(CD.ColorToken.text)
+            .multilineTextAlignment(.center)
+            .lineLimit(compact ? 2 : 2)
+            .minimumScaleFactor(0.75)
+            .fixedSize(horizontal: false, vertical: true)
+
+        if !thai.isEmpty {
+            Text(thai)
+                .font(.system(size: compact ? 14 : 16, weight: .medium))
+                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.82))
+                .multilineTextAlignment(.center)
+                .lineLimit(compact ? 1 : 2)
+                .minimumScaleFactor(0.85)
+        }
+
+        if let line = phonetic?.trimmingCharacters(in: .whitespacesAndNewlines), !line.isEmpty {
+            Text(line)
+                .font(.system(size: compact ? 13 : 15, weight: .semibold))
+                .foregroundStyle(ThemeManager.shared.currentAccentFill.opacity(0.92))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.82)
+        }
+
+        if onPlay != nil {
+            playControl
+                .scaleEffect(compact ? 0.92 : 1, anchor: .center)
+        }
+    }
+
+    @ViewBuilder
+    private var listenBody: some View {
+        let thai = title.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if showsMetaLabel {
+            promptMetaLabel("СЛУШАЙ")
+        }
+
+        if !thai.isEmpty {
+            Text(thai)
+                .font(.system(size: compact ? 32 : 38, weight: .semibold))
+                .foregroundStyle(CD.ColorToken.text)
+                .multilineTextAlignment(.center)
+                .lineLimit(4)
+                .minimumScaleFactor(0.55)
+                .padding(.horizontal, 8)
+        }
+
+        if onPlay != nil {
+            playControl
+        }
+    }
+
+    @ViewBuilder
+    private var playControl: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            onPlay?()
+        } label: {
+            TaikaHeaderGlassPill(height: 42, horizontalPadding: playLabel == nil ? 0 : 14) {
+                HStack(spacing: 6) {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                    if let playLabel, !playLabel.isEmpty {
+                        Text(playLabel)
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                }
+                .foregroundStyle(CD.ColorToken.text)
+                .frame(width: playLabel == nil ? 40 : nil)
+            }
+            .overlay {
+                if isListening {
+                    Capsule(style: .continuous)
+                        .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.55), lineWidth: 1.2)
+                }
+            }
+        }
+        .buttonStyle(TaikaHeaderButtonStyle())
+        .disabled(onPlay == nil)
+        .padding(.top, 2)
+    }
+
+    private func promptMetaLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: compact ? 11 : 12, weight: .semibold))
+            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.74))
+            .textCase(.uppercase)
+            .tracking(0.4)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
 #if DEBUG
 
 /// Interactive DS playground (no business logic) — tap to preview visual states
@@ -451,7 +887,7 @@ struct MPMatchPairs_Playground: View {
     }
 
     var body: some View {
-        ScrollView {
+        TaikaRootVerticalScroll {
             VStack(spacing: 16) {
                 MPMatchHUD(title: "подобрать пару", pairsDone: 0, total: 0, tries: 0)
                 HStack(spacing: 20) {
@@ -475,7 +911,6 @@ struct MPMatchPairs_Playground: View {
             .padding(20)
         }
         .background(CD.ColorToken.background)
-        .preferredColorScheme(.dark)
     }
 
     private func onTapLeft(_ i: Int) {

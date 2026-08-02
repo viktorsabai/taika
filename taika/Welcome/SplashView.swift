@@ -176,11 +176,13 @@ struct SplashTaikaView: View {
     let onFinished: (() -> Void)?
 
     @ObservedObject private var theme = ThemeManager.shared
-    @State private var logoVisible = false
-    @State private var taglineVisible = false
-    @State private var spinnerVisible = false
+    /// Сразу видимо — иначе на cold start (особенно device+LLDB) onAppear может опоздать → чёрный экран.
+    @State private var logoVisible = true
+    @State private var taglineVisible = true
+    @State private var spinnerVisible = true
     @State private var fadeOut = false
-    @State private var logoPulse: CGFloat = 1.0
+    @State private var logoPulse: CGFloat = 1.03
+    @State private var didFinish = false
 
     init(onFinished: (() -> Void)? = nil) {
         self.onFinished = onFinished
@@ -213,30 +215,31 @@ struct SplashTaikaView: View {
                     .foregroundStyle(PD.ColorToken.textSecondary)
                     .padding(.top, 14)
                     .opacity(taglineVisible ? 1 : 0)
-                    .animation(.easeOut(duration: 0.4).delay(0.2), value: taglineVisible)
 
                 Spacer(minLength: 60)
 
                 GradientSpinner(size: 44)
                     .opacity(spinnerVisible ? 1 : 0)
-                    .animation(.easeOut(duration: 0.35).delay(0.4), value: spinnerVisible)
 
                 Spacer(minLength: 80)
             }
             .opacity(fadeOut ? 0 : 1)
             .animation(.easeOut(duration: 0.35), value: fadeOut)
         }
-        .onAppear {
-            logoVisible = true
-            logoPulse = 1.03
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { taglineVisible = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { spinnerVisible = true }
-            // Загрузочный экран без кнопки: авто-закрытие через 2.5 с
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                guard !fadeOut else { return }
-                withAnimation(.easeOut(duration: 0.35)) { fadeOut = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onFinished?() }
-            }
+        .task {
+            // Короткий brand beat для returning users (первый вход — Welcome, без этого сплэша).
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            await MainActor.run { finishIfNeeded() }
+        }
+    }
+
+    @MainActor
+    private func finishIfNeeded() {
+        guard !didFinish else { return }
+        didFinish = true
+        withAnimation(.easeOut(duration: 0.35)) { fadeOut = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            onFinished?()
         }
     }
 }

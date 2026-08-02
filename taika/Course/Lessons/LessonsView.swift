@@ -40,7 +40,7 @@ import SwiftUI
 
 private extension LessonsData {
     func course(withID id: String) -> CourseBundle? {
-        allCourses().first { $0.courseID == id }
+        courseBundle(matchingAnyId: id)
     }
 }
 
@@ -89,13 +89,19 @@ private extension LessonsView {
 
     var activeLessonIndex: Int {
         let ids = lessonsSorted.map { $0.lessonID }
+        let cid = currentCourse?.courseID
         // 1) explicit selection wins
         if let sel = selectedLessonId, let i = ids.firstIndex(of: sel) { return i }
         // 2) fallback to last active (persisted)
         if !lastActiveLessonId.isEmpty, let i = ids.firstIndex(of: lastActiveLessonId) { return i }
         // 3) initial deep-link / provided lessonId
         if let initial = lessonId, let i = ids.firstIndex(of: initial) { return i }
-        // 4) otherwise first
+        // 4) carousel position (back navigation)
+        if let cid, !ids.isEmpty {
+            let p = CarouselScrollPersistence.lessonReelIndex(courseId: cid, max: ids.count)
+            if ids.indices.contains(p) { return p }
+        }
+        // 5) otherwise first
         return 0
     }
 
@@ -105,13 +111,36 @@ private extension LessonsView {
         return lessonsManager.headerCounts(for: cid, lessonsTotal: total)
     }
 
-    /// Course-level stats for Итоги курса: learned words (sum over lessons), favorites count.
-    private var courseOverviewStats: (learnedWords: Int, favorites: Int) {
-        guard let cid = currentCourse?.courseID else { return (0, 0) }
+    /// Теория-only бонус (`course_b_0`): без игр/спикера в хедере и на карточках.
+    var isTheoryBonusCourse: Bool {
+        guard let cid = currentCourse?.courseID else { return false }
+        return courseExperienceKind(for: cid) == .theoryBonus
+    }
+
+    /// Course-level stats for Итоги курса: learned words, favorites, spent minutes.
+    /// Spent minutes are estimated from lesson duration * lesson progress percent.
+    private var courseOverviewStats: (learnedWords: Int, favorites: Int, spentMinutes: Int) {
+        guard let cid = currentCourse?.courseID else { return (0, 0, 0) }
         let ids = lessonsSorted.map(\.lessonID)
         let words = ids.reduce(0) { acc, lid in acc + ProgressManager.shared.learnedEffectiveCount(courseId: cid, lessonId: lid) }
         let favs = ids.reduce(0) { acc, lid in acc + lessonsManager.lessonFavoriteCount(courseId: cid, lessonId: lid) }
-        return (words, favs)
+        let spent = lessonsSorted.reduce(0.0) { acc, lesson in
+            let p = lessonsManager.lessonProgress(courseId: cid, lessonId: lesson.lessonID)?.percent ?? 0.0
+            let clamped = max(0.0, min(1.0, p))
+            return acc + (Double(lesson.durationMinutes) * clamped)
+        }
+        return (words, favs, Int(spent.rounded()))
+    }
+
+    /// Remaining estimated minutes to finish the whole course.
+    private var remainingCourseMinutes: Int {
+        guard let cid = currentCourse?.courseID else { return 0 }
+        let left = lessonsSorted.reduce(0.0) { acc, lesson in
+            let p = lessonsManager.lessonProgress(courseId: cid, lessonId: lesson.lessonID)?.percent ?? 0.0
+            let remaining = max(0.0, 1.0 - min(1.0, max(0.0, p)))
+            return acc + (Double(lesson.durationMinutes) * remaining)
+        }
+        return Int(left.rounded())
     }
 
     /// Per-lesson completion percentage array (0...1) for the header slots
@@ -181,7 +210,7 @@ private extension LessonsView {
                     title: l.title,
                     subtitle: l.subtitle,
                     durationMinutes: l.durationMinutes,
-                    isPro: !l.isFree,
+                    isPro: false,
                     status: status,
                     tags: l.tags,
                     progress: progressValue,
@@ -281,6 +310,7 @@ public struct LessonsView: View {
     // Keep user on the Courses tab while viewing lessons
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var nav: NavigationIntent
+    @EnvironmentObject private var overlay: OverlayPresenter
     @ObservedObject private var lessonsStore = LessonsData.shared
     @ObservedObject private var lessonsManager = LessonsManager.shared
     @StateObject private var homeTaskManager = HomeTaskManager()
@@ -298,8 +328,8 @@ public struct LessonsView: View {
     // Debounce work item for header refreshes
     @State private var headerRefreshWork: DispatchWorkItem? = nil
     @State private var frozenSnapshot: Image? = nil
-    @State private var showResetConfirmation: Bool = false
     @ObservedObject private var lessonsHeaderStore = LessonsHeaderStore.shared
+    @ObservedObject private var pro = ProManager.shared
     @AppStorage("LSLessonActivity.lastActiveLessonId") private var lastActiveLessonId: String = ""
 
     private let courseId: String?
@@ -356,7 +386,7 @@ public struct LessonsView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        ScrollView(.vertical, showsIndicators: false) {
+        TaikaRootVerticalScroll {
             VStack(spacing: Theme.Layout.sectionGap) {
                 headerSection
                     .id(itemsVersion) // force re-render when progress changes
@@ -366,11 +396,11 @@ public struct LessonsView: View {
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
                     .padding(.top, Theme.Layout.sectionTop)
 
-                TaikaFMBubbleTyping(
-                    messages: TaikaFMData.shared.messages(for: .lessons),
-                    reactions: TaikaFMData.shared.reactionGroups(for: .lessons),
-                    repeats: false,
-                    showBubble: false
+                TaikaFMRow(
+                    scope: .lessons,
+                    mode: .typing,
+                    showBubble: false,
+                    repeats: false
                 )
                 .padding(.horizontal, Theme.Layout.pageHorizontal)
                 .padding(.top, Theme.Layout.sectionTitleToContent)
@@ -379,32 +409,36 @@ public struct LessonsView: View {
                     .id(itemsVersion)
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
 
-                LSProgressSection(
-                    lessonsDone: headerProgress.completed,
-                    lessonsTotal: headerProgress.total
-                )
-                .padding(.horizontal, Theme.Layout.pageHorizontal)
+                if !isTheoryBonusCourse {
+                    lessonsTotalsSectionHeader
+                        .padding(.horizontal, Theme.Layout.pageHorizontal)
+                        .padding(.top, Theme.Layout.sectionTop)
 
-                LSCourseOverview(
-                    stats: LSCourseStats(
-                        completedLessons: headerProgress.completed,
-                        totalLessons: headerProgress.total,
-                        learnedWords: courseOverviewStats.learnedWords,
-                        favorites: courseOverviewStats.favorites,
-                        streakDays: 0,
-                        timeMinutes: 0
-                    ),
-                    category: headerChipResolved ?? "",
-                    onCTA: {
-                        if let first = lessonsSorted.first {
-                            selectedLessonId = first.lessonID
-                        }
-                    },
-                    onReset: {},
-                    onSpeaker: nil,
-                    onReinforce: nil
-                )
-                .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    LSCourseOverview(
+                        stats: LSCourseStats(
+                            completedLessons: headerProgress.completed,
+                            totalLessons: headerProgress.total,
+                            learnedWords: courseOverviewStats.learnedWords,
+                            favorites: courseOverviewStats.favorites,
+                            streakDays: 0,
+                            timeMinutes: courseOverviewStats.spentMinutes
+                        ),
+                        category: "",
+                        etaMinutes: remainingCourseMinutes > 0 ? remainingCourseMinutes : nil,
+                        onCTA: {
+                            if let first = lessonsSorted.first {
+                                selectedLessonId = first.lessonID
+                            }
+                        },
+                        onReset: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            presentCourseResetOverlay()
+                        },
+                        onSpeaker: nil,
+                        onReinforce: nil
+                    )
+                    .padding(.horizontal, Theme.Layout.pageHorizontal)
+                }
 
                 if currentCourse == nil {
                     Text("Не удалось загрузить курс из lessons.json")
@@ -417,7 +451,6 @@ public struct LessonsView: View {
             .frame(maxWidth: .infinity, alignment: .top)
             .padding(.bottom, Theme.Layout.pageBottomSafeGap)
         }
-        .preferredColorScheme(.dark)
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .id(progressReloadToken)
     }
@@ -473,7 +506,19 @@ public struct LessonsView: View {
                                         showGameOverlay = false
                                     }
                                     frozenSnapshot = nil
-                                }
+                                },
+                                onLockedTap: { mode in
+                                    if mode.isPro && !ProManager.shared.isPro {
+                                        let cid = currentCourse?.courseID ?? ""
+                                        overlay.presentPro(reason: .lockedCourse, courseId: cid)
+                                    } else {
+#if os(iOS)
+                                        let gen = UINotificationFeedbackGenerator()
+                                        gen.notificationOccurred(.warning)
+#endif
+                                    }
+                                },
+                                modes: GameModeType.modesLessonAndPark
                             )
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
@@ -484,9 +529,7 @@ public struct LessonsView: View {
         }
     }
 
-    @ViewBuilder
     private func buildBody() -> some View {
-        let stepPub = NotificationCenter.default.publisher(for: .stepProgressDidChange)
         let courseResetPub = NotificationCenter.default.publisher(for: Notification.Name("progressCourseDidReset"))
         let courseResetLegacyPub = NotificationCenter.default.publisher(for: Notification.Name("courseProgressDidReset"))
         let lessonResetPub = NotificationCenter.default.publisher(for: Notification.Name("progressLessonDidReset"))
@@ -558,6 +601,30 @@ let withTasks = base
 
         }
 
+        if isTheoryBonusCourse {
+            lessonsHeaderStore.setActions(onSpeaker: nil, onReinforce: nil)
+        } else {
+            lessonsHeaderStore.setActions(
+                onSpeaker: {
+                    guard let cid = currentCourse?.courseID else { return }
+                    UserSession.shared.markActive(courseId: cid)
+                    NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+                    SpeakerRequestedCourseId.shared.set(cid)
+                    nav.requestTab(2)
+                },
+                onReinforce: {
+                    guard currentCourse?.courseID != nil else { return }
+                    selectedGameLessonId = nil
+                    selectedGameType = .match
+                    frozenSnapshot = captureWindowSnapshot()
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                        showGameOverlay = true
+                        showGameModePicker = true
+                    }
+                }
+            )
+        }
+
     }
 
     .onChange(of: selectedLessonId) { _, _ in
@@ -596,13 +663,6 @@ let withTasks = base
 
     .onReceive(lessonResetLegacyPub) { _ in scheduleHeaderRefresh() }
 
-    .onReceive(stepPub) { _ in
-
-        itemsVersion = UUID()
-
-        scheduleHeaderRefresh()
-
-    }
     .onReceive(favoritesDidChangePub) { _ in
         itemsVersion = UUID()
         scheduleHeaderRefresh()
@@ -641,38 +701,39 @@ let withTasks = base
             .navigationBarBackButtonHidden(true)
             .toolbar(.hidden, for: .navigationBar)
             .onAppear {
-                lessonsHeaderStore.setActions(
-                    onSpeaker: {
-                        guard let cid = currentCourse?.courseID else { return }
-                        UserSession.shared.markActive(courseId: cid)
-                        NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                        SpeakerRequestedCourseId.shared.set(cid)
-                        nav.requestTab(2)
-                    },
-                    onReinforce: {
-                        guard currentCourse?.courseID != nil else { return }
-                        selectedGameLessonId = nil
-                        selectedGameType = .match
-                        frozenSnapshot = captureWindowSnapshot()
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                            showGameOverlay = true
-                            showGameModePicker = true
+                GameHeaderStore.shared.config = nil
+                if isTheoryBonusCourse {
+                    lessonsHeaderStore.setActions(onSpeaker: nil, onReinforce: nil)
+                } else {
+                    lessonsHeaderStore.setActions(
+                        onSpeaker: {
+                            guard let cid = currentCourse?.courseID else { return }
+                            UserSession.shared.markActive(courseId: cid)
+                            NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+                            SpeakerRequestedCourseId.shared.set(cid)
+                            nav.requestTab(2)
+                        },
+                        onReinforce: {
+                            guard currentCourse?.courseID != nil else { return }
+                            selectedGameLessonId = nil
+                            selectedGameType = .match
+                            frozenSnapshot = captureWindowSnapshot()
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                                showGameOverlay = true
+                                showGameModePicker = true
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
             .onDisappear {
+                GameHeaderStore.shared.config = nil
                 lessonsHeaderStore.clearActions()
             }
             .onChange(of: lessonsHeaderStore.resetRequested) { _, requested in
                 if requested {
-                    showResetConfirmation = true
                     lessonsHeaderStore.clearResetRequest()
-                }
-            }
-            .overlay {
-                if showResetConfirmation {
-                    resetCourseConfirmOverlay
+                    presentCourseResetOverlay()
                 }
             }
 
@@ -683,61 +744,30 @@ let withTasks = base
 
 
 extension LessonsView {
-    // MARK: - Подтверждение сброса курса (оверлей в айдентике приложения)
-    private var resetCourseConfirmOverlay: some View {
-        let accent = AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-        return ZStack {
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
-                .onTapGesture { withAnimation(.easeOut(duration: 0.2)) { showResetConfirmation = false } }
+    /// Product rule: PRO gating is course-level only.
+    /// Lesson-level `is_free` flags are ignored for navigation.
+    private func openLessonIfAllowed(_ lessonId: String) -> Bool {
+        _ = lessonId
+        return true
+    }
 
-            VStack(spacing: 20) {
-                Text("Сбросить прогресс курса?")
-                    .font(PD.FontToken.body(18, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.text)
-                    .multilineTextAlignment(.center)
-
-                Text("Весь прогресс по этому курсу будет удалён. Вы уверены?")
-                    .font(PD.FontToken.caption(15, weight: .regular))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                    .multilineTextAlignment(.center)
-
-                HStack(spacing: 12) {
-                    Button {
-                        withAnimation(.easeOut(duration: 0.2)) { showResetConfirmation = false }
-                    } label: {
-                        Text("Отмена")
-                            .font(PD.FontToken.body(16, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(PD.ColorToken.card))
-                            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        if let cid = currentCourse?.courseID {
-                            lessonsManager.resetCourseProgress(courseId: cid)
-                            resolveHeaderMeta()
-                        }
-                        withAnimation(.easeOut(duration: 0.2)) { showResetConfirmation = false }
-                    } label: {
-                        Text("Сбросить")
-                            .font(PD.FontToken.body(16, weight: .semibold))
-                            .foregroundStyle(Color(white: 0.14))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Capsule().fill(accent))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(24)
-            .frame(maxWidth: 320)
-            .background(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).fill(PD.ColorToken.card))
-            .overlay(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
+    /// Заголовок секции: «ИТОГИ» слева, название курса справа (одна строка).
+    private var lessonsTotalsSectionHeader: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text("ИТОГИ")
+                .taikaSectionTitleStyle()
+            Spacer(minLength: 8)
+            Text(headerTitle)
+                .taikaSubsectionStyle(accent: true)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .multilineTextAlignment(.trailing)
         }
+    }
+
+    private func presentCourseResetOverlay() {
+        guard let cid = currentCourse?.courseID, !cid.isEmpty else { return }
+        overlay.present(.courseResetConfirm(courseId: cid))
     }
 
     // MARK: - Extracted Sections
@@ -756,15 +786,18 @@ extension LessonsView {
                 let arr = lessonsSorted
                 if idx >= 0 && idx < arr.count {
                     let lid = arr[idx].lessonID
+                    guard openLessonIfAllowed(lid) else { return }
                     LSLessonActivity.mark(lid)
                     if let cid = currentCourse?.courseID {
                         UserSession.shared.markActive(courseId: cid, lessonId: lid)
+                        CarouselScrollPersistence.setLessonReelIndex(courseId: cid, index: idx)
                     }
                     DispatchQueue.main.async {
                         selectedLessonId = lid
-                        nav.go(.step(
+                        nav.go(.lesson(
                             courseId: currentCourse?.courseID ?? "",
-                            lessonId: lid
+                            lessonId: lid,
+                            presentation: .canonical
                         ))
                     }
                 }
@@ -798,20 +831,23 @@ extension LessonsView {
                 let arr = lessonsSorted
                 if item.index >= 0 && item.index < arr.count {
                     let lid = arr[item.index].lessonID
+                    guard openLessonIfAllowed(lid) else { return }
                     LSLessonActivity.mark(lid)
                     if let cid = currentCourse?.courseID {
                         UserSession.shared.markActive(courseId: cid, lessonId: lid)
+                        CarouselScrollPersistence.setLessonReelIndex(courseId: cid, index: item.index)
                     }
                     DispatchQueue.main.async {
                         selectedLessonId = lid
-                        nav.go(.step(
+                        nav.go(.lesson(
                             courseId: currentCourse?.courseID ?? "",
-                            lessonId: lid
+                            lessonId: lid,
+                            presentation: .canonical
                         ))
                     }
                 }
             },
-            onTapAccessory: { item in
+            onTapAccessory: isTheoryBonusCourse ? nil : { item in
                 let arr = lessonsSorted
                 guard item.index >= 0 && item.index < arr.count else { return }
 
@@ -825,6 +861,7 @@ extension LessonsView {
 
                 // 1️⃣ Completed → show game picker
                 if percent >= 1.0 {
+                    guard openLessonIfAllowed(lid) else { return }
 
                     selectedGameLessonId = lid
                     selectedGameType = .match
@@ -839,11 +876,13 @@ extension LessonsView {
                 }
                 // 2️⃣ In progress → redirect user back to lesson (clean UX, no modal spam)
                 else if percent > 0 {
+                    guard openLessonIfAllowed(lid) else { return }
 
                     selectedLessonId = lid
-                    nav.go(.step(
+                    nav.go(.lesson(
                         courseId: currentCourse?.courseID ?? "",
-                        lessonId: lid
+                        lessonId: lid,
+                        presentation: .canonical
                     ))
 
                 }
@@ -852,10 +891,11 @@ extension LessonsView {
                     UINotificationFeedbackGenerator().notificationOccurred(.warning)
                 }
             },
-            onSpeaker: { item in
+            onSpeaker: isTheoryBonusCourse ? nil : { item in
                 guard let cid = currentCourse?.courseID else { return }
                 UserSession.shared.markActive(courseId: cid, lessonId: item.id, stepIndex: 0)
                 NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+                SpeakerRequestedCourseId.shared.set(cid)
                 nav.requestTab(2)
             },
             selectedIndex: activeLessonIndex
@@ -864,6 +904,8 @@ extension LessonsView {
 }
 #Preview("LessonsView – screen") {
     LessonsView()
+        .environmentObject(NavigationIntent())
+        .environmentObject(OverlayPresenter.shared)
         .task { CourseData.shared.load() } // прогрузи курсовый JSON
 }
 

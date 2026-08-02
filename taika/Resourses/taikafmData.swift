@@ -2,15 +2,6 @@
 //  taikafmData.swift
 //  taika
 //
-//  Created by product on 01.12.2025.
-//
-
-//
-//  taikafmData.swift
-//  taika
-//
-//  Created by product on 01.12.2025.
-//
 
 import Foundation
 
@@ -18,33 +9,61 @@ import Foundation
 public enum TaikaFMScope: String, CaseIterable, Codable {
     case main
     case course
+    case resume
+    case scenarios
+    case dictionary
+    case mine
     case lessons
     case step
     case fav
+    case speaker
+    case profile
+    case games
 }
 
 // конфиг для одного скоупа в taikafm.json
 public struct TaikaFMScopeConfig: Decodable {
     public let messages: [String]
     public let reactions: [String]
+
+    public init(messages: [String] = [], reactions: [String] = []) {
+        self.messages = messages
+        self.reactions = reactions
+    }
+
+    public static let empty = TaikaFMScopeConfig()
 }
 
-// корневой json taikafm.json
+// корневой json taikafm.json — все ключи опциональны, чтобы один пропуск не ломал весь файл
 private struct TaikaFMRootConfig: Decodable {
-    let version: Int
-    let main: TaikaFMScopeConfig
-    let course: TaikaFMScopeConfig
-    let lessons: TaikaFMScopeConfig
-    let step: TaikaFMScopeConfig
-    let fav: TaikaFMScopeConfig
+    let version: Int?
+    let main: TaikaFMScopeConfig?
+    let course: TaikaFMScopeConfig?
+    let resume: TaikaFMScopeConfig?
+    let scenarios: TaikaFMScopeConfig?
+    let dictionary: TaikaFMScopeConfig?
+    let mine: TaikaFMScopeConfig?
+    let lessons: TaikaFMScopeConfig?
+    let step: TaikaFMScopeConfig?
+    let fav: TaikaFMScopeConfig?
+    let speaker: TaikaFMScopeConfig?
+    let profile: TaikaFMScopeConfig?
+    let games: TaikaFMScopeConfig?
 
     func config(for scope: TaikaFMScope) -> TaikaFMScopeConfig {
         switch scope {
-        case .main:    return main
-        case .course:  return course
-        case .lessons: return lessons
-        case .step:    return step
-        case .fav:     return fav
+        case .main:       return main ?? .empty
+        case .course:     return course ?? .empty
+        case .resume:     return resume ?? .empty
+        case .scenarios:  return scenarios ?? .empty
+        case .dictionary: return dictionary ?? .empty
+        case .mine:       return mine ?? .empty
+        case .lessons:    return lessons ?? .empty
+        case .step:       return step ?? .empty
+        case .fav:        return fav ?? .empty
+        case .speaker:    return speaker ?? .empty
+        case .profile:    return profile ?? .empty
+        case .games:      return games ?? .empty
         }
     }
 }
@@ -76,27 +95,74 @@ public final class TaikaFMData {
         }
     }
 
-    /// сообщения для конкретного экрана (main / course / lessons / step / fav)
+    /// сообщения для конкретного экрана
     public func messages(for scope: TaikaFMScope) -> [String] {
         root?.config(for: scope).messages ?? []
     }
 
-    /// реакции для конкретного экрана в виде маленьких групп по одному эмодзи,
-    /// чтобы удобно отдавать их в бабл
+    /// реакции для конкретного экрана в виде маленьких групп по одному эмодзи
     public func reactionGroups(for scope: TaikaFMScope) -> [[String]] {
         guard let flat = root?.config(for: scope).reactions, !flat.isEmpty else { return [] }
         return flat.map { [$0] }
     }
 
-    /// сообщения для конкретного экрана в виде акцентных чанков,
-    /// где фрагменты в [[двойных скобках]] помечены как isAccent = true
+    /// сообщения в виде акцентных чанков ([[accent]])
     public func accentMessages(for scope: TaikaFMScope) -> [[TaikaFMChunk]] {
         messages(for: scope).map { Self.parseAccentChunks($0) }
     }
 
-    /// специальный helper для step‑экрана:
-    /// берём tip из steps.json и превращаем его в один "сообщение" Таика FM
-    /// если tip пустой или nil — возвращаем [], чтобы DS мог показать только "печатает..." без текста
+    // MARK: - Rotation (без таймера — меняется раз в день / по extra-ключу вкладки)
+
+    /// Стабильный индекс ротации: день года + scope + optional extra (вкладка).
+    public func rotationSeed(for scope: TaikaFMScope, extra: String = "") -> Int {
+        let cal = Calendar.current
+        let day = cal.ordinality(of: .day, in: .year, for: Date()) ?? 0
+        let year = cal.component(.year, from: Date())
+        var hasher = Hasher()
+        hasher.combine(scope.rawValue)
+        hasher.combine(extra)
+        hasher.combine(year)
+        hasher.combine(day)
+        return abs(hasher.finalize())
+    }
+
+    /// Сообщения, начиная с «сегодняшнего» — для typing-режима или цепочки.
+    public func rotatedMessages(for scope: TaikaFMScope, extra: String = "") -> [String] {
+        let msgs = messages(for: scope)
+        guard msgs.count > 1 else { return msgs }
+        let start = rotationSeed(for: scope, extra: extra) % msgs.count
+        return Array(msgs[start...]) + Array(msgs[..<start])
+    }
+
+    /// Одна строка на сегодня (perf-safe, без таймера).
+    public func primaryRotatedMessage(for scope: TaikaFMScope, extra: String = "") -> String {
+        rotatedMessages(for: scope, extra: extra).first ?? ""
+    }
+
+    // MARK: - Step chain
+
+    /// tip → hints → текст карточки → taikafm step scope
+    public func messagesForStep(tip: String?, hints: [String], cardText: String?) -> [String] {
+        var result: [String] = []
+
+        func appendUnique(_ raw: String) {
+            let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !t.isEmpty, !result.contains(t) else { return }
+            result.append(t)
+        }
+
+        if let tip { appendUnique(tip) }
+        for h in hints { appendUnique(h) }
+        if let cardText { appendUnique(cardText) }
+        for m in messages(for: .step) { appendUnique(m) }
+
+        if result.isEmpty {
+            result.append("Листай карточки — рядом [[подсказки]] по уроку.")
+        }
+        return result
+    }
+
+    /// tip из steps.json → один message
     public func accentMessagesFromStepTip(_ tip: String?) -> [[TaikaFMChunk]] {
         guard let raw = tip?.trimmingCharacters(in: .whitespacesAndNewlines),
               !raw.isEmpty else {
@@ -105,9 +171,19 @@ public final class TaikaFMData {
         return [Self.parseAccentChunks(raw)]
     }
 
+    /// Короткие строки Taika FM после завершения урока (итоги).
+    public func lessonCompletionAccentMessages() -> [[TaikaFMChunk]] {
+        let lines = [
+            "[[Молодец.]] Урок пройден.",
+            "Ты это сделал. Дальше — только [[легче]].",
+            "Закрепи в игре или в [[Спикере]] — так запомнится крепче.",
+            "Слово за словом — и вот ты уже [[дальше]], чем вчера."
+        ]
+        return lines.map { Self.parseAccentChunks($0) }
+    }
+
     // MARK: - Accent Parsing
 
-    /// простой парсер для [[accent]]-синтаксиса, как в LessonsDS.accentText(_:)
     private static func parseAccentChunks(_ raw: String) -> [TaikaFMChunk] {
         var result: [TaikaFMChunk] = []
         var buffer = ""
@@ -122,7 +198,6 @@ public final class TaikaFMData {
         }
 
         while index < raw.endIndex {
-            // начало акцентного сегмента [[
             if raw[index...].hasPrefix("[[") {
                 flushBuffer()
                 isAccent = true
@@ -130,7 +205,6 @@ public final class TaikaFMData {
                 continue
             }
 
-            // конец акцентного сегмента ]]
             if raw[index...].hasPrefix("]]") {
                 flushBuffer()
                 isAccent = false

@@ -23,8 +23,8 @@ FMAX = 400
 # Порог тишины для trim: выше = режем агрессивнее. 20 = мягче (тихий iPhone не «съест» запись).
 TRIM_TOP_DB = 20
 
-# Ограничение длительности аудио для стабильной работы pYIN/DTW в реальном времени.
-MAX_AUDIO_S = 8.0
+# Ограничение длительности аудио для pYIN (длинные фразы умного спикера — до ~25 с).
+MAX_AUDIO_S = 25.0
 
 
 def _load_wav_scipy(audio_path: str) -> tuple[np.ndarray, int]:
@@ -96,16 +96,25 @@ def get_syllables_from_text(thai_text: str) -> list[str]:
         if particle_suffix:
             out.append(particle_suffix)
         return out
-    if particle_suffix and rest:
-        return [rest, particle_suffix]
     try:
         from pythainlp.tokenize import syllable_tokenize
+
+        # Важно: не схлопывать всю фразу без частицы в один «слог» — иначе /assess даёт 2 слога (тело + кхрап).
+        if rest:
+            syllables = syllable_tokenize(rest, engine="han_solo", keep_whitespace=False)
+            syllables = [s for s in syllables if s and not s.isspace()]
+            if syllables:
+                if particle_suffix:
+                    syllables.append(particle_suffix)
+                return syllables
         syllables = syllable_tokenize(thai_text, engine="han_solo", keep_whitespace=False)
         syllables = [s for s in syllables if s and not s.isspace()]
         if syllables:
             return syllables
     except Exception:
         pass
+    if particle_suffix and rest:
+        return [rest, particle_suffix]
     return [thai_text]
 
 
