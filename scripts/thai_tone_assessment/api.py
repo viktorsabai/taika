@@ -350,6 +350,12 @@ class ThaiPhoneticReq(BaseModel):
 
 # --- Smart Speaker: SQLite cache для переводов (экономия API-запросов) ---
 
+# Bump this whenever the LLM system prompt changes meaning-affecting behavior:
+# it namespaces cache keys so old (possibly wrong) cached translations become
+# unreachable instead of being served forever via INSERT OR REPLACE.
+_SMART_CACHE_PROMPT_VERSION = "v2"
+
+
 def _cache_db_path() -> Path:
     env = (os.getenv("TAIKA_SMART_CACHE_DB") or "").strip()
     if env:
@@ -373,6 +379,11 @@ def _init_cache_db() -> None:
         conn.commit()
 
 
+def _cache_key(text_ru_norm: str) -> str:
+    """Namespaces the cache key with the prompt version — see _SMART_CACHE_PROMPT_VERSION."""
+    return f"{_SMART_CACHE_PROMPT_VERSION}:{text_ru_norm}"
+
+
 def _cache_get(text_ru_norm: str, politeness: str) -> tuple[str, str] | None:
     p = (politeness or "female").strip().lower()
     if p not in ("male", "female", "kathoey"):
@@ -381,7 +392,7 @@ def _cache_get(text_ru_norm: str, politeness: str) -> tuple[str, str] | None:
         with sqlite3.connect(_cache_db_path()) as conn:
             row = conn.execute(
                 "SELECT thai, phonetic FROM translations WHERE text_ru_norm = ? AND politeness = ?",
-                (text_ru_norm, p),
+                (_cache_key(text_ru_norm), p),
             ).fetchone()
             if row:
                 return (row[0], row[1])
@@ -398,7 +409,7 @@ def _cache_set(text_ru_norm: str, politeness: str, thai: str, phonetic: str) -> 
         with sqlite3.connect(_cache_db_path()) as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO translations (text_ru_norm, politeness, thai, phonetic) VALUES (?, ?, ?, ?)",
-                (text_ru_norm, p, thai, phonetic),
+                (_cache_key(text_ru_norm), p, thai, phonetic),
             )
             conn.commit()
     except Exception as e:
@@ -431,6 +442,16 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] 
         "2) \"phonetic\" — ONLY the pronunciation of THAT Thai sentence written in Russian Cyrillic letters + tone arrows. "
         "This is **Thai-to-Cyrillic**: each **Thai syllable** (by Thai spelling) becomes one Cyrillic chunk + one arrow (→↓↘↑↗). "
         "It must sound like Thai, NOT like Russian. It must NOT repeat, spell, or syllabify the original Russian prompt.\n\n"
+        "CRITICAL — translate the EXACT meaning, do not substitute a more \"familiar\" app-domain sentence:\n"
+        "- Translate ONLY the literal meaning of the given Russian sentence: same subject (я/ты/вы/он...), "
+        "same verb tense/mood (statement vs question), same object/language named.\n"
+        "- If the Russian sentence names a language (русский/тайский/английский...), keep that EXACT language in \"thai\" — "
+        "never swap it for another language just because this app is about learning Thai.\n"
+        "- Example: «Я говорю по-русски» (statement, language=Russian) → thai «ฉันพูดภาษารัสเซีย ครับ/ค่ะ» "
+        "(chan phuut phaasaa rasia, i.e. \"I speak Russian\"). This is NOT «คุณพูดภาษาไทยได้ไหม» (\"Do you speak Thai?\") — "
+        "do not default to that stock phrase just because it's common in Thai-learning apps.\n"
+        "- Example: «Ты говоришь по-русски?» (question, 2nd person, language=Russian) → thai should ask "
+        "whether the listener speaks Russian, not Thai.\n\n"
         "Phonetic format (STRICT):\n"
         "- Cyrillic а-я/ё only, plus hyphens inside a syllable, spaces between words. NO Thai letters in phonetic. NO Latin. NO IPA.\n"
         "- For the vowel sound [i] use ONLY Cyrillic «и»/«И», never Latin I or i.\n"
@@ -439,8 +460,9 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] 
         "- Good example: Russian «Как дела?» → thai might be «สบายดีไหม» → phonetic like «са-бай↘ ди↗-май↗» (sounds of Thai words).\n"
         "- BAD: any phonetic whose letters read as the Russian question (e.g. «как→ де→ла») — forbidden.\n"
         "- Do NOT add ครับ/ค่ะ or кхрап/кха in output — we append politeness on the server.\n\n"
-        "Workflow: first choose correct \"thai\", then write \"phonetic\" by reading **left-to-right through \"thai\"** "
-        "(Thai syllable boundaries), transcribing each syllable’s Thai pronunciation into Cyrillic.\n"
+        "Workflow: first re-read the Russian sentence carefully (who is the subject, is it a question, which language/topic "
+        "is named), then choose the correct \"thai\" with the SAME meaning, then write \"phonetic\" by reading "
+        "**left-to-right through \"thai\"** (Thai syllable boundaries), transcribing each syllable’s Thai pronunciation into Cyrillic.\n"
         "If the Russian input is a question (?), \"thai\" should be a natural Thai question; \"phonetic\" still reflects only that Thai.\n\n"
         "Return JSON: {\"thai\": \"...\", \"phonetic\": \"...\"}."
     )
