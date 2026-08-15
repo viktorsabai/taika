@@ -8,7 +8,9 @@
 //
 
 import SwiftUI
+import Foundation
 import Speech
+import UIKit
 
 enum TaikaStartDoor: String, Equatable {
     case beginner
@@ -156,7 +158,9 @@ struct TaikaLearnOnboardingView: View {
     }
 
     private var contentMotion: Animation? {
-        reduceMotion ? .easeOut(duration: 0.16) : .easeInOut(duration: 0.28)
+        reduceMotion
+            ? .easeOut(duration: 0.16)
+            : .spring(response: 0.46, dampingFraction: 0.86)
     }
 
     // MARK: - Fixed slots
@@ -244,7 +248,10 @@ struct TaikaLearnOnboardingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
         .id(step)
-        .transition(.opacity)
+        .transition(reduceMotion ? .opacity : .asymmetric(
+            insertion: .opacity.combined(with: .scale(scale: 0.96)),
+            removal: .opacity.combined(with: .scale(scale: 1.04))
+        ))
         .animation(contentMotion, value: step)
     }
 
@@ -845,6 +852,10 @@ private struct LearnBreakdownDemo: View {
                 baseColor: .white.opacity(0.88)
             )
 
+            PitchRibbonView(active: showTone || showRows, tint: theme.currentAccentTintColor)
+                .frame(height: compact ? 42 : 54)
+                .padding(.top, 2)
+
             HStack(spacing: 10) {
                 scoreMetric(title: "Текст", subtitle: "слова", value: textScore, visible: showText)
                 scoreMetric(title: "Тон", subtitle: "мелодия", value: toneScore, visible: showTone)
@@ -869,7 +880,7 @@ private struct LearnBreakdownDemo: View {
                         comment: "Нужен спад в конце."
                     )
                 }
-                .transition(.opacity)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
 
             if showHint {
@@ -888,7 +899,7 @@ private struct LearnBreakdownDemo: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(Color.white.opacity(0.06))
                 )
-                .transition(.opacity)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
         .padding(compact ? 14 : 18)
@@ -985,6 +996,9 @@ private struct LearnBreakdownDemo: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
         }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.35) {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
     }
 }
 
@@ -1061,17 +1075,13 @@ private struct LearnPhraseCard: View {
                 .opacity(checking || recording ? 0.45 : 1)
             }
 
-            if checking {
+            if recording || checking {
                 RoundedRectangle(cornerRadius: CardDS.Metrics.stepCardContentRadius, style: .continuous)
-                    .fill(Color.black.opacity(0.45))
-                VStack(spacing: 10) {
-                    ProgressView()
-                        .tint(theme.currentAccentTintColor)
-                        .scaleEffect(1.15)
-                    Text("Разбираю…")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.white)
-                }
+                    .fill(Color.black.opacity(0.48))
+                LiveVoiceOverlay(
+                    phase: recording ? .recording : .checking,
+                    tint: theme.currentAccentTintColor
+                )
             }
         }
         .frame(width: size.width, height: size.height)
@@ -1082,6 +1092,119 @@ private struct LearnPhraseCard: View {
                 lineWidth: recording || checking ? 1.6 : 1.2
             )
         )
+    }
+}
+
+private enum LiveVoicePhase: Equatable {
+    case recording
+    case checking
+}
+
+private struct LiveVoiceOverlay: View {
+    let phase: LiveVoicePhase
+    let tint: Color
+    @State private var pulse = false
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                ForEach(0..<3, id: \.self) { index in
+                    Circle()
+                        .stroke(tint.opacity(0.24), lineWidth: 1.3)
+                        .frame(width: 68 + CGFloat(index * 18), height: 68 + CGFloat(index * 18))
+                        .scaleEffect(pulse ? 1.12 : 0.9)
+                        .opacity(pulse ? 0.18 : 0.68)
+                        .animation(.easeOut(duration: 1.35).repeatForever().delay(Double(index) * 0.16), value: pulse)
+                }
+                Image(systemName: phase == .recording ? "waveform" : "sparkles")
+                    .font(.system(size: 21, weight: .bold))
+                    .foregroundStyle(tint)
+                    .symbolEffect(.pulse, options: .repeating, isActive: phase == .recording)
+            }
+            .frame(height: 86)
+
+            Text(phase == .recording ? "Слушаю тебя…" : "Сканирую слова и тоны…")
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+
+            if phase == .recording {
+                SignalBars(tint: tint, active: true)
+                    .frame(height: 24)
+            }
+        }
+        .onAppear { pulse = true }
+        .onChange(of: phase) { _, _ in pulse = false; pulse = true }
+    }
+}
+
+private struct SignalBars: View {
+    let tint: Color
+    let active: Bool
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<22, id: \.self) { index in
+                Capsule()
+                    .fill(tint.opacity(active ? 0.9 : 0.35))
+                    .frame(width: 3, height: active ? CGFloat(7 + ((index * 13) % 18)) : 7)
+                    .animation(.easeInOut(duration: 0.42).repeatForever().delay(Double(index) * 0.025), value: active)
+            }
+        }
+    }
+}
+
+private struct PitchRibbonView: View {
+    let active: Bool
+    let tint: Color
+    @State private var phase: CGFloat = 0
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.04))
+            PitchRibbonShape(phase: active ? phase : 0.08)
+                .stroke(tint.opacity(active ? 0.95 : 0.3), style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 7)
+                .animation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true), value: phase)
+            HStack {
+                Text("тон")
+                Spacer()
+                Text(active ? "слышу мелодию" : "эталон тона")
+            }
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.42))
+            .padding(.horizontal, 11)
+            .frame(maxHeight: .infinity, alignment: .bottom)
+            .padding(.bottom, 4)
+        }
+        .onAppear { phase = 1 }
+    }
+}
+
+private struct PitchRibbonShape: Shape {
+    var phase: CGFloat
+    var animatableData: CGFloat {
+        get { phase }
+        set { phase = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let width = rect.width
+        let height = rect.height
+        let points: [(CGFloat, CGFloat)] = [
+            (0.0, 0.68), (0.13, 0.55), (0.25, 0.63), (0.38, 0.31),
+            (0.51, 0.46), (0.64, 0.23), (0.78, 0.52), (0.9, 0.42), (1.0, 0.58)
+        ]
+        for (index, point) in points.enumerated() {
+            let x = point.0 * width
+            let wave = sin(CGFloat(index) * 1.4 + phase * .pi) * height * 0.055
+            let y = point.1 * height + wave
+            if index == 0 { path.move(to: CGPoint(x: x, y: y)) }
+            else { path.addLine(to: CGPoint(x: x, y: y)) }
+        }
+        return path
     }
 }
 
