@@ -47,12 +47,10 @@ struct TaikaCoreLoopOnboardingView: View {
 
     var body: some View {
         ZStack {
-            WelcomeSpaceBackdropView()
-            Color.black.opacity(0.48).ignoresSafeArea()
+            Color.black.ignoresSafeArea()
             ambientGlow
 
             VStack(spacing: 0) {
-                topBar
                 Spacer(minLength: phase == .hook ? 10 : 18)
                 if phase != .hook {
                     promptSlot
@@ -86,54 +84,19 @@ struct TaikaCoreLoopOnboardingView: View {
     private var ambientGlow: some View {
         ZStack {
             Circle()
-                .fill(theme.currentAccentTintColor.opacity(0.42))
-                .frame(width: 330, height: 330)
-                .blur(radius: 78)
-                .offset(y: phase == .hook ? 70 : 20)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 2.6).repeatForever(autoreverses: true), value: phase)
+                .fill(theme.currentAccentTintColor.opacity(phase == .hook ? 0.12 : 0.18))
+                .frame(width: 260, height: 260)
+                .blur(radius: 92)
+                .offset(y: phase == .hook ? 30 : 10)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 3.2).repeatForever(autoreverses: true), value: phase)
             LinearGradient(
-                colors: [.clear, theme.currentAccentTintColor.opacity(0.16), .clear],
+                colors: [.clear, theme.currentAccentTintColor.opacity(0.055), .clear],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
         }
         .allowsHitTesting(false)
-    }
-
-    private var topBar: some View {
-        HStack(spacing: 12) {
-            Text("taikAAA")
-                .font(.custom("Onmark Trial", size: 30))
-                .foregroundStyle(theme.currentAccentFill)
-            Spacer()
-            Group {
-                onboardingIcon("gamecontroller.fill")
-                onboardingIcon("bookmark.fill", value: "6")
-                onboardingIcon("crown.fill")
-            }
-            .opacity(phase == .hook && introFrame != .cta ? 0 : 0.72)
-            .animation(transition, value: introFrame)
-        }
-    }
-
-    private func onboardingIcon(_ systemName: String, value: String? = nil) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Image(systemName: systemName)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(theme.currentAccentFill.opacity(0.9))
-                .frame(width: 38, height: 38)
-                .background(Circle().fill(Color.white.opacity(0.035)))
-                .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 1))
-            if let value {
-                Text(value)
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .foregroundStyle(.black)
-                    .padding(3)
-                    .background(Circle().fill(theme.currentAccentFill))
-                    .offset(x: 2, y: -2)
-            }
-        }
     }
 
     private var promptSlot: some View {
@@ -188,15 +151,17 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var brandReveal: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 26) {
             Text("taikAAA")
-                .font(.custom("Onmark Trial", size: 62))
+                .font(.custom("Onmark Trial", size: 64))
                 .foregroundStyle(theme.currentAccentFill)
-                .shadow(color: theme.currentAccentTintColor.opacity(0.64), radius: 24)
-            Text("Говори. Учись. Живи по-тайски.")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.white.opacity(0.48))
-                .opacity(0.9)
+                .shadow(color: theme.currentAccentTintColor.opacity(0.52), radius: 28)
+                .scaleEffect(introFrame == .brand ? 1 : 0.96)
+            Rectangle()
+                .fill(theme.currentAccentFill)
+                .frame(width: 68, height: 2)
+                .blur(radius: 0.3)
+                .shadow(color: theme.currentAccentTintColor.opacity(0.8), radius: 12)
         }
         .frame(maxWidth: .infinity)
     }
@@ -464,7 +429,6 @@ struct TaikaCoreLoopOnboardingView: View {
             case .hook:
                 if introFrame == .cta {
                     primaryCTA("Попробовать фразу") { advance(.phrase) }
-                    warmupStrip
                 }
             case .phrase:
                 primaryCTA("Послушать") { advance(.listen) }
@@ -489,29 +453,6 @@ struct TaikaCoreLoopOnboardingView: View {
                     .buttonStyle(.plain)
             }
         }
-    }
-
-    private var warmupStrip: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "bolt.fill")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(theme.currentAccentFill)
-            Text("Разминка")
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(theme.currentAccentFill)
-            Text("· 3ч 25м")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.72))
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(.white.opacity(0.42))
-        }
-        .padding(.horizontal, 18)
-        .frame(height: 48)
-        .background(Capsule().fill(Color.white.opacity(0.035)))
-        .overlay(Capsule().stroke(theme.currentAccentTintColor.opacity(0.58), lineWidth: 1))
-        .contentShape(Capsule())
     }
 
     private func primaryCTA(_ title: String, action: @escaping () -> Void) -> some View {
