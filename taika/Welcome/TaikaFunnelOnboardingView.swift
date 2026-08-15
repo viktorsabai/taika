@@ -19,7 +19,7 @@ struct TaikaFunnelOnboardingView: View {
     @State private var resultReveal = 0
     @State private var didFinish = false
 
-    private enum FunnelState: Int, CaseIterable { case attract, choose, listen, speak, analyze, understand, choosePath }
+    private enum FunnelState: Int, CaseIterable { case attract, choose, listen, speak, analyze, understand, reinforce, choosePath }
     private enum VoiceState: Equatable { case idle, recording, checking, success, failed }
 
     private let phraseItems: [FunnelPhrase] = [
@@ -81,6 +81,7 @@ struct TaikaFunnelOnboardingView: View {
         case .speak: speak
         case .analyze: analyze
         case .understand: understand
+        case .reinforce: reinforce
         case .choosePath: choosePath
         }
     }
@@ -88,13 +89,13 @@ struct TaikaFunnelOnboardingView: View {
     private var attract: some View {
         VStack(alignment: .leading, spacing: 18) {
             Spacer(minLength: 20)
-            MDCyclingTypewriter(lines: ["Скажи одну фразу", "Почувствуй тайский", "Говори — Taika услышит"], font: .system(size: 28, weight: .bold), holdSeconds: 2.1, charInterval: 0.035, minHeight: 78)
+            MDCyclingTypewriter(lines: ["Научись говорить сам", "Taika будет рядом", "Одна фраза — один шаг"], font: .system(size: 28, weight: .bold), holdSeconds: 2.1, charInterval: 0.035, minHeight: 78)
                 .frame(height: 78, alignment: .leading)
-            Text("Taika покажет, что происходит с твоим голосом — словами и тонами.")
+            Text("Taika не переводит за тебя. Она помогает услышать, сказать и понять следующий шаг.")
                 .font(.system(size: 16, weight: .medium, design: .rounded))
                 .foregroundStyle(PD.ColorToken.textSecondary)
             Spacer(minLength: 10)
-            MDPromptHero(greeting: "Скажи сам", tagline: "Одна фраза — и ты увидишь, как это работает.") { go(.choose) }
+            MDPromptHero(greeting: "Начни сам", tagline: "Кун кру рядом: слушает, объясняет и помогает закрепить.") { go(.choose) }
             Spacer(minLength: 10)
         }
     }
@@ -172,9 +173,16 @@ struct TaikaFunnelOnboardingView: View {
                 metric(title: "Тон", value: "68%", reveal: resultReveal >= 2)
             }
             ToneRevealRail(reveal: resultReveal >= 3, tint: theme.currentAccentTintColor)
-            mainCTA("Выбрать свой путь") { go(.choosePath) }
+            mainCTA("Закрепить это") { go(.reinforce) }
         }
         .onAppear { revealResult() }
+    }
+
+    private var reinforce: some View {
+        funnelColumn(prompt: "Закрепим по-твоему", subtitle: "Одна фраза — три способа, чтобы она осталась в речи") {
+            ReinforcementCarousel(accent: theme.currentAccentTintColor, reduceMotion: reduceMotion)
+            mainCTA("Выбрать курс") { go(.choosePath) }
+        }
     }
 
     private var choosePath: some View {
@@ -300,6 +308,37 @@ struct TaikaFunnelOnboardingView: View {
 
 private struct FunnelPhrase: Identifiable { let id: String; let thai: String; let ru: String; let phonetic: String; let caption: String }
 private struct FunnelCourse: Identifiable { let id: String; let title: String; let subtitle: String; let chip: String; let isPro: Bool }
+
+private struct ReinforcementCarousel: View {
+    let accent: Color
+    let reduceMotion: Bool
+    @State private var index = 0
+    private let items: [(icon: String, title: String, subtitle: String)] = [
+        ("square.grid.2x2.fill", "Матч", "быстро вспомнить глазами"),
+        ("textformat.abc", "Слоги", "собрать фразу руками"),
+        ("speaker.wave.2.fill", "Аудио Recall", "узнать и сказать на слух")
+    ]
+    var body: some View {
+        VStack(spacing: 12) {
+            TabView(selection: $index) {
+                ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
+                    VStack(spacing: 10) {
+                        Image(systemName: item.icon).font(.system(size: 28, weight: .semibold)).foregroundStyle(accent)
+                        Text(item.title).font(.system(size: 22, weight: .semibold, design: .rounded))
+                        Text(item.subtitle).font(.system(size: 15, weight: .medium, design: .rounded)).foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 170)
+                    .background(Theme.Surfaces.card(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)))
+                    .tag(idx)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 190)
+            HStack(spacing: 6) { ForEach(0..<items.count, id: \.self) { idx in Capsule().fill(idx == index ? AnyShapeStyle(accent) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.24))).frame(width: idx == index ? 18 : 6, height: 6).animation(.spring(response: 0.3, dampingFraction: 0.85), value: index) } }
+            Text("Свайпай, чтобы увидеть остальные").font(.caption.weight(.medium)).foregroundStyle(PD.ColorToken.textSecondary)
+        }
+    }
+}
 
 private struct DepthCarousel<Item: Identifiable, Card: View>: View {
     let items: [Item]
