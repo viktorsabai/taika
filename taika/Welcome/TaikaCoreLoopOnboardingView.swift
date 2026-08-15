@@ -47,8 +47,10 @@ struct TaikaCoreLoopOnboardingView: View {
             VStack(spacing: 0) {
                 topBar
                 Spacer(minLength: 18)
-                promptSlot
-                Spacer(minLength: 16)
+                if phase != .hook {
+                    promptSlot
+                }
+                Spacer(minLength: phase == .hook ? 2 : 16)
                 heroSlot
                 Spacer(minLength: 16)
                 footerSlot
@@ -148,31 +150,25 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var hookHero: some View {
-                    VStack(spacing: 16) {
-                VStack(spacing: 3) {
+                    VStack(spacing: 14) {
+                VStack(spacing: 2) {
                     Text("Не переводчик.")
                         .foregroundStyle(.white)
-                    Text("Твоя персональная кун кру")
+                    Text("Твоя кун кру")
                         .foregroundStyle(theme.currentAccentFill)
                     Text("для тайского.")
                         .foregroundStyle(theme.currentAccentFill)
                 }
-                .font(.system(size: 31, weight: .bold, design: .rounded))
+                .font(.system(size: 34, weight: .bold, design: .rounded))
                 .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.78)
 
-                Text("Слушай. Говори. Понимай следующий шаг.")
+                Text("Услышь. Скажи. Пойми.")
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.78))
+                    .foregroundStyle(.white.opacity(0.74))
                     .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
 
-                PainChipMarquee(chips: painChips, tint: theme.currentAccentTintColor, reduceMotion: reduceMotion)
-                    .frame(height: 34)
-                    .padding(.horizontal, -24)
-
-                VoiceOrb(isActive: false, tint: theme.currentAccentTintColor)
-                    .frame(height: 205)
+                VoiceOrb(isActive: true, tint: theme.currentAccentTintColor)
+                    .frame(height: 250)
             }
 
     }
@@ -327,7 +323,7 @@ struct TaikaCoreLoopOnboardingView: View {
         VStack(spacing: 12) {
             switch phase {
             case .hook:
-                primaryCTA("Попробовать одну фразу") { advance(.phrase) }
+                primaryCTA("Попробовать фразу") { advance(.phrase) }
             case .phrase:
                 primaryCTA("Послушать") { advance(.listen) }
             case .listen:
@@ -499,18 +495,24 @@ private struct VoiceMic: View {
 private struct WaveformLine: View {
     let tint: Color
     let active: Bool
+
     var body: some View {
-        Canvas { context, size in
-            var path = Path()
-            let mid = size.height / 2
-            let amp = active ? size.height * 0.28 : size.height * 0.16
-            path.move(to: CGPoint(x: 0, y: mid))
-            for x in stride(from: 0, through: size.width, by: 3) {
-                let t = x / size.width
-                let y = mid + sin(t * .pi * 4) * amp * (0.4 + 0.6 * sin(t * .pi))
-                path.addLine(to: CGPoint(x: x, y: y))
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                var path = Path()
+                let mid = size.height / 2
+                let amp = active ? size.height * 0.28 : size.height * 0.16
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                path.move(to: CGPoint(x: 0, y: mid))
+                for x in stride(from: 0, through: size.width, by: 3) {
+                    let t = x / size.width
+                    let carrier = sin(t * .pi * 4 + time * (active ? 2.2 : 0.8))
+                    let shimmer = sin(t * .pi * 9 - time * 1.35) * 0.16
+                    let y = mid + (carrier + shimmer) * amp * (0.42 + 0.58 * sin(t * .pi))
+                    path.addLine(to: CGPoint(x: x, y: y))
+                }
+                context.stroke(path, with: .color(tint.opacity(0.88)), lineWidth: active ? 2.2 : 1.7)
             }
-            context.stroke(path, with: .color(tint.opacity(0.82)), lineWidth: 2)
         }
     }
 }
