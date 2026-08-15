@@ -70,11 +70,11 @@ struct AppShell: View {
                 .ignoresSafeArea()
 
             // Вход:
-            // • первый раз → Splash → мини-урок → LessonsView стартового курса
+            // • первый раз → Splash → живой core loop → LessonsView стартового курса
             // • returning → короткий Splash → Main
             if !onboardingDone {
                 if firstEntryPhase == .learn {
-                    TaikaLearnOnboardingView { courseId in
+                    TaikaCoreLoopOnboardingView { courseId in
                         finishFirstEntry(with: .baseCourse, landingCourseId: courseId)
                     }
                     .transition(.opacity)
