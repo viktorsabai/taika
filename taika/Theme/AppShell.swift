@@ -17,18 +17,44 @@ struct AppShell: View {
     @State private var selectedTab: Int = 0
     /// Показываем единый экран входа до первого «Начать» (персистится).
     @AppStorage("taika.welcome.seen.v1") private var welcomeSeen: Bool = false
-    /// Брендовый сплэш на каждом cold start → дальше Welcome или Main.
+    /// Value-онбординг + быстрый старт пройдены.
+    @AppStorage("taika.onboarding.v2.done") private var onboardingDone: Bool = false
+    /// Брендовый сплэш на каждом cold start → дальше Main (только returning).
     @State private var showBootSplash: Bool = true
     @State private var didStartDataPreload: Bool = false
+    /// Фаза первого входа после Welcome.
+    @State private var firstEntryPhase: FirstEntryPhase = .none
+    @State private var pendingQuickStart: TaikaQuickStartAction? = nil
+
+    private enum FirstEntryPhase: Equatable {
+        case none
+        case splash
+        case learn
+    }
 
     private var tabSelection: Binding<Int> {
         Binding(
             get: { selectedTab },
             set: { newValue in
+                if newValue == 2, selectedTab != 2 {
+                    openSpeakerFromToolbarIfNeeded()
+                }
                 // Avoid extra spring-driven layout work on heavy root tabs.
                 selectedTab = newValue
             }
         )
+    }
+
+    /// Тап по иконке Спикер в тулбаре → умный спикер, если нет контекста тренировки курса/избранного.
+    private func openSpeakerFromToolbarIfNeeded() {
+        let trainingIntent =
+            speakerPendingCourseId != nil
+            || SpeakerManager.shared.speakerContextCourseId != nil
+            || SpeakerRequestedCourseId.shared.courseId != nil
+        guard !trainingIntent else { return }
+        if SpeakerManager.shared.speakerUIMode != .conversation {
+            SpeakerManager.shared.setSpeakerUIMode(.conversation)
+        }
     }
 
     @ObservedObject private var overlay = OverlayPresenter.shared
@@ -43,18 +69,23 @@ struct AppShell: View {
             PD.ColorToken.background
                 .ignoresSafeArea()
 
-            // Вход — один экран, не два бренда подряд:
-            // • первый раз → Welcome (там уже tai/kAAA + «Начать»)
-            // • дальше → короткий Splash → Main
-            if !welcomeSeen {
-                WelcomeLandingView {
-                    welcomeSeen = true
-                    showBootSplash = false
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.9)) {
-                        selectedTab = 0
+            // Вход:
+            // • первый раз → Splash → мини-урок → LessonsView стартового курса
+            // • returning → короткий Splash → Main
+            if !onboardingDone {
+                if firstEntryPhase == .learn {
+                    TaikaLearnOnboardingView { courseId in
+                        finishFirstEntry(with: .baseCourse, landingCourseId: courseId)
                     }
+                    .transition(.opacity)
+                } else {
+                    SplashTaikaView {
+                        withAnimation(.easeOut(duration: 0.28)) {
+                            firstEntryPhase = .learn
+                        }
+                    }
+                    .transition(.opacity)
                 }
-                .transition(.opacity)
             } else if showBootSplash {
                 SplashTaikaView {
                     withAnimation(.easeOut(duration: 0.28)) {
@@ -63,101 +94,7 @@ struct AppShell: View {
                 }
                 .transition(.opacity)
             } else {
-                NavigationStack(path: $nav.path) {
-                    tabContent
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .navigationDestination(for: NavigationIntent.Route.self) { route in
-                            switch route {
-
-                            case .course:
-                                CourseView()
-
-                            case let .lessons(courseId):
-                                LessonsView(courseId: courseId)
-
-                            case let .lesson(courseId, lessonId, presentation):
-                                StepView(
-                                    courseId: courseId,
-                                    lessonId: lessonId,
-                                    lessonTitle: LessonsData.shared.lessonTitle(for: lessonId),
-                                    startIndex: presentation.startIndex,
-                                    scope: presentation.scope,
-                                    showKinds: presentation.showKinds,
-                                    layoutCardsOnly: presentation.layoutCardsOnly,
-                                    allowLearning: presentation.allowLearning,
-                                    showBottomProgress: presentation.showBottomProgress,
-                                    showInternalHeader: presentation.showInternalHeader,
-                                    useInternalBackground: presentation.useInternalBackground,
-                                    onBack: nil
-                                )
-
-                            case let .game(courseId, lessonId, gameType):
-                                GameView(
-                                    courseId: courseId,
-                                    lessonId: lessonId,
-                                    gameType: gameType
-                                )
-
-                            case let .favoritesAll(initialFilter):
-                                Color.clear
-                                    .onAppear {
-                                        FavoritesFilterState.shared.selectedTab = FavoriteScreenTab(fdk: initialFilter)
-                                        nav.popToRoot()
-                                        nav.requestTab(3)
-                                    }
-                            }
-                        }
-                }
-                .background(PD.ColorToken.background)
-                .toolbar(.hidden, for: .navigationBar)
-                .environment(
-                    \.taikaRootHeaderClearance,
-                    gameHeaderStore.config != nil
-                        ? Theme.Layout.rootHeaderClearanceGame
-                        : Theme.Layout.rootHeaderClearance
-                )
-                .overlay(alignment: .top) {
-                    ShellHeaderHost(
-                        selectedTab: $selectedTab,
-                        speakerPendingCourseId: $speakerPendingCourseId,
-                        speakerPendingLessonId: $speakerPendingLessonId
-                    )
-                    .frame(maxWidth: .infinity)
-                    .background(alignment: .top) {
-                        TaikaLiquidGlassHeaderBackdrop()
-                    }
-                    .zIndex(50)
-                }
-                .overlay(alignment: .bottom) {
-                    if nav.path.isEmpty {
-                        ToolBar(selectedTab: tabSelection)
-                    }
-                }
-                // Perf hotfix: do not blur/fade the whole shell tree while scrolling/tab switching.
-                .onChange(of: nav.requestedTab) { _, newValue in
-                    guard let tab = newValue, (0...4).contains(tab) else { return }
-                    if tab == 2 {
-                        if nav.path.isEmpty {
-                            // Таб → таб с корня: без back-хрома.
-                            SpeakerReturnContext.shared.clear()
-                        } else {
-                            SpeakerReturnContext.shared.save(tab: selectedTab, path: nav.path)
-                        }
-                        if let ctx = SpeakerRequestedCourseId.shared.consume() {
-                            speakerPendingCourseId = ctx.courseId
-                            speakerPendingLessonId = ctx.lessonId
-                        }
-                    }
-                    nav.popToRoot()
-                    selectedTab = tab
-                    nav.clearRequestedTab()
-                }
-                .onChange(of: nav.path) { _, newPath in
-                    let onGame = newPath.last.map { if case .game = $0 { return true }; return false } ?? false
-                    if !onGame, gameHeaderStore.config != nil {
-                        gameHeaderStore.config = nil
-                    }
-                }
+                mainShellContent
             }
 
             // Оверлеи на уровне шелла (EPIC 2: courseFilters, speakerFilters, voiceSettings, gamePark)
@@ -173,6 +110,29 @@ struct AppShell: View {
                     }
                 case .proCoursePaywall(let courseId, let reason):
                     PROView(courseId: courseId.isEmpty ? nil : courseId, reason: reason) {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                            overlay.dismiss()
+                        }
+                    }
+                case .speakerToneAha(let courseId, let reason, let fromSpeakerPaywall):
+                    SpeakerToneAhaStepView(
+                        courseId: courseId,
+                        reason: reason,
+                        fromSpeakerPaywall: fromSpeakerPaywall,
+                        onDismissWithoutPaywall: {
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                overlay.dismiss()
+                            }
+                        }
+                    )
+                case .speakerFirstTip:
+                    TaikaTabTipOverlayView(kind: .speaker) {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                            overlay.dismiss()
+                        }
+                    }
+                case .courseFirstTip:
+                    TaikaTabTipOverlayView(kind: .course) {
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
                             overlay.dismiss()
                         }
@@ -223,6 +183,12 @@ struct AppShell: View {
                             overlay.dismiss()
                         }
                     }
+                case .lessonResetConfirm(let courseId, let lessonId):
+                    CourseResetConfirmOverlayView(courseId: courseId, lessonId: lessonId) {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                            overlay.dismiss()
+                        }
+                    }
                 case .authSoftWall(let masteryPercent, let streakDays):
                     AuthSoftWallSheetHost(
                         masteryPercent: masteryPercent,
@@ -234,14 +200,44 @@ struct AppShell: View {
                 }
             }
         }
+        .animation(.spring(response: 0.5, dampingFraction: 0.9), value: welcomeSeen)
+        .animation(.spring(response: 0.5, dampingFraction: 0.9), value: firstEntryPhase)
+        .animation(.easeOut(duration: 0.28), value: showBootSplash)
+        .onAppear {
+            migrateOnboardingFlagIfNeeded()
+            if !onboardingDone, firstEntryPhase == .none {
+                showBootSplash = false
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: TaikaProductDemoFlags.debugResetOnboardingNotification)) { _ in
+            pendingQuickStart = nil
+            showBootSplash = false
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) {
+                firstEntryPhase = .splash
+                selectedTab = 0
+            }
+            nav.popToRoot()
+        }
+        .overlay(alignment: .top) {
+            if welcomeSeen && onboardingDone && !showBootSplash && firstEntryPhase == .none {
+                ShellHeaderHost(
+                    selectedTab: $selectedTab,
+                    speakerPendingCourseId: $speakerPendingCourseId,
+                    speakerPendingLessonId: $speakerPendingLessonId
+                )
+                .frame(maxWidth: .infinity)
+                .background(alignment: .top) {
+                    TaikaLiquidGlassHeaderBackdrop()
+                }
+            }
+        }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .environmentObject(ThemeManager.shared)
         .environmentObject(FavoriteManager.shared)
         .environmentObject(overlay)
         .environmentObject(ProManager.shared)
-        // Failsafe: только когда сплэш реально на экране (returning users).
         .task(id: showBootSplash) {
-            guard welcomeSeen, showBootSplash else { return }
+            guard welcomeSeen, onboardingDone, showBootSplash, firstEntryPhase == .none else { return }
             try? await Task.sleep(nanoseconds: 2_500_000_000)
             if showBootSplash {
                 withAnimation(.easeOut(duration: 0.28)) {
@@ -250,7 +246,6 @@ struct AppShell: View {
             }
         }
         .task {
-            // Не блокируем первый кадр: Pro sync после короткой паузы.
             try? await Task.sleep(nanoseconds: 300_000_000)
             ProManager.shared.start(session: UserSession.shared)
             await ProManager.shared.syncRevenueCatIdentity(userId: AuthService.shared.currentUserID)
@@ -259,7 +254,6 @@ struct AppShell: View {
         .onAppear {
             guard !didStartDataPreload else { return }
             didStartDataPreload = true
-            // Тихий preload без модалки «Готовим Taika…».
             Task.detached(priority: .utility) {
                 StepData.shared.preload()
                 LessonsData.shared.preload()
@@ -268,6 +262,143 @@ struct AppShell: View {
                     ProgressManager.shared.debugAuditProgressIfEnabled()
                 }
 #endif
+            }
+        }
+    }
+
+    /// Существующие пользователи с welcome.seen не гоняем через новый онбординг.
+    private func migrateOnboardingFlagIfNeeded() {
+        if welcomeSeen, UserDefaults.standard.object(forKey: "taika.onboarding.v2.done") == nil {
+            onboardingDone = true
+        }
+        migrateProductDemoFlagsIfNeeded()
+    }
+
+    /// Один раз: у тех, кто уже прошёл онбординг до product-demo, не форсим first-visit туры.
+    private func migrateProductDemoFlagsIfNeeded() {
+        let key = "taika.demo.flags.migrated.v1"
+        guard UserDefaults.standard.object(forKey: key) == nil else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        if onboardingDone {
+            TaikaProductDemoFlags.markSpeakerSeen()
+            TaikaProductDemoFlags.markCourseSeen()
+        }
+    }
+
+    private func finishFirstEntry(with action: TaikaQuickStartAction, landingCourseId: String = "course_b_1") {
+        pendingQuickStart = nil
+        welcomeSeen = true
+        onboardingDone = true
+        showBootSplash = false
+
+        switch action {
+        case .baseCourse:
+            let cid = landingCourseId.isEmpty ? "course_b_1" : landingCourseId
+            UserSession.shared.markActive(courseId: cid)
+            selectedTab = 1
+            nav.path = [.lessons(courseId: cid)]
+            withAnimation(.easeOut(duration: 0.32)) {
+                firstEntryPhase = .none
+            }
+        case .speakerVoice:
+            SpeakerManager.shared.setSpeakerUIMode(.conversation)
+            SpeakerReturnContext.shared.clear()
+            selectedTab = 2
+            withAnimation(.easeOut(duration: 0.32)) {
+                firstEntryPhase = .none
+            }
+        case .catalog:
+            selectedTab = 1
+            withAnimation(.easeOut(duration: 0.32)) {
+                firstEntryPhase = .none
+            }
+            DispatchQueue.main.async {
+                nav.openCourseCatalog(tab: .base)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var mainShellContent: some View {
+        NavigationStack(path: $nav.path) {
+            tabContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .navigationDestination(for: NavigationIntent.Route.self) { route in
+                    switch route {
+
+                    case .course:
+                        CourseView()
+
+                    case let .lessons(courseId):
+                        LessonsView(courseId: courseId)
+
+                    case let .lesson(courseId, lessonId, presentation):
+                        StepView(
+                            courseId: courseId,
+                            lessonId: lessonId,
+                            lessonTitle: LessonsData.shared.lessonTitle(for: lessonId),
+                            startIndex: presentation.startIndex,
+                            scope: presentation.scope,
+                            showKinds: presentation.showKinds,
+                            layoutCardsOnly: presentation.layoutCardsOnly,
+                            allowLearning: presentation.allowLearning,
+                            showBottomProgress: presentation.showBottomProgress,
+                            showInternalHeader: presentation.showInternalHeader,
+                            useInternalBackground: presentation.useInternalBackground,
+                            onBack: nil
+                        )
+
+                    case let .game(courseId, lessonId, gameType):
+                        GameView(
+                            courseId: courseId,
+                            lessonId: lessonId,
+                            gameType: gameType
+                        )
+
+                    case let .favoritesAll(initialFilter):
+                        Color.clear
+                            .onAppear {
+                                FavoritesFilterState.shared.selectedTab = FavoriteScreenTab(fdk: initialFilter)
+                                nav.popToRoot()
+                                nav.requestTab(3)
+                            }
+                    }
+                }
+        }
+        .background(PD.ColorToken.background)
+        .toolbar(.hidden, for: .navigationBar)
+        .environment(
+            \.taikaRootHeaderClearance,
+            gameHeaderStore.config != nil
+                ? Theme.Layout.rootHeaderClearanceGame
+                : Theme.Layout.rootHeaderClearance
+        )
+        .overlay(alignment: .bottom) {
+            if nav.path.isEmpty {
+                ToolBar(selectedTab: tabSelection)
+            }
+        }
+        .onChange(of: nav.requestedTab) { _, newValue in
+            guard let tab = newValue, (0...4).contains(tab) else { return }
+            if tab == 2 {
+                if nav.path.isEmpty {
+                    SpeakerReturnContext.shared.clear()
+                } else {
+                    SpeakerReturnContext.shared.save(tab: selectedTab, path: nav.path)
+                }
+                if let ctx = SpeakerRequestedCourseId.shared.consume() {
+                    speakerPendingCourseId = ctx.courseId
+                    speakerPendingLessonId = ctx.lessonId
+                }
+            }
+            nav.popToRoot()
+            selectedTab = tab
+            nav.clearRequestedTab()
+        }
+        .onChange(of: nav.path) { _, newPath in
+            let onGame = newPath.last.map { if case .game = $0 { return true }; return false } ?? false
+            if !onGame, gameHeaderStore.config != nil {
+                gameHeaderStore.config = nil
             }
         }
     }
@@ -282,7 +413,8 @@ struct AppShell: View {
         case 2:
             SpeakerView(
                 pendingCourseId: $speakerPendingCourseId,
-                pendingLessonId: $speakerPendingLessonId
+                pendingLessonId: $speakerPendingLessonId,
+                selectedTab: $selectedTab
             )
         case 3:
             FavoriteView()
@@ -303,10 +435,6 @@ private struct ShellHeaderHost: View {
     @EnvironmentObject private var overlay: OverlayPresenter
     @EnvironmentObject private var nav: NavigationIntent
 
-    private var gameParkActive: Bool {
-        UserSession.shared.snapshot.learnedSteps.values.contains { !$0.isEmpty }
-    }
-
     private var headerStyle: AppHeaderStyle {
         _ = headerDriver.generation
         let speakerManager = SpeakerManager.shared
@@ -315,15 +443,8 @@ private struct ShellHeaderHost: View {
         let stepManager = StepManager.shared
 
         if selectedTab == 2 && SpeakerReturnContext.shared.hasContext {
-            let onBack = {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                    if let ctx = SpeakerReturnContext.shared.consume() {
-                        selectedTab = ctx.tab
-                        nav.path = ctx.path
-                    }
-                }
-            }
-            return .main(tab: 2, onBack: onBack)
+            // Back в хедере перегружает Спикер; возврат — нижней CTA «К обучению».
+            return .main(tab: 2, onBack: nil)
         }
         if selectedTab == 2, (speakerPendingCourseId != nil || speakerManager.speakerContextCourseId != nil) {
             return .main(tab: 2, onBack: nil)
@@ -350,7 +471,7 @@ private struct ShellHeaderHost: View {
                 onSpeaker: lessonsHeaderStore.onSpeaker,
                 onReinforce: lessonsHeaderStore.onReinforce,
                 onReset: { lessonsHeaderStore.requestReset() },
-                gameParkActive: gameParkActive
+                gameParkActive: LearnedGameSource.hasPlayableCards
             )
         }
         return .back(
@@ -390,7 +511,7 @@ private struct ShellHeaderHost: View {
             )
                 ? conversationAttempts.remainingToday
                 : speakerAttempts.remainingToday,
-            gameParkActive: gameParkActive,
+            gameParkActive: LearnedGameSource.hasPlayableCards,
             onTapFavoritesFilters: { overlay.present(.favoritesFilters) },
             favoritesTotalCount: favorites.items.count,
             favoritesHasCards: !FavoriteManager.shared.speakerStepIds().isEmpty,
@@ -437,6 +558,7 @@ private struct ShellHeaderHost: View {
 private struct GameView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var overlay: OverlayPresenter
+    @EnvironmentObject private var nav: NavigationIntent
     @ObservedObject private var pro = ProManager.shared
     let courseId: String
     /// nil = course-level (learned cards from entire course); non-nil = lesson-level
@@ -453,9 +575,31 @@ private struct GameView: View {
         Self.resolvedHomeGameType(gameType)
     }
 
+    private var resolvedLessonId: String { lessonId ?? "" }
+
+    private var isFromLessonStep: Bool {
+        HomeTaskView.isLessonStepOrigin(courseId: courseId, lessonId: resolvedLessonId)
+    }
+
     /// Страховка: навигация напрямую в `.game` без пикера не должна открывать PRO-режим бесплатным юзерам.
     private var isProGateActive: Bool {
         resolvedGame.normalizedForGameShell.requiresProSubscription && !pro.isPro
+    }
+
+    private var currentParkMode: GameModeType {
+        switch resolvedGame.normalizedForGameShell {
+        case .match: return .match
+        case .recall, .builder: return .recall
+        case .audioRecall, .conversation: return .audioRecall
+        case .grandDialogue: return .grandDialogue
+        }
+    }
+
+    private var nextParkMode: GameModeType? {
+        let modes = GameModeType.modesLessonAndPark.filter { !$0.isPro || pro.isPro }
+        guard let idx = modes.firstIndex(of: currentParkMode) else { return modes.first }
+        let next = modes[(idx + 1) % modes.count]
+        return next == currentParkMode ? nil : next
     }
 
     var body: some View {
@@ -465,16 +609,66 @@ private struct GameView: View {
             } else {
                 HomeTaskView(
                     courseId: courseId,
-                    lessonId: lessonId ?? "",
+                    lessonId: resolvedLessonId,
                     embedBackground: false,
                     onClose: { dismiss() },
-                    onNextGame: nil,
-                    nextGameTitle: nil,
+                    onNextGame: isFromLessonStep ? nil : {
+                        guard let next = nextParkMode else { return }
+                        if !nav.path.isEmpty { nav.path.removeLast() }
+                        nav.go(.game(courseId: courseId, lessonId: lessonId, gameType: next.rawValue))
+                    },
+                    nextGameTitle: nextParkMode?.title ?? "Следующая игра",
                     isProUser: pro.isPro,
                     displayTitle: displayTitle,
-                    gameType: resolvedGame
+                    gameType: resolvedGame,
+                    onSpeakerPractice: isFromLessonStep ? openSpeakerPractice : nil,
+                    onContinueLearning: isFromLessonStep ? continueLearning : nil,
+                    continueLearningTitle: HomeTaskView.continueLearningTitle(
+                        courseId: courseId,
+                        lessonId: resolvedLessonId
+                    )
                 )
             }
+        }
+    }
+
+    private func openSpeakerPractice() {
+        let lid = resolvedLessonId
+        UserSession.shared.markActive(courseId: courseId, lessonId: lid, stepIndex: 0)
+        NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+        SpeakerManager.shared.rebuildQueue()
+        SpeakerManager.shared.setSpeakerUIMode(.training)
+        SpeakerRequestedCourseId.shared.set(courseId, lessonId: lid)
+        dismiss()
+        nav.requestTab(2)
+    }
+
+    private func continueLearning() {
+        let lid = resolvedLessonId
+        let advance = CourseNavigator.shared.advance(from: courseId, lessonId: lid)
+        while let last = nav.path.last {
+            if case .game = last {
+                nav.path.removeLast()
+                continue
+            }
+            // In-place lesson advance keeps the first lesson id on the stack — pop by course.
+            if case .lesson(let c, _, _) = last, c == courseId {
+                nav.path.removeLast()
+                continue
+            }
+            break
+        }
+        switch advance {
+        case .nextLesson(let c, let nextLid):
+            nav.go(.lesson(courseId: c, lessonId: nextLid, presentation: .canonical))
+        case .nextCourse(let c, let firstLid):
+            if case .lessons(let oldCid) = nav.path.last, oldCid == courseId {
+                nav.path.removeLast()
+            }
+            nav.go(.lessons(courseId: c))
+            nav.go(.lesson(courseId: c, lessonId: firstLid, presentation: .canonical))
+        case .end:
+            dismiss()
         }
     }
 
@@ -482,7 +676,7 @@ private struct GameView: View {
         ZStack {
             PD.ColorToken.background.ignoresSafeArea()
             VStack(spacing: 18) {
-                Image(systemName: "crown.fill")
+                Image(systemName: "lock.fill")
                     .font(.system(size: 36, weight: .semibold))
                     .foregroundStyle(ThemeManager.shared.currentAccentFill)
                 Text("Этот режим — Taika+")
@@ -494,7 +688,7 @@ private struct GameView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 12)
                 Button {
-                    overlay.presentPro(reason: .lockedCourse, courseId: courseId)
+                    overlay.presentPro(reason: .games, courseId: courseId)
                 } label: {
                     Text("оформить Taika+")
                         .font(.system(size: 15, weight: .semibold))

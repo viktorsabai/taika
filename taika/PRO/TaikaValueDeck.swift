@@ -97,6 +97,8 @@ enum TaikaValueSlideID {
     static let games = "games"
     static let personal = "personal"
     static let sync = "sync"
+    static let notTranslator = "not_translator"
+    static let selfLearn = "self_learn"
     /// Paywall plus perks (бриф).
     static let reinforce = "reinforce"
     static let speakerAI = "speaker_ai"
@@ -118,35 +120,42 @@ struct TaikaValueSlide: Identifiable, Equatable {
 }
 
 enum TaikaValueDeck {
-    /// About / онбординг — что такое продукт целиком.
+    /// About / онбординг — позиционирование продукта.
     static let about: [TaikaValueSlide] = [
         .init(
-            id: TaikaValueSlideID.steps,
+            id: TaikaValueSlideID.notTranslator,
+            icon: "sparkles",
+            title: "Не переводчик",
+            subtitle: "Мы не подсказываем ответ за тебя. Taika — кун кру для самообучения: учишься говорить сам.",
+            badge: "суть"
+        ),
+        .init(
+            id: TaikaValueSlideID.selfLearn,
             icon: "rectangle.stack.fill",
-            title: "Короткие шаги",
-            subtitle: "Слова и фразы по урокам — без простыней теории.",
+            title: "Шаги, не простыни",
+            subtitle: "Короткие уроки: слова, тон, скорость. Без хаоса теории — только то, что остаётся в речи.",
             badge: "уроки"
+        ),
+        .init(
+            id: TaikaValueSlideID.games,
+            icon: "gamecontroller.fill",
+            title: "Игры на разные памяти",
+            subtitle: "Матч, слоги, аудио — зрительная, моторная и слуховая. Закрепляешь так, как мозг любит.",
+            badge: "игры"
         ),
         .init(
             id: TaikaValueSlideID.speaker,
             icon: "waveform.circle.fill",
-            title: "Спикер и тон",
-            subtitle: "Скажи вслух — увидишь, как звучит. Разбор — в Taika+.",
+            title: "Спикер и разборы",
+            subtitle: "Скажи вслух — услышишь себя. Голос закрепляет сильнее зубрёжки. Глубже — в Taika+.",
             badge: "речь"
-        ),
-        .init(
-            id: TaikaValueSlideID.dictionary,
-            icon: "character.book.closed.fill",
-            title: "Свой словарь",
-            subtitle: "Фразы из своей речи остаются в Избранном — иконка книги в хедере.",
-            badge: "словарь"
         ),
         .init(
             id: TaikaValueSlideID.shelf,
             icon: "heart.fill",
-            title: "Полка и разминка",
-            subtitle: "Избранное, лайфхаки и ежедневная подборка на Main.",
-            badge: "практика"
+            title: "Твоя полка",
+            subtitle: "Избранное, словарь и лайфхаки — материал, который ты собрал сам.",
+            badge: "полка"
         )
     ]
 

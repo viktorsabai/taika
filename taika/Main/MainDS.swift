@@ -728,45 +728,20 @@ public struct MDDailyPicksComposite: View {
     @State private var now: Date = Date()
 
     private var refreshCountdownLabel: String {
-        let cal = MDBangkokCalendar.cal
-        let dayStart = cal.startOfDay(for: now)
-        guard let nextMidnight = cal.date(byAdding: .day, value: 1, to: dayStart) else {
-            return "обновление завтра"
-        }
-        let remaining = max(0, Int(nextMidnight.timeIntervalSince(now)))
-        let hours = remaining / 3600
-        let minutes = (remaining % 3600) / 60
-        if hours > 0 {
-            return "через \(hours) ч \(minutes) мин"
-        }
-        if minutes > 0 {
-            return "через \(minutes) мин"
-        }
-        return "скоро"
+        MDDailyRefreshCountdown.label(now: now)
+    }
+
+    private var sectionCountdownTitle: String {
+        let label = refreshCountdownLabel.uppercased()
+        if label == "СКОРО" { return "СКОРО ОБНОВЛЕНИЕ" }
+        return "ЧЕРЕЗ \(label)"
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
             VStack(alignment: .leading, spacing: 8) {
-                TaikaSectionHeaderRow(title) {
-                    Text(refreshCountdownLabel)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(PD.ColorToken.text)
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 7)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(ThemeManager.shared.currentAccentTintColor.opacity(0.28))
-                        )
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(
-                                    ThemeManager.shared.currentAccentFill.opacity(0.55),
-                                    lineWidth: Theme.Strokes.strokeLineWidth
-                                )
-                        )
-                        .accessibilityLabel("Обновление подборки \(refreshCountdownLabel)")
-                }
+                // Таймер — это название секции (стиль pip + caps), без отдельного бейджа и без дубля «РАЗМИНКА».
+                TaikaSectionHeaderRow(sectionCountdownTitle)
 
                 if !items.isEmpty {
                     let courseTitle = courseNameDerived(at: activeIndex)
@@ -782,16 +757,16 @@ public struct MDDailyPicksComposite: View {
 
                     VStack(alignment: .leading, spacing: 5) {
                         if isProActive {
-                            Text("Taika+ · подборка дня")
-                                .font(.system(size: 13, weight: .semibold))
+                            Text("TAIKA+ · ПОДБОРКА ДНЯ")
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(ThemeManager.shared.currentAccentFill)
                                 .lineLimit(1)
                         } else if !courseTitle.isEmpty {
                             Button {
                                 onOpenCourse(activeIndex)
                             } label: {
-                                Text(courseTitle)
-                                    .font(.system(size: 13, weight: .semibold))
+                                Text(courseTitle.uppercased())
+                                    .font(.system(size: 12, weight: .bold))
                                     .foregroundStyle(ThemeManager.shared.currentAccentFill)
                                     .lineLimit(1)
                                     .truncationMode(.tail)
@@ -1183,6 +1158,8 @@ public struct MDTechResumeBannerModel: Identifiable, Equatable {
     public let isEmpty: Bool
     /// Вариация волны на фоне (чтобы карточки в карусели не были клонами).
     public let waveSeed: Int
+    /// Прогресс курса/урока 0...1 — для кольца на карточке «Продолжить».
+    public let progressFraction: Double
 
     public init(
         id: String,
@@ -1194,7 +1171,8 @@ public struct MDTechResumeBannerModel: Identifiable, Equatable {
         statsLine: String?,
         ctaTitle: String,
         isEmpty: Bool = false,
-        waveSeed: Int = 0
+        waveSeed: Int = 0,
+        progressFraction: Double = 0
     ) {
         self.id = id
         self.eyebrow = eyebrow
@@ -1206,6 +1184,7 @@ public struct MDTechResumeBannerModel: Identifiable, Equatable {
         self.ctaTitle = ctaTitle
         self.isEmpty = isEmpty
         self.waveSeed = waveSeed
+        self.progressFraction = progressFraction
     }
 
     public static func emptyState() -> MDTechResumeBannerModel {
@@ -1219,280 +1198,12 @@ public struct MDTechResumeBannerModel: Identifiable, Equatable {
             statsLine: nil,
             ctaTitle: "Выбрать",
             isEmpty: true,
-            waveSeed: 0
+            waveSeed: 0,
+            progressFraction: 0
         )
     }
 }
 
-/// Абстрактная «mesh»-волна справа: тонкие линии + accent, без фото и без перегруза.
-private struct MDTechWaveMesh: View {
-    var seed: Int
-    var intensity: Double = 1
-    var phase: Double = 0
-
-    var body: some View {
-        let tint = ThemeManager.shared.currentAccentTintColor
-        Canvas { context, size in
-            let w = size.width
-            let h = size.height
-            let phaseBase = Double(seed % 7) * 0.37 + phase
-            let lineCount = 9
-
-            for i in 0..<lineCount {
-                let t = Double(i) / Double(max(lineCount - 1, 1))
-                var path = Path()
-                let amp = (10.0 + t * 18.0) * intensity
-                let y0 = h * (0.18 + t * 0.62)
-                let freq = 1.6 + t * 0.9 + phaseBase * 0.15
-                let step: CGFloat = 3
-                var x: CGFloat = 0
-                while x <= w {
-                    let xn = Double(x / w)
-                    let y = y0
-                        + sin((xn * freq + phaseBase + t * 0.55) * .pi * 2) * amp
-                        + cos((xn * (freq * 0.55) + t) * .pi * 2) * (amp * 0.28)
-                    let pt = CGPoint(x: x, y: y)
-                    if x == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
-                    x += step
-                }
-
-                let alpha = (0.10 + (1 - t) * 0.22) * intensity
-                context.stroke(
-                    path,
-                    with: .linearGradient(
-                        Gradient(colors: [
-                            tint.opacity(0.02),
-                            tint.opacity(alpha),
-                            tint.opacity(alpha * 0.55),
-                            tint.opacity(0.02)
-                        ]),
-                        startPoint: .init(x: 0, y: y0),
-                        endPoint: .init(x: w, y: y0)
-                    ),
-                    lineWidth: i % 3 == 0 ? 1.35 : 0.75
-                )
-            }
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-}
-
-/// Баннер «продолжить»: eyebrow → title → detail → motivation chip → stats + CTA.
-public struct MDTechResumeBannerCard: View {
-    public let model: MDTechResumeBannerModel
-    public let onContinue: () -> Void
-
-    public init(model: MDTechResumeBannerModel, onContinue: @escaping () -> Void) {
-        self.model = model
-        self.onContinue = onContinue
-    }
-
-    private let corner: CGFloat = 28
-    static let cardHeight: CGFloat = 228
-
-    public var body: some View {
-        let accent = ThemeManager.shared.currentAccentFill
-        let tint = ThemeManager.shared.currentAccentTintColor
-        let shape = RoundedRectangle(cornerRadius: corner, style: .continuous)
-
-        Button(action: onContinue) {
-            ZStack(alignment: .bottomTrailing) {
-                Theme.Surfaces.card(shape)
-                shape
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.045),
-                                Color.clear,
-                                tint.opacity(0.10)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-
-                TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { timeline in
-                    let phase = timeline.date.timeIntervalSinceReferenceDate * 0.12
-                    MDTechWaveMesh(
-                        seed: model.waveSeed,
-                        intensity: model.isEmpty ? 0.5 : 1,
-                        phase: phase
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .mask(
-                        LinearGradient(
-                            colors: [.clear, .white.opacity(0.22), .white],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .padding(.leading, 64)
-                    .opacity(0.95)
-                }
-
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(model.eyebrow)
-                        .font(.system(size: 12, weight: .bold))
-                        .kerning(0.9)
-                        .foregroundStyle(accent)
-                        .textCase(.uppercase)
-                        .padding(.trailing, model.motivationChip == nil ? 0 : 88)
-
-                    Text(model.title)
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.text)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                        .padding(.top, 10)
-                        .padding(.trailing, model.motivationChip == nil ? 0 : 72)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    if let detail = model.detailLine, !detail.isEmpty {
-                        Text(detail)
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.92))
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(2)
-                            .padding(.top, 6)
-                            .padding(.trailing, 36)
-                    }
-
-                    Spacer(minLength: 12)
-
-                    HStack(alignment: .center, spacing: 10) {
-                        if let stats = model.statsLine, !stats.isEmpty {
-                            Text(stats)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.95))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.82)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(PD.ColorToken.chip)
-                                )
-                                .overlay(
-                                    Capsule(style: .continuous)
-                                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                                )
-                        }
-
-                        Spacer(minLength: 8)
-
-                        HStack(spacing: 5) {
-                            Text(model.ctaTitle)
-                                .font(.system(size: 14, weight: .semibold))
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 12, weight: .bold))
-                        }
-                        .foregroundStyle(Color.black.opacity(0.88))
-                        .padding(.horizontal, 14)
-                        .frame(height: 34)
-                        .background(Capsule(style: .continuous).fill(accent))
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 18)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
-                if let chip = model.motivationChip, !chip.isEmpty {
-                    AppStatusChip(kind: model.motivationKind, scale: .s, title: chip.lowercased())
-                        .padding(.top, 16)
-                        .padding(.trailing, 16)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                        .allowsHitTesting(false)
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: Self.cardHeight, maxHeight: Self.cardHeight)
-            .clipShape(shape)
-            .contentShape(shape)
-            .shadow(color: tint.opacity(0.14), radius: 16, y: 8)
-        }
-        .buttonStyle(PressDownStyle(scale: 0.978, fade: 0.97))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(model.eyebrow). \(model.title). \(model.ctaTitle)")
-    }
-}
-
-/// Автокарусель tech-баннеров: свайп вручную + автолистание, пауза при взаимодействии.
-public struct MDTechResumeBannerCarousel: View {
-    public let models: [MDTechResumeBannerModel]
-    public let onSelect: (MDTechResumeBannerModel) -> Void
-
-    @State private var page: Int = 0
-    @State private var isUserInteracting = false
-    @State private var resumeAutoAt: Date = .distantPast
-
-    private let timer = Timer.publish(every: 4.6, on: .main, in: .common).autoconnect()
-
-    public init(
-        models: [MDTechResumeBannerModel],
-        onSelect: @escaping (MDTechResumeBannerModel) -> Void
-    ) {
-        self.models = models
-        self.onSelect = onSelect
-    }
-
-    public var body: some View {
-        let safeModels = models.isEmpty ? [MDTechResumeBannerModel.emptyState()] : models
-        let clampedPage = min(max(0, page), max(0, safeModels.count - 1))
-
-        VStack(spacing: 0) {
-            TabView(selection: $page) {
-                ForEach(Array(safeModels.enumerated()), id: \.element.id) { idx, model in
-                    MDTechResumeBannerCard(model: model) {
-                        onSelect(model)
-                    }
-                    .padding(.horizontal, PD.Spacing.screen)
-                    .tag(idx)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: MDTechResumeBannerCard.cardHeight)
-            .animation(.easeInOut(duration: 0.42), value: page)
-
-            MDCarouselPageDots(count: safeModels.count, activeIndex: Binding(
-                get: { clampedPage },
-                set: { newValue in
-                    page = newValue
-                    pauseAutoBriefly()
-                }
-            ))
-            .padding(.top, 8)
-        }
-        .onAppear {
-            if page >= safeModels.count { page = 0 }
-        }
-        .onChange(of: safeModels.map(\.id)) { _, _ in
-            if page >= safeModels.count { page = 0 }
-        }
-        .onReceive(timer) { _ in
-            guard safeModels.count > 1 else { return }
-            guard !isUserInteracting, Date() >= resumeAutoAt else { return }
-            withAnimation(.easeInOut(duration: 0.45)) {
-                page = (page + 1) % safeModels.count
-            }
-        }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 8)
-                .onChanged { _ in
-                    isUserInteracting = true
-                    pauseAutoBriefly()
-                }
-                .onEnded { _ in
-                    isUserInteracting = false
-                    pauseAutoBriefly()
-                }
-        )
-    }
-
-    private func pauseAutoBriefly() {
-        resumeAutoAt = Date().addingTimeInterval(6.5)
-    }
-}
 
 // MARK: - DS: Continue hero (Main) — единая карточка: курс + кольцо + неделя + CTA
 
@@ -1534,23 +1245,17 @@ public struct MDContinueHeroModel: Equatable {
     }
 }
 
-/// Карточка «Продолжить» на Main: курс, кольцо прогресса, мини-календарь, CTA.
+/// Карточка «Продолжить» на Main: только курс, время, CTA. Без кольца и лишних строк.
 public struct MDContinueHeroCard: View {
     public let model: MDContinueHeroModel
-    public let weekItems: [WeeklyResumeItem]
     public let onContinue: () -> Void
-    public let onTapDay: (WeeklyResumeItem) -> Void
 
     public init(
         model: MDContinueHeroModel,
-        weekItems: [WeeklyResumeItem],
-        onContinue: @escaping () -> Void,
-        onTapDay: @escaping (WeeklyResumeItem) -> Void
+        onContinue: @escaping () -> Void
     ) {
         self.model = model
-        self.weekItems = weekItems
         self.onContinue = onContinue
-        self.onTapDay = onTapDay
     }
 
     private let cardCorner: CGFloat = Theme.Radii.card
@@ -1559,160 +1264,37 @@ public struct MDContinueHeroCard: View {
         let accent = ThemeManager.shared.currentAccentFill
         let shape = RoundedRectangle(cornerRadius: cardCorner, style: .continuous)
 
-        VStack(spacing: 0) {
-            Button(action: onContinue) {
-                HStack(alignment: .center, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(model.courseTitle)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(PD.ColorToken.text)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(2)
+        Button(action: onContinue) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(model.courseTitle)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
 
-                        if let meta = model.metaLine, !meta.isEmpty {
-                            Text(meta)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
-                                .lineLimit(1)
-                        }
-
-                        if let focus = model.focusLessonTitle, !focus.isEmpty {
-                            Text(focus)
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(accent)
-                                .multilineTextAlignment(.leading)
-                                .lineLimit(2)
-                        }
-
-                        if let mins = model.durationMinutes, mins > 0 {
-                            HStack(spacing: 5) {
-                                Image(systemName: "clock")
-                                    .font(.system(size: 11, weight: .semibold))
-                                Text("≈ \(mins) \(minutesLabel(mins))")
-                                    .font(.system(size: 12, weight: .medium))
-                            }
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.88))
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    progressRing
+                if let mins = model.durationMinutes, mins > 0 {
+                    Text("≈ \(mins) \(minutesLabel(mins))")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                } else if let meta = model.metaLine, !meta.isEmpty {
+                    Text(meta)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(1)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
-            }
-            .buttonStyle(.plain)
 
-            Rectangle()
-                .fill(Color.white.opacity(0.08))
-                .frame(height: 1)
-                .padding(.horizontal, 14)
-
-            HStack(alignment: .center, spacing: 10) {
-                weekDotsRow
-                Spacer(minLength: 4)
-                Button(action: onContinue) {
-                    HStack(spacing: 4) {
-                        Text(model.isEmpty ? "Начать" : "Продолжить")
-                            .font(.system(size: 14, weight: .semibold))
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .bold))
-                    }
+                Text(model.isEmpty ? "Начать →" : "Продолжить →")
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(accent)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .background(
-                        Capsule(style: .continuous)
-                            .stroke(accent, lineWidth: 1.5)
-                    )
-                }
-                .buttonStyle(.plain)
-                .layoutPriority(1)
+                    .padding(.top, 2)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-        }
-        .background(Theme.Surfaces.card(shape))
-        .overlay(shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private var progressRing: some View {
-        let pct = max(0, min(100, Int((model.progress * 100).rounded())))
-        let accent = ThemeManager.shared.currentAccentFill
-        return ZStack {
-            AppDonut(value: CGFloat(model.progress), size: 54, lineWidth: 5)
-                .shadow(color: Color.pink.opacity(model.progress > 0.02 ? 0.28 : 0), radius: 8)
-            Text("\(pct)%")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(PD.ColorToken.text)
-                .monospacedDigit()
-        }
-        .frame(width: 58, height: 58)
-        .accessibilityLabel("Прогресс курса \(pct) процентов")
-    }
-
-    private var weekDotsRow: some View {
-        HStack(spacing: 9) {
-            ForEach(weekItems) { item in
-                weekDotButton(item)
-            }
-        }
-    }
-
-    private func weekDotButton(_ item: WeeklyResumeItem) -> some View {
-        let cal = MDBangkokCalendar.cal
-        let dayNum = cal.component(.day, from: item.date)
-        let hasActivity = dayHasActivity(item)
-        let accent = ThemeManager.shared.currentAccentFill
-
-        return Button {
-            onTapDay(item)
-        } label: {
-            VStack(spacing: 5) {
-                ZStack {
-                    if item.isToday {
-                        Circle()
-                            .stroke(Color.white.opacity(0.55), lineWidth: 1.5)
-                            .frame(width: 14, height: 14)
-                    }
-                    Circle()
-                        .fill(dotFill(hasActivity: hasActivity, isToday: item.isToday, accent: AnyShapeStyle(accent)))
-                        .frame(width: item.isToday ? 8 : 7, height: item.isToday ? 8 : 7)
-                }
-                .frame(width: 16, height: 16)
-
-                Text("\(dayNum)")
-                    .font(.system(size: 10, weight: item.isToday ? .bold : .medium))
-                    .foregroundStyle(dayNumberColor(isToday: item.isToday, hasActivity: hasActivity, accent: accent))
-                    .monospacedDigit()
-            }
-            .frame(minWidth: 22)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    private func dayHasActivity(_ item: WeeklyResumeItem) -> Bool {
-        if (item.progress ?? 0) > 0.0001 { return true }
-        if (item.learnedCount ?? 0) > 0 { return true }
-        if (item.favCount ?? 0) > 0 { return true }
-        if (item.audioMinutes ?? 0) > 0 { return true }
-        return false
-    }
-
-    private func dayNumberColor(isToday: Bool, hasActivity: Bool, accent: LinearGradient) -> AnyShapeStyle {
-        if isToday { return AnyShapeStyle(accent) }
-        if hasActivity { return AnyShapeStyle(PD.ColorToken.text.opacity(0.9)) }
-        return AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.55))
-    }
-
-    private func dotFill(hasActivity: Bool, isToday: Bool, accent: AnyShapeStyle) -> AnyShapeStyle {
-        if hasActivity || isToday {
-            return accent
-        }
-        return AnyShapeStyle(Color.white.opacity(0.14))
+        .background(Theme.Surfaces.card(shape))
     }
 
     private func minutesLabel(_ mins: Int) -> String {
@@ -1900,6 +1482,588 @@ private struct MDSearchPreviewHost: View {
     }
 }
 #endif
+
+// MARK: - Instant Speaker portal (Main → «Скажи сам»)
+
+/// Canned demo для tone-aha перед paywall (не на Main).
+public enum MainInstantSpeakerDemo {
+    public static let thai = "ไม่เผ็ด"
+    public static let ru = "Без острого"
+    public static let phonetic = "май→ пхет↘"
+    public static let toneLabels: [(syllable: String, arrow: String, toneRU: String)] = [
+        ("май", "→", "средний"),
+        ("пхет", "↘", "падающий")
+    ]
+}
+
+/// Печатающийся заголовок как на taikaa.online: набор → пауза → стирание → следующая фраза.
+/// Говорит от лица Taika: что делать на главной прямо сейчас.
+public struct MDCyclingTypewriter: View {
+    public var lines: [String]
+    public var font: Font
+    public var holdSeconds: TimeInterval
+    public var charInterval: TimeInterval
+    public var minHeight: CGFloat
+    /// Цифры в строке — акцент + Skifer (для норм/статов внутри сообщения).
+    public var accentDigits: Bool
+    public var digitSize: CGFloat
+
+    @State private var lineIndex = 0
+    @State private var visibleCount = 0
+    @State private var cursorOn = true
+    @State private var task: Task<Void, Never>?
+
+    public init(
+        lines: [String],
+        font: Font = .system(size: 24, weight: .bold),
+        holdSeconds: TimeInterval = 2.2,
+        charInterval: TimeInterval = 0.034,
+        minHeight: CGFloat = 58,
+        accentDigits: Bool = false,
+        digitSize: CGFloat = 26
+    ) {
+        self.lines = lines.filter { !$0.isEmpty }
+        self.font = font
+        self.holdSeconds = holdSeconds
+        self.charInterval = charInterval
+        self.minHeight = minHeight
+        self.accentDigits = accentDigits
+        self.digitSize = digitSize
+    }
+
+    private var currentLine: String {
+        guard !lines.isEmpty else { return "" }
+        return lines[lineIndex % lines.count]
+    }
+
+    public var body: some View {
+        let tint = ThemeManager.shared.currentAccentTintColor
+        let visible = String(currentLine.prefix(visibleCount))
+        HStack(alignment: .firstTextBaseline, spacing: 1) {
+            styledVisibleText(visible)
+                .lineLimit(2)
+                .minimumScaleFactor(0.82)
+                .animation(nil, value: visibleCount)
+            Text("▍")
+                .font(font)
+                .foregroundStyle(tint)
+                .opacity(cursorOn ? 1 : 0.12)
+        }
+        .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .leading)
+        .onAppear { startLoop() }
+        .onChange(of: lines) { _, _ in startLoop() }
+        .onDisappear { task?.cancel() }
+        .accessibilityLabel(currentLine)
+    }
+
+    @ViewBuilder
+    private func styledVisibleText(_ visible: String) -> some View {
+        if accentDigits {
+            accentDigitText(visible)
+        } else {
+            Text(visible)
+                .font(font)
+                .foregroundStyle(PD.ColorToken.text)
+        }
+    }
+
+    private func accentDigitText(_ visible: String) -> Text {
+        var result = Text("")
+        var index = visible.startIndex
+        while index < visible.endIndex {
+            if visible[index].isNumber {
+                var end = index
+                while end < visible.endIndex, visible[end].isNumber {
+                    end = visible.index(after: end)
+                }
+                result = result + Text(String(visible[index..<end]))
+                    .font(.taikaStat(digitSize))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    .monospacedDigit()
+                index = end
+            } else {
+                var end = index
+                while end < visible.endIndex, !visible[end].isNumber {
+                    end = visible.index(after: end)
+                }
+                result = result + Text(String(visible[index..<end]))
+                    .font(font)
+                    .foregroundStyle(PD.ColorToken.text)
+                index = end
+            }
+        }
+        return result
+    }
+
+    private func startLoop() {
+        task?.cancel()
+        guard !lines.isEmpty else { return }
+        lineIndex = 0
+        visibleCount = 0
+        cursorOn = true
+        task = Task { @MainActor in
+            while !Task.isCancelled {
+                let line = lines[lineIndex % lines.count]
+                let chars = Array(line)
+                // type
+                for i in 0...chars.count {
+                    if Task.isCancelled { return }
+                    visibleCount = i
+                    cursorOn.toggle()
+                    if i < chars.count {
+                        try? await Task.sleep(nanoseconds: UInt64(charInterval * 1_000_000_000))
+                    }
+                }
+                // hold
+                let holdSteps = Int(holdSeconds / 0.35)
+                for _ in 0..<max(1, holdSteps) {
+                    if Task.isCancelled { return }
+                    try? await Task.sleep(nanoseconds: 350_000_000)
+                    cursorOn.toggle()
+                }
+                // erase
+                for i in stride(from: chars.count, through: 0, by: -1) {
+                    if Task.isCancelled { return }
+                    visibleCount = i
+                    cursorOn.toggle()
+                    try? await Task.sleep(nanoseconds: UInt64(charInterval * 0.55 * 1_000_000_000))
+                }
+                lineIndex = (lineIndex + 1) % lines.count
+                try? await Task.sleep(nanoseconds: 180_000_000)
+            }
+        }
+    }
+}
+
+/// Главный сценарий Main: живой typewriter-заголовок от Taika + микрофон как главный wow.
+public struct MDPromptHero: View {
+    public var greeting: String
+    public var tagline: String
+    public var onOpenSpeaker: () -> Void
+
+    @ObservedObject private var theme = ThemeManager.shared
+    @State private var pulseOut = false
+
+    public init(
+        greeting: String,
+        tagline: String = "Говори. Учись. Живи по-тайски.",
+        onOpenSpeaker: @escaping () -> Void
+    ) {
+        self.greeting = greeting
+        self.tagline = tagline
+        self.onOpenSpeaker = onOpenSpeaker
+    }
+
+    private var headlineLines: [String] {
+        [
+            greeting,
+            "Скажи по-русски — я переведу",
+            "Учись короткими курсами",
+            "Разминка — фразы на сегодня",
+            "Жми на микрофон и говори"
+        ]
+    }
+
+    public var body: some View {
+        let accent = theme.currentAccentFill
+        let tint = theme.currentAccentTintColor
+
+        VStack(spacing: 18) {
+            VStack(alignment: .leading, spacing: 8) {
+                MDCyclingTypewriter(
+                    lines: headlineLines,
+                    font: .system(size: 24, weight: .bold)
+                )
+                Text(tagline)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                onOpenSpeaker()
+            } label: {
+                ZStack {
+                    // Мягкая «волна» за микрофоном — вау-плоскость, без текста.
+                    Ellipse()
+                        .fill(
+                            RadialGradient(
+                                colors: [tint.opacity(0.35), tint.opacity(0.08), .clear],
+                                center: .center,
+                                startRadius: 10,
+                                endRadius: 150
+                            )
+                        )
+                        .frame(width: 280, height: 120)
+                        .blur(radius: 8)
+                        .opacity(0.9)
+
+                    ZStack {
+                        Circle()
+                            .stroke(tint.opacity(pulseOut ? 0 : 0.55), lineWidth: 1.4)
+                            .frame(width: 148, height: 148)
+                            .scaleEffect(pulseOut ? 1.28 : 1.0)
+
+                        Circle()
+                            .stroke(tint.opacity(pulseOut ? 0 : 0.28), lineWidth: 1)
+                            .frame(width: 172, height: 172)
+                            .scaleEffect(pulseOut ? 1.18 : 1.0)
+
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [tint.opacity(0.55), tint.opacity(0.12), tint.opacity(0)],
+                                    center: .center, startRadius: 2, endRadius: 90
+                                )
+                            )
+                            .frame(width: 190, height: 190)
+
+                        Circle()
+                            .fill(accent)
+                            .frame(width: 96, height: 96)
+                            .shadow(color: tint.opacity(0.65), radius: 24, y: 8)
+
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 34, weight: .bold))
+                            .foregroundStyle(Color.black)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 200)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
+            .accessibilityLabel("Открыть спикер и начать запись")
+            .onAppear {
+                withAnimation(.easeOut(duration: 2.1).repeatForever(autoreverses: false)) {
+                    pulseOut = true
+                }
+            }
+
+            MDExamplePhraseMarquee(onTapPhrase: onOpenSpeaker)
+        }
+        .padding(.horizontal, Theme.Layout.pageHorizontal)
+    }
+}
+
+/// Бесконечная карусель чипов с примерами фраз — лёгкий marquee без паузы.
+public struct MDExamplePhraseMarquee: View {
+    public var onTapPhrase: () -> Void
+
+    private static let phrases: [String] = [
+        "Можно счёт, пожалуйста",
+        "Где туалет?",
+        "Сколько стоит?",
+        "Без острого",
+        "Можно QR?",
+        "Я не понимаю",
+        "Повторите, пожалуйста",
+        "Это слишком дорого",
+        "Есть другой вариант?",
+        "Как пройти к метро?",
+        "Возьмите сдачу",
+        "Можно без льда?",
+        "Забронировано на моё имя",
+        "Wi‑Fi есть?",
+        "Подождите минутку"
+    ]
+
+    @State private var rowWidth: CGFloat = 0
+
+    public init(onTapPhrase: @escaping () -> Void) {
+        self.onTapPhrase = onTapPhrase
+    }
+
+    public var body: some View {
+        Color.clear
+            .frame(height: 34)
+            .overlay(alignment: .leading) {
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+                    let speed: CGFloat = 26
+                    let shift: CGFloat = {
+                        guard rowWidth > 1 else { return 0 }
+                        let t = context.date.timeIntervalSinceReferenceDate
+                        return CGFloat(t * Double(speed)).truncatingRemainder(dividingBy: rowWidth)
+                    }()
+
+                    HStack(spacing: 0) {
+                        phraseRow
+                            .background(
+                                GeometryReader { g in
+                                    Color.clear.preference(key: MDMarqueeWidthKey.self, value: g.size.width)
+                                }
+                            )
+                        phraseRow
+                            .accessibilityHidden(true)
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                    .offset(x: -shift)
+                }
+            }
+            .clipped()
+            .mask(
+                LinearGradient(
+                    colors: [.clear, .white, .white, .clear],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .onPreferenceChange(MDMarqueeWidthKey.self) { rowWidth = $0 }
+            .accessibilityLabel("Примеры фраз для спикера")
+    }
+
+    private var phraseRow: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(Self.phrases.enumerated()), id: \.offset) { _, phrase in
+                phraseChip(phrase)
+            }
+        }
+        .padding(.trailing, 8)
+    }
+
+    private func phraseChip(_ phrase: String) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            onTapPhrase()
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(phrase)
+                    .font(.system(size: 12, weight: .medium))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(PD.ColorToken.textSecondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Capsule(style: .continuous).fill(PD.ColorToken.chip))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct MDMarqueeWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+// MARK: - Main pill CTAs (как «Начать тренировку» в Спикере)
+
+/// Залитая градиентная pill-CTA на Main: «Начать обучение» / «Продолжить …».
+public struct MDMainFilledPillCTA: View {
+    public var title: String
+    public var icon: String
+    public var action: () -> Void
+
+    public init(
+        title: String,
+        icon: String = "graduationcap.fill",
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.icon = icon
+        self.action = action
+    }
+
+    public var body: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .bold))
+                Text(title)
+                    .font(.system(size: 16, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .padding(.horizontal, 18)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(ThemeManager.shared.currentAccentFill)
+            )
+            .shadow(
+                color: ThemeManager.shared.currentAccentTintColor.opacity(0.32),
+                radius: 14,
+                y: 4
+            )
+        }
+        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+    }
+}
+
+/// Outline pill-CTA с опциональной заливкой прогресса (Разминка: остаток суток).
+public struct MDMainOutlinePillCTA: View {
+    public var title: String
+    public var icon: String?
+    /// 0...1 — доля заполнения слева направо (полная = 100% суток).
+    public var progressFill: CGFloat?
+    public var action: () -> Void
+
+    public init(
+        title: String,
+        icon: String? = nil,
+        progressFill: CGFloat? = nil,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.icon = icon
+        self.progressFill = progressFill
+        self.action = action
+    }
+
+    public var body: some View {
+        let accent = ThemeManager.shared.currentAccentFill
+        let fill = min(1, max(0, progressFill ?? 0))
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 8) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .foregroundStyle(accent)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .padding(.horizontal, 18)
+            .background(
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule(style: .continuous)
+                            .fill(Color.clear)
+                        if progressFill != nil {
+                            Capsule(style: .continuous)
+                                .fill(accent.opacity(0.22))
+                                .frame(width: max(0, geo.size.width * fill))
+                        }
+                    }
+                }
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(accent, lineWidth: 1.6)
+            )
+            .clipShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+    }
+}
+
+/// Одно простое действие-строка (например «Разминка»): иконка, заголовок + опциональный бейдж, мета, шеврон.
+public struct MDSingleActionCard: View {
+    public var icon: String
+    public var title: String
+    public var titleBadge: String?
+    public var subtitle: String
+    public var action: () -> Void
+
+    public init(
+        icon: String,
+        title: String,
+        titleBadge: String? = nil,
+        subtitle: String,
+        action: @escaping () -> Void
+    ) {
+        self.icon = icon
+        self.title = title
+        self.titleBadge = titleBadge
+        self.subtitle = subtitle
+        self.action = action
+    }
+
+    public var body: some View {
+        let accent = ThemeManager.shared.currentAccentFill
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(PD.ColorToken.chip))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 8) {
+                        Text(title)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.text)
+                            .lineLimit(1)
+                        if let titleBadge, !titleBadge.isEmpty {
+                            Text(titleBadge)
+                                .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                                .foregroundStyle(PD.ColorToken.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    Text(subtitle)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.5))
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
+        .background(Theme.Surfaces.card(shape))
+    }
+}
+
+// MARK: - Daily refresh countdown
+
+/// Подпись и прогресс до полуночи Бангкока — для чипа разминки.
+public enum MDDailyRefreshCountdown {
+    public static func remainingSeconds(now: Date = Date()) -> Int {
+        let cal = MDBangkokCalendar.cal
+        let dayStart = cal.startOfDay(for: now)
+        guard let nextMidnight = cal.date(byAdding: .day, value: 1, to: dayStart) else {
+            return 0
+        }
+        return max(0, Int(nextMidnight.timeIntervalSince(now)))
+    }
+
+    /// Доля оставшихся суток (1 = только что после полуночи, 0 = почти полночь).
+    public static func remainingFraction(now: Date = Date()) -> CGFloat {
+        CGFloat(remainingSeconds(now: now)) / CGFloat(24 * 3600)
+    }
+
+    public static func label(now: Date = Date()) -> String {
+        let remaining = remainingSeconds(now: now)
+        let hours = remaining / 3600
+        let minutes = (remaining % 3600) / 60
+        let seconds = remaining % 60
+        if hours > 0 { return "\(hours)ч \(minutes)м" }
+        if minutes > 0 { return "\(minutes)м \(seconds)с" }
+        if seconds > 0 { return "\(seconds)с" }
+        return "скоро"
+    }
+}
 
 // MARK: - Preview
  #Preview("Main DS") {

@@ -535,12 +535,7 @@ public struct AppHeader: View {
                             .accessibilityLabel("Выбрать курсы, попыток \(speakerDailyAttemptsRemaining)")
                         }
                     case 3:
-                        if let onSpeaker = onTapFavoritesSpeaker {
-                            headerIconButton("mic.fill", isAccent: favoritesHasCards, action: onSpeaker)
-                        }
-                        if let onGamePark = onTapFavoritesGamePark {
-                            headerIconButton("gamecontroller.fill", isAccent: favoritesHasCards, action: onGamePark)
-                        }
+                        // Спикер / консоль — нижние CTA на экране; в хедере только поиск.
                         if let onSearch = onTapFavoritesSearch {
                             headerIconButton("magnifyingglass", action: onSearch)
                         }
@@ -869,6 +864,13 @@ public struct AppGameHeader: View {
 // MARK: - Summary CTA style enum
 
 public enum SummaryCTAStyle { case brandChips }
+
+/// Уровень итогового оверлея: урок / весь курс / конец каталога.
+public enum LessonSummaryKind {
+    case lesson
+    case course
+    case catalogEnd
+}
 
 // MARK: - Shared CTA buttons (reusable across screens)
 // Preset semantic types for CTA labels
@@ -2009,7 +2011,7 @@ public struct ProStyleModalPanel<Content: View>: View {
     }
 }
 
-// MARK: - Lesson Summary Overlay (PRO shell + Taika FM)
+// MARK: - Lesson Summary Overlay (PRO shell)
 public struct LessonSummaryOverlay: View {
     public var title: String
     public var subtitle: String
@@ -2019,12 +2021,20 @@ public struct LessonSummaryOverlay: View {
     public var onSecondary: () -> Void
     public var onClose: () -> Void = {}
     public var ctaStyle: SummaryCTAStyle
+    /// Уровень завершения — меняет тон и иерархию CTA.
+    public var kind: LessonSummaryKind
+    /// Мини‑бейдж над заголовком («курс», «трек»).
+    public var eyebrow: String?
     /// Мини‑лайфхаки урока (те же атомы, что в FavoriteDS); `nil` — не показывать блок.
     public var hacksAccessory: AnyView?
-    /// Вторая строка под основным CTA: переход в Спикер (итоги урока).
+    /// Вторая строка: Спикер (урок) или «следующий курс» / каталог.
     public var onSpeakerPractice: (() -> Void)? = nil
+    public var speakerPracticeTitle: String
+    public var speakerPracticeSystemImage: String
     public var selectedGameMode: GameModeType? = nil
     public var onSelectGameMode: ((GameModeType) -> Void)? = nil
+    /// На итоге курса/трека игры прячем — один нативный хук «закрепить голосом».
+    public var showGameReinforce: Bool
     public var lessonDurationText: String? = nil
     public var overallProgressText: String? = nil
     @State private var isGameModeExpanded: Bool = false
@@ -2041,10 +2051,15 @@ public struct LessonSummaryOverlay: View {
         onSecondary: @escaping () -> Void = {},
         onClose: @escaping () -> Void = {},
         ctaStyle: SummaryCTAStyle = .brandChips,
+        kind: LessonSummaryKind = .lesson,
+        eyebrow: String? = nil,
         hacksAccessory: AnyView? = nil,
         onSpeakerPractice: (() -> Void)? = nil,
+        speakerPracticeTitle: String = "Практика в Спикере",
+        speakerPracticeSystemImage: String = "mic.fill",
         selectedGameMode: GameModeType? = nil,
         onSelectGameMode: ((GameModeType) -> Void)? = nil,
+        showGameReinforce: Bool = true,
         lessonDurationText: String? = nil,
         overallProgressText: String? = nil
     ) {
@@ -2056,16 +2071,28 @@ public struct LessonSummaryOverlay: View {
         self.onSecondary = onSecondary
         self.onClose = onClose
         self.ctaStyle = ctaStyle
+        self.kind = kind
+        self.eyebrow = eyebrow
         self.hacksAccessory = hacksAccessory
         self.onSpeakerPractice = onSpeakerPractice
+        self.speakerPracticeTitle = speakerPracticeTitle
+        self.speakerPracticeSystemImage = speakerPracticeSystemImage
         self.selectedGameMode = selectedGameMode
         self.onSelectGameMode = onSelectGameMode
+        self.showGameReinforce = showGameReinforce
         self.lessonDurationText = lessonDurationText
         self.overallProgressText = overallProgressText
     }
 
     private var fmAccentLine: [TaikaFMChunk] {
-        let all = TaikaFMData.shared.lessonCompletionAccentMessages()
+        let all: [[TaikaFMChunk]] = {
+            switch kind {
+            case .course, .catalogEnd:
+                return TaikaFMData.shared.courseCompletionAccentMessages()
+            case .lesson:
+                return TaikaFMData.shared.lessonCompletionAccentMessages()
+            }
+        }()
         guard !all.isEmpty else { return [] }
         let idx = abs((title + subtitle).hashValue) % all.count
         return all[idx]
@@ -2116,21 +2143,6 @@ public struct LessonSummaryOverlay: View {
             }
             .frame(maxWidth: .infinity)
         }
-    }
-
-    @ViewBuilder
-    private func taikaGuidanceBubble() -> some View {
-        TaikaFMBubble(label: "taika fm", reactions: [], onReactionTap: nil, showBubble: true) {
-            taikaFMStyledText(
-                "сначала *закрепи навык* в игре или *открой следующий урок*.",
-                baseColor: CD.ColorToken.textSecondary.opacity(0.92)
-            )
-            .font(.system(size: 12, weight: .medium))
-            .lineSpacing(2)
-            .multilineTextAlignment(.leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func startIntroAnimationIfNeeded() {
@@ -2192,50 +2204,60 @@ public struct LessonSummaryOverlay: View {
             }
             .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
 
-            // SECONDARY — quiet dark capsule + game icon
-            Button(action: {
-                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                if !isGameModeExpanded {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
-                        isGameModeExpanded = true
-                    }
-                } else {
-                    onSecondary()
-                }
-            }) {
-                HStack(spacing: 10) {
-                    Image(systemName: "gamecontroller.fill")
-                        .font(.system(size: 15, weight: .semibold))
+            // SECONDARY — quiet dark capsule + game modes always visible
+            if showGameReinforce, selectedGameMode != nil, onSelectGameMode != nil {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Закрепить в игре")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
+                    inlineGameModeSelector()
+                    Button(action: {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        onSecondary()
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: gameModeIcon(selectedGameMode!))
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Играть · \(gameModeLabel(selectedGameMode!))")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
                         .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                    Text(
-                        isGameModeExpanded && selectedGameMode != nil
-                        ? gameModeActionTitle(selectedGameMode!)
-                        : compactSecondary(secondaryTitle)
-                    )
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(CD.ColorToken.text)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .allowsTightening(true)
-                    Spacer(minLength: 0)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule(style: .continuous)
+                                .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 1.4)
+                        )
+                    }
+                    .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
                 }
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
-                .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.82)))
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                )
-                .contentShape(Capsule())
-            }
-            .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
-
-            if isGameModeExpanded,
-               let selectedGameMode,
-               onSelectGameMode != nil {
-                inlineGameModeSelector()
-                    .padding(.top, 4)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+            } else if !secondaryTitle.isEmpty {
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                    onSecondary()
+                }) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "gamecontroller.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        Text(compactSecondary(secondaryTitle))
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.text)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .allowsTightening(true)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
+                    .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.82)))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                    )
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
             }
         }
         .frame(maxWidth: .infinity)
@@ -2386,7 +2408,9 @@ public struct LessonSummaryOverlay: View {
     @ViewBuilder
     private func footerBlock() -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            if let onSpeaker = onSpeakerPractice {
+            if kind == .course || kind == .catalogEnd {
+                courseCompleteCTA()
+            } else if let onSpeaker = onSpeakerPractice {
                 consolidateChipsWithSpeaker(onSpeaker: onSpeaker)
             } else {
                 buttonsBrandChips()
@@ -2395,11 +2419,83 @@ public struct LessonSummaryOverlay: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// Итоги урока: акцент «Закрепить» → открывает выбор режима снаружи; Спикер; следующий шаг.
+    /// Итог курса/трека: один главный хук (голос) + тихий продолжить. Игры — на уровне урока.
+    private func courseCompleteCTA() -> some View {
+        let h: CGFloat = 48
+        return VStack(spacing: 12) {
+            Button(action: {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                onPrimary()
+            }) {
+                HStack(spacing: 10) {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 15, weight: .bold))
+                    Text(primaryTitle)
+                        .font(.system(size: 15, weight: .bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .foregroundColor(Color.black.opacity(0.92))
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
+                .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .fill(LinearGradient(colors: [Color.white.opacity(0.14), .clear], startPoint: .top, endPoint: .center))
+                        .blendMode(.plusLighter)
+                )
+                .clipShape(Capsule(style: .continuous))
+                .contentShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+
+            if let onSpeaker = onSpeakerPractice {
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                    onSpeaker()
+                }) {
+                    HStack(spacing: 10) {
+                        Image(systemName: speakerPracticeSystemImage)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        Text(speakerPracticeTitle)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.text)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.55))
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44)
+                    .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.55)))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                    )
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+            }
+
+            Text(kind == .catalogEnd
+                 ? "Голос закрепит всё, что ты прошёл. Каталог — когда захочешь новый путь."
+                 : "Сначала проговори курс — следующий откроется, когда будешь готов.")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.72))
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Итоги урока: следующий шаг → спикер → нативный выбор игры (без expand-танца).
     private func consolidateChipsWithSpeaker(onSpeaker: @escaping () -> Void) -> some View {
         let h: CGFloat = 44
         return VStack(spacing: 12) {
-            // PRIMARY — visually neutral, on-brand capsule
             Button(action: {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 onPrimary()
@@ -2424,16 +2520,15 @@ public struct LessonSummaryOverlay: View {
             }
             .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
 
-            // Speaker practice button — mic icon, quiet capsule
             Button(action: {
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                 onSpeaker()
             }) {
                 HStack(spacing: 12) {
-                    Image(systemName: "mic.fill")
+                    Image(systemName: speakerPracticeSystemImage)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                    Text("Практика в Спикере")
+                    Text(speakerPracticeTitle)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(CD.ColorToken.text)
                         .lineLimit(1)
@@ -2452,50 +2547,33 @@ public struct LessonSummaryOverlay: View {
             }
             .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
 
-            // Secondary — game icon, quiet capsule
-            Button(action: {
-                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                if !isGameModeExpanded {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
-                        isGameModeExpanded = true
+            if showGameReinforce, selectedGameMode != nil, onSelectGameMode != nil {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Закрепить в игре")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
+                    inlineGameModeSelector()
+                    Button(action: {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        onSecondary()
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: gameModeIcon(selectedGameMode!))
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Играть · \(gameModeLabel(selectedGameMode!))")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule(style: .continuous)
+                                .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 1.4)
+                        )
                     }
-                } else {
-                    onSecondary()
+                    .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
                 }
-            }) {
-                HStack(spacing: 10) {
-                    Image(systemName: "gamecontroller.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                    Text(
-                        isGameModeExpanded && selectedGameMode != nil
-                        ? gameModeActionTitle(selectedGameMode!)
-                        : compactSecondary(secondaryTitle)
-                    )
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(CD.ColorToken.text)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                        .allowsTightening(true)
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity, minHeight: h, maxHeight: h)
-                .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.82)))
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                )
-                .contentShape(Capsule())
-            }
-            .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
-
-            if isGameModeExpanded,
-               let selectedGameMode,
-               onSelectGameMode != nil {
-                inlineGameModeSelector()
-                    .padding(.top, 4)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.top, 2)
             }
         }
         .frame(maxWidth: .infinity)
@@ -2506,16 +2584,26 @@ public struct LessonSummaryOverlay: View {
         VStack(alignment: .leading, spacing: 4) {
             if !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.7))
+                    .font(.system(
+                        size: (kind == .course || kind == .catalogEnd) ? 16 : 13,
+                        weight: (kind == .course || kind == .catalogEnd) ? .semibold : .regular
+                    ))
+                    .foregroundStyle(
+                        (kind == .course || kind == .catalogEnd)
+                        ? CD.ColorToken.text.opacity(0.88)
+                        : CD.ColorToken.textSecondary.opacity(0.7)
+                    )
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
+    // Legacy Taika FM guidance removed from lesson-complete (game picker is inline below).
+
     public var body: some View {
         GeometryReader { proxy in
             let panelW = min(proxy.size.width - 40, 420)
+            let isCourseMoment = kind == .course || kind == .catalogEnd
             ZStack {
                 Color.clear
                     .contentShape(Rectangle())
@@ -2525,7 +2613,7 @@ public struct LessonSummaryOverlay: View {
                     VStack(spacing: 16) {
                         ProStyleModalPanel(maxWidth: panelW) {
                             ZStack(alignment: .topTrailing) {
-                                VStack(alignment: .leading, spacing: 14) {
+                                VStack(alignment: .leading, spacing: isCourseMoment ? 16 : 14) {
                                     HStack(alignment: .center, spacing: 8) {
                                         Text("taikA")
                                             .font(.taikaLogo(16))
@@ -2533,22 +2621,49 @@ public struct LessonSummaryOverlay: View {
                                         Spacer(minLength: 0)
                                     }
 
+                                    if let eyebrow, !eyebrow.isEmpty {
+                                        Text(eyebrow.uppercased())
+                                            .font(.system(size: 11, weight: .bold))
+                                            .tracking(1.1)
+                                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 5)
+                                            .background(
+                                                Capsule(style: .continuous)
+                                                    .fill(ThemeManager.shared.currentAccentFill.opacity(0.14))
+                                            )
+                                            .overlay(
+                                                Capsule(style: .continuous)
+                                                    .stroke(ThemeManager.shared.currentAccentFill.opacity(0.45), lineWidth: 1)
+                                            )
+                                            .opacity(animateIntro ? 1 : 0)
+                                            .offset(y: animateIntro ? 0 : 6)
+                                    }
+
                                     Text(title)
-                                        .font(.system(size: 20, weight: .semibold, design: .rounded))
+                                        .font(.system(size: isCourseMoment ? 26 : 20, weight: .bold, design: .rounded))
                                         .foregroundStyle(CD.ColorToken.text)
                                         .multilineTextAlignment(.leading)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .opacity(animateIntro ? 1 : 0)
                                         .offset(y: animateIntro ? 0 : 8)
 
-                                    taikaGuidanceBubble()
-                                        .opacity(animateIntro ? 1 : 0)
-                                        .offset(y: animateIntro ? 0 : 10)
-
                                     progressAndSubtitleBlock()
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .opacity(animateIntro ? 1 : 0)
                                         .offset(y: animateIntro ? 0 : 8)
+
+                                    if isCourseMoment, !fmAccentLine.isEmpty {
+                                        taikaFMStyledText(
+                                            chunks: fmAccentLine,
+                                            baseColor: CD.ColorToken.textSecondary.opacity(0.92)
+                                        )
+                                        .font(.system(size: 14, weight: .medium))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .padding(.top, 2)
+                                        .opacity(animateReward ? 1 : 0)
+                                        .offset(y: animateReward ? 0 : 8)
+                                    }
 
                                     if let hacksAccessory {
                                         hacksAccessory

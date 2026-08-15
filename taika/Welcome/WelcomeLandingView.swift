@@ -10,14 +10,20 @@ import SwiftUI
 private let supportURL = "https://t.me/taika_support"
 
 struct WelcomeLandingView: View {
-    let onComplete: () -> Void
+    enum Completion: Equatable {
+        case start
+        case skip
+    }
+
+    let onComplete: (Completion) -> Void
 
     @ObservedObject private var theme = ThemeManager.shared
     @ObservedObject private var auth = AuthService.shared
     @State private var authInProgress = false
     @State private var authErrorMessage: String?
     @State private var showOtherOptions = false
-    @State private var showOnboarding = false
+    /// Preview того же value-storyboard, что после «Начать» / в Профиле (единый источник).
+    @State private var showValueStoryboard = false
     // Mini-splash phase inside the same entry screen.
     @State private var showBranding = false
     @State private var showSkip = false
@@ -25,8 +31,6 @@ struct WelcomeLandingView: View {
     @State private var cursorVisible = true
 
     private let legalText = "Продолжая, ты соглашаешься с условиями использования и политикой конфиденциальности."
-
-    @State private var aboutPage: Int = 0
 
     var body: some View {
         ZStack {
@@ -78,13 +82,16 @@ struct WelcomeLandingView: View {
         }
         .sheet(isPresented: $showOtherOptions) {
             otherOptionsSheet
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(22)
         }
-        .fullScreenCover(isPresented: $showOnboarding) {
-            WelcomeOnboardingView(onClose: { showOnboarding = false })
-                .environmentObject(theme)
+        .fullScreenCover(isPresented: $showValueStoryboard) {
+            TaikaEntryOnboardingView(
+                onFinished: { showValueStoryboard = false },
+                onSkipToStart: { showValueStoryboard = false }
+            )
+            .environmentObject(theme)
         }
     }
 
@@ -114,13 +121,13 @@ struct WelcomeLandingView: View {
 
     private var onboardingChip: some View {
         Button {
-            showOnboarding = true
+            showValueStoryboard = true
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "info.circle.fill")
                     .symbolRenderingMode(.monochrome)
                     .font(.system(size: 14, weight: .semibold))
-                Text("О Taika")
+                Text("Как устроена")
                     .font(.system(size: 15, weight: .semibold))
             }
             .foregroundStyle(.white.opacity(0.92))
@@ -141,7 +148,7 @@ struct WelcomeLandingView: View {
     }
 
     private var skipChip: some View {
-        Button(action: { onComplete() }) {
+        Button(action: { onComplete(.skip) }) {
             Text("Пропустить")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.95))
@@ -190,7 +197,7 @@ struct WelcomeLandingView: View {
 
     private var bottomBlock: some View {
         VStack(spacing: 14) {
-            frostedPillButton(title: "Начать", systemImage: nil, prominent: true, action: { onComplete() })
+            frostedPillButton(title: "Начать", systemImage: nil, prominent: true, action: { onComplete(.start) })
                 .disabled(authInProgress)
 
             frostedPillButton(title: "Войти через Apple", systemImage: "apple.logo", prominent: false, action: signInWithApple)
@@ -262,26 +269,19 @@ struct WelcomeLandingView: View {
         return NavigationStack {
             TaikaRootVerticalScroll {
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("О Taika")
+                    Text("Вход и аккаунт")
                         .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(PD.ColorToken.text)
 
-                    Text("Мы учим тайскому через короткие шаги, произношение и прогресс — без хаоса и «простыней» теории.")
+                    Text("Ценности продукта — в «Как устроена» или после «Начать». Здесь только практические шаги.")
                         .font(.system(size: 14, weight: .regular))
                         .foregroundStyle(PD.ColorToken.textSecondary)
-
-                    TaikaValueCarouselView(
-                        slides: TaikaValueDeck.about,
-                        page: $aboutPage,
-                        compact: true
-                    )
-                    .padding(.top, 4)
 
                     VStack(alignment: .leading, spacing: 14) {
                         sheetRow(
                             icon: "checkmark.seal.fill",
                             title: "Как начать",
-                            subtitle: "Нажми «Начать», выбери курс и двигайся по урокам. Произношение — в карточках и в Спикере."
+                            subtitle: "«Начать» → короткий tour → выбор: База, голос или каталог."
                         )
                         sheetRow(
                             icon: "person.crop.circle.fill",
@@ -294,7 +294,7 @@ struct WelcomeLandingView: View {
                 .padding(24)
             }
             .background(PD.ColorToken.background)
-            .navigationTitle("О Taika")
+            .navigationTitle("Ещё")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -336,7 +336,7 @@ struct WelcomeLandingView: View {
                     SyncManager.shared.onUserDidLogin(userId: uid)
                 }
                 authInProgress = false
-                onComplete()
+                onComplete(.start)
             } catch AuthService.AuthError.cancelled {
                 authInProgress = false
             } catch {
@@ -355,6 +355,6 @@ struct WelcomeLandingView: View {
 
 
 #Preview {
-    WelcomeLandingView(onComplete: {})
+    WelcomeLandingView(onComplete: { _ in })
         .environmentObject(ThemeManager.shared)
 }

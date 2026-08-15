@@ -571,6 +571,11 @@ extension Font {
     static func taikaLogo(_ size: CGFloat) -> Font {
         .custom(TaikaFontPS.title, size: size, relativeTo: .title2)
     }
+
+    /// Скор и статистика курса/урока — MV-SKIFER (`MVSKIFERRegular`).
+    static func taikaStat(_ size: CGFloat) -> Font {
+        Theme.Fonts.stat(size)
+    }
 }
 
 extension UIFont {
@@ -613,8 +618,8 @@ public enum CardDS {
         public static let lessonCardWidth: CGFloat  = lessonWidth
         public static let lessonCardHeight: CGFloat = lessonHeight
 
-        // step cards: фразы — квадрат; лайфхаки — вертикальный портрет.
-        public static let stepCardWidth: CGFloat = 286
+        // step cards: крупнее в карусели, чтобы не «тонули» на экране.
+        public static let stepCardWidth: CGFloat = 336
         public static let stepWordCardHeight: CGFloat = stepCardWidth
         /// EPIC 5: max height for step word card when using adaptive height so long text is not truncated.
         public static let stepCardMaxHeight: CGFloat = 420

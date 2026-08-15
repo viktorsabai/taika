@@ -12,6 +12,9 @@ struct GrandDialogueGameView: View {
     let onNextGame: (() -> Void)?
     let nextGameTitle: String?
     let isProUser: Bool
+    var onSpeakerPractice: (() -> Void)? = nil
+    var onContinueLearning: (() -> Void)? = nil
+    var continueLearningTitle: String? = nil
 
     @EnvironmentObject private var theme: ThemeManager
     @ObservedObject private var recorder = SpeakerRecorder.shared
@@ -754,72 +757,38 @@ struct GrandDialogueGameView: View {
 
     private var completionOverlay: some View {
         ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
-            VStack(spacing: 20) {
-                HStack {
-                    Text("taikA")
-                        .font(.taikaLogo(16))
-                        .foregroundStyle(CD.ColorToken.text)
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 4)
-
-                Text("Курсовая — готово")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(CD.ColorToken.text)
-                    .frame(maxWidth: .infinity)
-
-                VStack(spacing: 10) {
-                    Text("успешных реплик: \(score) из \(turns.count)")
-                        .font(CD.FontToken.body(15, weight: .regular))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
-                    let mm = elapsedSeconds / 60
-                    let ss = elapsedSeconds % 60
-                    Text(String(format: "%d:%02d", mm, ss))
-                        .font(CD.FontToken.body(16, weight: .semibold))
-                        .foregroundStyle(CD.ColorToken.text)
-                }
-
-                VStack(spacing: 12) {
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        reloadSession()
-                        GameHeaderStore.shared.config = headerConfig()
-                    } label: {
-                        Text("Повторить")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color(white: 0.14))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(theme.currentAccentFill))
+            OverlayEtalonBackground(onDismiss: onClose)
+            OverlayEtalonCard(title: "Курсовая — готово", onDismiss: onClose) {
+                VStack(spacing: 16) {
+                    VStack(spacing: 10) {
+                        Text("успешных реплик: \(score) из \(turns.count)")
+                            .font(CD.FontToken.body(15, weight: .regular))
+                            .foregroundStyle(CD.ColorToken.textSecondary)
+                        let mm = elapsedSeconds / 60
+                        let ss = elapsedSeconds % 60
+                        Text(String(format: "%d:%02d", mm, ss))
+                            .font(CD.FontToken.body(16, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.text)
                     }
-                    .buttonStyle(.plain)
 
-                    if isProUser, let onNext = onNextGame {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                            onNext()
-                        } label: {
-                            HStack(spacing: 8) {
-                                Text("Следующая игра")
-                                    .font(CD.FontToken.body(15, weight: .semibold))
-                                Image(systemName: "arrow.right")
-                            }
-                            .foregroundStyle(theme.currentAccentFill)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(theme.currentAccentFill, lineWidth: 1.5))
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    GameCompletionActions(
+                        isFromLessonStep: false,
+                        isProUser: isProUser,
+                        continueLearningTitle: continueLearningTitle,
+                        nextGameTitle: nextGameTitle,
+                        onRepeat: {
+                            reloadSession()
+                            GameHeaderStore.shared.config = headerConfig()
+                        },
+                        onNextGame: onNextGame,
+                        onSpeakerPractice: onSpeakerPractice,
+                        onContinueLearning: onContinueLearning,
+                        onClose: onClose
+                    )
                 }
+                .padding(.horizontal, CD.Spacing.screen)
+                .padding(.bottom, 20)
             }
-            .padding(20)
-            .taikaBlackGlassBackground(cornerRadius: 28)
-            .frame(maxWidth: 420)
-            .padding(.horizontal, 20)
         }
     }
 }

@@ -449,8 +449,7 @@ public struct SDStepCard: View {
     @State private var bigLike: Bool = false
     private var isLearned: Bool
 
-    /// Лайфхак: `tip` → заголовок (`titleRU`); `text` → тело (`subtitleTH`).
-    /// Тело может начинаться с заголовка через `\n\n` (legacy) — тогда берём его из текста.
+    /// Лайфхак: один блок текста без отдельного заголовка (он обрезался и дублировал чип).
     private static func lifehackHeadlineAndBody(from item: SDStepItem) -> (headline: String?, body: String) {
         let tipTitle = item.titleRU.trimmingCharacters(in: .whitespacesAndNewlines)
         let genericTitles: Set<String> = ["лайфхак", "лайфхаки", "сцена"]
@@ -842,20 +841,21 @@ public struct SDStepCarousel: View {
             }
             coverflowCarousel(itemW: itemW, itemH: itemH)
                 .frame(height: slotHeight)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, compactSection ? 0 : Theme.Layout.carouselVPad)
         }
+        .frame(maxWidth: .infinity)
     }
 
-    /// Coverflow: фразы — привычный 3D; лайфхаки — спокойнее и центрированнее (презентационный фокус).
+    /// Coverflow: фразы — привычный 3D; лайфхаки — спокойнее и центрированнее (портрет).
     @ViewBuilder
     private func coverflowCarousel(itemW: CGFloat, itemH: CGFloat) -> some View {
         let currentIndex = min(max(0, activeIndex), max(0, items.count - 1))
         let tipsOnly = !items.isEmpty && items.allSatisfy { $0.kind == .tip }
-        let sideScale: CGFloat = tipsOnly ? 0.90 : 0.82
-        let yaw: Double = tipsOnly ? -8 : -14
-        let stepX = itemW * (tipsOnly ? 0.78 : 0.88)
-        let sideOpacity: Double = tipsOnly ? 0.38 : 0.45
+        let sideScale: CGFloat = tipsOnly ? 0.90 : 0.86
+        let yaw: Double = tipsOnly ? -8 : -7
+        let stepX = itemW * (tipsOnly ? 0.78 : 0.84)
+        let sideOpacity: Double = tipsOnly ? 0.38 : 0.36
 
         ZStack {
             ForEach(Array(items.indices), id: \.self) { index in
@@ -870,7 +870,7 @@ public struct SDStepCarousel: View {
                     .rotation3DEffect(
                         .degrees(Double(rel) * yaw),
                         axis: (x: 0, y: 1, z: 0),
-                        perspective: tipsOnly ? 0.55 : 0.7
+                        perspective: tipsOnly ? 0.55 : 0.65
                     )
                     .opacity(abs(rel) > 2 ? 0 : (rel == 0 ? 1.0 : sideOpacity))
                     .offset(x: CGFloat(rel) * stepX)
@@ -882,8 +882,8 @@ public struct SDStepCarousel: View {
                     }
             }
         }
-        .frame(height: itemH + (tipsOnly ? 20 : 12))
-        .frame(maxWidth: .infinity)
+        .frame(height: itemH + (tipsOnly ? 20 : 16))
+        .frame(maxWidth: .infinity, alignment: .center)
         .clipped()
         .contentShape(Rectangle())
         .gesture(

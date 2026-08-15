@@ -32,6 +32,9 @@ struct FavoriteView: View {
     @State private var selectedTab: FavoriteScreenTab = .cards
     @State private var isEditing: Bool = false
 
+    @AppStorage("taika.fav.cards.viewMode") private var cardsViewModeRaw: String = FavCardsViewMode.list.rawValue
+    @AppStorage("taika.fav.dict.viewMode") private var dictViewModeRaw: String = FavCardsViewMode.list.rawValue
+
     private var cardsList: [FDCardDTO] {
         manager.cardsDTO
             .filter { !canonicalId($0).lowercased().hasPrefix("hack:") }
@@ -69,6 +72,25 @@ struct FavoriteView: View {
 
     private var bottomContentInset: CGFloat {
         ToolBar.recommendedBottomInset + 8
+    }
+
+    private var showsViewModeToggle: Bool {
+        selectedTab == .cards || selectedTab == .dictionary
+    }
+
+    private var activeViewMode: Binding<FavCardsViewMode> {
+        switch selectedTab {
+        case .dictionary:
+            return Binding(
+                get: { FavCardsViewMode(rawValue: dictViewModeRaw) ?? .list },
+                set: { dictViewModeRaw = $0.rawValue }
+            )
+        default:
+            return Binding(
+                get: { FavCardsViewMode(rawValue: cardsViewModeRaw) ?? .list },
+                set: { cardsViewModeRaw = $0.rawValue }
+            )
+        }
     }
 
     private var currentEmptySpec: FavEmptySpec? {
@@ -110,12 +132,27 @@ struct FavoriteView: View {
         }
     }
 
+    private var showsBottomTrainingBar: Bool {
+        switch selectedTab {
+        case .cards: return !cardsList.isEmpty
+        case .dictionary: return !dictionaryList.isEmpty
+        default: return false
+        }
+    }
+
     var body: some View {
         ZStack {
             PD.ColorToken.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 favoritesScreenHeader()
+
+                if showsBottomTrainingBar {
+                    favoritesTopActionRow()
+                        .padding(.horizontal, CD.Spacing.screen)
+                        .padding(.top, 10)
+                        .padding(.bottom, 10)
+                }
 
                 if let empty = currentEmptySpec {
                     favEmptyState(
@@ -157,12 +194,79 @@ struct FavoriteView: View {
 
     private func favoritesScreenHeader() -> some View {
         TaikaScreenPageTitle(title: "Избранное") {
-            FDFavoriteTabBar(
-                selection: $selectedTab,
-                dictionaryCount: dictionaryList.count
-            )
+            HStack(spacing: 8) {
+                if showsViewModeToggle {
+                    FDFavViewModeToggle(viewMode: activeViewMode)
+                }
+                FDFavoriteTabBar(
+                    selection: $selectedTab,
+                    dictionaryCount: dictionaryList.count
+                )
+            }
         }
-        .padding(.top, 4)
+        .padding(.top, 8)
+    }
+
+    /// Один ряд вместо typewriter + нижнего бара: Спикер | игровая консоль.
+    private func favoritesTopActionRow() -> some View {
+        HStack(spacing: 10) {
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                trainCurrentTabInSpeaker()
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "person.wave.2.fill")
+                        .font(.system(size: 13, weight: .bold))
+                    Text("В Спикер")
+                        .font(.system(size: 14, weight: .bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
+            }
+            .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+            .accessibilityLabel("Тренировать в спикере")
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                overlay.present(.gameParkFromFavorites)
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("В игры")
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Capsule(style: .continuous).fill(Color.clear))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 1.5)
+                )
+                .contentShape(Capsule())
+            }
+            .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+            .accessibilityLabel("Открыть игровую консоль")
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func trainCurrentTabInSpeaker() {
+        SpeakerManager.shared.setSpeakerUIMode(.training)
+        if selectedTab == .dictionary {
+            SpeakerRequestedCourseId.shared.set("__dictionary__")
+        } else {
+            SpeakerRequestedCourseId.shared.set("__favorites__")
+        }
+        SpeakerReturnContext.shared.save(tab: 3, path: nav.path)
+        nav.requestTab(2)
     }
 
     @ViewBuilder
@@ -182,12 +286,7 @@ struct FavoriteView: View {
                     SpeakerReturnContext.shared.save(tab: 3, path: nav.path)
                     nav.requestTab(2)
                 },
-                onTrainInSpeaker: {
-                    SpeakerManager.shared.setSpeakerUIMode(.training)
-                    SpeakerRequestedCourseId.shared.set("__dictionary__")
-                    SpeakerReturnContext.shared.save(tab: 3, path: nav.path)
-                    nav.requestTab(2)
-                }
+                onTrainInSpeaker: nil
             )
         case .hacks:
             FDFavHacksTabGrid(

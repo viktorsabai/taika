@@ -14,6 +14,7 @@ struct SpeakerView: View {
     @ObservedObject private var speakerFilterState = SpeakerFilterState.shared
     @ObservedObject private var speaker = SpeakerManager.shared
     @ObservedObject private var conversationAttempts = SpeakerConversationAttemptsStore.shared
+    @ObservedObject private var returnContext = SpeakerReturnContext.shared
     private let pro = ProManager.shared
     @State private var showSpeakerBreakdown = false
     @State private var isRecordingFromBreakdown = false
@@ -21,13 +22,17 @@ struct SpeakerView: View {
     @Binding var pendingCourseId: String?
     /// Optional lesson scope when opened from Step summary / lesson CTA.
     @Binding var pendingLessonId: String?
+    /// Shell tab — для CTA «К обучению» без back в хедере.
+    @Binding var selectedTab: Int
 
     init(
         pendingCourseId: Binding<String?> = .constant(nil),
-        pendingLessonId: Binding<String?> = .constant(nil)
+        pendingLessonId: Binding<String?> = .constant(nil),
+        selectedTab: Binding<Int> = .constant(2)
     ) {
         _pendingCourseId = pendingCourseId
         _pendingLessonId = pendingLessonId
+        _selectedTab = selectedTab
         _speakerFilterState = ObservedObject(wrappedValue: SpeakerFilterState.shared)
         _speaker = ObservedObject(wrappedValue: SpeakerManager.shared)
         _showSpeakerBreakdown = State(initialValue: false)
@@ -124,6 +129,21 @@ struct SpeakerView: View {
     private func lessonTitle(for lessonId: String) -> String? {
         let t = displayLessonTitle(for: lessonId)
         return t.isEmpty ? nil : t
+    }
+
+    /// Main → «Скажи сам»: если пришли с микрофона/чипа, сразу стартуем запись.
+    private func maybeStartPendingConversationRecording() {
+        guard speaker.speakerUIMode == .conversation else { return }
+        guard speaker.consumePendingConversationAutoRecord() else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            guard speaker.speakerUIMode == .conversation else { return }
+            switch speaker.phase {
+            case .idle, .hint, .feedback:
+                speaker.startConversationRecording()
+            default:
+                break
+            }
+        }
     }
 
     var body: some View {
@@ -227,6 +247,9 @@ struct SpeakerView: View {
                 speaker.returnToTrainingHome()
                 speakerFilterState.selectedFilterId = nil
             },
+            onReturnToLearning: returnContext.hasContext ? { returnToLearning() } : nil,
+            returnToLearningTitle: returnContext.hasContext ? returnContext.returnActionTitle : nil,
+            returnToLearningIcon: returnContext.hasContext ? returnContext.returnActionIcon : nil,
             onOpenCourses: {
                 nav.popToRoot()
                 nav.requestTab(1)
@@ -234,7 +257,17 @@ struct SpeakerView: View {
             trainingCourseOptions: speaker.learnedTrainingCourseOptions(),
             // Не синкаем speakerFilterState.selectedFilterId здесь: он привязан к .onChange → applyFilter(id),
             // а applyFilter(.learned) перезаписал бы наш подвыбор курсов общей очередью «все выученные».
-            onStartCourseTraining: { speaker.startTraining(withCourseIds: $0) },
+            onStartCourseTraining: { courses, lessons in
+                speaker.startTraining(
+                    withCourseIds: courses,
+                    lessonIds: lessons.isEmpty ? nil : lessons
+                )
+            },
+            trainingFavoritesCount: speaker.trainingFavoritesCount(),
+            trainingDictionaryCount: speaker.trainingDictionaryCount(),
+            onStartSpecialTraining: { poolId in
+                speaker.startSpecialTraining(poolId: poolId)
+            },
             speakerUIMode: speaker.speakerUIMode,
             onSpeakerUIModeChange: { mode in
                 speaker.setSpeakerUIMode(mode)
@@ -249,6 +282,11 @@ struct SpeakerView: View {
             onPlayConversationTTS: { speaker.playConversationTTS() },
             onConversationRepeat: { speaker.conversationRepeat() },
             onConversationDemoPhrase: { speaker.startConversationDemoPhrase($0) },
+            onConfirmConversationDraft: { addDict, practice in
+                speaker.confirmConversationDraft(addToDictionary: addDict, startPractice: practice)
+            },
+            onRetranslateConversationDraft: { speaker.retranslateConversationDraft($0) },
+            onDiscardConversationDraft: { speaker.discardConversationDraft() },
             isProUser: pro.isPro,
             conversationRemainingToday: conversationAttempts.remainingToday,
             conversationRecordingElapsed: speaker.conversationRecordingElapsed,
@@ -306,9 +344,12 @@ struct SpeakerView: View {
                 speaker.loadIfNeeded()
                 speakerFilterState.selectedFilterId = speaker.activeFilterId
             }
-            if speaker.speakerUIMode == .conversation {
-                speaker.clearConversationResult()
-            }
+            // Не чистим conversation-результат на каждом appear: tab switch remount'ит SpeakerView
+            // и сбрасывал бы только что распознанную фразу. Сброс — при смене режима (`setSpeakerUIMode`).
+            speaker.sanitizeConversationHistory()
+
+            maybeStartPendingConversationRecording()
+            maybePresentSpeakerProductDemo()
 
             UserSession.shared.logActivity(
                 .speakerOpened,
@@ -317,6 +358,42 @@ struct SpeakerView: View {
                 stepIndex: speaker.current?.index,
                 refId: "speaker:mvp"
             )
+        }
+        .onChange(of: speaker.pendingConversationAutoRecord) { _, pending in
+            if pending { maybeStartPendingConversationRecording() }
+        }
+    }
+
+    /// Первый визит в Спикер (не из тренировки курса): лёгкий tip в айдентике оверлеев.
+    private func maybePresentSpeakerProductDemo() {
+        guard !TaikaProductDemoFlags.hasSeenSpeaker else { return }
+        // Не перебиваем вход в очередь урока / избранного.
+        if pendingCourseId != nil { return }
+        if SpeakerManager.shared.speakerContextCourseId != nil { return }
+        if SpeakerRequestedCourseId.shared.courseId != nil { return }
+        if case .speakerFirstTip = overlay.overlay { return }
+        if overlay.overlay != nil { return }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            guard !TaikaProductDemoFlags.hasSeenSpeaker else { return }
+            guard pendingCourseId == nil else { return }
+            guard overlay.overlay == nil else { return }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                overlay.present(.speakerFirstTip)
+            }
+        }
+    }
+
+    private func returnToLearning() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+            if let ctx = SpeakerReturnContext.shared.consume() {
+                selectedTab = ctx.tab
+                nav.path = ctx.path
+            } else {
+                nav.popToRoot()
+                selectedTab = 1
+            }
         }
     }
 }

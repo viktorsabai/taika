@@ -1593,16 +1593,27 @@ public struct CDBaseSection: View {
     public var body: some View {
         CDSectionWithAction(title, action: {
             Button(action: { onTapStart?() }) {
-                HStack(spacing: 3) {
-                    Text("НАЧАТЬ")
-                        .font(CD.FontToken.caption(12, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                HStack(spacing: 6) {
+                    Text("Начать")
+                        .font(.system(size: 13, weight: .bold))
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 11, weight: .bold))
                 }
+                .foregroundColor(.black.opacity(0.92))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(ThemeManager.shared.currentAccentFill)
+                )
+                .shadow(
+                    color: ThemeManager.shared.currentAccentTintColor.opacity(0.28),
+                    radius: 8,
+                    y: 2
+                )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+            .accessibilityLabel("Начать курс")
         }) {
             CDLessonCarousel(
                 data: items,
@@ -1788,6 +1799,7 @@ public struct CDWeeklyRhythmSection: View {
     @State private var displayMinutes: Int = 0
     @State private var displayWords: Int = 0
     @State private var appeared: Bool = false
+    @State private var countTask: Task<Void, Never>?
 
     public init(model: CDWeeklyRhythmModel, windowLabel: String = "эта неделя") {
         self.model = model
@@ -1795,72 +1807,83 @@ public struct CDWeeklyRhythmSection: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             TaikaSectionHeaderRow("ТВОЙ РИТМ") {
                 Text(windowLabel.uppercased())
                     .taikaSubsectionStyle(accent: false)
             }
             .padding(.horizontal, CD.Spacing.screen)
 
-            HStack(alignment: .top, spacing: 0) {
-                rhythmValue(value: displayLessons, label: lessonWord(model.lessons))
-                rhythmValue(
-                    value: displayMinutes,
-                    label: "мин",
-                    footnote: "за неделю"
-                )
-                rhythmValue(value: displayWords, label: wordWord(model.words))
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                rhythmValue(value: displayLessons, label: lessonWord(model.lessons), delay: 0)
+                rhythmValue(value: displayMinutes, label: "мин", delay: 0.08)
+                rhythmValue(value: displayWords, label: wordWord(model.words), delay: 0.16)
             }
             .padding(.horizontal, CD.Spacing.screen)
             .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 6)
+            .offset(y: appeared ? 0 : 10)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(
-                "Твой ритм за неделю: \(model.lessons) \(lessonWord(model.lessons)), \(model.minutes) минут, \(model.words) \(wordWord(model.words))"
+                "Твой ритм: \(model.lessons) \(lessonWord(model.lessons)), \(model.minutes) минут, \(model.words) \(wordWord(model.words))"
             )
         }
-        .padding(.top, 10)
+        .padding(.top, 8)
         .onAppear { animateIn() }
         .onChange(of: model) { _, _ in animateIn(fromCurrent: true) }
+        .onDisappear { countTask?.cancel() }
     }
 
-    private func rhythmValue(value: Int, label: String, footnote: String? = nil) -> some View {
-        VStack(spacing: 3) {
-            Text("\(value)")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(PD.ColorToken.text)
-                .monospacedDigit()
-                .contentTransition(.numericText())
-            Text(label)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-            if let footnote {
-                Text(footnote)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.8))
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity)
+    private func rhythmValue(value: Int, label: String, delay: TimeInterval) -> some View {
+        TaikaStatMetric(
+            valueText: "\(value)",
+            label: label,
+            valueSize: 64,
+            accent: true,
+            appeared: appeared,
+            delay: delay
+        )
     }
 
     private func animateIn(fromCurrent: Bool = false) {
+        countTask?.cancel()
         if !fromCurrent {
             displayLessons = 0
             displayMinutes = 0
             displayWords = 0
             appeared = false
         }
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.86)) {
+        withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) {
             appeared = true
         }
-        withAnimation(.spring(response: 0.8, dampingFraction: 0.86).delay(0.05)) {
-            displayLessons = model.lessons
-            displayMinutes = model.minutes
-            displayWords = model.words
+        countTask = Task { @MainActor in
+            async let a: Void = countUp(to: model.lessons, assign: { displayLessons = $0 }, stagger: 0)
+            async let b: Void = countUp(to: model.minutes, assign: { displayMinutes = $0 }, stagger: 0.07)
+            async let c: Void = countUp(to: model.words, assign: { displayWords = $0 }, stagger: 0.14)
+            _ = await (a, b, c)
         }
+    }
+
+    private func countUp(to target: Int, assign: @escaping (Int) -> Void, stagger: TimeInterval) async {
+        if stagger > 0 {
+            try? await Task.sleep(nanoseconds: UInt64(stagger * 1_000_000_000))
+        }
+        guard !Task.isCancelled else { return }
+        let clamped = max(0, target)
+        guard clamped > 0 else {
+            assign(0)
+            return
+        }
+        let steps = min(clamped, 22)
+        let stepDuration = 0.72 / Double(steps)
+        for i in 1...steps {
+            if Task.isCancelled { return }
+            let next = Int(round(Double(clamped) * Double(i) / Double(steps)))
+            withAnimation(.easeOut(duration: 0.05)) {
+                assign(next)
+            }
+            try? await Task.sleep(nanoseconds: UInt64(stepDuration * 1_000_000_000))
+        }
+        assign(clamped)
     }
 
     private func lessonWord(_ n: Int) -> String {

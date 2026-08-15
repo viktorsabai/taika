@@ -44,22 +44,16 @@ public enum FavoriteScreenTab: String, CaseIterable, Identifiable {
 
 public struct FDFavoriteTabBar: View {
     @Binding public var selection: FavoriteScreenTab
-    public var dictionaryCount: Int
 
     public init(selection: Binding<FavoriteScreenTab>, dictionaryCount: Int = 0) {
         self._selection = selection
-        self.dictionaryCount = dictionaryCount
+        _ = dictionaryCount // счётчики в табах не показываем
     }
 
     private var tabs: [FavoriteScreenTab] { FavoriteScreenTab.mvpTabs }
 
     private var titles: [String] {
-        tabs.map { tab in
-            if tab == .dictionary, dictionaryCount > 0 {
-                return "\(tab.title) · \(dictionaryCount)"
-            }
-            return tab.title
-        }
+        tabs.map(\.title)
     }
 
     public var body: some View {
@@ -412,7 +406,7 @@ private struct FavSwipeToRemove<Content: View>: View {
     }
 }
 
-private enum FavCardsViewMode: String, CaseIterable, Identifiable {
+enum FavCardsViewMode: String, CaseIterable, Identifiable {
     case list
     case grid
 
@@ -430,6 +424,54 @@ private enum FavCardsViewMode: String, CaseIterable, Identifiable {
         case .list: return "Список"
         case .grid: return "Карточки"
         }
+    }
+}
+
+/// Переключатель список/сетка — в шапке слева от табов «Карточки / Словарь…».
+struct FDFavViewModeToggle: View {
+    @Binding var viewMode: FavCardsViewMode
+    private let toggleHeight: CGFloat = 36
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(FavCardsViewMode.allCases) { mode in
+                let isOn = mode == viewMode
+                Button {
+                    guard !isOn else { return }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                        viewMode = mode
+                    }
+                } label: {
+                    Image(systemName: mode.systemImage)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(
+                            isOn
+                            ? AnyShapeStyle(Color.black.opacity(0.9))
+                            : AnyShapeStyle(PD.ColorToken.textSecondary)
+                        )
+                        .frame(width: 40, height: toggleHeight - 4)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(isOn ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(Color.clear))
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(mode.accessibilityLabel)
+            }
+        }
+        .padding(2)
+        .frame(height: toggleHeight)
+        .background(
+            Capsule(style: .continuous)
+                .fill(PD.ColorToken.chip)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Вид списка")
     }
 }
 
@@ -714,71 +756,73 @@ private struct FavTreeLeafGuide: View {
     }
 }
 
-/// Чипы категорий + переключатель список/сетка — одна панель-консоль.
+/// Чипы категорий (вид список/сетка — в шапке экрана).
 private struct FavCardsChromeBar: View {
-    @Binding var viewMode: FavCardsViewMode
     let categoryTitles: [String]
     @Binding var selectedCategory: String?
-    var phraseCount: Int
-    var valueTitle: String = "Ваши сохранённые фразы"
 
     var body: some View {
-        FavTabChromePanel(
-            valueTitle: valueTitle,
-            countLabel: favCountLabel(phraseCount, one: "фраза", few: "фразы", many: "фраз"),
-            viewMode: $viewMode,
-            categoryTitles: categoryTitles,
-            selectedCategory: $selectedCategory
-        )
+        if !categoryTitles.isEmpty {
+            FavTabChromePanel(
+                valueTitle: "",
+                countLabel: "",
+                categoryTitles: categoryTitles,
+                selectedCategory: $selectedCategory
+            )
+        }
     }
 }
 
-/// Единая консоль избранного: ценность + count + mode, под ними чипы (если есть).
+/// Консоль избранного: капсулы фильтра / trailing-action (без переключателя вида).
 private struct FavTabChromePanel: View {
     var valueTitle: String
     var countLabel: String
-    @Binding var viewMode: FavCardsViewMode
     var categoryTitles: [String] = []
     var selectedCategory: Binding<String?>? = nil
     var trailingActionTitle: String? = nil
     var trailingAction: (() -> Void)? = nil
-    var showsViewMode: Bool = true
 
-    private let toggleHeight: CGFloat = 36
+    private var showsTopRow: Bool {
+        !valueTitle.isEmpty || !countLabel.isEmpty || trailingActionTitle != nil
+    }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(valueTitle)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                    Text(countLabel)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                }
-                Spacer(minLength: 8)
-                if let trailingActionTitle, let trailingAction {
-                    Button(action: trailingAction) {
-                        Text(trailingActionTitle)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                            .padding(.horizontal, 12)
-                            .frame(height: 32)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(PD.ColorToken.chip)
-                            )
-                            .overlay(
-                                Capsule(style: .continuous)
-                                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                            )
+        VStack(alignment: .leading, spacing: 10) {
+            if showsTopRow {
+                HStack(alignment: .center, spacing: 12) {
+                    if !valueTitle.isEmpty || !countLabel.isEmpty {
+                        VStack(alignment: .leading, spacing: 2) {
+                            if !valueTitle.isEmpty {
+                                Text(valueTitle)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(PD.ColorToken.textSecondary)
+                            }
+                            if !countLabel.isEmpty {
+                                Text(countLabel)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
-                }
-                if showsViewMode {
-                    viewModeToggle
+                    Spacer(minLength: 0)
+                    if let trailingActionTitle, let trailingAction {
+                        Button(action: trailingAction) {
+                            Text(trailingActionTitle)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                .padding(.horizontal, 12)
+                                .frame(height: 32)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(PD.ColorToken.chip)
+                                )
+                                .overlay(
+                                    Capsule(style: .continuous)
+                                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
 
@@ -786,12 +830,6 @@ private struct FavTabChromePanel: View {
                 FavCategoryChipsRow(items: categoryChipItems(selectedCategory), edgeInset: 0)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(Theme.Surfaces.card(shape))
-        .overlay(
-            shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-        )
         .padding(.horizontal, CD.Spacing.screen)
         .padding(.top, 4)
         .padding(.bottom, 2)
@@ -817,51 +855,6 @@ private struct FavTabChromePanel: View {
             )
         }
         return items
-    }
-
-    private var viewModeToggle: some View {
-        HStack(spacing: 2) {
-            ForEach(FavCardsViewMode.allCases) { mode in
-                let isOn = mode == viewMode
-                Button {
-                    guard !isOn else { return }
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-                        viewMode = mode
-                    }
-                } label: {
-                    Image(systemName: mode.systemImage)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(
-                            isOn
-                            ? AnyShapeStyle(Color.black.opacity(0.9))
-                            : AnyShapeStyle(PD.ColorToken.textSecondary)
-                        )
-                        .frame(width: 40, height: toggleHeight - 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(
-                                    isOn
-                                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                                    : AnyShapeStyle(Color.clear)
-                                )
-                        )
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(mode.accessibilityLabel)
-                .accessibilityAddTraits(isOn ? .isSelected : [])
-            }
-        }
-        .padding(3)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(CD.ColorToken.card.opacity(0.55))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-        )
     }
 }
 
@@ -1108,10 +1101,8 @@ struct FDFavCardsTabList: View {
     private var cardsFilledContent: some View {
         LazyVStack(alignment: .leading, spacing: 16) {
             FavCardsChromeBar(
-                viewMode: viewMode,
                 categoryTitles: categoryTitles,
-                selectedCategory: $selectedCategory,
-                phraseCount: categoryFilteredCards.count
+                selectedCategory: $selectedCategory
             )
 
             if categoryFilteredCards.isEmpty {
@@ -1213,7 +1204,7 @@ struct FDFavCardsTabList: View {
     }
 }
 
-/// Ячейка сетки: главные надписи слева и по вертикали по центру.
+/// Ячейка сетки: перевод слева сверху, крупный транслит по центру, путь снизу.
 private struct FDFavPhraseGridCard: View {
     let dto: FDCardDTO
     let pathLabel: String
@@ -1242,7 +1233,20 @@ private struct FDFavPhraseGridCard: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
         ZStack(alignment: .topTrailing) {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 0) {
+                if !russian.isEmpty {
+                    Text(russian)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.95))
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.88)
+                        .padding(.trailing, 28)
+                }
+
+                Spacer(minLength: 6)
+
                 Group {
                     if !phonetic.isEmpty {
                         TaikaPhoneticText.styled(
@@ -1255,40 +1259,38 @@ private struct FDFavPhraseGridCard: View {
                         .lineLimit(4)
                         .minimumScaleFactor(0.72)
                         .fixedSize(horizontal: false, vertical: true)
-                    } else {
-                        Text(russian.isEmpty ? "—" : russian)
+                    } else if !russian.isEmpty {
+                        Text(russian)
                             .font(.system(size: 20, weight: .bold))
                             .foregroundStyle(ThemeManager.shared.currentAccentFill)
                             .multilineTextAlignment(.leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .lineLimit(4)
                             .minimumScaleFactor(0.72)
+                    } else {
+                        Text("—")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
 
-                if !russian.isEmpty, !phonetic.isEmpty {
-                    Text(russian)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.88)
-                        .padding(.trailing, 28)
-                }
+                Spacer(minLength: 8)
 
                 if !pathLabel.isEmpty {
                     Text(pathLabel)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.55))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
                         .lineLimit(2)
-                        .minimumScaleFactor(0.88)
+                        .minimumScaleFactor(0.85)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 12)
             .padding(.trailing, 22)
-            .frame(width: size.width, height: size.height, alignment: .leading)
+            .frame(width: size.width, height: size.height, alignment: .topLeading)
 
             Button(action: onUnfavorite) {
                 Image(systemName: "heart.fill")
@@ -1564,32 +1566,10 @@ struct FDFavDictionaryTabList: View {
 
     private var dictionaryFilledContent: some View {
         LazyVStack(alignment: .leading, spacing: 14) {
-            FavDictionaryChromeBar(
-                viewMode: viewMode,
-                phraseCount: cards.count
-            )
-
             if viewMode.wrappedValue == .grid {
                 dictionaryGrid
             } else {
                 dictionaryList
-            }
-
-            if let onTrainInSpeaker {
-                Button(action: onTrainInSpeaker) {
-                    Text("тренировать в спикере")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.black.opacity(0.88))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(ThemeManager.shared.currentAccentFill)
-                        )
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, CD.Spacing.screen)
-                .padding(.top, 4)
             }
         }
         .padding(.top, 6)
@@ -1632,20 +1612,6 @@ struct FDFavDictionaryTabList: View {
         if !thai.isEmpty {
             StepAudio.shared.speakThai(thai)
         }
-    }
-}
-
-/// Шапка словаря: та же консоль, что у Карточек (без чипов категорий).
-private struct FavDictionaryChromeBar: View {
-    @Binding var viewMode: FavCardsViewMode
-    var phraseCount: Int
-
-    var body: some View {
-        FavTabChromePanel(
-            valueTitle: "Фразы из «Скажи сам»",
-            countLabel: favCountLabel(phraseCount, one: "фраза", few: "фразы", many: "фраз"),
-            viewMode: $viewMode
-        )
     }
 }
 
@@ -1782,16 +1748,14 @@ struct FDFavHacksTabGrid: View {
         } else {
             LazyVStack(alignment: .leading, spacing: Theme.Layout.sectionGap) {
                 FavTabChromePanel(
-                    valueTitle: "Сохранённые лайфхаки",
-                    countLabel: favCountLabel(hacks.count, one: "лайфхак", few: "лайфхака", many: "лайфхаков"),
-                    viewMode: .constant(.grid),
+                    valueTitle: "",
+                    countLabel: "",
                     trailingActionTitle: isEditing ? "готово" : "править",
                     trailingAction: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
                             isEditing.toggle()
                         }
-                    },
-                    showsViewMode: false
+                    }
                 )
 
                 ForEach(courseGroups) { course in

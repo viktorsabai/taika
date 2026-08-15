@@ -424,20 +424,40 @@ public final class HomeTaskManager: ObservableObject {
 
     @MainActor
     private func learnedTriples(courseId: String, lessonId: String) -> [LearnedTriple] {
-        // Pull steps for the lesson and select only learned indices
-        let steps = StepData.shared.items(for: lessonId)
+        // Progress keys канонизированы (`_`→`-`); steps.json часто с underscore —
+        // резолвим lessonId как в FavoritesGameSource, иначе консоль Main врёт «нет фраз».
+        let stepData = StepData.shared
+        let candidates = lessonIdCandidatesForResolve(lessonId, stepData: stepData)
+        var steps: [StepItem] = []
+        for cand in candidates {
+            let found = stepData.items(for: cand)
+            if !found.isEmpty {
+                steps = found
+                break
+            }
+        }
+        guard !steps.isEmpty else { return [] }
+
         let learnedIdx = ProgressManager.shared.learnedSet(courseId: courseId, lessonId: lessonId)
         var out: [LearnedTriple] = []
+        var learnableOrdinal = 0
         for (i, it) in steps.enumerated() {
-            guard learnedIdx.contains(i) else { continue }
             switch it.kind {
             case .word, .phrase, .casual:
-                if let ru = it.ru {
-                    let th = it.thai ?? ""
-                    let ph = it.phonetic ?? ""
-                    out.append(.init(ru: ru, th: th, ph: ph, lessonId: lessonId))
-                }
-            default: continue
+                let orderKey = it.order >= 0 ? it.order : i
+                let matched = ProgressManager.matchesLearnedIndex(
+                    learnedIdx,
+                    order: orderKey,
+                    enumerated: i,
+                    learnableOrdinal: learnableOrdinal
+                )
+                learnableOrdinal += 1
+                guard matched, let ru = it.ru else { continue }
+                let th = it.thai ?? ""
+                let ph = it.phonetic ?? ""
+                out.append(.init(ru: ru, th: th, ph: ph, lessonId: lessonId))
+            default:
+                continue
             }
         }
         return out

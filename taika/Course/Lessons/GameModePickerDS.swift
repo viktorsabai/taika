@@ -106,26 +106,10 @@ public struct GameModePickerDS: View {
 
     private var fullPickerView: some View {
         ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
-                .onTapGesture { onClose() }
-
-            VStack {
-                Spacer()
-
-                VStack(spacing: 20) {
-
-                    Text("Выбери режим")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-
-                    pickerBody
-                }
-                .padding(.top, 28)
-                .taikaBlackGlassBackground(cornerRadius: 28)
-                .padding(.horizontal, 16)
-
-                Spacer(minLength: 24)
+            OverlayEtalonBackground(onDismiss: onClose)
+            OverlayEtalonCard(title: "Выбери режим", onDismiss: onClose) {
+                pickerBody
+                    .padding(.bottom, 8)
             }
         }
     }

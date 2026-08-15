@@ -66,6 +66,9 @@ struct AudioRecallGameView: View {
     let onNextGame: (() -> Void)?
     let nextGameTitle: String?
     let isProUser: Bool
+    var onSpeakerPractice: (() -> Void)? = nil
+    var onContinueLearning: (() -> Void)? = nil
+    var continueLearningTitle: String? = nil
 
     @EnvironmentObject private var theme: ThemeManager
 
@@ -862,39 +865,16 @@ struct AudioRecallGameView: View {
 
     private var completionOverlay: some View {
         ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
-            completionOverlayCard
+            OverlayEtalonBackground(onDismiss: onClose)
+            OverlayEtalonCard(title: "Аудио-реплика завершена", onDismiss: onClose) {
+                VStack(spacing: 16) {
+                    completionOverlayStats
+                    completionOverlayActionButtons
+                }
+                .padding(.horizontal, CD.Spacing.screen)
+                .padding(.bottom, 20)
+            }
         }
-    }
-
-    private var completionOverlayCard: some View {
-        VStack(spacing: 20) {
-            completionOverlayTitleRow
-            Text("Аудио-реплика завершена")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(CD.ColorToken.text)
-                .frame(maxWidth: .infinity)
-            completionOverlayStats
-            completionOverlayActionButtons
-        }
-        .padding(20)
-        .background(completionOverlayCardFill)
-        .overlay(completionOverlayCardBorder)
-        .shadow(color: Color.black.opacity(0.2), radius: 16, y: 10)
-        .frame(maxWidth: 420)
-        .padding(.horizontal, 20)
-    }
-
-    private var completionOverlayTitleRow: some View {
-        HStack {
-            Text("taikA")
-                .font(.taikaLogo(16))
-                .foregroundStyle(CD.ColorToken.text)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 4)
     }
 
     private var completionOverlayStats: some View {
@@ -909,83 +889,27 @@ struct AudioRecallGameView: View {
     }
 
     private var completionOverlayActionButtons: some View {
-        VStack(spacing: 12) {
-            completionOverlayRepeatButton
-            completionOverlayNextSlot
-        }
-    }
-
-    private var completionOverlayRepeatButton: some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            shuffleLessonOrder.toggle()
-            reloadSession()
-            GameHeaderStore.shared.config = headerConfig()
-        } label: {
-            Text("Повторить")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Color(white: 0.14))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(theme.currentAccentFill))
-        }
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private var completionOverlayNextSlot: some View {
-        if isProUser, let onNext = onNextGame {
-            Button {
-                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                StepAudio.shared.stop()
-                onNext()
-            } label: {
-                HStack(spacing: 8) {
-                    Text("Следующая игра")
-                        .font(CD.FontToken.body(15, weight: .semibold))
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 14, weight: .semibold))
+        GameCompletionActions(
+            isFromLessonStep: HomeTaskView.isLessonStepOrigin(courseId: courseId, lessonId: lessonId),
+            isProUser: isProUser,
+            continueLearningTitle: continueLearningTitle
+                ?? HomeTaskView.continueLearningTitle(courseId: courseId, lessonId: lessonId),
+            nextGameTitle: nextGameTitle,
+            onRepeat: {
+                shuffleLessonOrder.toggle()
+                reloadSession()
+                GameHeaderStore.shared.config = headerConfig()
+            },
+            onNextGame: onNextGame.map { next in
+                {
+                    StepAudio.shared.stop()
+                    next()
                 }
-                .foregroundStyle(theme.currentAccentFill)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(theme.currentAccentFill, lineWidth: 1.5)
-                )
-            }
-            .buttonStyle(.plain)
-        } else {
-            completionOverlayNextLocked
-        }
-    }
-
-    private var completionOverlayNextLocked: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "crown.fill")
-                .font(.system(size: 16))
-            Text(nextGameTitle ?? "Следующая игра")
-                .font(CD.FontToken.body(15, weight: .medium))
-        }
-        .foregroundStyle(PD.ColorToken.textSecondary)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(PD.ColorToken.card.opacity(0.6)))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(PD.ColorToken.stroke.opacity(0.6), lineWidth: 1)
+            },
+            onSpeakerPractice: onSpeakerPractice,
+            onContinueLearning: onContinueLearning,
+            onClose: onClose
         )
-        .allowsHitTesting(false)
-    }
-
-    private var completionOverlayCardFill: some View {
-        RoundedRectangle(cornerRadius: 28, style: .continuous)
-            .fill(CD.ColorToken.card.opacity(0.58))
-    }
-
-    private var completionOverlayCardBorder: some View {
-        RoundedRectangle(cornerRadius: 28, style: .continuous)
-            .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
     }
 }
 

@@ -16,13 +16,14 @@ struct MainView: View {
     private let session = UserSession.shared
     private let progress = ProgressManager.shared
     @State private var dailyIndex: Int = 1
+    /// Разминка больше не занимает весь скролл главной инлайн — открывается по тапу с компактной карточки.
+    @State private var showDailyPicksSheet: Bool = false
     @State private var doneHaptic = UINotificationFeedbackGenerator()
     @State private var learnedIds: Set<String> = []
     @State private var favoriteIds: Set<String> = []
     @State private var lessonsTick: Int = 0
     @State private var keyboardHeight: CGFloat = 0
     @State private var navPushInFlight: Bool = false
-    @State private var didCenterForYouCarousel: Bool = false
     @State private var suppressReactiveRefreshUntil: Date = .distantPast
     @State private var lastReactiveRefreshAt: Date = .distantPast
     @State private var weekProgressState: ProfileDashboardState = ProgressManager.shared.publishedState
@@ -57,8 +58,14 @@ struct MainView: View {
     /// В оверлее «добавить курс»: выбранный день (полоска 7 дней); синхронизируется с sheet.day при появлении.
     @State private var calendarOverlaySelectedDay: Date = Date()
     @State private var kunKruCourses: [MainManager.CourseCardModel] = []
-    /// Умная подборка курсов: показывается в секции «ДЛЯ ТЕБЯ» после тапа «Подборка для тебя».
+    /// Умная подборка курсов: показывается в секции «ПОДБОРКА ДНЯ».
     @State private var forYouCourses: [MainManager.CourseCardModel] = []
+    @State private var didCenterForYouCarousel = false
+    @State private var forYouAutoIndex: Int = 0
+    @State private var forYouAutoScrollPausedUntil: Date = .distantPast
+    private let forYouAutoScrollTimer = Timer.publish(every: 3.6, on: .main, in: .common).autoconnect()
+    /// Нативный индикатор при «Начни обучение» — без кастомного «случайный курс…» оверлея.
+    @State private var isStartingRandomCourse = false
 
     // MARK: - Thailand canonical calendar (match MainManager)
     private static let bangkokTZ: TimeZone = TimeZone(identifier: "Asia/Bangkok") ?? .current
@@ -93,7 +100,7 @@ struct MainView: View {
 
         return AnyView(VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
             MDDailyPicksComposite(
-                title: "Разминка",
+                title: "РАЗМИНКА",
                 items: items,
                 courseShortNames: picks.courseShort,
                 lessonShortNames: picks.lessonShort,
@@ -193,198 +200,122 @@ struct MainView: View {
         })
     }
 
-    // MARK: - Секция «Продолжить» — tech-баннеры последних курсов (автокарусель)
-
+    /// Полноэкранный оверлей с полной интерактивной разминкой (карточки + прогресс-ряд).
+    /// Важно: постоянный хедер приложения (логотип/иконки) рисуется поверх всего таба
+    /// с zIndex 50 в AppShell, поэтому свой заголовок и кнопку закрытия нужно опускать
+    /// ниже `rootHeaderClearance` — иначе они уезжают под персистентный хедер и выглядят
+    /// как «нет пути назад». Контент центрируем по высоте, а не прижимаем к верху.
     @ViewBuilder
-    private var continueCalendarSection: some View {
-        let models = techResumeBannerModels()
+    private var dailyPicksFullOverlay: some View {
+        if showDailyPicksSheet {
+            VStack(spacing: 0) {
+                HStack {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.easeInOut(duration: 0.2)) { showDailyPicksSheet = false }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 15, weight: .semibold))
+                            Text("Главная")
+                                .font(.system(size: 15, weight: .medium))
+                        }
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .frame(minHeight: 44, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Назад на главную")
 
-        VStack(alignment: .leading, spacing: 10) {
-            TaikaSectionLabel(title: "ПРОДОЛЖИТЬ")
-                .padding(.horizontal, PD.Spacing.screen)
+                    Spacer(minLength: 12)
 
-            MDTechResumeBannerCarousel(models: models) { model in
-                if model.isEmpty || model.id == "continue-empty" {
-                    startRandomCourseQuickstart()
-                } else if let item = main.resumeItems.first(where: { $0.id == model.id }) {
-                    openResumeItem(item)
-                } else {
-                    // id = courseId or courseId:lessonId
-                    if let colon = model.id.firstIndex(of: ":") {
-                        let courseId = String(model.id[..<colon])
-                        let lessonId = String(model.id[model.id.index(after: colon)...])
-                        openLesson(courseId: courseId, lessonId: lessonId)
-                    } else {
-                        openCourse(model.id)
+                    Text("Разминка")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.text)
+                        .frame(minHeight: 44, alignment: .trailing)
+                }
+                .padding(.horizontal, Theme.Layout.pageHorizontal)
+                .padding(.bottom, 6)
+
+                GeometryReader { proxy in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            Spacer(minLength: 0)
+                            dailyPicksBlock
+                                .padding(.vertical, 10)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(minHeight: proxy.size.height)
                     }
                 }
             }
+            .padding(.top, Theme.Layout.rootHeaderClearance + 6)
+            .padding(.bottom, ToolBar.recommendedBottomInset + 12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(PD.ColorToken.background.ignoresSafeArea())
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 24)
+                    .onEnded { value in
+                        guard value.translation.height > 70,
+                              abs(value.translation.height) > abs(value.translation.width) else { return }
+                        withAnimation(.easeInOut(duration: 0.2)) { showDailyPicksSheet = false }
+                    }
+            )
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+            .zIndex(20)
         }
-        .fixedSize(horizontal: false, vertical: true)
     }
 
-    private func techResumeBannerModels() -> [MDTechResumeBannerModel] {
-        let items = main.resumeItems.filter { $0.id != "continue-empty" }
-        guard !items.isEmpty else { return [.emptyState()] }
+    // MARK: - Продолжить + Разминка (отдельно)
 
-        let streak = weekProgressState.currentStreak
-        let plannedToday = Set(UserSession.shared.plannedCourseIds(on: Self.bangkokCal.startOfDay(for: Date())))
+    /// Базовый курс «Разговорный старт», если продолжать нечего.
+    private static let conversationalStartCourseId = "course_b_1"
 
-        return items.enumerated().map { index, item in
-            techResumeBannerModel(for: item, index: index, streak: streak, plannedToday: plannedToday)
-        }
+    private func activeResumeItem() -> MainBannerItem? {
+        main.resumeItems.first { $0.id != "continue-empty" }
     }
 
-    private func techResumeBannerModel(
-        for item: MainBannerItem,
-        index: Int,
-        streak: Int,
-        plannedToday: Set<String>
-    ) -> MDTechResumeBannerModel {
-        let (courseId, lessonId) = parseResumeItemIds(item)
+    private func handleContinueCardTap() {
+        if let item = activeResumeItem() {
+            openResumeItem(item)
+            return
+        }
+        openCourse(Self.conversationalStartCourseId)
+    }
+
+    private func continuePillTitle() -> String {
+        guard let item = activeResumeItem() else {
+            return "Начать обучение"
+        }
+        let (courseId, _) = parseResumeItemIds(item)
         let courseTitle = LessonsManager.shared.courseTitle(for: courseId)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let displayCourse = courseTitle.isEmpty ? item.title : courseTitle
+        let name = courseTitle.isEmpty ? item.title : courseTitle
+        return name.isEmpty ? "Продолжить" : "Продолжить \(name)"
+    }
 
-        let lessons = LessonsData.shared.lessons(for: courseId).sorted { $0.order < $1.order }
-        let lessonsTotal = lessons.count
-        let completedLessons = lessons.filter {
-            LessonsManager.shared.lessonPercent(courseId: courseId, lessonId: $0.lessonID) >= 0.999
-        }.count
-        let remainingLessons = max(0, lessonsTotal - completedLessons)
-        let progress = max(0, min(1, ProgressManager.shared.progress(for: courseId, lessonId: nil)))
+    /// Одна строка: «Разминка · 13ч 39м» (+ секунды ближе к концу).
+    private func warmupPillTitle(now: Date = Date()) -> String {
+        let label = MDDailyRefreshCountdown.label(now: now)
+        if label == "скоро" { return "Разминка · скоро" }
+        return "Разминка · \(label)"
+    }
 
-        let resolved = resolveNextLessonTitle(
-            courseId: courseId,
-            lessonId: lessonId,
-            item: item,
-            lessons: lessons
-        )
-        var durationMinutes = item.lessonMinutes ?? resolved.minutes
-        if durationMinutes == 0 { durationMinutes = nil }
-
-        let lessonTitle = resolved.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedCourse = displayCourse.lowercased()
-        let normalizedLesson = lessonTitle.lowercased()
-        let focusIsLesson = !lessonTitle.isEmpty && normalizedLesson != normalizedCourse
-
-        // Заголовок = имя курса/урока. CTA отдельно — без «Продолжить …» в title.
-        let title: String = focusIsLesson ? lessonTitle : displayCourse
-
-        let eyebrow: String = {
-            if index == 0 { return "СЕГОДНЯ" }
-            if plannedToday.contains(courseId) { return "В ПЛАНЕ" }
-            return "НА НЕДЕЛЕ"
-        }()
-
-        let detailLine: String? = {
-            var parts: [String] = []
-            if focusIsLesson {
-                parts.append(displayCourse)
-            }
-            if let lessonIndex = lessons.firstIndex(where: { $0.lessonID == lessonId }) {
-                parts.append("урок \(lessonIndex + 1) из \(max(lessonsTotal, 1))")
-            } else if lessonsTotal > 0, completedLessons < lessonsTotal {
-                parts.append("урок \(completedLessons + 1) из \(lessonsTotal)")
-            }
-            if parts.isEmpty {
-                if let courseDesc = CourseData.shared.description(for: courseId)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines),
-                   !courseDesc.isEmpty {
-                    return String(courseDesc.prefix(90))
+    private var warmupRow: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            MDMainOutlinePillCTA(
+                title: warmupPillTitle(now: context.date),
+                icon: "bolt.fill",
+                progressFill: MDDailyRefreshCountdown.remainingFraction(now: context.date)
+            ) {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                    showDailyPicksSheet = true
                 }
-                return nil
             }
-            if let courseDesc = CourseData.shared.description(for: courseId)?
-                .trimmingCharacters(in: .whitespacesAndNewlines),
-               !courseDesc.isEmpty,
-               !focusIsLesson {
-                return String(courseDesc.prefix(90))
-            }
-            return parts.joined(separator: " · ")
-        }()
-
-        // Мотивационный статус — зависит от стадии курса (+ серия).
-        let motivation: (chip: String, kind: AppStatusKind) = {
-            if lessonsTotal > 0, remainingLessons == 0 {
-                return ("пройден", .completed)
-            }
-            if progress >= 0.85, remainingLessons <= 1 {
-                return streak > 0
-                    ? ("ещё 1 · серия \(streak)", .inProgress)
-                    : ("почти финиш", .inProgress)
-            }
-            if remainingLessons == 1 {
-                return streak > 0
-                    ? ("1 урок · серия \(streak)", .inProgress)
-                    : ("остался 1 урок", .inProgress)
-            }
-            if progress < 0.12, completedLessons == 0 {
-                return ("новый", .new)
-            }
-            if remainingLessons > 1, streak > 0 {
-                return ("ещё \(remainingLessons) · серия \(streak)", .inProgress)
-            }
-            if remainingLessons > 1 {
-                return ("ещё \(remainingLessons) \(lessonWord(remainingLessons))", .inProgress)
-            }
-            if streak > 0 {
-                return ("серия \(streak)", .inProgress)
-            }
-            return ("в процессе", .inProgress)
-        }()
-
-        let statsLine: String? = {
-            var parts: [String] = []
-            if lessonsTotal > 0 {
-                parts.append("\(max(completedLessons, 1)) \(lessonWord(max(completedLessons, 1)))")
-            }
-            if let mins = durationMinutes, mins > 0 {
-                parts.append("\(mins) мин")
-            }
-            let learnedInCourse = learnedStepsCount(courseId: courseId)
-            if learnedInCourse > 0 {
-                parts.append("\(learnedInCourse) \(wordWord(learnedInCourse))")
-            } else {
-                let pct = Int((progress * 100).rounded())
-                if pct > 0 { parts.append("\(pct)%") }
-            }
-            guard !parts.isEmpty else { return nil }
-            return parts.joined(separator: "  ·  ")
-        }()
-
-        return MDTechResumeBannerModel(
-            id: item.id,
-            eyebrow: eyebrow,
-            title: title,
-            detailLine: detailLine,
-            motivationChip: motivation.chip,
-            motivationKind: motivation.kind,
-            statsLine: statsLine,
-            ctaTitle: "Продолжить",
-            isEmpty: false,
-            waveSeed: index &+ courseId.hashValue
-        )
-    }
-
-    private func learnedStepsCount(courseId: String) -> Int {
-        let snap = UserSession.shared.snapshot
-        var total = 0
-        for (key, set) in snap.learnedSteps where key.hasPrefix(courseId) {
-            total += set.count
         }
-        return total
-    }
-
-    private func lessonWord(_ n: Int) -> String {
-        let mod10 = n % 10
-        let mod100 = n % 100
-        if mod100 >= 11 && mod100 <= 14 { return "уроков" }
-        switch mod10 {
-        case 1: return "урок"
-        case 2, 3, 4: return "урока"
-        default: return "уроков"
-        }
+        .padding(.horizontal, Theme.Layout.pageHorizontal)
+        .accessibilityLabel("Разминка, таймер до обновления")
     }
 
     private func dayWord(_ n: Int) -> String {
@@ -395,17 +326,6 @@ struct MainView: View {
         case 1: return "день"
         case 2, 3, 4: return "дня"
         default: return "дней"
-        }
-    }
-
-    private func wordWord(_ n: Int) -> String {
-        let mod10 = n % 10
-        let mod100 = n % 100
-        if mod100 >= 11 && mod100 <= 14 { return "слов" }
-        switch mod10 {
-        case 1: return "слово"
-        case 2, 3, 4: return "слова"
-        default: return "слов"
         }
     }
 
@@ -457,62 +377,35 @@ struct MainView: View {
         }
     }
 
-    // MARK: - Week progress (Profile-style compact indicators)
-    @ViewBuilder
-    private var weekProgressBlock: some View {
+    // MARK: - Week progress — лёгкая подпись-строка, а не отдельная секция с рамкой и заголовком.
+    // Раньше это была своя зона («ЗА НЕДЕЛЮ» + панель с 3 показателями) — дублировала Профиль
+    // и добавляла лишний блок между «Скажи сам» и «Подборкой дня». Сводим к одной строке-подписи.
+    private func weekStreakCaptionText() -> String? {
         let state = weekProgressState
+        var parts: [String] = []
+        if state.currentStreak > 0 {
+            parts.append("🔥 серия \(state.currentStreak) \(dayWord(state.currentStreak))")
+        }
+        if state.totalMasteryPercent > 0 {
+            parts.append("\(state.totalMasteryPercent)% усвоено")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: "   ·   ")
+    }
 
-        VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
-            TaikaSectionLabel(title: "ЗА НЕДЕЛЮ")
-                .padding(.horizontal, PD.Spacing.screen)
-
-            HStack(spacing: PD.Spacing.inner) {
-                weekProgressChip(label: "выучено", value: "\(state.totalStableSteps)", accent: false, progress: nil)
-                weekProgressChip(label: "дней подряд", value: "\(state.currentStreak)", accent: false, progress: nil)
-                weekProgressChip(label: "прогресс", value: "\(state.totalMasteryPercent)%", accent: true, progress: nil)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(
-                Theme.Surfaces.panel(
-                    RoundedRectangle(cornerRadius: Theme.Radii.card, style: .continuous)
-                )
-            )
-            .padding(.horizontal, PD.Spacing.screen)
-            .padding(.top, Theme.Layout.sectionTitleToContent)
+    @ViewBuilder
+    private var weekStreakCaption: some View {
+        if let caption = weekStreakCaptionText() {
+            Text(caption)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, Theme.Layout.pageHorizontal + 4)
+                .padding(.top, 12)
         }
     }
 
-    /// Инфографика без рамок: значение + подпись + опциональный прогресс-бар.
-    private func weekProgressChip(label: String, value: String, accent: Bool, progress: Double? = nil) -> some View {
-        let fill = accent ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary)
-        return VStack(spacing: 6) {
-            Text(value)
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(fill)
-            Text(label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(PD.ColorToken.textSecondary)
-            if let frac = progress, frac >= 0 {
-                GeometryReader { g in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .fill(PD.ColorToken.textSecondary.opacity(0.2))
-                            .frame(height: 5)
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .fill(accent ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary))
-                            .frame(width: max(0, g.size.width * min(1, frac)), height: 5)
-                    }
-                }
-                .frame(height: 5)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 4)
-    }
-
-    // MARK: - Подборка дня: карусель курсов (мини-карточки с чипом категории), данные грузятся в .task при открытии Main
+    // MARK: - Подборка дня: карусель курсов (мини-карточки с чипом категории), данные грузятся
+    // в .task при открытии Main. Возвращено как было — карточки, а не текст/иконки.
     @ViewBuilder
     private var forYouSection: some View {
         if forYouCourses.isEmpty {
@@ -567,9 +460,10 @@ struct MainView: View {
     @ViewBuilder
     private var forYouReelContent: some View {
         let dtos = forYouDTOs()
-        let reelItems = dtos
-        let centerIndex = 0
-        let allowsPeek = reelItems.count > 1
+        let baseCount = dtos.count
+        let allowsPeek = baseCount > 1
+        // Тройной буфер — автоскролл по кругу без рывка на краю.
+        let loopedCount = allowsPeek ? baseCount * 3 : baseCount
         let sideInset: CGFloat = PD.Spacing.screen
 
         VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
@@ -593,8 +487,11 @@ struct MainView: View {
                 ScrollViewReader { proxy in
                     TaikaCarouselScroll {
                         HStack(alignment: .top, spacing: allowsPeek ? forYouSpacing : 0) {
-                            ForEach(Array(reelItems.enumerated()), id: \.offset) { idx, dto in
-                                forYouCarouselCell(idx: idx, dto: dto, dtos: dtos)
+                            ForEach(0..<loopedCount, id: \.self) { renderIdx in
+                                let baseIdx = allowsPeek ? (renderIdx % baseCount) : renderIdx
+                                let dto = dtos[baseIdx]
+                                forYouCarouselCell(idx: baseIdx, dto: dto, dtos: dtos)
+                                    .id(renderIdx)
                             }
                         }
                         .padding(.horizontal, allowsPeek ? sideInset : singleSideInset)
@@ -602,10 +499,51 @@ struct MainView: View {
                         .frame(height: MDPortraitCarouselMetrics.cardHeight + 36)
                     }
                     .scrollDisabled(!allowsPeek)
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 8)
+                            .onChanged { _ in
+                                forYouAutoScrollPausedUntil = Date().addingTimeInterval(6)
+                            }
+                    )
                     .onAppear {
-                        if !didCenterForYouCarousel, !reelItems.isEmpty {
+                        guard !didCenterForYouCarousel, baseCount > 0 else { return }
+                        didCenterForYouCarousel = true
+                        let start = allowsPeek ? baseCount : 0
+                        forYouAutoIndex = start
+                        DispatchQueue.main.async {
+                            withAnimation(.none) {
+                                proxy.scrollTo(start, anchor: .center)
+                            }
+                        }
+                    }
+                    .onReceive(forYouAutoScrollTimer) { _ in
+                        guard allowsPeek, baseCount > 1 else { return }
+                        guard Date() >= forYouAutoScrollPausedUntil else { return }
+                        guard !overlay.isPresented, !showDailyPicksSheet else { return }
+
+                        var next = forYouAutoIndex + 1
+                        // Держим индекс в среднем блоке, чтобы круг не упирался в край.
+                        if next >= baseCount * 2 {
+                            next = baseCount + (next % baseCount)
+                            withAnimation(.none) {
+                                proxy.scrollTo(next - 1, anchor: .center)
+                            }
+                        }
+                        forYouAutoIndex = next
+                        withAnimation(.easeInOut(duration: 0.55)) {
+                            proxy.scrollTo(next, anchor: .center)
+                        }
+                    }
+                    .onChange(of: baseCount) { _, newCount in
+                        guard newCount > 0 else { return }
+                        didCenterForYouCarousel = false
+                        let start = newCount > 1 ? newCount : 0
+                        forYouAutoIndex = start
+                        DispatchQueue.main.async {
+                            withAnimation(.none) {
+                                proxy.scrollTo(start, anchor: .center)
+                            }
                             didCenterForYouCarousel = true
-                            proxy.scrollTo(centerIndex, anchor: .center)
                         }
                     }
                 }
@@ -642,29 +580,18 @@ struct MainView: View {
             onOpen: { openCourse(model.courseId) }
         )
         .frame(width: MDPortraitCarouselMetrics.cardWidth, height: MDPortraitCarouselMetrics.cardHeight)
-        .id(idx)
     }
 
     private func startRandomCourseQuickstart() {
-        // avoid stacking overlays
-        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-            overlay.present(.randomCourseLoading)
-        }
+        guard !isStartingRandomCourse else { return }
+        isStartingRandomCourse = true
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
 
         Task { @MainActor in
-            // a tiny delay for the loading animation
-            try? await Task.sleep(nanoseconds: 950_000_000)
-
-            // pick a random course according to current business rules
-            // (pro: any; free: only free courses)
             let pick = await main.randomCourseForToday(isProUser: pro.isPro)
-            let courseId = pick?.id
+            isStartingRandomCourse = false
 
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                overlay.dismiss()
-            }
-
-            guard let courseId else {
+            guard let courseId = pick?.id else {
                 withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
                     overlay.present(.kunKruSuggestions)
                 }
@@ -860,26 +787,58 @@ struct MainView: View {
         return out
     }
 
+    /// Приветствие в духе AI-инструмента: время суток в Бангкоке + имя, если пользователь входил
+    /// через Sign in with Apple.
+    private func timeGreeting() -> String {
+        let hour = Self.bangkokCal.component(.hour, from: Date())
+        switch hour {
+        case 5..<12: return "Доброе утро"
+        case 12..<18: return "Добрый день"
+        case 18..<23: return "Добрый вечер"
+        default: return "Доброй ночи"
+        }
+    }
+
+    private var heroGreetingText: String {
+        let base = timeGreeting()
+        guard let raw = AuthService.shared.displayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty else { return "\(base) 👋" }
+        let firstName = raw.split(separator: " ").first.map(String.init) ?? raw
+        return "\(base), \(firstName) 👋"
+    }
+
+    private var continueSection: some View {
+        MDMainFilledPillCTA(
+            title: continuePillTitle(),
+            icon: "graduationcap.fill"
+        ) {
+            handleContinueCardTap()
+        }
+        .padding(.horizontal, Theme.Layout.pageHorizontal)
+    }
+
     private var mainScrollBlock: some View {
         let isModalPresented = overlay.isPresented
 
+        // Главная: герой → продолжить → разминка → подборка курсов.
+        let sectionBreath: CGFloat = 32
+
         return TaikaRootVerticalScroll {
-            // VStack (не LazyVStack): карусель Разминки с GeometryReader иначе ломает высоту
-            // и карта «улетает» под таббар (виден только футер «Слово»).
-            VStack(spacing: Theme.Layout.sectionGap) {
-                fmSection
+            VStack(spacing: 0) {
+                MDPromptHero(
+                    greeting: heroGreetingText,
+                    onOpenSpeaker: openSpeakerConversationFromSandbox
+                )
+                .padding(.top, 6)
 
-                weekProgressBlock
-                    .padding(.top, Theme.Layout.sectionTop)
+                continueSection
+                    .padding(.top, sectionBreath)
 
-                continueCalendarSection
-                    .padding(.top, Theme.Layout.sectionTop)
-
-                dailyPicksBlock
-                    .padding(.top, Theme.Layout.sectionTop)
+                warmupRow
+                    .padding(.top, 12)
 
                 forYouSection
-                    .padding(.top, Theme.Layout.sectionTop)
+                    .padding(.top, sectionBreath)
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(.bottom, ToolBar.recommendedBottomInset + 12)
@@ -985,10 +944,6 @@ var body: some View {
             .ignoresSafeArea()
 
         VStack(spacing: 0) {
-            TaikaScreenPageTitle(title: "Главная")
-                .padding(.top, 4)
-                .padding(.bottom, 8)
-
             mainScrollBlock
                 // Clearance уже на внешней VStack — внутри скролла не дублируем (как в CourseView).
                 .environment(\.taikaRootHeaderClearance, 0)
@@ -1010,7 +965,8 @@ var body: some View {
             case .kunKruSuggestions:
                 kunKruOverlay
             case .randomCourseLoading:
-                randomCourseLoadingOverlay
+                // Legacy path — больше не показываем кастомный «случайный курс…».
+                EmptyView()
             case .proCoursePaywall(_, _):
                 // Shown at AppShell level so paywall works from any tab (EPIC 3)
                 EmptyView()
@@ -1022,6 +978,12 @@ var body: some View {
                 EmptyView()
             }
         }
+
+        if isStartingRandomCourse {
+            nativeCourseStartOverlay
+        }
+
+        dailyPicksFullOverlay
     }
     .ignoresSafeArea(.keyboard, edges: .bottom)
 }
@@ -1035,11 +997,7 @@ var body: some View {
     }
 
     private var searchOverlayBackdrop: some View {
-        Color.black.opacity(0.28)
-            .ignoresSafeArea()
-            .onTapGesture {
-                dismissSearchOverlay()
-            }
+        OverlayEtalonBackground(onDismiss: dismissSearchOverlay)
     }
 
     private var searchOverlayCard: some View {
@@ -1086,21 +1044,21 @@ var body: some View {
     private var searchOverlayHeader: some View {
         HStack(spacing: 10) {
             Text("поиск")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(CD.ColorToken.text)
 
             Spacer(minLength: 12)
 
             Button {
                 dismissSearchOverlay()
             } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.9))
-                    .padding(10)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
+                    .symbolRenderingMode(.hierarchical)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Закрыть")
         }
     }
 
@@ -1314,20 +1272,18 @@ var body: some View {
     // MARK: - Кун Кру: подборка курсов (без выбора дня)
     private var kunKruOverlay: some View {
         ZStack {
-            Color.black.opacity(0.28)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                        overlay.dismiss()
-                        kunKruCourses = []
-                    }
+            OverlayEtalonBackground(onDismiss: {
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                    overlay.dismiss()
+                    kunKruCourses = []
                 }
+            })
 
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
                     Text("Подборка для тебя")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(CD.ColorToken.text)
                     Spacer(minLength: 12)
                     Button {
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
@@ -1335,18 +1291,18 @@ var body: some View {
                             kunKruCourses = []
                         }
                     } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color.white.opacity(0.9))
-                            .padding(10)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
+                            .symbolRenderingMode(.hierarchical)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Закрыть")
                 }
 
                 Text("Таика подобрала курсы по твоему прогрессу — выбери и продолжай")
                     .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(.white.opacity(0.82))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
 
                 kunKruCarousel
                     .padding(.top, 6)
@@ -1355,6 +1311,7 @@ var body: some View {
             .taikaBlackGlassBackground(cornerRadius: 26)
             .frame(maxWidth: 420)
             .padding(.horizontal, 16)
+            .padding(.top, 60)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
@@ -1573,9 +1530,7 @@ var body: some View {
         }
     }
 
-    private var fmSection: some View {
-        MDFMSection("ТАЙКА FM", messages: [])
-    }
+    // Taika FM убран с главной (был дублем: он уже есть в разделе «Курсы» — courseFmSection).
 
     private func allowReactiveRefresh(minInterval: TimeInterval) -> Bool {
         let now = Date()
@@ -1585,19 +1540,26 @@ var body: some View {
     }
     // MARK: - Random course loading overlay (scoped to MainView)
 
-    private var randomCourseLoadingOverlay: some View {
+    /// Нативный индикатор старта курса — системный ProgressView, без кастомного макета.
+    private var nativeCourseStartOverlay: some View {
         ZStack {
             Color.black.opacity(0.28)
                 .ignoresSafeArea()
+                .allowsHitTesting(true)
 
-            TaikaLoadingView(label: "случайный курс…")
-                .padding(.vertical, 18)
-                .padding(.horizontal, 18)
-                .taikaBlackGlassBackground(cornerRadius: 26)
-                .frame(maxWidth: 280)
-                .padding(.horizontal, 16)
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(.white)
+                .scaleEffect(1.15)
+                .padding(22)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
         }
-        .transition(.scale(scale: 0.98).combined(with: .opacity))
+        .transition(.opacity)
+        .zIndex(30)
+        .accessibilityLabel("Загрузка курса")
     }
 
     // MARK: - Step handlers (mirror StepView)
@@ -1734,14 +1696,12 @@ var body: some View {
         let effectiveDay = sheet.isAdd ? calendarOverlaySelectedDay : day
         let taskId = calendarOverlayTaskId(day: effectiveDay, isAdd: sheet.isAdd, shuffle: addOverlayShuffleToken, reload: addOverlayReloadToken)
 
-        Color.black.opacity(0.28)
-            .ignoresSafeArea()
-            .onTapGesture {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                    overlay.dismiss()
-                    calendarDayCourses = []
-                }
+        OverlayEtalonBackground(onDismiss: {
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                overlay.dismiss()
+                calendarDayCourses = []
             }
+        })
 
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 14) {
@@ -1879,13 +1839,13 @@ var body: some View {
                     calendarDayCourses = []
                 }
             } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.9))
-                    .padding(10)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
+                    .symbolRenderingMode(.hierarchical)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Закрыть")
         }
     }
 
@@ -2070,6 +2030,18 @@ var body: some View {
 
 // MARK: - Navigation intents (scoped to MainView)
 extension MainView {
+    /// Deep link: вкладка Спикер + режим «Скажи сам» + сразу запись (мы же зовём говорить).
+    private func openSpeakerConversationFromSandbox() {
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+            overlay.dismiss()
+        }
+        SpeakerReturnContext.shared.clear()
+        SpeakerManager.shared.setSpeakerUIMode(.conversation)
+        SpeakerManager.shared.pendingConversationAutoRecord = true
+        nav.popToRoot()
+        nav.requestTab(2)
+    }
+
     private func openCourse(_ courseId: String) {
         // prevent double pushes in the same frame (DailyPicks can fire multiple callbacks)
         guard !navPushInFlight else { return }

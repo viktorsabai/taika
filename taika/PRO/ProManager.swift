@@ -55,6 +55,13 @@ final class ProManager: ObservableObject {
     /// Активное entitlement из RevenueCat (обновляется delegate + sync).
     @Published private(set) var revenueCatEntitled: Bool = false
 
+    /// Дата окончания текущего периода (триал / подписка). `nil` у lifetime / без срока.
+    @Published private(set) var subscriptionExpirationDate: Date? = nil
+    /// Сейчас идёт intro / free trial.
+    @Published private(set) var isInIntroTrial: Bool = false
+    /// Автопродление включено.
+    @Published private(set) var willAutoRenew: Bool = false
+
     // MARK: Debug Override
 
     private static let debugOverrideKey = "pro.debug.override"
@@ -85,6 +92,9 @@ final class ProManager: ObservableObject {
         cancellables.removeAll()
         session = nil
         revenueCatEntitled = false
+        subscriptionExpirationDate = nil
+        isInIntroTrial = false
+        willAutoRenew = false
         setPro(false, tier: .none, source: .none)
     }
 
@@ -113,10 +123,72 @@ final class ProManager: ObservableObject {
 
     /// Обновление из RevenueCat (`CustomerInfo`).
     func applyRevenueCatCustomerInfo(_ info: CustomerInfo) {
-        let active = info.entitlements[TaikaProConfig.entitlementIdentifier]?.isActive == true
+        let ent = info.entitlements[TaikaProConfig.entitlementIdentifier]
+        let active = ent?.isActive == true
         revenueCatEntitled = active
+        if active, let ent {
+            subscriptionExpirationDate = ent.expirationDate
+            willAutoRenew = ent.willRenew
+            switch ent.periodType {
+            case .trial, .intro:
+                isInIntroTrial = true
+            default:
+                isInIntroTrial = false
+            }
+        } else {
+            subscriptionExpirationDate = nil
+            willAutoRenew = false
+            isInIntroTrial = false
+        }
         applyMergedEntitlement()
     }
+
+    /// Дней до конца периода (0 = сегодня/истекло). `nil` если срока нет.
+    var subscriptionDaysRemaining: Int? {
+        guard let exp = subscriptionExpirationDate else { return nil }
+        let start = Calendar.current.startOfDay(for: Date())
+        let end = Calendar.current.startOfDay(for: exp)
+        let days = Calendar.current.dateComponents([.day], from: start, to: end).day
+        return days.map { max(0, $0) }
+    }
+
+    /// Короткий статус для Профиля.
+    var subscriptionStatusTitle: String {
+        if !isPro { return "Taika+ не активен" }
+        if isInIntroTrial {
+            if let days = subscriptionDaysRemaining {
+                return "Пробный период · \(days) \(TaikaProConfig.russianDaysWord(days))"
+            }
+            return "Пробный период"
+        }
+        return "Taika+ активен"
+    }
+
+    var subscriptionStatusSubtitle: String {
+        if !isPro {
+            return "\(TaikaProConfig.introTrialDaysPhrase) бесплатно — разминка, курсы и Спикер"
+        }
+        if let exp = subscriptionExpirationDate {
+            let formatted = Self.shortDateFormatter.string(from: exp)
+            if isInIntroTrial {
+                return willAutoRenew
+                    ? "До \(formatted), затем продление"
+                    : "До \(formatted) · отмена в Apple ID"
+            }
+            return willAutoRenew
+                ? "Продлится \(formatted)"
+                : "До \(formatted)"
+        }
+        return "Расширенная разминка, курсы и Спикер"
+    }
+
+    private static let shortDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ru_RU")
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return f
+    }()
 
     func applyMergedEntitlement() {
         if let forced = debugOverride {

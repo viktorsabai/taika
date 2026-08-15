@@ -1530,37 +1530,6 @@ public struct LSCourseStats: Hashable {
 
 // MARK: - Course overview (minimal: no outer card; progress block + stats strip)
 
-private struct LSCourseStatColumn: View {
-    let value: String
-    let label: String
-    var accent: Bool = false
-
-    var body: some View {
-        VStack(spacing: 5) {
-            Text(value)
-                .font(.system(size: 19, weight: .semibold, design: .rounded))
-                .foregroundStyle(accent ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.text.opacity(0.92)))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.82))
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
-private struct LSCourseStatsHairline: View {
-    var body: some View {
-        Rectangle()
-            .fill(Color.white.opacity(0.07))
-            .frame(width: 1, height: 32)
-    }
-}
-
 /// Оставшееся время курса: заметная «пилюля» в акценте (читается как таймер).
 private struct LSCourseETATimer: View {
     let minutes: Int
@@ -1579,7 +1548,7 @@ private struct LSCourseETATimer: View {
             Image(systemName: "timer")
                 .font(.system(size: 12, weight: .semibold))
             Text(mmss)
-                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .font(.taikaStat(13))
                 .monospacedDigit()
         }
         .foregroundStyle(accent)
@@ -1607,6 +1576,13 @@ public struct LSCourseOverview: View {
     public var onSpeaker: (() -> Void)?
     public var onReinforce: (() -> Void)?
     public let showInlineProgress: Bool
+
+    @State private var displayLessonsDone: Int = 0
+    @State private var displayWords: Int = 0
+    @State private var displayFavorites: Int = 0
+    @State private var displayMinutes: Int = 0
+    @State private var appeared: Bool = false
+    @State private var countTask: Task<Void, Never>?
 
     private var courseProgress: Double {
         guard stats.totalLessons > 0 else { return 0 }
@@ -1661,26 +1637,95 @@ public struct LSCourseOverview: View {
             }
             .padding(.bottom, 18)
 
-            Rectangle()
-                .fill(Color.white.opacity(0.08))
-                .frame(height: 1)
-                .padding(.bottom, 16)
-
-            // Инфографика в одну линию — без вложенных рамок
-            HStack(alignment: .top, spacing: 0) {
-                LSCourseStatColumn(
-                    value: "\(stats.completedLessons)/\(stats.totalLessons)",
+            // Как «Твой ритм» на Course: крупные цифры Skifer, без рамок и hairline.
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                TaikaStatMetric(
+                    valueText: "\(displayLessonsDone)/\(stats.totalLessons)",
                     label: "уроки",
-                    accent: true
+                    valueSize: 44,
+                    accent: true,
+                    appeared: appeared,
+                    delay: 0
                 )
-                LSCourseStatsHairline()
-                LSCourseStatColumn(value: "\(stats.learnedWords)", label: "слова", accent: false)
-                LSCourseStatsHairline()
-                LSCourseStatColumn(value: "\(stats.favorites)", label: "избранное", accent: false)
-                LSCourseStatsHairline()
-                LSCourseStatColumn(value: "\(stats.timeMinutes)", label: "мин в курсе", accent: false)
+                TaikaStatMetric(
+                    valueText: "\(displayWords)",
+                    label: "слова",
+                    valueSize: 44,
+                    accent: true,
+                    appeared: appeared,
+                    delay: 0.06
+                )
+                TaikaStatMetric(
+                    valueText: "\(displayFavorites)",
+                    label: "избранное",
+                    valueSize: 44,
+                    accent: true,
+                    appeared: appeared,
+                    delay: 0.12
+                )
+                TaikaStatMetric(
+                    valueText: "\(displayMinutes)",
+                    label: "мин",
+                    valueSize: 44,
+                    accent: true,
+                    appeared: appeared,
+                    delay: 0.18
+                )
             }
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 8)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                "\(stats.completedLessons) из \(stats.totalLessons) уроков, \(stats.learnedWords) слов, \(stats.favorites) в избранном, \(stats.timeMinutes) минут"
+            )
         }
+        .onAppear { animateStats() }
+        .onChange(of: stats) { _, _ in animateStats(fromCurrent: true) }
+        .onDisappear { countTask?.cancel() }
+    }
+
+    private func animateStats(fromCurrent: Bool = false) {
+        countTask?.cancel()
+        if !fromCurrent {
+            displayLessonsDone = 0
+            displayWords = 0
+            displayFavorites = 0
+            displayMinutes = 0
+            appeared = false
+        }
+        withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) {
+            appeared = true
+        }
+        countTask = Task { @MainActor in
+            async let a: Void = countUp(to: stats.completedLessons, assign: { displayLessonsDone = $0 }, stagger: 0)
+            async let b: Void = countUp(to: stats.learnedWords, assign: { displayWords = $0 }, stagger: 0.06)
+            async let c: Void = countUp(to: stats.favorites, assign: { displayFavorites = $0 }, stagger: 0.12)
+            async let d: Void = countUp(to: stats.timeMinutes, assign: { displayMinutes = $0 }, stagger: 0.18)
+            _ = await (a, b, c, d)
+        }
+    }
+
+    private func countUp(to target: Int, assign: @escaping (Int) -> Void, stagger: TimeInterval) async {
+        if stagger > 0 {
+            try? await Task.sleep(nanoseconds: UInt64(stagger * 1_000_000_000))
+        }
+        guard !Task.isCancelled else { return }
+        let clamped = max(0, target)
+        guard clamped > 0 else {
+            assign(0)
+            return
+        }
+        let steps = min(clamped, 22)
+        let stepDuration = 0.72 / Double(steps)
+        for i in 1...steps {
+            if Task.isCancelled { return }
+            let next = Int(round(Double(clamped) * Double(i) / Double(steps)))
+            withAnimation(.easeOut(duration: 0.05)) {
+                assign(next)
+            }
+            try? await Task.sleep(nanoseconds: UInt64(stepDuration * 1_000_000_000))
+        }
+        assign(clamped)
     }
 
     public init(

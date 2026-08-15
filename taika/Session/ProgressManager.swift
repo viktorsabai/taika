@@ -116,6 +116,9 @@ public final class ProgressManager: ObservableObject {
     }
 
     private var emitWorkItem: DispatchWorkItem?
+    /// Guards against recursive resetLesson from notification handlers.
+    private var isResettingLesson = false
+    private var isResettingCourse = false
     private func emitChange() {
         emitWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
@@ -179,13 +182,19 @@ public final class ProgressManager: ObservableObject {
             return lessons.map { lesson in
                 let items = StepData.shared.items(for: lesson.lessonID)
                 var tipIndexes = Set<Int>()
-                for (idx, item) in items.enumerated() {
-                    if item.kind == .tip || item.kind == .dialog {
-                        tipIndexes.insert(idx)
+                var learnable = 0
+                for item in items {
+                    switch item.kind {
+                    case .tip, .dialog:
+                        tipIndexes.insert(item.order)
+                    case .word, .phrase, .casual:
+                        learnable += 1
                     }
                 }
                 let excludedIndexes = StepData.shared.invalidProgressIndices(for: lesson.lessonID)
-                return (id: lesson.lessonID, totalSteps: items.count, tipIndexes: tipIndexes, excludedIndexes: excludedIndexes)
+                // totalSteps = только учебные карточки; tipIndexes оставляем, чтобы вычищать
+                // случайно сохранённые ключи лайфхаков из learnedSteps.
+                return (id: lesson.lessonID, totalSteps: learnable, tipIndexes: tipIndexes, excludedIndexes: excludedIndexes)
             }
         }
         // Не вызываем rebuildProfileDashboardState() здесь: UserSession.shared в цепочке → возможный цикл при старте.
@@ -226,8 +235,8 @@ public final class ProgressManager: ObservableObject {
             // Rebuild tip/excluded sets exactly like meta provider does
             var tipIndexes = Set<Int>()
             tipIndexes.reserveCapacity(8)
-            for (idx, item) in items.enumerated() {
-                if item.kind == .tip || item.kind == .dialog { tipIndexes.insert(idx) }
+            for item in items {
+                if item.kind == .tip || item.kind == .dialog { tipIndexes.insert(item.order) }
             }
             let excluded = StepData.shared.invalidProgressIndices(for: lessonId)
 
@@ -273,29 +282,66 @@ public final class ProgressManager: ObservableObject {
     }
 
     // MARK: - Effective count helpers
+    /// Считаем только word/phrase/casual. Ключи в `learnedSteps` могут быть `order`,
+    /// enumerated index или compact-индекс среди learnable — матчим все три, лайфхаки не учитываем.
     public func learnedEffectiveCount(courseId: String, lessonId: String) -> Int {
-        let key = makeKey(courseId: courseId, lessonId: lessonId)
-        let learned = learnedSteps[key] ?? []
-
-        // If meta is available, exclude tips/excluded from the learned count.
-        if let meta = lessonMeta(courseId: courseId, lessonId: lessonId) {
-            let effectiveLearned = learned.subtracting(meta.tipIndexes).subtracting(meta.excludedIndexes)
-            return effectiveLearned.count
+        let learned = learnedSet(courseId: courseId, lessonId: lessonId)
+        guard !learned.isEmpty else { return 0 }
+        let items = StepData.shared.items(for: lessonId)
+        let invalid = StepData.shared.invalidProgressIndices(for: lessonId)
+        var count = 0
+        var learnableOrdinal = 0
+        for (i, item) in items.enumerated() {
+            switch item.kind {
+            case .word, .phrase, .casual:
+                let orderKey = item.order >= 0 ? item.order : i
+                defer { learnableOrdinal += 1 }
+                if invalid.contains(orderKey) || invalid.contains(i) { continue }
+                if Self.matchesLearnedIndex(learned, order: orderKey, enumerated: i, learnableOrdinal: learnableOrdinal) {
+                    count += 1
+                }
+            default:
+                continue
+            }
         }
-
-        return learned.count
+        return count
     }
 
     public func totalEffectiveCount(courseId: String, lessonId: String) -> Int {
-        // Prefer real totals (excluding tips/excluded) when meta is wired.
-        if let meta = lessonMeta(courseId: courseId, lessonId: lessonId) {
-            let eff = max(0, meta.totalSteps - meta.tipIndexes.count - meta.excludedIndexes.count)
-            return eff
+        let items = StepData.shared.items(for: lessonId)
+        let invalid = StepData.shared.invalidProgressIndices(for: lessonId)
+        var total = 0
+        for (i, item) in items.enumerated() {
+            switch item.kind {
+            case .word, .phrase, .casual:
+                let orderKey = item.order >= 0 ? item.order : i
+                if invalid.contains(orderKey) || invalid.contains(i) { continue }
+                total += 1
+            default:
+                continue
+            }
         }
+        if total > 0 { return total }
+        // Fallback if StepData ещё не прогрузил урок.
+        let counts = StepData.shared.progressCounts(for: lessonId)
+        if counts.learnable > 0 { return counts.learnable }
+        if let meta = lessonMeta(courseId: courseId, lessonId: lessonId) {
+            // meta.totalSteps уже learnable-only (без tipIndexes в знаменателе).
+            return max(0, meta.totalSteps - meta.excludedIndexes.count)
+        }
+        return 0
+    }
 
-        // Fallback (avoids crashes / keeps UI running until meta is wired).
-        let key = makeKey(courseId: courseId, lessonId: lessonId)
-        return learnedSteps[key]?.count ?? 0
+    /// Совпадение ключа прогресса с карточкой (order / index / compact learnable ordinal).
+    public static func matchesLearnedIndex(
+        _ learned: Set<Int>,
+        order: Int,
+        enumerated: Int,
+        learnableOrdinal: Int
+    ) -> Bool {
+        learned.contains(order)
+            || learned.contains(enumerated)
+            || learned.contains(learnableOrdinal)
     }
 
     private func lessonMeta(
@@ -416,7 +462,7 @@ public final class ProgressManager: ObservableObject {
         }
     }
 
-    /// Returns the progress fraction [0, 1] for a lesson, counting only steps not in tipIndexes/excludedIndexes.
+    /// Returns the progress fraction [0, 1] for a lesson, counting only learnable cards.
     public func lessonProgressFraction(
         courseId: String,
         lessonId: String,
@@ -424,13 +470,14 @@ public final class ProgressManager: ObservableObject {
         tipIndexes: Set<Int> = [],
         excludedIndexes: Set<Int> = []
     ) -> Double {
-        guard totalSteps > 0 else { return 0 }
-        let key = makeKey(courseId: courseId, lessonId: lessonId)
-        let learned = learnedSteps[key] ?? []
-        let effectiveLearned = learned.subtracting(tipIndexes).subtracting(excludedIndexes)
-        let clampedTotal = max(0, totalSteps - tipIndexes.count - excludedIndexes.count)
-        guard clampedTotal > 0 else { return 0 }
-        return min(1.0, Double(effectiveLearned.count) / Double(clampedTotal))
+        // Prefer kind-based counters (устойчивы к смеси order/enum/compact ключей).
+        let learned = learnedEffectiveCount(courseId: courseId, lessonId: lessonId)
+        let total = totalSteps > 0
+            ? max(0, totalSteps - excludedIndexes.count)
+            : totalEffectiveCount(courseId: courseId, lessonId: lessonId)
+        guard total > 0 else { return 0 }
+        _ = tipIndexes // tips never enter the denominator; learnedEffectiveCount already ignores them
+        return min(1.0, Double(learned) / Double(total))
     }
 
     /// Backward-compatible overload that ignores tipIndexes.
@@ -467,6 +514,11 @@ public final class ProgressManager: ObservableObject {
 
     // MARK: Reset
     public func resetLesson(courseId: String, lessonId: String) {
+        // Re-entrancy guard: StepView used to call resetLesson again from .lessonProgressDidReset.
+        if isResettingLesson { return }
+        isResettingLesson = true
+        defer { isResettingLesson = false }
+
         purgeLesson(courseId: courseId, lessonId: lessonId)
         scheduleSave(immediate: true)
         emitChange()
@@ -484,6 +536,10 @@ public final class ProgressManager: ObservableObject {
     }
 
     public func resetCourse(courseId: String) {
+        if isResettingCourse { return }
+        isResettingCourse = true
+        defer { isResettingCourse = false }
+
         let norm = canonicalize(courseId)
 
         // learned
@@ -663,12 +719,8 @@ public extension ProgressManager {
                 var learnedTotal = 0
                 var effectiveTotal = 0
                 for l in meta {
-                    let key = makeKey(courseId: courseId, lessonId: l.id)
-                    let learned = learnedSteps[key] ?? []
-                    let effectiveLearned = learned.subtracting(l.tipIndexes).subtracting(l.excludedIndexes)
-                    let effTotal = max(0, l.totalSteps - l.tipIndexes.count - l.excludedIndexes.count)
-                    learnedTotal += min(effectiveLearned.count, effTotal)
-                    effectiveTotal += effTotal
+                    learnedTotal += learnedEffectiveCount(courseId: courseId, lessonId: l.id)
+                    effectiveTotal += totalEffectiveCount(courseId: courseId, lessonId: l.id)
                 }
                 guard effectiveTotal > 0 else { return 0 }
                 return min(1.0, max(0.0, Double(learnedTotal) / Double(effectiveTotal)))

@@ -16,11 +16,15 @@ public struct HomeTaskView: View {
     public let embedBackground: Bool
     public let onClose: (() -> Void)?
     public let onNextGame: (() -> Void)?
-    /// Название следующей игры (для не‑Pro: подпись на заблокированной кнопке с короной).
+    /// Название следующей игры (для не‑Pro: подпись на заблокированной кнопке).
     public let nextGameTitle: String?
     public let isProUser: Bool
     public let displayTitle: String?
     public let gameType: HomeGameType
+    /// Из урока/степа: предложить спикер и следующий урок/курс.
+    public let onSpeakerPractice: (() -> Void)?
+    public let onContinueLearning: (() -> Void)?
+    public let continueLearningTitle: String?
     @StateObject private var store: HomeTaskManager
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var theme: ThemeManager
@@ -65,7 +69,10 @@ public struct HomeTaskView: View {
                 nextGameTitle: String? = nil,
                 isProUser: Bool = true,
                 displayTitle: String? = nil,
-                gameType: HomeGameType = .match) {
+                gameType: HomeGameType = .match,
+                onSpeakerPractice: (() -> Void)? = nil,
+                onContinueLearning: (() -> Void)? = nil,
+                continueLearningTitle: String? = nil) {
         self.courseId = courseId
         self.lessonId = lessonId
         self.embedBackground = embedBackground
@@ -75,7 +82,18 @@ public struct HomeTaskView: View {
         self.isProUser = isProUser
         self.displayTitle = displayTitle
         self.gameType = gameType
+        self.onSpeakerPractice = onSpeakerPractice
+        self.onContinueLearning = onContinueLearning
+        self.continueLearningTitle = continueLearningTitle
         _store = StateObject(wrappedValue: store ?? HomeTaskManager())
+    }
+
+    private var isFromLessonStep: Bool {
+        Self.isLessonStepOrigin(courseId: courseId, lessonId: lessonId)
+    }
+
+    private var resolvedContinueTitle: String? {
+        continueLearningTitle ?? Self.continueLearningTitle(courseId: courseId, lessonId: lessonId)
     }
 
     public var body: some View {
@@ -244,46 +262,21 @@ public struct HomeTaskView: View {
         }
     }
 
-    /// Оверлей итогов в том же UI/UX, что и PRO (корона): фон 0.35, карточка material+чёрный, хедер taikA + крестик.
+    /// Оверлей итогов: blur-scrim + эталонная карточка с хедером (заголовок + закрытие).
     @ViewBuilder
     private var completionOverlay: some View {
         ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
-                }
+            OverlayEtalonBackground(onDismiss: {
+                withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
+            })
 
-            VStack(spacing: 20) {
-                // Хедер как в PRO: слева логотип, справа крестик
-                HStack {
-                    Text("taikA")
-                        .font(.taikaLogo(16))
-                        .foregroundStyle(CD.ColorToken.text)
-                    Spacer(minLength: 0)
-                    Button {
-                        withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.8))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 4)
-
-                Text("закрепление завершено")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(CD.ColorToken.text)
-                    .frame(maxWidth: .infinity)
-
+            OverlayEtalonCard(title: "закрепление завершено", onDismiss: {
+                withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
+            }) {
                 finishedBlockContent
+                    .padding(.horizontal, CD.Spacing.screen)
+                    .padding(.bottom, 20)
             }
-            .padding(20)
-            .taikaBlackGlassBackground(cornerRadius: 28)
-            .frame(maxWidth: 420)
-            .padding(.horizontal, 20)
         }
     }
 
@@ -312,53 +305,23 @@ public struct HomeTaskView: View {
             }
 
             VStack(spacing: 12) {
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
-                    buildRound(force: true)
-                } label: {
-                    Text("Повторить")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color(white: 0.14))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(theme.currentAccentFill))
-                }
-                .buttonStyle(.plain)
-
-                if isProUser, onNextGame != nil {
-                    Button {
-                        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                GameCompletionActions(
+                    isFromLessonStep: isFromLessonStep,
+                    isProUser: isProUser,
+                    continueLearningTitle: resolvedContinueTitle,
+                    nextGameTitle: nextGameTitle,
+                    onRepeat: {
                         withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
-                        onNextGame?()
-                    } label: {
-                        HStack(spacing: 8) {
-                            Text("Следующая игра")
-                                .font(CD.FontToken.body(15, weight: .semibold))
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 14, weight: .semibold))
-                        }
-                        .foregroundStyle(theme.currentAccentFill)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(theme.currentAccentFill, lineWidth: 1.5))
+                        buildRound(force: true)
+                    },
+                    onNextGame: onNextGame,
+                    onSpeakerPractice: onSpeakerPractice,
+                    onContinueLearning: onContinueLearning,
+                    onClose: {
+                        withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
+                        if let onClose { onClose() }
                     }
-                    .buttonStyle(.plain)
-                } else {
-                    HStack(spacing: 8) {
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                        Text(nextGameTitle ?? "Следующая игра")
-                            .font(CD.FontToken.body(15, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(PD.ColorToken.card.opacity(0.6)))
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.6), lineWidth: 1))
-                    .allowsHitTesting(false)
-                }
+                )
             }
         }
         .frame(maxWidth: .infinity)
@@ -405,7 +368,10 @@ public struct HomeTaskView: View {
                 },
                 onNextGame: onNextGame,
                 nextGameTitle: nextGameTitle,
-                isProUser: isProUser
+                isProUser: isProUser,
+                onSpeakerPractice: onSpeakerPractice,
+                onContinueLearning: onContinueLearning,
+                continueLearningTitle: resolvedContinueTitle
             )
             .environmentObject(theme)
         )
@@ -426,7 +392,10 @@ public struct HomeTaskView: View {
                 },
                 onNextGame: onNextGame,
                 nextGameTitle: nextGameTitle,
-                isProUser: isProUser
+                isProUser: isProUser,
+                onSpeakerPractice: onSpeakerPractice,
+                onContinueLearning: onContinueLearning,
+                continueLearningTitle: resolvedContinueTitle
             )
             .environmentObject(theme)
         )
@@ -671,87 +640,41 @@ public struct HomeTaskView: View {
     @ViewBuilder
     private var recallCompletionOverlay: some View {
         ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
+            OverlayEtalonBackground(onDismiss: {})
 
-            VStack(spacing: 20) {
-                HStack {
-                    Text("taikA")
-                        .font(.taikaLogo(16))
-                        .foregroundStyle(CD.ColorToken.text)
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 4)
-
-                Text(recallCompletionTitle)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(CD.ColorToken.text)
-                    .frame(maxWidth: .infinity)
-
-                VStack(spacing: 10) {
-                    let total = max(1, store.builderTotalRounds)
-                    Text("фраз: \(store.builderScore) из \(total)")
-                        .font(CD.FontToken.body(15, weight: .regular))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
-                    let m = recallElapsedSeconds / 60
-                    let s = recallElapsedSeconds % 60
-                    Text(String(format: "%d:%02d", m, s))
-                        .font(CD.FontToken.body(16, weight: .semibold))
-                        .foregroundStyle(CD.ColorToken.text)
-                }
-
-                VStack(spacing: 12) {
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        startRecallGame()
-                    } label: {
-                        Text("Повторить")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color(white: 0.14))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(theme.currentAccentFill))
+            OverlayEtalonCard(title: recallCompletionTitle, onDismiss: {
+                if let onClose { onClose() }
+            }) {
+                VStack(spacing: 16) {
+                    VStack(spacing: 10) {
+                        let total = max(1, store.builderTotalRounds)
+                        Text("фраз: \(store.builderScore) из \(total)")
+                            .font(CD.FontToken.body(15, weight: .regular))
+                            .foregroundStyle(CD.ColorToken.textSecondary)
+                        let m = recallElapsedSeconds / 60
+                        let s = recallElapsedSeconds % 60
+                        Text(String(format: "%d:%02d", m, s))
+                            .font(CD.FontToken.body(16, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.text)
                     }
-                    .buttonStyle(.plain)
 
-                    if isProUser, let onNext = onNextGame {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                            onNext()
-                        } label: {
-                            HStack(spacing: 8) {
-                                Text("Следующая игра")
-                                    .font(CD.FontToken.body(15, weight: .semibold))
-                                Image(systemName: "arrow.right")
-                                    .font(.system(size: 14, weight: .semibold))
-                            }
-                            .foregroundStyle(theme.currentAccentFill)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(theme.currentAccentFill, lineWidth: 1.5))
+                    GameCompletionActions(
+                        isFromLessonStep: isFromLessonStep,
+                        isProUser: isProUser,
+                        continueLearningTitle: resolvedContinueTitle,
+                        nextGameTitle: nextGameTitle,
+                        onRepeat: { startRecallGame() },
+                        onNextGame: onNextGame,
+                        onSpeakerPractice: onSpeakerPractice,
+                        onContinueLearning: onContinueLearning,
+                        onClose: {
+                            if let onClose { onClose() }
                         }
-                        .buttonStyle(.plain)
-                    } else {
-                        HStack(spacing: 8) {
-                            Image(systemName: "crown.fill")
-                                .font(.system(size: 16))
-                            Text(nextGameTitle ?? "Следующая игра")
-                                .font(CD.FontToken.body(15, weight: .medium))
-                        }
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(PD.ColorToken.card.opacity(0.6)))
-                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.6), lineWidth: 1))
-                        .allowsHitTesting(false)
-                    }
+                    )
                 }
+                .padding(.horizontal, CD.Spacing.screen)
+                .padding(.bottom, 20)
             }
-            .padding(20)
-            .taikaBlackGlassBackground(cornerRadius: 28)
-            .frame(maxWidth: 420)
-            .padding(.horizontal, 20)
         }
     }
 

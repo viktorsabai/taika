@@ -882,9 +882,6 @@ struct FDMiniCourseCard: View {
                         .font(Font.custom("ONMARK Trial", size: 14))
                         .foregroundStyle(isPro ? AnyShapeStyle(accent) : AnyShapeStyle(Color.secondary))
                     Spacer(minLength: 4)
-                    if isPro {
-                        AppProChip(scale: 0.82)
-                    }
                 }
 
                 Spacer(minLength: 0)
@@ -1040,14 +1037,7 @@ struct FDMiniCourseCard: View {
                 }
             }
         }
-        .overlay(
-            Group {
-                if isPro {
-                    round.stroke(AnyShapeStyle(accent.opacity(0.9)), lineWidth: 1.5)
-                }
-            }
-        )
-        .shadow(color: isPro ? tint.opacity(0.28) : .clear, radius: isPro ? 14 : 0, y: isPro ? 6 : 0)
+        .shadow(color: isPro ? tint.opacity(0.18) : .clear, radius: isPro ? 10 : 0, y: isPro ? 4 : 0)
         .contentShape(round)
         .onTapGesture { onOpen?() }
     }

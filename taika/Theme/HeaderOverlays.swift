@@ -82,7 +82,7 @@ private struct OverlayFilterSectionView<Content: View>: View {
 }
 
 // MARK: - Эталон оверлеев: тёмный blur-scrim + чёрное глянцевое стекло.
-let overlayEtalonBackgroundOpacity: Double = 0.58
+let overlayEtalonBackgroundOpacity: Double = 0.34
 
 struct OverlayEtalonBackground: View {
     let onDismiss: () -> Void
@@ -94,7 +94,7 @@ struct OverlayEtalonBackground: View {
     }
 }
 
-/// Карточка оверлея: жидкое чёрное стекло (без серого material).
+/// Карточка оверлея: жидкое чёрное стекло + единый хедер (заголовок + закрытие).
 struct OverlayEtalonCard<Content: View>: View {
     let title: String
     let onDismiss: () -> Void
@@ -102,27 +102,32 @@ struct OverlayEtalonCard<Content: View>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
+            HStack(alignment: .center, spacing: 12) {
                 Text(title)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(CD.ColorToken.text)
-                Spacer()
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 28))
-                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.8))
+                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Закрыть")
             }
             .padding(.horizontal, CD.Spacing.screen)
-            .padding(.vertical, 16)
+            .padding(.top, 18)
+            .padding(.bottom, 14)
 
             content()
         }
         .taikaBlackGlassBackground(cornerRadius: 28)
         .frame(maxWidth: 420)
         .padding(.horizontal, 20)
-        .padding(.top, 60)
+        .padding(.top, Theme.Layout.rootHeaderClearance)
     }
 }
 
@@ -535,10 +540,12 @@ struct SpeakerAttemptsOverlayView: View {
     }
 }
 
-// MARK: - Speaker courses overlay (канон: только выбор курсов + старт)
+// MARK: - Speaker courses overlay (канон: курсы + уроки + старт)
 struct SpeakerCoursesOverlayView: View {
     @ObservedObject private var speaker = SpeakerManager.shared
     @State private var selectedCourseIds: Set<String>? = nil
+    @State private var selectedLessonIdsByCourse: [String: Set<String>] = [:]
+    @State private var expandedCourseId: String? = nil
     var onDismiss: () -> Void
 
     private var options: [SpeakerTrainingCourseOption] {
@@ -549,8 +556,26 @@ struct SpeakerCoursesOverlayView: View {
         selectedCourseIds ?? Set(options.map(\.id))
     }
 
+    private func defaultLessons(for courseId: String) -> Set<String> {
+        Set(speaker.learnedTrainingLessonOptions(courseId: courseId).map(\.id))
+    }
+
+    private var selectedLessonIds: Set<String> {
+        var out = Set<String>()
+        for cid in selected {
+            out.formUnion(selectedLessonIdsByCourse[cid] ?? defaultLessons(for: cid))
+        }
+        return out
+    }
+
     private var selectedTotal: Int {
-        options.filter { selected.contains($0.id) }.reduce(0) { $0 + $1.count }
+        var total = 0
+        for cid in selected {
+            let lessons = speaker.learnedTrainingLessonOptions(courseId: cid)
+            let picked = selectedLessonIdsByCourse[cid] ?? defaultLessons(for: cid)
+            total += lessons.filter { picked.contains($0.id) }.reduce(0) { $0 + $1.count }
+        }
+        return total
     }
 
     var body: some View {
@@ -559,8 +584,31 @@ struct SpeakerCoursesOverlayView: View {
             UnifiedOverlayChrome(title: "Курсы для тренировки", onDismiss: onDismiss) {
                 TaikaRootVerticalScroll {
                     VStack(alignment: .leading, spacing: 12) {
+                        let favCount = speaker.trainingFavoritesCount()
+                        let dictCount = speaker.trainingDictionaryCount()
+                        HStack(spacing: 10) {
+                            overlayPoolButton(
+                                title: "Избранное",
+                                count: favCount,
+                                enabled: favCount > 0
+                            ) {
+                                speaker.startSpecialTraining(poolId: "__favorites__")
+                                SpeakerFilterState.shared.selectedFilterId = nil
+                                onDismiss()
+                            }
+                            overlayPoolButton(
+                                title: "Словарь",
+                                count: dictCount,
+                                enabled: dictCount > 0
+                            ) {
+                                speaker.startSpecialTraining(poolId: "__dictionary__")
+                                SpeakerFilterState.shared.selectedFilterId = nil
+                                onDismiss()
+                            }
+                        }
+
                         if options.isEmpty {
-                            Text("Пройди пару шагов в уроке — фразы появятся здесь для тренировки.")
+                            Text("Пройди пару шагов в уроке — фразы появятся здесь для тренировки. Или жми Избранное / Словарь выше.")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.85))
                                 .fixedSize(horizontal: false, vertical: true)
@@ -572,9 +620,17 @@ struct SpeakerCoursesOverlayView: View {
                                 Spacer(minLength: 8)
                                 Button {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    selectedCourseIds = selected.count == options.count
-                                        ? []
-                                        : Set(options.map(\.id))
+                                    if selected.count == options.count {
+                                        selectedCourseIds = []
+                                        selectedLessonIdsByCourse = [:]
+                                        expandedCourseId = nil
+                                    } else {
+                                        let all = Set(options.map(\.id))
+                                        selectedCourseIds = all
+                                        var map: [String: Set<String>] = [:]
+                                        for cid in all { map[cid] = defaultLessons(for: cid) }
+                                        selectedLessonIdsByCourse = map
+                                    }
                                 } label: {
                                     Text(selected.count == options.count ? "снять всё" : "выбрать все")
                                         .font(.system(size: 13, weight: .semibold))
@@ -584,7 +640,7 @@ struct SpeakerCoursesOverlayView: View {
                             }
 
                             ForEach(options) { option in
-                                courseRow(option: option)
+                                courseBlock(option: option)
                             }
 
                             Button {
@@ -592,7 +648,11 @@ struct SpeakerCoursesOverlayView: View {
                                 if speaker.speakerUIMode != .training {
                                     speaker.setSpeakerUIMode(.training)
                                 }
-                                speaker.startTraining(withCourseIds: selected)
+                                let lessons = selectedLessonIds
+                                speaker.startTraining(
+                                    withCourseIds: selected,
+                                    lessonIds: lessons.isEmpty ? nil : lessons
+                                )
                                 SpeakerFilterState.shared.selectedFilterId = nil
                                 onDismiss()
                             } label: {
@@ -619,42 +679,82 @@ struct SpeakerCoursesOverlayView: View {
         }
         .onAppear {
             if selectedCourseIds == nil {
-                selectedCourseIds = Set(options.map(\.id))
+                let all = Set(options.map(\.id))
+                selectedCourseIds = all
+                var map: [String: Set<String>] = [:]
+                for cid in all { map[cid] = defaultLessons(for: cid) }
+                selectedLessonIdsByCourse = map
             }
         }
     }
 
-    private func courseRow(option: SpeakerTrainingCourseOption) -> some View {
+    private func courseBlock(option: SpeakerTrainingCourseOption) -> some View {
         let isSelected = selected.contains(option.id)
-        return Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            var updated = selected
-            if updated.contains(option.id) {
-                updated.remove(option.id)
-            } else {
-                updated.insert(option.id)
-            }
-            selectedCourseIds = updated
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(
-                        isSelected
-                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                        : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4))
-                    )
-                Text(option.title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.text)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 8)
-                Text("\(option.count) \(Self.phraseUnit(option.count))")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
+        let isExpanded = expandedCourseId == option.id
+        let lessons = speaker.learnedTrainingLessonOptions(courseId: option.id)
+        let picked = selectedLessonIdsByCourse[option.id] ?? defaultLessons(for: option.id)
+
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    var updated = selected
+                    if updated.contains(option.id) {
+                        updated.remove(option.id)
+                        selectedLessonIdsByCourse[option.id] = []
+                        if expandedCourseId == option.id { expandedCourseId = nil }
+                    } else {
+                        updated.insert(option.id)
+                        selectedLessonIdsByCourse[option.id] = defaultLessons(for: option.id)
+                    }
+                    selectedCourseIds = updated
+                } label: {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(
+                            isSelected
+                            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4))
+                        )
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                        if expandedCourseId == option.id {
+                            expandedCourseId = nil
+                        } else {
+                            expandedCourseId = option.id
+                            if selectedLessonIdsByCourse[option.id] == nil {
+                                selectedLessonIdsByCourse[option.id] = defaultLessons(for: option.id)
+                            }
+                            var updated = selected
+                            updated.insert(option.id)
+                            selectedCourseIds = updated
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Text(option.title)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.text)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Spacer(minLength: 8)
+                        Text("\(option.count) \(Self.phraseUnit(option.count))")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
+                            .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -675,8 +775,106 @@ struct SpeakerCoursesOverlayView: View {
                             )
                     )
             )
+
+            if isExpanded, !lessons.isEmpty {
+                VStack(spacing: 6) {
+                    ForEach(lessons) { lesson in
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            var next = picked
+                            if next.contains(lesson.id) {
+                                next.remove(lesson.id)
+                            } else {
+                                next.insert(lesson.id)
+                            }
+                            selectedLessonIdsByCourse[option.id] = next
+                            var courses = selected
+                            if next.isEmpty {
+                                courses.remove(option.id)
+                            } else {
+                                courses.insert(option.id)
+                            }
+                            selectedCourseIds = courses
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: picked.contains(lesson.id) ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(
+                                        picked.contains(lesson.id)
+                                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                                        : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4))
+                                    )
+                                Text(lesson.title)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(PD.ColorToken.text)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                                Spacer(minLength: 8)
+                                Text("\(lesson.count)")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
+                                    .monospacedDigit()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(
+                                        picked.contains(lesson.id)
+                                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.08))
+                                        : AnyShapeStyle(PD.ColorToken.chip.opacity(0.28))
+                                    )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.leading, 12)
+            }
+        }
+    }
+
+    private func overlayPoolButton(
+        title: String,
+        count: Int,
+        enabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            guard enabled else { return }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            action()
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(PD.ColorToken.text)
+                Text(enabled ? "\(count) \(Self.phraseUnit(count))" : "пусто")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.8))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(enabled
+                          ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.1))
+                          : AnyShapeStyle(PD.ColorToken.chip.opacity(0.35)))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(
+                                enabled
+                                ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.45))
+                                : AnyShapeStyle(Theme.Strokes.strokeSubtle),
+                                lineWidth: Theme.Strokes.strokeLineWidth
+                            )
+                    )
+            )
         }
         .buttonStyle(.plain)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.55)
     }
 
     private static func phraseUnit(_ n: Int) -> String {
@@ -889,7 +1087,11 @@ struct GameParkOverlayView: View {
                         onClose: onDismiss,
                         onLockedTap: { mode in
                             if mode.isPro && !ProManager.shared.isPro {
-                                overlay.presentPro(reason: .games)
+                                // Сначала закрыть парк — иначе пейвол поверх пикера = два сообщения.
+                                onDismiss()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                                    overlay.presentPro(reason: .games)
+                                }
                             } else {
 #if os(iOS)
                                 let gen = UINotificationFeedbackGenerator()

@@ -1428,10 +1428,12 @@ final class FavoriteManager: ObservableObject {
         return favoritesForLesson(courseId: courseId, lessonId: lessonId, onlyCards: onlyCards).count
     }
 
-    /// Количество избранных КАРТОЧЕК (без лайфхаков) для урока — синхронный шорткат
+    /// Количество избранных элементов урока (карточки + лайфхаки), без курсов.
     @inline(__always)
     func countCardsForLesson(courseId: String, lessonId: String) -> Int {
-        return favoritesForLesson(courseId: courseId, lessonId: lessonId, onlyCards: true).count
+        favoritesForLesson(courseId: courseId, lessonId: lessonId, onlyCards: false)
+            .filter { !normalized($0.id).hasPrefix("course:") }
+            .count
     }
 
     /// Паблишер, выдающий актуальное количество избранных для конкретного урока

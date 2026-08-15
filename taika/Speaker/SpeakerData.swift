@@ -252,6 +252,13 @@ public struct SpeakerTrainingCourseOption: Identifiable, Equatable {
     public let count: Int
 }
 
+/// Урок внутри курса на лаунчере тренировки — галочка + число фраз.
+public struct SpeakerTrainingLessonOption: Identifiable, Equatable {
+    public let id: String
+    public let title: String
+    public let count: Int
+}
+
 /// Одна фраза в ленте «Своя речь» (как история Google Translate).
 public struct SpeakerConversationHistoryItem: Identifiable, Equatable, Codable {
     public let id: UUID
@@ -259,19 +266,23 @@ public struct SpeakerConversationHistoryItem: Identifiable, Equatable, Codable {
     public let thai: String
     public let phonetic: String
     public let createdAt: Date
+    /// Последний балл тренировки произношения по этой фразе (nil = ещё не тренировали).
+    public let lastPracticeScore: Int?
 
     public init(
         id: UUID = UUID(),
         russian: String,
         thai: String,
         phonetic: String,
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        lastPracticeScore: Int? = nil
     ) {
         self.id = id
         self.russian = russian
         self.thai = thai
         self.phonetic = phonetic
         self.createdAt = createdAt
+        self.lastPracticeScore = lastPracticeScore
     }
 }
 
@@ -281,7 +292,15 @@ enum SpeakerConversationHistoryStore {
 
     static func load() -> [SpeakerConversationHistoryItem] {
         guard let data = UserDefaults.standard.data(forKey: key) else { return [] }
-        return (try? JSONDecoder().decode([SpeakerConversationHistoryItem].self, from: data)) ?? []
+        let raw = (try? JSONDecoder().decode([SpeakerConversationHistoryItem].self, from: data)) ?? []
+        // Отбрасываем «фантомы» без русского (пустой RU + только фонетика/тайский — как stray «саватди»).
+        let cleaned = raw.filter { item in
+            !item.russian.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        if cleaned.count != raw.count {
+            save(cleaned)
+        }
+        return cleaned
     }
 
     static func save(_ items: [SpeakerConversationHistoryItem]) {
@@ -325,21 +344,68 @@ public final class SpeakerReturnContext: ObservableObject {
     private var savedTab: Int?
     private var savedPath: [NavigationIntent.Route] = []
     private init() {}
+
     public var hasContext: Bool { savedTab != nil }
-    public func save(tab: Int, path: [NavigationIntent.Route]) {
-        guard !path.isEmpty else { return }
-        savedTab = tab
-        savedPath = path
+
+    /// Подпись CTA «вернуться»: из курса/урока/игры → обучение; из избранного → избранное.
+    public var returnActionTitle: String {
+        switch savedTab {
+        case 1: return "К обучению"
+        case 3: return "К избранному"
+        case 0: return "На главную"
+        default: return "Назад"
+        }
     }
+
+    public var returnActionIcon: String {
+        switch savedTab {
+        case 1: return "graduationcap.fill"
+        case 3: return "heart.fill"
+        case 0: return "house.fill"
+        default: return "arrow.uturn.backward"
+        }
+    }
+
+    /// Путь без игровых роутов: иначе «назад» из Спикера снова монтирует игру с нуля.
+    public static func sanitizedPath(_ path: [NavigationIntent.Route]) -> [NavigationIntent.Route] {
+        var cleaned = path
+        while let last = cleaned.last {
+            if case .game = last {
+                cleaned.removeLast()
+                continue
+            }
+            break
+        }
+        return cleaned
+    }
+
+    public func save(tab: Int, path: [NavigationIntent.Route]) {
+        let cleaned = Self.sanitizedPath(path)
+        guard !cleaned.isEmpty else {
+            clear()
+            return
+        }
+        savedTab = tab
+        savedPath = cleaned
+        objectWillChange.send()
+        ShellHeaderDriver.shared.bump()
+    }
+
     public func clear() {
+        guard savedTab != nil || !savedPath.isEmpty else { return }
         savedTab = nil
         savedPath = []
+        objectWillChange.send()
+        ShellHeaderDriver.shared.bump()
     }
+
     public func consume() -> (tab: Int, path: [NavigationIntent.Route])? {
         guard let tab = savedTab else { return nil }
         let path = savedPath
         savedTab = nil
         savedPath = []
+        objectWillChange.send()
+        ShellHeaderDriver.shared.bump()
         return (tab, path)
     }
 }

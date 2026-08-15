@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 import CryptoKit
 import Speech
 import AVFoundation
@@ -76,8 +77,19 @@ public final class SpeakerManager: ObservableObject {
         taikaHints = []
         if mode == .conversation {
             SpeakerConversationAttemptsStore.shared.refreshDayIfNeeded()
+            sanitizeConversationHistory()
         }
         // Ленту «Своя речь» не трогаем при смене режима — она персистится.
+    }
+
+    /// Убрать фантомные записи без русского (stray фонетика вроде «саватди»).
+    func sanitizeConversationHistory() {
+        let cleaned = conversationHistory.filter {
+            !$0.russian.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        guard cleaned.count != conversationHistory.count else { return }
+        conversationHistory = cleaned
+        persistConversationHistory()
     }
 
     /// Сброс результата умного спикера (русский/тайский/транслит и состояние «Повторить и проверить»). Вызывать при входе в режим, при появлении экрана и по кнопке «Сбросить результат».
@@ -93,6 +105,7 @@ public final class SpeakerManager: ObservableObject {
         recordingPartialThai = nil
         recordingPartialTranslit = nil
         recordingMeter = 0
+        activePracticeHistoryId = nil
         if phase != .recording && phase != .analyzing && phase != .analyzingTranslation {
             setPhase(.idle)
         }
@@ -101,9 +114,19 @@ public final class SpeakerManager: ObservableObject {
     // MARK: - published
 
     // Default to training: Smart Speaker is PRO-only and should be user-initiated.
-    @Published var speakerUIMode: SpeakerUIMode = .training
+    @Published var speakerUIMode: SpeakerUIMode = .conversation
+
+    /// Main mic / example chip: после перехода на вкладку Спикер сразу стартовать запись.
+    @Published var pendingConversationAutoRecord: Bool = false
 
     @Published private(set) var phase: Phase = .idle
+
+    @discardableResult
+    public func consumePendingConversationAutoRecord() -> Bool {
+        guard pendingConversationAutoRecord else { return false }
+        pendingConversationAutoRecord = false
+        return true
+    }
 
     /// Central transition for state machine; DEBUG logs to trace stuck states (EPIC 3).
     private func setPhase(_ p: Phase) {
@@ -197,11 +220,33 @@ public final class SpeakerManager: ObservableObject {
     @Published var conversationHeardPhoneticFromASR: String? = nil
     /// Лента прошлых переводов «Своя речь» (newest first). Персистится; не чистится при «Новая фраза».
     @Published private(set) var conversationHistory: [SpeakerConversationHistoryItem] = SpeakerConversationHistoryStore.load()
+    /// Карточка ленты, по которой сейчас идёт тренировка произношения (не создавать дубль).
+    @Published private(set) var activePracticeHistoryId: UUID? = nil
 
     private let conversationHistoryLimit = 30
 
     private func persistConversationHistory() {
         SpeakerConversationHistoryStore.save(conversationHistory)
+    }
+
+    private func updateHistoryPracticeScore(id: UUID, score: Int) {
+        guard let idx = conversationHistory.firstIndex(where: { $0.id == id }) else { return }
+        let old = conversationHistory[idx]
+        let updated = SpeakerConversationHistoryItem(
+            id: old.id,
+            russian: old.russian,
+            thai: old.thai,
+            phonetic: old.phonetic,
+            createdAt: old.createdAt,
+            lastPracticeScore: max(0, min(100, score))
+        )
+        conversationHistory[idx] = updated
+        // Поднимаем тренированную фразу наверх — видно свежий балл.
+        if idx > 0 {
+            conversationHistory.remove(at: idx)
+            conversationHistory.insert(updated, at: 0)
+        }
+        persistConversationHistory()
     }
 
     // MARK: - UX timings
@@ -578,14 +623,67 @@ public final class SpeakerManager: ObservableObject {
         }
     }
 
-    /// Start a training session scoped to the courses picked on the launcher screen.
-    public func startTraining(withCourseIds courseIds: Set<String>) {
+    /// Сколько фраз в избранном (уроки), без словаря «Скажи сам».
+    public func trainingFavoritesCount() -> Int {
+        buildFavoritesQueue().filter {
+            !($0.courseId == "user_dict" && $0.lessonId == "smart_speaker")
+        }.count
+    }
+
+    /// Сколько фраз в словаре умного спикера.
+    public func trainingDictionaryCount() -> Int {
+        buildFavoritesQueue().filter {
+            $0.courseId == "user_dict" && $0.lessonId == "smart_speaker"
+        }.count
+    }
+
+    /// Быстрый старт: избранное уроков или словарь.
+    public func startSpecialTraining(poolId: String) {
+        guard poolId == "__favorites__" || poolId == "__dictionary__" else { return }
+        prepareTrainingPoolIfNeeded()
+        loadQueueForCourse(poolId)
+        if !queue.isEmpty {
+            setPhase(.idle)
+            taikaHints = []
+        }
+    }
+
+    /// Выученные уроки курса с числом фраз — для чекбоксов на лаунчере / в сессии.
+    public func learnedTrainingLessonOptions(courseId: String) -> [SpeakerTrainingLessonOption] {
+        var counts: [String: Int] = [:]
+        for r in baseQueue where r.courseId == courseId {
+            counts[r.lessonId, default: 0] += 1
+        }
+        guard !counts.isEmpty else { return [] }
+        let bundles = LessonsData.shared.lessons(for: courseId)
+        var ordered: [SpeakerTrainingLessonOption] = []
+        var seen = Set<String>()
+        for lesson in bundles {
+            guard let c = counts[lesson.lessonID], c > 0 else { continue }
+            seen.insert(lesson.lessonID)
+            let title = LessonsData.shared.lessonTitle(for: lesson.lessonID) ?? lesson.lessonID
+            ordered.append(SpeakerTrainingLessonOption(id: lesson.lessonID, title: title, count: c))
+        }
+        // Уроки вне каталога (старые id) — в конец.
+        for (lid, c) in counts.sorted(by: { $0.key < $1.key }) where !seen.contains(lid) {
+            let title = LessonsData.shared.lessonTitle(for: lid) ?? lid
+            ordered.append(SpeakerTrainingLessonOption(id: lid, title: title, count: c))
+        }
+        return ordered
+    }
+
+    /// Start a training session scoped to the courses (and optional lessons) picked on the launcher.
+    public func startTraining(withCourseIds courseIds: Set<String>, lessonIds: Set<String>? = nil) {
         if baseQueue.isEmpty {
             rebuildQueue()
         }
-        let selected = baseQueue.filter { courseIds.contains($0.courseId) }
+        var selected = baseQueue.filter { courseIds.contains($0.courseId) }
+        if let lessonIds, !lessonIds.isEmpty {
+            let needles = Set(lessonIds.map { $0.lowercased() })
+            selected = selected.filter { needles.contains($0.lessonId.lowercased()) }
+        }
         guard !selected.isEmpty else { return }
-        speakerContextCourseId = nil
+        speakerContextCourseId = courseIds.count == 1 ? courseIds.first : nil
         activeFilterId = SpeakerMode.learned.id
         learnedLessonIds = Array(Set(selected.map(\.lessonId))).sorted()
         learnedLessonFilter = nil
@@ -809,7 +907,10 @@ public final class SpeakerManager: ObservableObject {
                         $0.courseId == "user_dict" && $0.lessonId == "smart_speaker"
                     }
                 }
-                return buildFavoritesQueue()
+                // Избранное уроков — без словаря «Скажи сам» (для него отдельный вход).
+                return buildFavoritesQueue().filter {
+                    !($0.courseId == "user_dict" && $0.lessonId == "smart_speaker")
+                }
             }()
             if fav.isEmpty {
                 queue = []
@@ -844,14 +945,27 @@ public final class SpeakerManager: ObservableObject {
         if baseQueue.isEmpty {
             prepareTrainingPoolIfNeeded()
         }
+        let byCourse = baseQueue.filter { $0.courseId == courseId }
+        let preferredLessonRaw = lessonId?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let preferredLesson = (preferredLessonRaw?.isEmpty == false) ? preferredLessonRaw : nil
+        let preferredLower = preferredLesson?.lowercased()
+
         let filtered: [StepData.SpeakerResolved] = {
-            let byCourse = baseQueue.filter { $0.courseId == courseId }
-            guard let lessonId, !lessonId.isEmpty else { return byCourse }
-            let byLesson = byCourse.filter { $0.lessonId == lessonId }
-            // Если в этом уроке ещё нет выученных — не молчим пустым экраном: весь курс.
+            guard let preferredLower else { return byCourse }
+            let byLesson = byCourse.filter { $0.lessonId.lowercased() == preferredLower }
+            // Если в этом уроке ещё нет выученных — не молчим: весь курс, но старт с предпочитаемого места.
             return byLesson.isEmpty ? byCourse : byLesson
         }()
         speakerContextCourseId = courseId
+        activeFilterId = SpeakerMode.learned.id
+        learnedLessonIds = Array(Set(byCourse.map(\.lessonId))).sorted()
+        // Если открыли конкретный урок — зафиксируем фильтр; иначе «все выученные» курса.
+        if let preferredLower,
+           byCourse.contains(where: { $0.lessonId.lowercased() == preferredLower }) {
+            learnedLessonFilter = byCourse.first(where: { $0.lessonId.lowercased() == preferredLower })?.lessonId
+        } else {
+            learnedLessonFilter = nil
+        }
         if filtered.isEmpty {
             queue = []
             current = nil
@@ -871,8 +985,19 @@ public final class SpeakerManager: ObservableObject {
             attemptPlayer = nil
             setPhase(.hint)
         } else {
-            queue = filtered
-            if shuffleQueue { shuffle() }
+            // Старт с нужного урока, а не с первого в каталоге.
+            let startLessonLower = preferredLower
+                ?? session.snapshot.lastLessonByCourse[courseId]?.lowercased()
+            let ordered: [StepData.SpeakerResolved]
+            if shuffleQueue {
+                ordered = filtered.shuffled()
+            } else if let startLessonLower,
+                      let pivot = filtered.firstIndex(where: { $0.lessonId.lowercased() == startLessonLower }) {
+                ordered = Array(filtered[pivot...]) + Array(filtered[..<pivot])
+            } else {
+                ordered = filtered
+            }
+            queue = ordered
             pickFirst()
         }
     }
@@ -1049,7 +1174,16 @@ public final class SpeakerManager: ObservableObject {
 
     /// Set second-level filter for "выученные": nil or "" = "Все", otherwise only steps from that lessonId.
     func setLearnedLessonFilter(_ lessonId: String?) {
-        learnedLessonFilter = lessonId
+        let normalized = lessonId?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = (normalized?.isEmpty == false) ? normalized : nil
+        learnedLessonFilter = value
+        if let cid = speakerContextCourseId,
+           cid != "__favorites__",
+           cid != "__dictionary__" {
+            // Перезагружаем очередь курса с учётом выбранного урока (или всех).
+            loadQueueForCourse(cid, lessonId: value)
+            return
+        }
         if activeFilterId == SpeakerMode.learnedMode.id {
             applyFilter(SpeakerMode.learnedMode.id)
         }
@@ -1073,16 +1207,27 @@ public final class SpeakerManager: ObservableObject {
 
     /// Commit current translation into the history feed (deduped). Call on success and before starting a new phrase.
     func commitConversationToHistoryIfNeeded() {
+        // Тренировка существующей фразы — только балл на карточке, без новой записи.
+        if activePracticeHistoryId != nil || conversationExpectedThai != nil { return }
+
         let ru = (heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let thai = (heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let ph = (heardTranslit ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !thai.isEmpty || !ph.isEmpty else { return }
-        if let first = conversationHistory.first,
-           first.thai == thai,
-           first.russian == ru,
-           first.phonetic == ph {
+        // Без русского не коммитим — иначе в ленте появляются фантомы вроде «са-ва-тд-и-и» без смысла.
+        guard !ru.isEmpty, !thai.isEmpty || !ph.isEmpty else { return }
+
+        // Dedup по всей ленте (не только first) — иначе тренировка 2-й карточки плодила дубль.
+        if let existingIdx = conversationHistory.firstIndex(where: {
+            $0.russian == ru && (thai.isEmpty || $0.thai == thai)
+        }) {
+            if existingIdx > 0 {
+                let item = conversationHistory.remove(at: existingIdx)
+                conversationHistory.insert(item, at: 0)
+                persistConversationHistory()
+            }
             return
         }
+
         let item = SpeakerConversationHistoryItem(russian: ru, thai: thai, phonetic: ph)
         conversationHistory.insert(item, at: 0)
         if conversationHistory.count > conversationHistoryLimit {
@@ -1091,9 +1236,15 @@ public final class SpeakerManager: ObservableObject {
         persistConversationHistory()
     }
 
-    /// «Новая фраза»: текущий перевод остаётся в ленте, активный результат сбрасывается — без возврата на пустой старт.
-    func conversationRepeat() {
-        commitConversationToHistoryIfNeeded()
+    /// Закрыть тренировку/фокус: записать балл на карточку, без дубля и без залипшего скора.
+    func finishConversationPractice(saveScore: Bool = true) {
+        if saveScore, let id = activePracticeHistoryId {
+            let score = displayScore ?? heardConfidence
+            if score > 0 {
+                updateHistoryPracticeScore(id: id, score: score)
+            }
+        }
+        activePracticeHistoryId = nil
         conversationExpectedThai = nil
         conversationExpectedTranslitForFeedback = nil
         conversationHeardThaiASR = nil
@@ -1111,13 +1262,40 @@ public final class SpeakerManager: ObservableObject {
         setPhase(.idle)
     }
 
+    /// «Новая фраза» / закрытие фокуса: без лишнего commit при тренировке.
+    func conversationRepeat() {
+        if activePracticeHistoryId != nil || conversationExpectedThai != nil {
+            finishConversationPractice(saveScore: true)
+            return
+        }
+        commitConversationToHistoryIfNeeded()
+        conversationExpectedThai = nil
+        conversationExpectedTranslitForFeedback = nil
+        conversationHeardThaiASR = nil
+        conversationHeardPhoneticFromASR = nil
+        heardThai = nil
+        heardRU = nil
+        heardTranslit = nil
+        heardConfidence = 0
+        taikaHints = []
+        lastAttemptURL = nil
+        lastAttempt = nil
+        lastPlayed = .none
+        syllableFeedback = []
+        breakdownHybridScore = nil
+        activePracticeHistoryId = nil
+        setPhase(.idle)
+    }
+
     func removeConversationHistoryItem(id: UUID) {
         conversationHistory.removeAll { $0.id == id }
+        if activePracticeHistoryId == id { activePracticeHistoryId = nil }
         persistConversationHistory()
     }
 
     /// Restore a history phrase as the active result (for «Тренировка» / listen from row).
     func activateConversationHistoryItem(_ item: SpeakerConversationHistoryItem) {
+        activePracticeHistoryId = item.id
         conversationExpectedThai = nil
         conversationExpectedTranslitForFeedback = nil
         conversationHeardThaiASR = nil
@@ -1139,6 +1317,7 @@ public final class SpeakerManager: ObservableObject {
 
         SpeakerConversationAttemptsStore.shared.refreshDayIfNeeded()
         guard SpeakerConversationAttemptsStore.shared.canRecord else {
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
             taikaHints = ["демо попытки на сегодня закончились. переходи на Taika+ — безлимит"]
             setPhase(.hint)
             return
@@ -1146,6 +1325,7 @@ public final class SpeakerManager: ObservableObject {
 
         commitConversationToHistoryIfNeeded()
 
+        activePracticeHistoryId = nil
         conversationExpectedThai = nil
         conversationExpectedTranslitForFeedback = nil
         conversationHeardThaiASR = nil
@@ -1199,21 +1379,51 @@ public final class SpeakerManager: ObservableObject {
         }
     }
 
-    /// Conversation mode demo: run RU -> TH pipeline from a prepared phrase (no recording needed).
+    /// Conversation mode: RU → TH from typed / demo text (no mic). Keeps preview until confirm.
     func startConversationDemoPhrase(_ ruText: String) {
+        startConversationFromText(ruText, consumeAttempt: true)
+    }
+
+    /// Typed compose or edit-and-retranslate. `consumeAttempt` false when correcting ASR/draft.
+    func startConversationFromText(_ ruText: String, consumeAttempt: Bool = true) {
         if phase == .recording || phase == .analyzing || phase == .analyzingTranslation { return }
         let ruTrimmed = ruText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !ruTrimmed.isEmpty else { return }
 
         SpeakerConversationAttemptsStore.shared.refreshDayIfNeeded()
-        guard SpeakerConversationAttemptsStore.shared.canRecord else {
-            taikaHints = ["демо попытки на сегодня закончились. переходи на Taika+ — безлимит"]
+        if consumeAttempt {
+            guard SpeakerConversationAttemptsStore.shared.canRecord else {
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                taikaHints = ["демо попытки на сегодня закончились. переходи на Taika+ — безлимит"]
+                setPhase(.hint)
+                return
+            }
+        }
+
+        let words = ruTrimmed.split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" })
+        if ruTrimmed.count > 80 || words.count > 12 {
+            heardRU = ruTrimmed
+            heardThai = nil
+            heardTranslit = nil
+            taikaHints = ["скажи короче: одну фразу"]
             setPhase(.hint)
             return
         }
 
-        commitConversationToHistoryIfNeeded()
-        clearConversationResult()
+        if consumeAttempt {
+            commitConversationToHistoryIfNeeded()
+            clearConversationResult()
+        } else {
+            // Edit in place: keep RU, drop old Thai until new translate lands.
+            heardThai = nil
+            heardTranslit = nil
+            conversationExpectedThai = nil
+            conversationExpectedTranslitForFeedback = nil
+            conversationHeardThaiASR = nil
+            conversationHeardPhoneticFromASR = nil
+            activePracticeHistoryId = nil
+        }
+
         heardRU = ruTrimmed
         taikaHints = ["перевожу…"]
         setPhase(.analyzing)
@@ -1227,24 +1437,74 @@ public final class SpeakerManager: ObservableObject {
                 }
                 await MainActor.run {
                     self.heardRU = ruTrimmed
-                    self.heardThai = thText.isEmpty ? nil : thText
-                    self.heardTranslit = phonetic.isEmpty ? nil : phonetic
+                    let thai = thText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let ph = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+                    self.heardThai = thai.isEmpty ? nil : thai
+                    self.heardTranslit = ph.isEmpty ? nil : ph
                     self.heardConfidence = 0
+                    if thai.isEmpty && ph.isEmpty {
+                        self.taikaHints = ["не удалось перевести. попробуй другую формулировку"]
+                        self.setPhase(.hint)
+                        return
+                    }
                     self.taikaHints = []
-                    self.setPhase(.hint)
-                    self.commitConversationToHistoryIfNeeded()
-                    SpeakerConversationAttemptsStore.shared.consume()
+                    self.setPhase(.idle)
+                    if consumeAttempt {
+                        SpeakerConversationAttemptsStore.shared.consume()
+                    }
                 }
             } catch {
                 await MainActor.run {
                     self.heardRU = ruTrimmed
                     self.heardThai = nil
                     self.heardTranslit = nil
-                    self.taikaHints = ["не удалось показать демо. попробуй ещё раз"]
+                    self.taikaHints = ["не удалось перевести. попробуй ещё раз"]
                     self.setPhase(.hint)
                 }
             }
         }
+    }
+
+    /// Re-run translate after user edited the Russian draft (no extra attempt spend).
+    func retranslateConversationDraft(_ ruText: String) {
+        startConversationFromText(ruText, consumeAttempt: false)
+    }
+
+    /// Confirm draft: history (+ optional dictionary), then optional immediate practice in the same window.
+    func confirmConversationDraft(addToDictionary: Bool = true, startPractice: Bool = false) {
+        guard speakerUIMode == .conversation else { return }
+        if phase == .recording || phase == .analyzing || phase == .analyzingTranslation { return }
+
+        let ru = (heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let thai = (heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let ph = (heardTranslit ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !ru.isEmpty, !thai.isEmpty || !ph.isEmpty else { return }
+
+        commitConversationToHistoryIfNeeded()
+
+        if addToDictionary, !thai.isEmpty, !ph.isEmpty {
+            FavoriteManager.shared.addSmartSpeakerCard(ru: ru, thai: thai, phonetic: ph)
+        }
+
+        if startPractice {
+            if let item = conversationHistory.first(where: {
+                $0.russian == ru && (thai.isEmpty || $0.thai == thai)
+            }) {
+                activateConversationHistoryItem(item)
+            }
+            startConversationPronunciationCheck()
+        } else {
+            clearConversationResult()
+        }
+    }
+
+    /// Close preview without saving to the feed.
+    func discardConversationDraft() {
+        guard activePracticeHistoryId == nil, conversationExpectedThai == nil else {
+            finishConversationPractice(saveScore: false)
+            return
+        }
+        clearConversationResult()
     }
 
     /// Conversation mode: stop recording and run pipeline ASR(ru) → translate → translit → UI.
@@ -1293,11 +1553,21 @@ public final class SpeakerManager: ObservableObject {
                     self.taikaHints = ["перевожу…"]
                 }
 
+                guard !ruTrimmed.isEmpty else {
+                    await MainActor.run {
+                        self.heardThai = nil
+                        self.heardTranslit = nil
+                        self.taikaHints = ["не расслышала. нажми микрофон и скажи ещё раз"]
+                        self.setPhase(.hint)
+                    }
+                    return
+                }
+
                 // Limit long "tirades" — keep UX readable
                 let words = ruTrimmed.split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" })
                 if ruTrimmed.count > 80 || words.count > 12 {
                     await MainActor.run {
-                        self.heardRU = ruTrimmed.isEmpty ? nil : ruTrimmed
+                        self.heardRU = ruTrimmed
                         self.heardThai = nil
                         self.heardTranslit = nil
                         self.taikaHints = ["скажи короче: одну фразу"]
@@ -1313,13 +1583,22 @@ public final class SpeakerManager: ObservableObject {
                 await MainActor.run {
                     if self.activeAttemptToken != nil && self.activeAttemptToken != token { return }
 
-                    self.heardRU = ruTrimmed.isEmpty ? nil : ruTrimmed
-                    self.heardThai = thText.isEmpty ? nil : thText
-                    self.heardTranslit = phonetic.isEmpty ? nil : phonetic
+                    self.heardRU = ruTrimmed
+                    let thai = thText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let ph = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+                    self.heardThai = thai.isEmpty ? nil : thai
+                    self.heardTranslit = ph.isEmpty ? nil : ph
                     self.heardConfidence = 0
+
+                    if thai.isEmpty && ph.isEmpty {
+                        self.taikaHints = ["не удалось перевести. попробуй другую формулировку"]
+                        self.setPhase(.hint)
+                        return
+                    }
+
                     self.taikaHints = []
-                    self.setPhase(.hint)
-                    self.commitConversationToHistoryIfNeeded()
+                    // Держим превью в фокусе: правка RU / подтверждение в ленту+словарь / тренировка.
+                    self.setPhase(.idle)
                     SpeakerConversationAttemptsStore.shared.consume()
                 }
             } catch {
@@ -1329,18 +1608,29 @@ public final class SpeakerManager: ObservableObject {
                     self.heardThai = nil
                     self.heardTranslit = nil
                     let hint: String
-                    if let e = error as NSError?, e.domain == "speaker.smart", e.code == 1 {
+                    if let e = error as NSError?, e.domain == "speaker.timeout" {
+                        hint = ruTrimmed.isEmpty
+                            ? "не успела распознать. скажи короче и ближе к микрофону"
+                            : "перевод занял слишком долго. попробуй ещё раз"
+                    } else if let e = error as NSError?, e.domain == "speaker.asr" {
+                        hint = "не расслышала. проверь микрофон и скажи ещё раз"
+                    } else if let e = error as NSError?, e.domain == "speaker.smart", e.code == 1 {
                         hint = "Разбор сейчас недоступен. Попробуй чуть позже."
                     } else if let e = error as NSError?, e.domain == "speaker.smart.http" {
                         let detail = e.localizedDescription
+                        #if DEBUG
+                        print("[speaker] smart_speaker.http \(e.code): \(detail)")
+                        #endif
                         if detail.contains("Application not found") || detail == "railway_down" {
                             hint = "Сервис разбора временно недоступен. Попробуй снова через минуту."
+                        } else if (500...599).contains(e.code) || detail.localizedCaseInsensitiveContains("failed to respond") {
+                            hint = "Сервис перевода сейчас не отвечает. Попробуй через минуту."
                         } else if e.code == 404, detail.localizedCaseInsensitiveContains("OPENAI_API_KEY") {
                             hint = "Не удалось разобрать фразу. Попробуй ещё раз."
                         } else if e.code == 404, detail.localizedCaseInsensitiveContains("LLM translation failed") {
                             hint = "Не удалось перевести фразу. Попробуй ещё раз."
-                        } else if !detail.isEmpty, detail != "The operation couldn’t be completed. (speaker.smart.http error \(e.code).)" {
-                            hint = "Что-то пошло не так. Попробуй ещё раз."
+                        } else if e.code == 422 || detail.localizedCaseInsensitiveContains("empty") {
+                            hint = "не расслышала фразу. скажи ещё раз чётче"
                         } else {
                             hint = "Не удалось перевести. Попробуй ещё раз"
                         }
@@ -1355,8 +1645,10 @@ public final class SpeakerManager: ObservableObject {
                             case NSURLErrorCannotConnectToHost, NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
                                 hint = "Проверь интернет и попробуй снова"
                             default:
-                                hint = "Ошибка сети: \(e.localizedDescription). Попробуй ещё раз"
+                                hint = "Ошибка сети. Попробуй ещё раз"
                             }
+                        } else if e.domain == "kAFAssistantErrorDomain" || e.localizedDescription.localizedCaseInsensitiveContains("speech") {
+                            hint = "не расслышала. скажи ещё раз чётче"
                         } else {
                             hint = "Не удалось перевести. Попробуй ещё раз"
                         }
@@ -1955,7 +2247,8 @@ public final class SpeakerManager: ObservableObject {
         }
     }
 
-    /// ASR Russian (SFSpeechRecognizer ru-RU). Replace with shared helper if needed.
+    /// ASR Russian (SFSpeechRecognizer ru-RU).
+    /// Важно: Apple часто присылает error после final — нельзя сразу abort'ить; пустой RU не должен уходить в translate.
     private func recognizeRussian(url: URL) async throws -> String {
         let auth = SFSpeechRecognizer.authorizationStatus()
         if auth == .notDetermined {
@@ -1973,29 +2266,55 @@ public final class SpeakerManager: ObservableObject {
         if !recognizer.isAvailable { throw NSError(domain: "speaker.asr", code: 4) }
 
         let request = SFSpeechURLRecognitionRequest(url: url)
-        request.shouldReportPartialResults = false
+        request.shouldReportPartialResults = true
+        if recognizer.supportsOnDeviceRecognition {
+            request.requiresOnDeviceRecognition = false
+        }
 
         return try await withCheckedThrowingContinuation { (c: CheckedContinuation<String, Error>) in
             var resumed = false
+            var best = ""
+            var task: SFSpeechRecognitionTask?
+
             func finish(returning s: String) {
                 guard !resumed else { return }
                 resumed = true
+                task?.cancel()
                 c.resume(returning: s)
             }
             func finish(throwing e: Error) {
                 guard !resumed else { return }
                 resumed = true
+                task?.cancel()
                 c.resume(throwing: e)
             }
-            recognizer.recognitionTask(with: request) { result, error in
-                if let error { finish(throwing: error); return }
-                if let result, result.isFinal {
-                    finish(returning: result.bestTranscription.formattedString)
+
+            task = recognizer.recognitionTask(with: request) { result, error in
+                if let result {
+                    let text = result.bestTranscription.formattedString
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !text.isEmpty {
+                        best = text
+                    }
+                    if result.isFinal {
+                        finish(returning: best)
+                        return
+                    }
+                }
+                if let error {
+                    // Частый кейс SFSpeech: final уже есть, следом прилетает error — не затираем успех.
+                    if !best.isEmpty {
+                        finish(returning: best)
+                    } else {
+                        finish(throwing: error)
+                    }
                 }
             }
+
             Task {
-                try? await Task.sleep(nanoseconds: 15_000_000_000)
-                finish(returning: "")
+                try? await Task.sleep(nanoseconds: 12_000_000_000)
+                // Не кидаем timeout-ошибку поверх уже пойманного текста.
+                finish(returning: best)
             }
         }
     }

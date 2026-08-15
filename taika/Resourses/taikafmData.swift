@@ -182,6 +182,16 @@ public final class TaikaFMData {
         return lines.map { Self.parseAccentChunks($0) }
     }
 
+    public func courseCompletionAccentMessages() -> [[TaikaFMChunk]] {
+        let lines = [
+            "Курс закрыт. Теперь [[проговори]] его — и он останется с тобой.",
+            "[[Красиво.]] Ты собрал целый курс. Голос закрепит лучше любой зубрёжки.",
+            "Это уже не урок — это [[слой]] языка. Проговори его в Спикере.",
+            "[[Стоп.]] Сначала закрепи голосом — следующий курс никуда не убежит."
+        ]
+        return lines.map { Self.parseAccentChunks($0) }
+    }
+
     // MARK: - Accent Parsing
 
     private static func parseAccentChunks(_ raw: String) -> [TaikaFMChunk] {

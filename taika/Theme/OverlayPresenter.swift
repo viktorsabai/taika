@@ -60,12 +60,22 @@ final class OverlayPresenter: ObservableObject {
 
         /// Подтверждение сброса прогресса курса (тот же chrome, что у PRO).
         case courseResetConfirm(courseId: String)
+        /// Подтверждение сброса прогресса одного урока (из StepView).
+        case lessonResetConfirm(courseId: String, lessonId: String)
 
         // theme / accent (ui only)
         case accentPicker
 
         /// Мягкое окно «Закрепи результат» — привязка аккаунта (bottom sheet).
         case authSoftWall(masteryPercent: Int, streakDays: Int)
+
+        /// Микро-шаг «разбор тонов» перед paywall (один раз).
+        case speakerToneAha(courseId: String, reason: ProGateReason, fromSpeakerPaywall: Bool)
+
+        /// First-visit tip: Спикер (black-glass, не fullscreen Welcome).
+        case speakerFirstTip
+        /// First-visit tip: Курсы.
+        case courseFirstTip
     }
 
     @Published private(set) var overlay: Overlay? = nil
@@ -126,12 +136,30 @@ final class OverlayPresenter: ObservableObject {
     }
 
     func present(_ overlay: Overlay) {
+        // Один раз перед paywall: интерактивный разбор тонов (Sprint B).
+        if SpeakerToneAhaState.shouldShowBeforePaywall {
+            switch overlay {
+            case .speakerPaywall:
+                self.overlay = .speakerToneAha(courseId: "", reason: .speakerBreakdown, fromSpeakerPaywall: true)
+                return
+            case .proCoursePaywall(let courseId, let reason):
+                self.overlay = .speakerToneAha(courseId: courseId, reason: reason, fromSpeakerPaywall: false)
+                return
+            default:
+                break
+            }
+        }
         self.overlay = overlay
     }
 
     /// Plus paywall с контекстом (карусель стартует с нужного слайда).
     func presentPro(reason: ProGateReason = .general, courseId: String = "") {
         present(.proCoursePaywall(courseId: courseId, reason: reason))
+    }
+
+    /// Онбординг: оффер без микро-шага тонов (aha остаётся на живом Спикере).
+    func presentProDirect(reason: ProGateReason = .general) {
+        overlay = .proCoursePaywall(courseId: "", reason: reason)
     }
 
     func dismiss() {

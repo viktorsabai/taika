@@ -9,8 +9,10 @@ struct ToolBar: View {
     private let capsuleHeight: CGFloat = 48
     private let iconSize: CGFloat = 21
     private let tapSize: CGFloat = 40
-    private let horizontalInset: CGFloat = 28
     private let bottomFloat: CGFloat = 8
+
+    /// Горизонтальный inset капсулы тулбара — CTA спикера должны совпадать по ширине.
+    static let contentHorizontalInset: CGFloat = 28
 
     /// Host views pad scroll content so it clears the floating capsule.
     static var recommendedBottomInset: CGFloat { Theme.Layout.bottomToolbarHeight }
@@ -30,7 +32,7 @@ struct ToolBar: View {
         .padding(.horizontal, 10)
         .frame(height: capsuleHeight)
         .background { TaikaLiquidGlassCapsule() }
-        .padding(.horizontal, horizontalInset)
+        .padding(.horizontal, Self.contentHorizontalInset)
         .padding(.bottom, bottomFloat)
         .accessibilityElement(children: .contain)
     }

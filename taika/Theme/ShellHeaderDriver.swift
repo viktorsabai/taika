@@ -17,6 +17,7 @@ final class ShellHeaderDriver: ObservableObject {
             FavoriteManager.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             ProManager.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             SpeakerManager.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+            SpeakerReturnContext.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             GameHeaderStore.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             LessonsHeaderStore.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
             StepManager.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
@@ -30,5 +31,10 @@ final class ShellHeaderDriver: ObservableObject {
                 self?.generation &+= 1
             }
             .store(in: &cancellables)
+    }
+
+    /// Мгновенный рефреш хедера (без debounce) — для return-context CTA.
+    func bump() {
+        generation &+= 1
     }
 }

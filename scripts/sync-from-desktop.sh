@@ -44,6 +44,7 @@ fi
 
 # --- helpers ---
 
+# Предикаты для `if is_corrupt_*`: return 0 = битый (пропускаем), return 1 = ок (копируем).
 is_corrupt_swift() {
   local f="$1"
   [[ -f "$f" ]] || return 0
@@ -68,8 +69,11 @@ is_corrupt_json() {
   local size
   size=$(wc -c <"$f" | tr -d ' ')
   [[ "$size" -eq 0 ]] && return 0
-  python3 -c "import json; json.load(open('$f'))" 2>/dev/null || return 0
-  return 1
+  # Успешный parse → не битый (1). Ошибка parse / нет python → битый (0).
+  if python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f" 2>/dev/null; then
+    return 1
+  fi
+  return 0
 }
 
 should_skip_path() {

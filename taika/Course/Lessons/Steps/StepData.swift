@@ -107,13 +107,13 @@ final class StepData {
         preload()
         let itemsList = stepsetsByLessonId[lessonId]?.items.sorted(by: { $0.order < $1.order }) ?? []
         var invalid = Set<Int>()
-        for (idx, item) in itemsList.enumerated() {
+        for item in itemsList {
             switch item.kind {
             case .word, .phrase, .casual:
                 if !Self.isValidForProgress(item) {
-                    invalid.insert(idx)
+                    invalid.insert(item.order)
                     #if DEBUG
-                    print("[StepData] invalid step for progress lessonId=\(lessonId) index=\(idx) order=\(item.order) kind=\(item.kind.rawValue)")
+                    print("[StepData] invalid step for progress lessonId=\(lessonId) order=\(item.order) kind=\(item.kind.rawValue)")
                     #endif
                 }
             case .tip, .dialog:

@@ -699,14 +699,23 @@ public func resolveRoute(fromFavoriteId fid: String) -> (courseId: String, lesso
     public func setLearned(courseId: String, lessonId: String, index: Int, isLearned: Bool) {
         guard !courseId.isEmpty, !lessonId.isEmpty else { return }
         let raw = StepData.shared.items(for: lessonId)
-        guard index >= 0, index < raw.count else { return }
         let invalid = StepData.shared.invalidProgressIndices(for: lessonId)
-        let lifehacks = Set(raw.enumerated().compactMap { i, it in
-            switch it.kind { case .tip, .dialog: return i; default: return nil }
+        let lifehacks = Set(raw.compactMap { it -> Int? in
+            switch it.kind { case .tip, .dialog: return it.order; default: return nil }
         })
         let excluded = lifehacks.union(invalid)
-        let eligible = Set(raw.indices).subtracting(excluded)
-        guard eligible.contains(index) else { return }
+        // `index` — канонический ключ прогресса (`order` или legacy enum); eligible — order learnable-карточек.
+        let eligible = Set(raw.compactMap { it -> Int? in
+            switch it.kind {
+            case .word, .phrase, .casual:
+                let key = it.order >= 0 ? it.order : nil
+                guard let key, !excluded.contains(key) else { return nil }
+                return key
+            default:
+                return nil
+            }
+        })
+        guard eligible.contains(index) || (!excluded.contains(index) && raw.indices.contains(index)) else { return }
         ProgressManager.shared.setStepLearned(
             courseId: courseId,
             lessonId: lessonId,

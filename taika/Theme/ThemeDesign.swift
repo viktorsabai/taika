@@ -119,6 +119,8 @@ public enum Theme {
     
     public enum Fonts {
         public static func appTitle(_ size: CGFloat) -> Font { .custom("ONMARK Trial", size: size) }
+        /// Крупные цифры скора / статистики курса и урока (MV-SKIFER).
+        public static func stat(_ size: CGFloat) -> Font { .custom("MVSKIFERRegular", size: size) }
         public static let heading: Font = .system(size: 22, weight: .semibold, design: .rounded)
         public static let body: Font    = .system(size: 16, weight: .regular, design: .rounded)
         public static let caption: Font = .system(size: 12, weight: .regular, design: .rounded)
@@ -288,16 +290,17 @@ public enum Theme {
         }
 
         /// Жидкое глянцевое чёрное стекло: blur есть, серой «плёнки» нет.
+        /// Полупрозрачный чёрный глянец — фон мутно читается сквозь карточку.
         /// Канон оверлеев / умного спикера / разбора / soft-wall / инфо-модалок.
         public static func blackGlass<S: Shape>(_ shape: S) -> some View {
             ZStack {
                 shape.fill(.ultraThinMaterial)
-                shape.fill(Color.black.opacity(0.78))
+                shape.fill(Color.black.opacity(0.52))
                 shape.fill(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.16),
-                            Color.white.opacity(0.04),
+                            Color.white.opacity(0.18),
+                            Color.white.opacity(0.05),
                             Color.clear
                         ],
                         startPoint: .top,
@@ -308,7 +311,7 @@ public enum Theme {
                 shape.stroke(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.28),
+                            Color.white.opacity(0.30),
                             Color.white.opacity(0.08),
                             Color.white.opacity(0.14)
                         ],
@@ -319,14 +322,24 @@ public enum Theme {
                 )
             }
             .compositingGroup()
-            .shadow(color: Color.black.opacity(0.45), radius: 28, y: 16)
+            .shadow(color: Color.black.opacity(0.38), radius: 28, y: 16)
         }
 
-        /// Backdrop модалок: тёмный blur без серого тумана.
+        /// Backdrop модалок: глубокий чёрный gloss — без серой «пыли».
         public static var blackGlassScrim: some View {
             ZStack {
                 Rectangle().fill(.ultraThinMaterial)
-                Color.black.opacity(0.58)
+                Color.black.opacity(0.68)
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.10),
+                        Color.clear,
+                        Color.black.opacity(0.22)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .blendMode(.plusLighter)
             }
         }
     }
@@ -905,6 +918,249 @@ struct TaikaEmptyStateIcon: View {
                 }
             }
             .accessibilityHidden(true)
+    }
+}
+
+/// Колонка статистики курса/урока: крупная цифра MV-SKIFER + подпись. Без рамок.
+public struct TaikaStatMetric: View {
+    public var valueText: String
+    public var label: String
+    public var valueSize: CGFloat
+    public var accent: Bool
+    public var appeared: Bool
+    public var delay: TimeInterval
+
+    public init(
+        valueText: String,
+        label: String,
+        valueSize: CGFloat = 34,
+        accent: Bool = true,
+        appeared: Bool = true,
+        delay: TimeInterval = 0
+    ) {
+        self.valueText = valueText
+        self.label = label
+        self.valueSize = valueSize
+        self.accent = accent
+        self.appeared = appeared
+        self.delay = delay
+    }
+
+    public var body: some View {
+        VStack(spacing: 4) {
+            Text(valueText)
+                .font(.taikaStat(valueSize))
+                .foregroundStyle(
+                    accent
+                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                    : AnyShapeStyle(PD.ColorToken.text.opacity(0.92))
+                )
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .scaleEffect(appeared ? 1 : 0.86)
+                .animation(
+                    .spring(response: 0.55, dampingFraction: 0.78).delay(delay),
+                    value: appeared
+                )
+            Text(label)
+                .font(.system(size: valueSize >= 48 ? 13 : 12, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// Счётчик очков MV-SKIFER: плавно «набирает» значение (Speaker, онбординг, статистика).
+public struct TaikaCountingScore<S: ShapeStyle>: View {
+    public let value: Int
+    public let font: Font
+    public let color: S
+    public var suffix: String = ""
+
+    @State private var displayed: Int = 0
+
+    public init(value: Int, font: Font, color: S, suffix: String = "") {
+        self.value = value
+        self.font = font
+        self.color = color
+        self.suffix = suffix
+    }
+
+    public var body: some View {
+        Text("\(displayed)\(suffix)")
+            .font(font)
+            .foregroundStyle(color)
+            .monospacedDigit()
+            .contentTransition(.numericText())
+            .onAppear { runCount(to: value) }
+            .onChange(of: value) { _, newValue in
+                runCount(to: newValue)
+            }
+    }
+
+    private func runCount(to target: Int) {
+        displayed = 0
+        let clamped = max(0, target)
+        guard clamped > 0 else { return }
+        let steps = min(clamped, 28)
+        let stepDuration = 0.85 / Double(steps)
+        for i in 1...steps {
+            let next = Int(round(Double(clamped) * Double(i) / Double(steps)))
+            DispatchQueue.main.asyncAfter(deadline: .now() + stepDuration * Double(i)) {
+                withAnimation(.easeOut(duration: 0.06)) {
+                    displayed = next
+                }
+            }
+        }
+    }
+}
+
+/// Кольцо + крупный скор + подпись — «вау»-момент после первой попытки (без полного PRO-разбора).
+public struct TaikaScoreHero: View {
+    public let score: Int
+    public let caption: String
+    public var ringSize: CGFloat = 118
+    public var fontSize: CGFloat = 48
+    public var lineWidth: CGFloat = 5
+
+    @State private var ringProgress: CGFloat = 0
+    @State private var appeared = false
+
+    public init(
+        score: Int,
+        caption: String,
+        ringSize: CGFloat = 118,
+        fontSize: CGFloat = 48,
+        lineWidth: CGFloat = 5
+    ) {
+        self.score = score
+        self.caption = caption
+        self.ringSize = ringSize
+        self.fontSize = fontSize
+        self.lineWidth = lineWidth
+    }
+
+    public var body: some View {
+        let accent = ThemeManager.shared.currentAccentFill
+        let target = CGFloat(max(0, min(100, score))) / 100.0
+
+        ZStack {
+            Circle()
+                .fill(ThemeManager.shared.currentAccentTintColor.opacity(appeared ? 0.22 : 0))
+                .frame(width: ringSize * 1.35, height: ringSize * 1.35)
+                .blur(radius: 18)
+                .scaleEffect(appeared ? 1.05 : 0.7)
+
+            Circle()
+                .stroke(Color.white.opacity(0.12), lineWidth: lineWidth)
+
+            Circle()
+                .trim(from: 0, to: ringProgress)
+                .stroke(
+                    AnyShapeStyle(accent),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+
+            VStack(spacing: 2) {
+                TaikaCountingScore(
+                    value: score,
+                    font: .taikaStat(fontSize),
+                    color: AnyShapeStyle(accent),
+                    suffix: "%"
+                )
+                Text(caption)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+            }
+            .padding(.horizontal, 6)
+        }
+        .frame(width: ringSize, height: ringSize)
+        .scaleEffect(appeared ? 1 : 0.72)
+        .opacity(appeared ? 1 : 0)
+        .onAppear {
+            ringProgress = 0
+            appeared = false
+            withAnimation(.spring(response: 0.58, dampingFraction: 0.76)) {
+                appeared = true
+            }
+            withAnimation(.easeOut(duration: 0.95).delay(0.12)) {
+                ringProgress = target
+            }
+        }
+        .onChange(of: score) { _, _ in
+            ringProgress = 0
+            appeared = false
+            withAnimation(.spring(response: 0.58, dampingFraction: 0.76)) {
+                appeared = true
+            }
+            withAnimation(.easeOut(duration: 0.95).delay(0.12)) {
+                ringProgress = target
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(score) процентов, \(caption)")
+    }
+}
+
+/// Мини-волны для «Послушай» и записи — лёгкий motion без тяжёлого Speaker UI.
+public struct TaikaListenWaveBars: View {
+    public var active: Bool
+    public var meter: Double = 0.35
+    public var barCount: Int = 5
+
+    @State private var phase: CGFloat = 0
+
+    public init(active: Bool, meter: Double = 0.35, barCount: Int = 5) {
+        self.active = active
+        self.meter = meter
+        self.barCount = barCount
+    }
+
+    public var body: some View {
+        HStack(alignment: .center, spacing: 4) {
+            ForEach(0..<barCount, id: \.self) { i in
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                    .frame(width: 3, height: barHeight(i))
+                    .opacity(active ? 0.92 : 0.35)
+            }
+        }
+        .frame(height: 16)
+        .onAppear { startPhaseIfNeeded() }
+        .onChange(of: active) { _, isActive in
+            if isActive { startPhaseIfNeeded() }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func barHeight(_ index: Int) -> CGFloat {
+        let base: CGFloat = 4
+        let amp = CGFloat(max(0.12, min(1.0, active ? meter : 0.22)))
+        let wobble = active ? (0.35 + 0.65 * wave(index)) : 0.45
+        return base + 11 * amp * wobble
+    }
+
+    private func wave(_ index: Int) -> CGFloat {
+        let t = (Double(phase) + Double(index) * 0.14).truncatingRemainder(dividingBy: 1.0)
+        let v = 1.0 - abs(t - 0.5) * 2.0
+        return CGFloat(max(0.0, v))
+    }
+
+    private func startPhaseIfNeeded() {
+        let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+        phase = 0
+        guard active, !isPreview else { return }
+        withAnimation(.linear(duration: 0.95).repeatForever(autoreverses: false)) {
+            phase = 1
+        }
     }
 }
 

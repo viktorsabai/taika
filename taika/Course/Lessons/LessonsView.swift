@@ -89,19 +89,8 @@ private extension LessonsView {
 
     var activeLessonIndex: Int {
         let ids = lessonsSorted.map { $0.lessonID }
-        let cid = currentCourse?.courseID
-        // 1) explicit selection wins
-        if let sel = selectedLessonId, let i = ids.firstIndex(of: sel) { return i }
-        // 2) fallback to last active (persisted)
-        if !lastActiveLessonId.isEmpty, let i = ids.firstIndex(of: lastActiveLessonId) { return i }
-        // 3) initial deep-link / provided lessonId
+        // Deep-link / явный lessonId — иначе всегда первый урок (без restore «последнего»).
         if let initial = lessonId, let i = ids.firstIndex(of: initial) { return i }
-        // 4) carousel position (back navigation)
-        if let cid, !ids.isEmpty {
-            let p = CarouselScrollPersistence.lessonReelIndex(courseId: cid, max: ids.count)
-            if ids.indices.contains(p) { return p }
-        }
-        // 5) otherwise first
         return 0
     }
 
@@ -204,6 +193,10 @@ private extension LessonsView {
                 // Show progress only if lesson is not locked
                 let progressValue: Double? = (status == .locked) ? nil : clamped
 
+                let learnableCount: Int = {
+                    let counts = StepData.shared.progressCounts(for: l.lessonID)
+                    return counts.learnable > 0 ? counts.learnable : l.cardCount
+                }()
                 return LS.Item(
                     id: l.lessonID,
                     index: i,
@@ -214,7 +207,7 @@ private extension LessonsView {
                     status: status,
                     tags: l.tags,
                     progress: progressValue,
-                    cardCount: l.cardCount,
+                    cardCount: learnableCount,
                     favoriteCount: FavoriteManager.shared.countCardsForLesson(courseId: cid, lessonId: l.lessonID)
                 )
             }()
@@ -330,7 +323,6 @@ public struct LessonsView: View {
     @State private var frozenSnapshot: Image? = nil
     @ObservedObject private var lessonsHeaderStore = LessonsHeaderStore.shared
     @ObservedObject private var pro = ProManager.shared
-    @AppStorage("LSLessonActivity.lastActiveLessonId") private var lastActiveLessonId: String = ""
 
     private let courseId: String?
     private let lessonId: String?
@@ -510,7 +502,14 @@ public struct LessonsView: View {
                                 onLockedTap: { mode in
                                     if mode.isPro && !ProManager.shared.isPro {
                                         let cid = currentCourse?.courseID ?? ""
-                                        overlay.presentPro(reason: .lockedCourse, courseId: cid)
+                                        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                                            showGameModePicker = false
+                                            showGameOverlay = false
+                                        }
+                                        frozenSnapshot = nil
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                            overlay.presentPro(reason: .games, courseId: cid)
+                                        }
                                     } else {
 #if os(iOS)
                                         let gen = UINotificationFeedbackGenerator()
@@ -607,9 +606,14 @@ let withTasks = base
             lessonsHeaderStore.setActions(
                 onSpeaker: {
                     guard let cid = currentCourse?.courseID else { return }
-                    UserSession.shared.markActive(courseId: cid)
+                    let lid = selectedLessonId
+                    if let lid {
+                        UserSession.shared.markActive(courseId: cid, lessonId: lid, stepIndex: 0)
+                    } else {
+                        UserSession.shared.markActive(courseId: cid)
+                    }
                     NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                    SpeakerRequestedCourseId.shared.set(cid)
+                    SpeakerRequestedCourseId.shared.set(cid, lessonId: lid)
                     nav.requestTab(2)
                 },
                 onReinforce: {
@@ -702,15 +706,22 @@ let withTasks = base
             .toolbar(.hidden, for: .navigationBar)
             .onAppear {
                 GameHeaderStore.shared.config = nil
+                // Карусель уроков всегда с первого; selection только для CTA/навигации.
+                selectedLessonId = nil
                 if isTheoryBonusCourse {
                     lessonsHeaderStore.setActions(onSpeaker: nil, onReinforce: nil)
                 } else {
                     lessonsHeaderStore.setActions(
                         onSpeaker: {
                             guard let cid = currentCourse?.courseID else { return }
-                            UserSession.shared.markActive(courseId: cid)
+                            let lid = selectedLessonId
+                            if let lid {
+                                UserSession.shared.markActive(courseId: cid, lessonId: lid, stepIndex: 0)
+                            } else {
+                                UserSession.shared.markActive(courseId: cid)
+                            }
                             NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                            SpeakerRequestedCourseId.shared.set(cid)
+                            SpeakerRequestedCourseId.shared.set(cid, lessonId: lid)
                             nav.requestTab(2)
                         },
                         onReinforce: {
@@ -895,7 +906,7 @@ extension LessonsView {
                 guard let cid = currentCourse?.courseID else { return }
                 UserSession.shared.markActive(courseId: cid, lessonId: item.id, stepIndex: 0)
                 NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                SpeakerRequestedCourseId.shared.set(cid)
+                SpeakerRequestedCourseId.shared.set(cid, lessonId: item.id)
                 nav.requestTab(2)
             },
             selectedIndex: activeLessonIndex

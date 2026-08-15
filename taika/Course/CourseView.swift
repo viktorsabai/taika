@@ -123,7 +123,6 @@ struct CourseView: View {
     /// Активная категория на вкладке «Сценарии» (один ряд карточек).
     @State private var selectedScenarioCategory: String = ""
 
-
     // Search state (UI only; logic delegated to CourseSearch)
     @State private var isSearchExpanded: Bool = true
     @State private var searchText: String = ""
@@ -687,16 +686,50 @@ struct CourseView: View {
     }
 
     private func courseFmSection(for tab: CourseScreenTab) -> some View {
-        TaikaFMSection(
-            scope: tab.taikaFMScope,
-            rotationExtra: tab.rawValue,
-            mode: .typing,
-            showBubble: false,
-            repeats: true,
-            horizontalPadding: CD.Spacing.screen
+        // Без маскота и мелкого FM-бабла: печатающийся гайд по странице, как typewriter на Main.
+        MDCyclingTypewriter(
+            lines: courseGuideLines(for: tab),
+            font: .system(size: 19, weight: .bold),
+            holdSeconds: 2.4,
+            charInterval: 0.032,
+            minHeight: 48
         )
-        .id(tab.rawValue)
+        .padding(.horizontal, CD.Spacing.screen)
+        .padding(.top, 2)
+        .padding(.bottom, 4)
+        .id("course-guide-\(tab.rawValue)")
         .frame(maxWidth: .infinity)
+        .accessibilityLabel("Подсказки по странице курсов")
+    }
+
+    /// Краткий туториал-навигатор по Course View (не «вайб-сообщения» FM).
+    private func courseGuideLines(for tab: CourseScreenTab) -> [String] {
+        switch tab {
+        case .resume:
+            return [
+                "Продолжи с того места, где остановился",
+                "Тап по карточке — сразу в урок",
+                "Игра и спикер — иконки внизу карточки"
+            ]
+        case .base:
+            return [
+                "Листай курсы — свайп влево и вправо",
+                "Сверху переключай База и Сценарии",
+                "Начать — открыть курс одним тапом",
+                "На карточке: избранное, игра и спикер"
+            ]
+        case .scenarios:
+            return [
+                "Сценарии — живые ситуации в Тае",
+                "Выбери вайб и нажми Начать",
+                "Закрепляй фразы в игре или спикере"
+            ]
+        case .dictionary, .mine:
+            return [
+                "Листай курсы — свайп влево и вправо",
+                "Сверху переключай вкладки каталога"
+            ]
+        }
     }
 
     // EPIC 2: search moved to header; no courseSearchHeader in body
@@ -1024,11 +1057,12 @@ struct CourseView: View {
 
                 courseFmSection(for: selectedCourseTab)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 2)
 
                 ScrollViewReader { proxy in
                     TaikaRootVerticalScroll {
-                        LazyVStack(spacing: Theme.Layout.sectionGap) {
+                        // Компактный ритм секций: на Базе почти всё влезает без скролла;
+                        // скролл оставляем страховкой для Сценариев / высоких экранов.
+                        LazyVStack(spacing: max(14, Theme.Layout.sectionGap - 6)) {
                             courseTabContentView()
                             CDWeeklyRhythmSection(model: weeklyRhythmModel())
                                 .id("weekly-rhythm-\(selectedCourseTab.rawValue)-\(selectedScenarioCategory)")
@@ -1078,31 +1112,31 @@ struct CourseView: View {
             .allowsHitTesting(!(isPaywallPresented || showGameModePicker || isInfoPreviewPresented))
 
             if showGameModePicker {
-                Color.black.opacity(0.28)
-                    .ignoresSafeArea()
-                    .zIndex(2)
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
-                            showGameModePicker = false
-                        }
-                    }
-
                 GameModePickerDS(
                     selected: $selectedGameMode,
                     isProUser: pro.isPro,
                     onStart: { _ in
-                        showGameModePicker = false
+                        withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
+                            showGameModePicker = false
+                        }
                         if let courseId = pendingGameCourseId {
                             nav.go(.game(courseId: courseId, lessonId: nil, gameType: selectedGameMode.rawValue))
                             pendingGameCourseId = nil
                         }
                     },
                     onClose: {
-                        showGameModePicker = false
+                        withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
+                            showGameModePicker = false
+                        }
                     },
                     onLockedTap: { mode in
                         if mode.isPro && !pro.isPro, let cid = pendingGameCourseId {
-                            overlay.presentPro(reason: .lockedCourse, courseId: cid)
+                            withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
+                                showGameModePicker = false
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                overlay.presentPro(reason: .games, courseId: cid)
+                            }
                         } else {
 #if os(iOS)
                             let gen = UINotificationFeedbackGenerator()
@@ -1165,6 +1199,29 @@ struct CourseView: View {
         }
         .onAppear {
             if !isPreviewEnv { installKeyboardObservers() }
+            maybePresentCourseProductDemo()
+        }
+        .onChange(of: nav.path.count) { _, count in
+            if count == 0 {
+                maybePresentCourseProductDemo()
+            }
+        }
+    }
+
+    /// Первый визит в каталог курсов: tip в black-glass, не Welcome поверх таба.
+    private func maybePresentCourseProductDemo() {
+        guard !TaikaProductDemoFlags.hasSeenCourse else { return }
+        guard !isPreviewEnv else { return }
+        if case .courseFirstTip = overlay.overlay { return }
+        if overlay.overlay != nil { return }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+            guard !TaikaProductDemoFlags.hasSeenCourse else { return }
+            guard nav.path.isEmpty else { return }
+            guard overlay.overlay == nil else { return }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                overlay.present(.courseFirstTip)
+            }
         }
     }
 

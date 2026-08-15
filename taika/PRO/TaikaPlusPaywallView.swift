@@ -2,8 +2,8 @@ import SwiftUI
 import RevenueCat
 import StoreKit
 
-/// Paywall Taika+ — продающий макет по брифу:
-/// hero + mascot.favorite · coverflow плюшек как Спикер · trial CTA в brand accent.
+/// Paywall Taika+ — минимальный checkout: оффер + планы + CTA.
+/// Value-deck / aha живут до paywall; здесь не дублируем.
 struct TaikaPlusPaywallView: View {
 
     let courseId: String?
@@ -32,18 +32,16 @@ struct TaikaPlusPaywallView: View {
     @State private var purchaseError: String?
     @State private var restoreInFlight = false
     @State private var contentVisible = false
-    @State private var perkPage: Int = 0
+    @State private var ctaPulse = false
     /// nil = ещё не проверили; true = Apple intro eligible.
     @State private var introEligible: Bool? = nil
     @State private var showAuthSheet = false
     @State private var authInProgress = false
     @State private var continuePurchaseAfterAuth = false
+    @State private var showProSuccess = false
 
-    /// Каноничный brand-accent (градиент), не solid tint.
     private var accentFill: LinearGradient { theme.currentAccentFill }
     private var accentTint: Color { theme.currentAccentTintColor }
-
-    private var perkSlides: [TaikaValueSlide] { TaikaValueDeck.plus }
 
     private var selectedPackage: Package? {
         guard let id = selectedPackageId,
@@ -60,33 +58,33 @@ struct TaikaPlusPaywallView: View {
         if isLoadingOfferings, selectedPackage == nil { return "Загружаем…" }
         if !auth.isLoggedIn {
             return offersIntroTrial
-                ? "Войти и попробовать \(TaikaProConfig.introTrialDays) дня"
+                ? TaikaProConfig.introTrialCTALogin
                 : "Войти и открыть Taika+"
         }
         if offersIntroTrial {
-            return "Попробовать \(TaikaProConfig.introTrialDays) дня бесплатно"
+            return TaikaProConfig.introTrialCTAFree
         }
         return reason.ctaFallback
     }
 
-    private var monthlyPriceLine: String {
+    private var legalLine: String {
         if offersIntroTrial {
-            if let monthly = offerings?.current?.package(identifier: TaikaProConfig.PackageIdentifier.monthly) {
-                return "\(TaikaProConfig.introTrialDays) дня бесплатно, дальше — \(monthly.localizedPriceString) в месяц. Отменить можно в любой момент."
-            }
-            return "\(TaikaProConfig.introTrialDays) дня бесплатно, дальше — подписка. Отменить можно в любой момент."
-        }
-        if let monthly = offerings?.current?.package(identifier: TaikaProConfig.PackageIdentifier.monthly) {
-            return "Дальше — \(monthly.localizedPriceString) в месяц. Отменить можно в любой момент."
+            return TaikaProConfig.introTrialLegalLine
         }
         if let selected = selectedPackage, selected.packageType != .lifetime {
-            return "Дальше — \(selected.localizedPriceString). Отменить можно в любой момент."
+            return "Дальше — \(selected.storeProduct.localizedPriceString). Отменить можно в любой момент в настройках Apple ID."
         }
-        return "Дальше — подписка. Отменить можно в любой момент."
+        return "Отменить можно в любой момент в настройках Apple ID."
     }
 
-    private var canPurchase: Bool {
-        RevenueCatBootstrap.isConfigured && selectedPackage != nil && !purchaseInFlight
+    private var annualPackage: Package? {
+        offerings?.current?.package(identifier: TaikaProConfig.PackageIdentifier.annual)
+    }
+    private var monthlyPackage: Package? {
+        offerings?.current?.package(identifier: TaikaProConfig.PackageIdentifier.monthly)
+    }
+    private var lifetimePackage: Package? {
+        offerings?.current?.package(identifier: TaikaProConfig.PackageIdentifier.lifetime)
     }
 
     var body: some View {
@@ -95,18 +93,36 @@ struct TaikaPlusPaywallView: View {
 
             mainPanel
                 .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .scaleEffect(contentVisible ? 1 : 0.98)
-                .opacity(contentVisible ? 1 : 0)
-                .animation(.spring(response: 0.36, dampingFraction: 0.92), value: contentVisible)
+                .padding(.top, Theme.Layout.rootHeaderClearance)
+                .padding(.bottom, 10)
+                .scaleEffect(contentVisible ? 1 : 0.96)
+                .opacity(contentVisible && !showProSuccess ? 1 : 0)
+                .offset(y: contentVisible ? 0 : 18)
+                .animation(.spring(response: 0.42, dampingFraction: 0.88), value: contentVisible)
+                .allowsHitTesting(!showProSuccess)
+
+            if showProSuccess {
+                TaikaProSuccessView {
+                    onClose()
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                .zIndex(2)
+            }
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.88), value: showProSuccess)
         .task {
             _ = courseId
-            perkPage = TaikaValueDeck.plusStartIndex(for: reason)
             await ProManager.shared.syncRevenueCatIdentity(userId: AuthService.shared.currentUserID)
             await loadOfferingsIfNeeded()
         }
-        .onAppear { contentVisible = true }
+        .onAppear {
+            contentVisible = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+                withAnimation(.easeInOut(duration: 1.15).repeatForever(autoreverses: true)) {
+                    ctaPulse = true
+                }
+            }
+        }
         .sheet(isPresented: $showAuthSheet) {
             paywallAuthSheet
         }
@@ -121,28 +137,19 @@ struct TaikaPlusPaywallView: View {
     // MARK: - Panel
 
     private var mainPanel: some View {
-        let panelMaxH = min(UIScreen.main.bounds.height * 0.92, 780)
-
-        return VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             headerBar
 
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 heroBlock
-                perksBlock
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                planPicker
+                checkoutBlock
             }
             .padding(.horizontal, 18)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-
-            bottomOffer
-                .padding(.horizontal, 18)
-                .padding(.top, 10)
-                .padding(.bottom, 4)
+            .padding(.top, 4)
+            .padding(.bottom, 16)
         }
-        .padding(.top, 2)
-        .padding(.bottom, 14)
         .frame(maxWidth: 420)
-        .frame(maxHeight: panelMaxH)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(CD.ColorToken.card)
@@ -153,7 +160,7 @@ struct TaikaPlusPaywallView: View {
                                 colors: [
                                     accentTint.opacity(0.10),
                                     Color.clear,
-                                    accentTint.opacity(0.06)
+                                    accentTint.opacity(0.05)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -163,9 +170,9 @@ struct TaikaPlusPaywallView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(accentFill.opacity(0.35), lineWidth: Theme.Strokes.strokeCardLineWidth)
+                .strokeBorder(accentFill.opacity(0.32), lineWidth: Theme.Strokes.strokeCardLineWidth)
         )
-        .shadow(color: accentTint.opacity(0.18), radius: 28, y: 16)
+        .shadow(color: accentTint.opacity(0.16), radius: 24, y: 14)
         .onTapGesture { }
     }
 
@@ -184,227 +191,165 @@ struct TaikaPlusPaywallView: View {
         }
         .padding(.horizontal, 14)
         .padding(.top, 12)
-        .padding(.bottom, 4)
+        .padding(.bottom, 2)
     }
 
-    // MARK: - Hero (контекст причины + brand)
+    // MARK: - Hero (только контекст, без маскота / deck)
 
     private var heroBlock: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: "crown.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(accentFill)
+        VStack(alignment: .leading, spacing: 8) {
+            Text(reason.heroTitle)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundStyle(CD.ColorToken.text)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
 
-                Text(reason.heroTitle)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(CD.ColorToken.text)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(reason.heroSubtitle)
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(CD.ColorToken.textSecondary)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if let courseId, !courseId.isEmpty,
-                   let title = CourseData.shared.title(for: courseId)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines),
-                   !title.isEmpty {
-                    Text(title)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(accentFill)
-                        .lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Image("mascot.favorite")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 108, height: 108)
-                .taikaMascotChrome()
-                .accessibilityHidden(true)
-        }
-    }
-
-    // MARK: - Perks coverflow — продающие карточки (как Pro teaser / Speaker)
-
-    private var perksBlock: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Что внутри Taika+")
-                .font(.system(size: 13, weight: .semibold))
+            Text(reason.heroSubtitle)
+                .font(.system(size: 14, weight: .regular))
                 .foregroundStyle(CD.ColorToken.textSecondary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
 
-            perkCoverflow
-
-            HStack(spacing: 6) {
-                ForEach(0..<perkSlides.count, id: \.self) { i in
-                    Capsule(style: .continuous)
-                        .fill(
-                            i == perkPage
-                            ? AnyShapeStyle(accentFill)
-                            : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.28))
-                        )
-                        .frame(width: i == perkPage ? 20 : 7, height: 6)
-                }
+            if let courseId, !courseId.isEmpty,
+               let title = CourseData.shared.title(for: courseId)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+               !title.isEmpty {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(accentFill)
+                    .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .animation(.easeInOut(duration: 0.25), value: perkPage)
-            .accessibilityHidden(true)
         }
-        .frame(maxWidth: .infinity)
-        .frame(maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var perkCoverflow: some View {
-        GeometryReader { geo in
-            let itemW = max(248, geo.size.width * 0.86)
-            let itemH = max(210, geo.size.height - 4)
-            let current = min(max(0, perkPage), max(0, perkSlides.count - 1))
+    // MARK: - Plans
 
-            ZStack {
-                ForEach(Array(perkSlides.enumerated()), id: \.element.id) { index, slide in
-                    let rel = index - current
-                    perkSellingCard(slide: slide, index: index, total: perkSlides.count, isActive: rel == 0)
-                        .frame(width: itemW, height: itemH)
-                        .scaleEffect(rel == 0 ? 1.0 : 0.82)
-                        .rotation3DEffect(
-                            .degrees(Double(rel) * -18),
-                            axis: (x: 0, y: 1, z: 0),
-                            perspective: 0.7
-                        )
-                        .opacity(abs(rel) > 2 ? 0 : (rel == 0 ? 1.0 : 0.45))
-                        .offset(x: CGFloat(rel) * (itemW * 0.92))
-                        .zIndex(rel == 0 ? 10 : Double(10 - abs(rel)))
-                        .allowsHitTesting(abs(rel) <= 1)
-                        .onTapGesture {
-                            guard index != current else { return }
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) { perkPage = index }
-                        }
-                }
-            }
-            .frame(width: geo.size.width, height: geo.size.height)
-            .clipped()
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 24)
-                    .onEnded { value in
-                        let dx = value.translation.width
-                        let dy = value.translation.height
-                        guard abs(dx) > 48, abs(dx) > abs(dy) * 1.15 else { return }
-                        withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
-                            if dx < 0 {
-                                perkPage = min(perkPage + 1, perkSlides.count - 1)
-                            } else {
-                                perkPage = max(perkPage - 1, 0)
-                            }
+    private var planPicker: some View {
+        VStack(spacing: 8) {
+            planRow(
+                id: TaikaProConfig.PackageIdentifier.annual,
+                title: "Год",
+                priceLine: annualPriceLine,
+                subtitle: annualSubtitle,
+                badge: TaikaProConfig.annualHeroBadge,
+                isHero: true
+            )
+            planRow(
+                id: TaikaProConfig.PackageIdentifier.monthly,
+                title: "Месяц",
+                priceLine: monthlyPlanPriceLine,
+                subtitle: "Гибкая оплата",
+                badge: nil,
+                isHero: false
+            )
+            planRow(
+                id: TaikaProConfig.PackageIdentifier.lifetime,
+                title: "Навсегда",
+                priceLine: lifetimePriceLine,
+                subtitle: "Разовая оплата",
+                badge: nil,
+                isHero: false
+            )
+        }
+    }
+
+    private var annualPriceLine: String {
+        if let p = annualPackage {
+            return "\(p.storeProduct.localizedPriceString)/год"
+        }
+        return "\(TaikaProConfig.MarketingPrice.annualTHB.formatted()) ฿/год"
+    }
+
+    /// Trial только в CTA/legal — здесь цена и выгода года.
+    private var annualSubtitle: String {
+        if let p = annualPackage {
+            let yearly = (p.storeProduct.price as NSDecimalNumber).doubleValue
+            let perMonth = Int((yearly / 12.0).rounded())
+            return "≈ \(perMonth) ฿/мес"
+        }
+        return "≈ \(TaikaProConfig.MarketingPrice.annualPerMonthTHB) ฿/мес"
+    }
+
+    private var monthlyPlanPriceLine: String {
+        if let p = monthlyPackage {
+            return "\(p.storeProduct.localizedPriceString)/мес"
+        }
+        return "\(TaikaProConfig.MarketingPrice.monthlyTHB.formatted()) ฿/мес"
+    }
+
+    private var lifetimePriceLine: String {
+        if let p = lifetimePackage {
+            return "\(p.storeProduct.localizedPriceString) разово"
+        }
+        return "\(TaikaProConfig.MarketingPrice.lifetimeTHB.formatted()) ฿ разово"
+    }
+
+    private func planRow(
+        id: String,
+        title: String,
+        priceLine: String,
+        subtitle: String,
+        badge: String?,
+        isHero: Bool
+    ) -> some View {
+        let isSelected = selectedPackageId == id
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+
+        return Button {
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            selectedPackageId = id
+            Task { await refreshIntroEligibility() }
+        } label: {
+            HStack(alignment: .center, spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Text(title)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(CD.ColorToken.text)
+                        if let badge {
+                            Text(badge)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Color.black.opacity(0.86))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(accentFill))
                         }
                     }
-            )
-            .animation(.spring(response: 0.38, dampingFraction: 0.86), value: current)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .frame(minHeight: 220)
-    }
-
-    /// Продающая карточка: контент по центру — иконка, польза, подзаголовок.
-    private func perkSellingCard(slide: TaikaValueSlide, index: Int, total: Int, isActive: Bool) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
-        return VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 8) {
-                Text("taikA")
-                    .font(.custom("ONMARK Trial", size: 14))
-                    .tracking(0.6)
-                    .foregroundStyle(PD.ColorToken.text)
-                Spacer(minLength: 0)
-                HStack(spacing: 4) {
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 9, weight: .semibold))
-                    Text("Taika+")
-                        .font(.system(size: 11, weight: .semibold))
+                    Text(subtitle)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
                 }
-                .foregroundStyle(accentFill)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .overlay(
-                    Capsule(style: .continuous)
-                        .strokeBorder(accentFill, lineWidth: 1.2)
-                )
+                Spacer(minLength: 0)
+                Text(priceLine)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(isHero && isSelected ? AnyShapeStyle(accentFill) : AnyShapeStyle(CD.ColorToken.text))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
-            .padding(.bottom, 18)
-
-            Image(systemName: slide.icon)
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(accentFill)
-                .padding(.bottom, 12)
-
-            Text(slide.title)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(CD.ColorToken.text)
-                .lineLimit(2)
-                .minimumScaleFactor(0.88)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 8)
-
-            Text(slide.subtitle)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(CD.ColorToken.textSecondary)
-                .lineLimit(3)
-                .minimumScaleFactor(0.9)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 4)
-
-            Spacer(minLength: 10)
-
-            Text("\(index + 1)/\(total)")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(CD.ColorToken.textSecondary)
-                .frame(maxWidth: .infinity)
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(
-            ZStack {
-                Theme.Surfaces.card(shape)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
                 shape
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                accentTint.opacity(isActive ? 0.16 : 0.08),
-                                Color.clear,
-                                accentTint.opacity(isActive ? 0.10 : 0.04)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                    .fill(CD.ColorToken.chip.opacity(isSelected ? 0.98 : 0.72))
+                    .overlay(
+                        shape.strokeBorder(
+                            isSelected ? AnyShapeStyle(accentFill.opacity(0.85)) : AnyShapeStyle(Theme.Strokes.strokeSubtle),
+                            lineWidth: isSelected ? 1.6 : Theme.Strokes.strokeLineWidth
                         )
                     )
-            }
-        )
-        .overlay(
-            shape.stroke(
-                isActive
-                ? AnyShapeStyle(accentFill.opacity(0.55))
-                : AnyShapeStyle(Theme.Strokes.strokeSubtle),
-                lineWidth: isActive ? Theme.Strokes.strokeCardLineWidth + 0.4 : Theme.Strokes.strokeLineWidth
             )
-        )
-        .shadow(
-            color: isActive ? accentTint.opacity(0.22) : Color.black.opacity(0.16),
-            radius: isActive ? 14 : 6,
-            y: isActive ? 6 : 3
-        )
-        .clipShape(shape)
+            .scaleEffect(isSelected ? 1.01 : 1.0)
+            .animation(.spring(response: 0.32, dampingFraction: 0.86), value: isSelected)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    // MARK: - Bottom offer (триал только для залогиненных)
+    // MARK: - CTA + legal + restore
 
-    private var bottomOffer: some View {
+    private var checkoutBlock: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let purchaseError {
                 Text(purchaseError)
@@ -412,43 +357,6 @@ struct TaikaPlusPaywallView: View {
                     .foregroundStyle(accentFill)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
-            HStack(alignment: .center, spacing: 10) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(accentFill)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(offersIntroTrial
-                         ? "Попробуй \(TaikaProConfig.introTrialDays) дня бесплатно"
-                         : "Taika+ без лимитов")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(CD.ColorToken.text)
-                    Text(offersIntroTrial
-                         ? (auth.isLoggedIn
-                            ? "После входа — триал на этот аккаунт."
-                            : "Сначала вход — так триал один на человека.")
-                         : "Подписка на этот Apple ID / аккаунт.")
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
-                }
-                Spacer(minLength: 0)
-                Text(offersIntroTrial ? "\(TaikaProConfig.introTrialDays) дня" : "Pro")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(Color.black.opacity(0.86))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(accentFill))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(CD.ColorToken.chip.opacity(0.9))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(accentFill.opacity(0.4), lineWidth: 1.15)
-                    )
-            )
 
             Button {
                 Task { await primaryCTATapped() }
@@ -473,8 +381,10 @@ struct TaikaPlusPaywallView: View {
             }
             .buttonStyle(.plain)
             .disabled(purchaseInFlight || authInProgress)
+            .scaleEffect(ctaPulse ? 1.015 : 1.0)
+            .shadow(color: accentTint.opacity(ctaPulse ? 0.35 : 0.18), radius: ctaPulse ? 16 : 8, y: 6)
 
-            Text(monthlyPriceLine)
+            Text(legalLine)
                 .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(CD.ColorToken.textSecondary)
                 .multilineTextAlignment(.center)
@@ -483,17 +393,11 @@ struct TaikaPlusPaywallView: View {
             Button {
                 Task { await restoreTapped() }
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "person.crop.circle")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text(restoreInFlight ? "Восстановление…" : "У меня уже есть подписка")
-                        .font(.system(size: 14, weight: .semibold))
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                }
-                .foregroundStyle(CD.ColorToken.textSecondary)
-                .padding(.vertical, 6)
+                Text(restoreInFlight ? "Восстановление…" : "У меня уже есть подписка")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
             }
             .buttonStyle(.plain)
             .disabled(restoreInFlight)
@@ -509,7 +413,6 @@ struct TaikaPlusPaywallView: View {
             }
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
-            .padding(.top, 2)
         }
     }
 
@@ -529,7 +432,7 @@ struct TaikaPlusPaywallView: View {
                 .foregroundStyle(CD.ColorToken.text)
                 .multilineTextAlignment(.center)
 
-            Text("3 дня Taika+ привязываются к аккаунту — так триал один раз на человека, а Pro не потеряется при смене телефона.")
+            Text("Триал на \(TaikaProConfig.introTrialDaysPhrase) привязывается к аккаунту — один раз на человека, а Pro не потеряется при смене телефона.")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(CD.ColorToken.textSecondary)
                 .multilineTextAlignment(.center)
@@ -603,8 +506,8 @@ struct TaikaPlusPaywallView: View {
     private func preselectPackage(from offerings: Offerings) {
         guard let current = offerings.current else { return }
         let order = [
-            TaikaProConfig.PackageIdentifier.monthly,
             TaikaProConfig.PackageIdentifier.annual,
+            TaikaProConfig.PackageIdentifier.monthly,
             TaikaProConfig.PackageIdentifier.lifetime
         ]
         for id in order {
@@ -697,7 +600,9 @@ struct TaikaPlusPaywallView: View {
             let result = try await Purchases.shared.purchase(package: pkg)
             ProManager.shared.applyRevenueCatCustomerInfo(result.customerInfo)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-            onClose()
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.88)) {
+                showProSuccess = true
+            }
         } catch {
             if isPurchaseCancelledError(error) { return }
             purchaseError = "Покупка не прошла. Попробуй ещё раз."
@@ -724,7 +629,9 @@ struct TaikaPlusPaywallView: View {
             try await ProManager.shared.restorePurchases()
             if pro.isPro {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
-                onClose()
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.88)) {
+                    showProSuccess = true
+                }
             } else {
                 purchaseError = "Активных покупок не найдено."
             }
