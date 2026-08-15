@@ -13,9 +13,20 @@ struct TaikaCoreLoopOnboardingView: View {
     @State private var hasPlayedPhrase = false
     @State private var isPressed = false
     @State private var selectedHint = 0
+    @State private var introFrame: IntroFrame = .brand
+    @State private var painIndex = 0
+    @State private var introTask: Task<Void, Never>?
     @Namespace private var heroNamespace
 
+    private let painPoints = ["Не понимаю тоны", "Боюсь говорить", "Забываю фразы", "Не знаю, что учить дальше"]
     private let hintChips = ["Как пройти к метро?", "Возьмите сдачу", "Я только учусь"]
+
+    private enum IntroFrame: Int, Equatable {
+        case brand
+        case positioning
+        case pain
+        case cta
+    }
 
     private enum Phase: Equatable {
         case hook
@@ -59,6 +70,10 @@ struct TaikaCoreLoopOnboardingView: View {
         }
         .onAppear {
             speaker.setSpeakerUIMode(.conversation)
+            startIntroSequence()
+        }
+        .onDisappear {
+            introTask?.cancel()
         }
         .onChange(of: speaker.phase) { _, newPhase in
             guard phase == .speak else { return }
@@ -92,11 +107,14 @@ struct TaikaCoreLoopOnboardingView: View {
                 .font(.custom("Onmark Trial", size: 30))
                 .foregroundStyle(theme.currentAccentFill)
             Spacer()
-            onboardingIcon("gamecontroller.fill")
-            onboardingIcon("bookmark.fill", value: "6")
-            onboardingIcon("crown.fill")
+            Group {
+                onboardingIcon("gamecontroller.fill")
+                onboardingIcon("bookmark.fill", value: "6")
+                onboardingIcon("crown.fill")
+            }
+            .opacity(phase == .hook && introFrame != .cta ? 0 : 0.72)
+            .animation(transition, value: introFrame)
         }
-        .opacity(phase == .hook ? 1 : 0.72)
     }
 
     private func onboardingIcon(_ systemName: String, value: String? = nil) -> some View {
@@ -152,29 +170,116 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var hookHero: some View {
-        VStack(spacing: 15) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("ТВОЙ ПЕРСОНАЛЬНЫЙ КУН КРУ")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .tracking(1.2)
-                    .foregroundStyle(theme.currentAccentFill)
-                Text("Говори. Учись.\nЖиви по-тайски.")
-                    .font(.system(size: 33, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineSpacing(-2)
+        ZStack {
+            switch introFrame {
+            case .brand:
+                brandReveal
+            case .positioning:
+                positioningReveal
+            case .pain:
+                painReveal
+            case .cta:
+                ctaReveal
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .id(introFrame)
+        .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.97)), removal: .opacity))
+        .animation(transition, value: introFrame)
+    }
 
+    private var brandReveal: some View {
+        VStack(spacing: 18) {
+            Text("taikAAA")
+                .font(.custom("Onmark Trial", size: 62))
+                .foregroundStyle(theme.currentAccentFill)
+                .shadow(color: theme.currentAccentTintColor.opacity(0.64), radius: 24)
+            Text("Говори. Учись. Живи по-тайски.")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.white.opacity(0.48))
+                .opacity(0.9)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var positioningReveal: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            Text("НЕ ПРОСТО ПЕРЕВОДЧИК")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .tracking(1.25)
+                .foregroundStyle(theme.currentAccentFill)
+            Text("Твоя персональная\nкун кру для тайского.")
+                .font(.system(size: 35, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .lineSpacing(-2)
+            Text("Она помогает услышать, сказать\nи запомнить живую речь.")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(.white.opacity(0.66))
             VoiceOrb(isActive: true, tint: theme.currentAccentTintColor)
                 .matchedGeometryEffect(id: "core-hero", in: heroNamespace)
-                .frame(height: 235)
+                .frame(maxWidth: .infinity)
+                .frame(height: 220)
+        }
+    }
 
-            Text("Сразу попробуй настоящую фразу —\nTaika услышит слова и тоны.")
+    private var painReveal: some View {
+        VStack(spacing: 24) {
+            Text("ЗНАКОМО, КОГДА УЧИШЬ ТАЙСКИЙ?")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .tracking(1.1)
+                .foregroundStyle(theme.currentAccentFill)
+            Text("Ты не один с этим.")
+                .font(.system(size: 31, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            VStack(spacing: 8) {
+                ForEach(Array(painPoints.enumerated()), id: \.offset) { index, pain in
+                    painRow(pain, active: index == painIndex)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            Text("Taika превращает каждую боль\nв следующий понятный шаг.")
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.white.opacity(0.68))
+                .foregroundStyle(.white.opacity(0.66))
                 .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 
+    private func painRow(_ title: String, active: Bool) -> some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(active ? theme.currentAccentFill : Color.white.opacity(0.18))
+                .frame(width: 7, height: 7)
+            Text(title)
+                .font(.system(size: 15, weight: active ? .semibold : .medium, design: .rounded))
+                .foregroundStyle(active ? .white : .white.opacity(0.4))
+            Spacer(minLength: 0)
+            if active {
+                Image(systemName: "waveform")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(theme.currentAccentFill)
+                    .transition(.opacity.combined(with: .scale))
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 43)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(active ? theme.currentAccentTintColor.opacity(0.16) : Color.white.opacity(0.035)))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(active ? theme.currentAccentTintColor.opacity(0.56) : Color.white.opacity(0.06), lineWidth: 1))
+        .animation(transition, value: active)
+    }
+
+    private var ctaReveal: some View {
+        VStack(spacing: 18) {
+            Text("ТЕПЕРЬ ПОПРОБУЕМ ВМЕСТЕ")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .tracking(1.2)
+                .foregroundStyle(theme.currentAccentFill)
+            Text("Скажи одну фразу —\nTaika услышит слова и тоны.")
+                .font(.system(size: 31, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineSpacing(-1)
+            VoiceOrb(isActive: true, tint: theme.currentAccentTintColor)
+                .matchedGeometryEffect(id: "core-hero", in: heroNamespace)
+                .frame(height: 220)
             hintRail
         }
     }
@@ -357,8 +462,10 @@ struct TaikaCoreLoopOnboardingView: View {
         VStack(spacing: 12) {
             switch phase {
             case .hook:
-                primaryCTA("Попробовать фразу") { advance(.phrase) }
-                warmupStrip
+                if introFrame == .cta {
+                    primaryCTA("Попробовать фразу") { advance(.phrase) }
+                    warmupStrip
+                }
             case .phrase:
                 primaryCTA("Послушать") { advance(.listen) }
             case .listen:
@@ -426,6 +533,33 @@ struct TaikaCoreLoopOnboardingView: View {
                 .onEnded { _ in isPressed = false }
         )
         .sensoryFeedback(.impact(weight: .medium), trigger: phase)
+    }
+
+    private func startIntroSequence() {
+        introTask?.cancel()
+        introFrame = .brand
+        painIndex = 0
+        introTask = Task { @MainActor in
+            if reduceMotion {
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                guard !Task.isCancelled else { return }
+                introFrame = .cta
+                return
+            }
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(transition) { introFrame = .positioning }
+            try? await Task.sleep(nanoseconds: 2_100_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(transition) { introFrame = .pain }
+            for index in 0..<painPoints.count {
+                guard !Task.isCancelled else { return }
+                withAnimation(transition) { painIndex = index }
+                try? await Task.sleep(nanoseconds: 850_000_000)
+            }
+            guard !Task.isCancelled else { return }
+            withAnimation(transition) { introFrame = .cta }
+        }
     }
 
     private func advance(_ next: Phase) {
