@@ -127,11 +127,7 @@ struct TaikaNativeOnboardingView: View {
         VStack(alignment: .leading, spacing: 12) {
             prompt("Сначала послушай", subtitle: "Потом выбери фразу, которую хочется сказать")
             phraseCarousel
-            HStack(spacing: 8) {
-                secondaryCTA("←") { phraseIndex = (phraseIndex + phrases.count - 1) % phrases.count }
-                mainCTA("Послушать пример") { playPhrase() }
-                secondaryCTA("→") { phraseIndex = (phraseIndex + 1) % phrases.count }
-            }
+            secondaryCTA("Листай карточки — выбери фразу") { phraseIndex = (phraseIndex + 1) % phrases.count }
             mainCTA("Сказать самому") { go(.speak) }
             Spacer(minLength: 10)
         }
@@ -139,7 +135,7 @@ struct TaikaNativeOnboardingView: View {
 
     private var phraseCarousel: some View {
         GeometryReader { outer in
-            let width = MDPortraitCarouselMetrics.cardWidth
+            let width = min(208, outer.size.width * 0.64)
             let side = max(0, (outer.size.width - width) / 2)
             TaikaCarouselScroll {
                 HStack(spacing: 12) {
@@ -169,7 +165,8 @@ struct TaikaNativeOnboardingView: View {
                 .padding(.vertical, 8)
             }
         }
-        .frame(height: MDPortraitCarouselMetrics.cardHeight + 28)
+        .frame(height: 306)
+        .clipped()
     }
 
     private var speakStage: some View {
@@ -289,14 +286,20 @@ struct TaikaNativeOnboardingView: View {
             }
             .padding(.top, 30)
             Spacer()
-            mainCTA("Начать практику") { finish(courseId: courses[courseIndex].id) }
+            mainCTA("Начать практику") { finish(courseId: courses[courseIndex].item.courseId) }
         }
     }
 
     private func prompt(_ title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             MDCyclingTypewriter(lines: [title], font: .system(size: 27, weight: .bold), holdSeconds: 2.4, charInterval: 0.035, minHeight: 42)
-            Text(subtitle).font(.system(size: 15, weight: .medium, design: .rounded)).foregroundStyle(PD.ColorToken.textSecondary).fixedSize(horizontal: false, vertical: true)
+                .frame(height: 44, alignment: .leading)
+                .clipped()
+            Text(subtitle)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 18)
     }
