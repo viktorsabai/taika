@@ -74,7 +74,7 @@ struct AppShell: View {
             // • returning → короткий Splash → Main
             if !onboardingDone {
                 if firstEntryPhase == .learn {
-                    TaikaLearnOnboardingView { courseId in
+                    TaikaNativeOnboardingView { courseId in
                         finishFirstEntry(with: .baseCourse, landingCourseId: courseId)
                     }
                     .transition(.opacity)
