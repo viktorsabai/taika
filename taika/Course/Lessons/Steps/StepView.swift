@@ -112,6 +112,8 @@ struct StepView: View {
     @State private var summaryOverlaySettled: Bool = false
     @State private var didShowSummaryOnce: Bool = false
     @State private var summaryGameMode: GameModeType = .match
+    @State private var isAdvancingFromSummary: Bool = false
+    @State private var showGamePaywallSheet: Bool = false
 
     @StateObject private var anim = StepAnimator()
     @State private var resetGuardUntil: Date = .distantPast
@@ -1101,7 +1103,10 @@ struct StepView: View {
             showGameReinforce: true,
             isProUser: ProManager.shared.isPro,
             onLockedGame: { _ in
-                OverlayPresenter.shared.presentPro(reason: .games, courseId: cid)
+                // Keep the user in the completion context: a light haptic plus a native bottom sheet,
+                // rather than replacing the current navigation state with a global overlay route.
+                UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+                showGamePaywallSheet = true
             },
             onOpenGame: { mode in
                 withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
@@ -1334,6 +1339,14 @@ struct StepView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .sheet(isPresented: $showGamePaywallSheet) {
+                TaikaPlusPaywallView(courseId: nil, reason: .games) {
+                    showGamePaywallSheet = false
+                }
+                .presentationDetents([.fraction(0.46), .medium])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+            }
             .onChange(of: showLessonSummary) { _, isOn in
                 if isOn {
                     frozenLessonDurationText = lessonDurationTextValue()
@@ -1814,6 +1827,8 @@ struct StepView: View {
 
     // Decide where to go next using CourseNavigator; swap in-place for same course, push for next course
     private func prepareNextLessonAndNavigate() {
+        guard !isAdvancingFromSummary else { return }
+        isAdvancingFromSummary = true
         let cid: String = {
             if !resolvedCourseId.isEmpty { return resolvedCourseId }
             let parts = resolvedLessonId.split(separator: "_")
@@ -1837,6 +1852,7 @@ struct StepView: View {
                 anim.learned.removeAll(); anim.favorites.removeAll()
                 loadFromStepData()
                 syncStepHeaderSegmentState()
+                isAdvancingFromSummary = false
                 if !resolvedCourseId.isEmpty {
                     UserSession.shared.markActive(courseId: resolvedCourseId, lessonId: resolvedLessonId)
                 }
@@ -1844,6 +1860,7 @@ struct StepView: View {
         case .nextCourse(let nextCourseId, let firstLesson):
             navigateToNextCourse(courseId: nextCourseId, lessonId: firstLesson)
         case .end:
+            isAdvancingFromSummary = false
             withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
             scheduleAuthSoftWallIfNeeded()
         }
@@ -1878,6 +1895,7 @@ struct StepView: View {
             }
             nav.go(.lessons(courseId: courseId))
             nav.go(.lesson(courseId: courseId, lessonId: lessonId, presentation: .canonical))
+            isAdvancingFromSummary = false
         }
     }
 

@@ -2843,7 +2843,8 @@ public struct LessonSummaryOverlay: View {
 
     public var body: some View {
         GeometryReader { proxy in
-            let panelW = min(max(proxy.size.width - 32, 280), 420)
+            let panelW = min(max(proxy.size.width - 24, 300), 520)
+            let panelH = max(proxy.size.height - max(proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom, 32), 1)
             ZStack {
                 Color.clear
                     .contentShape(Rectangle())
@@ -2920,8 +2921,9 @@ public struct LessonSummaryOverlay: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 24)
+                    .padding(.vertical, 18)
                 }
+                .frame(width: panelW, height: panelH, alignment: .top)
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
             .onAppear { startIntroAnimationIfNeeded() }
