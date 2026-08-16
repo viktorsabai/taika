@@ -368,19 +368,22 @@ struct TaikaCoreLoopOnboardingView: View {
 
     private var reinforceHero: some View {
         VStack(spacing: 22) {
-            Text("Теперь можно учиться по-настоящему")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+            Text("Тайский начнёт складываться")
+                .font(.system(size: 27, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.88)
             Text("Taika будет вести тебя от первой фразы к живой речи — с тонами, курсами и практикой.")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(.white.opacity(0.70))
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.72))
                 .multilineTextAlignment(.center)
-                .frame(maxWidth: 320)
+                .lineLimit(3)
+                .frame(maxWidth: 326)
             VStack(alignment: .leading, spacing: 12) {
-                trialValueRow("Разбор слов и тонов")
-                trialValueRow("Курсы под твой уровень")
-                trialValueRow("Закрепление фраз в практике")
+                trialValueRow("Понимать слова и тоны")
+                trialValueRow("Учиться по своему уровню")
+                trialValueRow("Говорить и закреплять фразы")
             }
             .padding(20)
             .frame(maxWidth: 336)
