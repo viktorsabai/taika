@@ -12,22 +12,21 @@ struct TaikaCoreLoopOnboardingView: View {
     @State private var phase: Phase = .hook
     @State private var hasPlayedPhrase = false
     @State private var isPressed = false
-    @State private var selectedHint = 0
     @State private var introFrame: IntroFrame = .brand
-    @State private var painIndex = 0
-    @State private var introTask: Task<Void, Never>?
+    @State private var selectedLevel: Int?
+    @State private var selectedPain: Int?
     @State private var recordingTask: Task<Void, Never>?
     @Namespace private var heroNamespace
 
     private let painPoints = ["Не понимаю тоны", "Боюсь говорить", "Забываю фразы", "Не знаю, что учить дальше"]
-    private let hintChips = ["Не понимаю тоны", "Боюсь говорить", "Забываю фразы", "Не знаю, что учить"]
-
+    private let levelOptions = ["Никогда не учил", "Знаю основы", "Уже говорю"]
     private enum IntroFrame: Int, Equatable {
         case brand
         case positioning
+        case level
         case pain
-        case cta
     }
+
 
     private enum Phase: Equatable {
         case hook
@@ -68,7 +67,6 @@ struct TaikaCoreLoopOnboardingView: View {
             startIntroSequence()
         }
         .onDisappear {
-            introTask?.cancel()
             recordingTask?.cancel()
         }
         .onChange(of: speaker.phase) { _, newPhase in
@@ -132,10 +130,10 @@ struct TaikaCoreLoopOnboardingView: View {
                 brandReveal
             case .positioning:
                 positioningReveal
+            case .level:
+                levelReveal
             case .pain:
                 painReveal
-            case .cta:
-                ctaReveal
             }
         }
         .id(introFrame)
@@ -147,8 +145,8 @@ struct TaikaCoreLoopOnboardingView: View {
         VStack(spacing: 26) {
             Text("taikAAA")
                 .font(.custom("Onmark Trial", size: 64))
-                .foregroundStyle(theme.currentAccentFill)
-                .shadow(color: theme.currentAccentTintColor.opacity(0.52), radius: 28)
+                .foregroundStyle(.white.opacity(0.94))
+                .shadow(color: theme.currentAccentTintColor.opacity(0.28), radius: 22)
                 .scaleEffect(introFrame == .brand ? 1 : 0.96)
             Rectangle()
                 .fill(theme.currentAccentFill)
@@ -179,81 +177,95 @@ struct TaikaCoreLoopOnboardingView: View {
         }
     }
 
-    private var painReveal: some View {
-        VStack(spacing: 24) {
-            Text("ЗНАКОМО, КОГДА УЧИШЬ ТАЙСКИЙ?")
+    private var levelReveal: some View {
+        VStack(spacing: 26) {
+            Text("С КАКОГО УРОВНЯ НАЧНЁМ?")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .tracking(1.1)
                 .foregroundStyle(theme.currentAccentFill)
-            Text("Ты не один с этим.")
-                .font(.system(size: 31, weight: .bold, design: .rounded))
+            Text("Расскажи, как ты знаешь тайский.")
+                .font(.system(size: 29, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
-            VStack(spacing: 8) {
-                ForEach(Array(painPoints.enumerated()), id: \.offset) { index, pain in
-                    painRow(pain, active: index == painIndex)
+                .multilineTextAlignment(.center)
+            VStack(spacing: 10) {
+                ForEach(Array(levelOptions.enumerated()), id: \.offset) { index, option in
+                    levelRow(option, selected: selectedLevel == index) {
+                        withAnimation(transition) { selectedLevel = index }
+                    }
                 }
             }
-            .frame(maxWidth: .infinity)
-            Text("Taika превращает каждую боль\nв следующий понятный шаг.")
+            Text("Это не тест. Taika просто подберёт\nправильную первую фразу.")
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.white.opacity(0.66))
+                .foregroundStyle(.white.opacity(0.62))
                 .multilineTextAlignment(.center)
         }
     }
 
-    private func painRow(_ title: String, active: Bool) -> some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(active ? theme.currentAccentFill : Color.white.opacity(0.18))
-                .frame(width: 7, height: 7)
-            Text(title)
-                .font(.system(size: 15, weight: active ? .semibold : .medium, design: .rounded))
-                .foregroundStyle(active ? .white : .white.opacity(0.4))
-            Spacer(minLength: 0)
-            if active {
-                Image(systemName: "waveform")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(theme.currentAccentFill)
-                    .transition(.opacity.combined(with: .scale))
+    private func levelRow(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Circle()
+                    .stroke(selected ? theme.currentAccentFill : Color.white.opacity(0.22), lineWidth: 1.5)
+                    .overlay(Circle().fill(selected ? theme.currentAccentFill : .clear).padding(5))
+                    .frame(width: 18, height: 18)
+                Text(title)
+                    .font(.system(size: 16, weight: selected ? .semibold : .medium, design: .rounded))
+                    .foregroundStyle(selected ? .white : .white.opacity(0.72))
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 18)
+            .frame(height: 54)
+            .background(Capsule().fill(selected ? theme.currentAccentTintColor.opacity(0.18) : Color.white.opacity(0.045)))
         }
-        .padding(.horizontal, 16)
-        .frame(height: 43)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(active ? theme.currentAccentTintColor.opacity(0.16) : Color.white.opacity(0.035)))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(active ? theme.currentAccentTintColor.opacity(0.56) : Color.white.opacity(0.06), lineWidth: 1))
-        .animation(transition, value: active)
+        .buttonStyle(.plain)
     }
 
-    private var ctaReveal: some View {
-        VStack(spacing: 0) {
-            Text("taikAAA")
-                .font(.custom("Onmark Trial", size: 24))
-                .foregroundStyle(theme.currentAccentFill.opacity(0.72))
-            Spacer(minLength: 32)
-            Text("ТЕПЕРЬ ПОПРОБУЕМ ВМЕСТЕ")
+    private var painReveal: some View {
+        VStack(spacing: 24) {
+            Text("ЧТО БОЛЬШЕ ВСЕГО МЕШАЕТ?")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
-                .tracking(1.2)
+                .tracking(1.1)
                 .foregroundStyle(theme.currentAccentFill)
-            Spacer(minLength: 14)
-            Text("Скажи одну фразу —\nTaika услышит слова и тоны.")
-                .font(.system(size: 31, weight: .bold, design: .rounded))
+            Text("Выбери свой главный стопер.")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-                .lineSpacing(-1)
-            Spacer(minLength: 30)
-            VoiceOrb(isActive: true, tint: theme.currentAccentTintColor, fill: theme.currentAccentFill)
-                .matchedGeometryEffect(id: "core-hero", in: heroNamespace)
-                .frame(height: 245)
-            Spacer(minLength: 28)
-            hintRail
+            VStack(spacing: 10) {
+                ForEach(Array(painPoints.enumerated()), id: \.offset) { index, pain in
+                    painRow(pain, active: selectedPain == index) {
+                        withAnimation(transition) { selectedPain = index }
+                    }
+                }
+            }
+            Text("Taika превратит его в первый понятный шаг.")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.white.opacity(0.62))
+                .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var hintRail: some View {
-        InfiniteHintMarquee(chips: hintChips, tint: theme.currentAccentTintColor, reduceMotion: reduceMotion)
-            .frame(height: 42)
-            .padding(.horizontal, -24)
+    private func painRow(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(active ? theme.currentAccentFill : Color.white.opacity(0.22))
+                    .frame(width: 7, height: 7)
+                Text(title)
+                    .font(.system(size: 16, weight: active ? .semibold : .medium, design: .rounded))
+                    .foregroundStyle(active ? .white : .white.opacity(0.72))
+                Spacer(minLength: 0)
+                if active {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(theme.currentAccentFill)
+                }
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 50)
+            .background(Capsule().fill(active ? theme.currentAccentTintColor.opacity(0.18) : Color.white.opacity(0.045)))
+        }
+        .buttonStyle(.plain)
+        .animation(transition, value: active)
     }
 
     private var phraseHero: some View {
@@ -271,12 +283,8 @@ struct TaikaCoreLoopOnboardingView: View {
 
     private var phraseCard: some View {
         VStack(spacing: 14) {
-            Text("ОДНА ФРАЗА")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .tracking(1.2)
-                .foregroundStyle(theme.currentAccentFill)
             Text(phraseThai)
-                .font(.system(size: 34, weight: .regular))
+                .font(.system(size: 28, weight: .regular))
                 .foregroundStyle(.white)
                 .minimumScaleFactor(0.7)
             Text(phrasePhonetic)
@@ -303,10 +311,10 @@ struct TaikaCoreLoopOnboardingView: View {
         .matchedGeometryEffect(id: "core-hero", in: heroNamespace)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.black.opacity(0.68))
                 .overlay(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(Color.white.opacity(0.035))
+                        .fill(Color.white.opacity(0.028))
                 )
         )
         .shadow(color: theme.currentAccentTintColor.opacity(0.20), radius: 34, y: 16)
@@ -424,14 +432,31 @@ struct TaikaCoreLoopOnboardingView: View {
         VStack(spacing: 12) {
             switch phase {
             case .hook:
-                if introFrame == .cta {
-                    primaryCTA("Попробовать фразу") { advance(.phrase) }
+                switch introFrame {
+                case .brand:
+                    primaryCTA("Дальше") { introFrame = .positioning }
+                case .positioning:
+                    primaryCTA("Выбрать уровень") { introFrame = .level }
+                case .level:
+                    primaryCTA("Продолжить") {
+                        guard selectedLevel != nil else { return }
+                        selectedPain = nil
+                        introFrame = .pain
+                    }
+                case .pain:
+                    primaryCTA("Попробовать фразу") {
+                        guard selectedPain != nil else { return }
+                        advance(.phrase)
+                    }
                 }
             case .phrase:
-                primaryCTA("Послушать") { advance(.listen) }
-            case .listen:
-                primaryCTA("Теперь сам") {
+                primaryCTA("Послушать") {
                     playReference()
+                    advance(.listen)
+                }
+            case .listen:
+                primaryCTA(hasPlayedPhrase ? "Теперь сам" : "Слушаю…") {
+                    guard hasPlayedPhrase else { return }
                     withAnimation(transition) { phase = .speak }
                 }
             case .speak:
@@ -474,30 +499,9 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private func startIntroSequence() {
-        introTask?.cancel()
         introFrame = .brand
-        painIndex = 0
-        introTask = Task { @MainActor in
-            if reduceMotion {
-                try? await Task.sleep(nanoseconds: 250_000_000)
-                guard !Task.isCancelled else { return }
-                introFrame = .cta
-                return
-            }
-            try? await Task.sleep(nanoseconds: 900_000_000)
-            guard !Task.isCancelled else { return }
-            withAnimation(transition) { introFrame = .positioning }
-            try? await Task.sleep(nanoseconds: 2_100_000_000)
-            guard !Task.isCancelled else { return }
-            withAnimation(transition) { introFrame = .pain }
-            for index in 0..<painPoints.count {
-                guard !Task.isCancelled else { return }
-                withAnimation(transition) { painIndex = index }
-                try? await Task.sleep(nanoseconds: 850_000_000)
-            }
-            guard !Task.isCancelled else { return }
-            withAnimation(transition) { introFrame = .cta }
-        }
+        selectedLevel = nil
+        selectedPain = nil
     }
 
     private func advance(_ next: Phase) {
@@ -536,52 +540,6 @@ struct TaikaCoreLoopOnboardingView: View {
     private func repeatWithHint() {
         speaker.startConversationRecording()
         withAnimation(transition) { phase = .speak }
-    }
-}
-
-private struct InfiniteHintMarquee: View {
-    let chips: [String]
-    let tint: Color
-    let reduceMotion: Bool
-    @State private var offset: CGFloat = 0
-
-    var body: some View {
-        GeometryReader { proxy in
-            let repeated = chips + chips + chips
-            HStack(spacing: 10) {
-                ForEach(Array(repeated.enumerated()), id: \.offset) { _, chip in
-                    HStack(spacing: 7) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 10, weight: .bold))
-                        Text(chip)
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .lineLimit(1)
-                    }
-                    .foregroundStyle(.white.opacity(0.88))
-                    .padding(.horizontal, 15)
-                    .frame(width: 144, height: 38)
-                    .background(Capsule().fill(tint.opacity(0.12)))
-                    .overlay(Capsule().stroke(tint.opacity(0.42), lineWidth: 1))
-                }
-            }
-            .fixedSize()
-            .offset(x: offset)
-            .onAppear {
-                guard !reduceMotion else { return }
-                let cycleWidth = CGFloat(chips.count) * 154
-                withAnimation(.linear(duration: 24).repeatForever(autoreverses: false)) {
-                    offset = -cycleWidth
-                }
-            }
-        }
-        .clipped()
-        .mask(
-            LinearGradient(
-                colors: [.clear, .black, .black, .clear],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        )
     }
 }
 
