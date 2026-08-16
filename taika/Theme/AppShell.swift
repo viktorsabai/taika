@@ -74,15 +74,14 @@ struct AppShell: View {
             // • returning → короткий Splash → Main
             if !onboardingDone {
                 TaikaCoreLoopOnboardingView(
+                    onFinished: { courseId in
+                        finishFirstEntry(with: .baseCourse, landingCourseId: courseId)
+                    },
                     onRequestPro: {
-                        // Открываем paywall поверх offer. Закрытие должно вернуть пользователя сюда,
-                        // поэтому first-entry завершаем только через явный first lesson handoff.
+                        // Paywall поверх offer; first-entry закрываем только через «Открыть первый урок».
                         DispatchQueue.main.async {
                             overlay.presentProDirect(reason: .general)
                         }
-                    },
-                    onFinished: { courseId in
-                        finishFirstEntry(with: .baseCourse, landingCourseId: courseId)
                     }
                 )
                 .transition(.opacity)

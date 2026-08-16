@@ -1852,15 +1852,45 @@ public final class SpeakerManager: ObservableObject {
         return out
     }
 
-    /// Conversation mode: start recording Thai for "Повторить и проверить". Saves current translation as expected.
-    func startConversationPronunciationCheck() {
+    /// Offline seed for first-entry / demo practice (no network translate).
+    func seedConversationPracticePhrase(thai: String, phonetic: String, ru: String) {
         guard speakerUIMode == .conversation else { return }
-        let thai = heardThai?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let translit = heardTranslit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !thai.isEmpty else { return }
+        let t = thai.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        if phase == .recording { return }
 
-        if phase == .recording || phase == .analyzing || phase == .analyzingTranslation { return }
+        heardRU = ru.trimmingCharacters(in: .whitespacesAndNewlines)
+        heardThai = t
+        let ph = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+        heardTranslit = ph.isEmpty ? nil : ph
+        conversationExpectedThai = t
+        conversationExpectedTranslitForFeedback = ph.isEmpty ? nil : ph
+        conversationHeardThaiASR = nil
+        conversationHeardPhoneticFromASR = nil
+        taikaHints = []
 
+        if phase == .analyzing || phase == .analyzingTranslation || phase == .hint {
+            setPhase(.idle)
+        }
+    }
+
+    /// Conversation mode: start recording Thai for "Повторить и проверить". Saves current translation as expected.
+    @discardableResult
+    func startConversationPronunciationCheck() -> Bool {
+        guard speakerUIMode == .conversation else { return false }
+        let fromHeard = heardThai?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let fromExpected = conversationExpectedThai?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let thai = !fromHeard.isEmpty ? fromHeard : fromExpected
+        let translitFromHeard = heardTranslit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let translitFromExpected = conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let translit = !translitFromHeard.isEmpty ? translitFromHeard : translitFromExpected
+        guard !thai.isEmpty else { return false }
+
+        if phase == .recording { return true }
+        if phase == .analyzing || phase == .analyzingTranslation { return false }
+
+        heardThai = thai
+        if !translit.isEmpty { heardTranslit = translit }
         conversationExpectedThai = thai
         conversationExpectedTranslitForFeedback = translit.isEmpty ? nil : translit
         conversationHeardThaiASR = nil
@@ -1890,6 +1920,7 @@ public final class SpeakerManager: ObservableObject {
                 self.lastAttempt = url
             }
         }
+        return true
     }
 
     /// Conversation mode: stop recording and run Thai ASR → compare with conversationExpectedThai → feedback.
