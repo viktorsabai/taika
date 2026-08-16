@@ -13,7 +13,8 @@ struct CourseHubWelcomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var activeIndex = 0
-    @State private var appeared = false
+    /// Start visible — never leave a solid black frame waiting for onAppear (debugger attach races).
+    @State private var appeared = true
     @State private var isFavorite = false
     @State private var beat: CourseHubDemoBeat = .idle
     @State private var demoTask: Task<Void, Never>?
@@ -142,12 +143,10 @@ struct CourseHubWelcomeView: View {
             .padding(.bottom, 10)
             .frame(maxWidth: 520)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 12)
         }
         .onAppear {
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.88)) { appeared = true }
-            restartDemoLoop()
+            // Defer choreography so first paint is never blocked by the demo loop.
+            restartDemoLoop(delay: 0.6)
         }
         .onDisappear { demoTask?.cancel() }
         .gesture(
@@ -209,15 +208,14 @@ struct CourseHubWelcomeView: View {
         let cardH = CardDS.Metrics.courseHeight * 0.78
 
         return ZStack {
-            // Side peeks — proof of many scenarios.
+            // Light side peeks (not full CourseLessonCard — avoid 3× heavy layout on device).
             ForEach([-1, 1], id: \.self) { side in
                 let idx = (activeIndex + side + scenarios.count) % scenarios.count
-                courseCard(for: scenarios[idx], interactive: false)
-                    .frame(width: cardW * 0.86, height: cardH * 0.86)
+                sidePeekCard(scenarios[idx])
+                    .frame(width: cardW * 0.82, height: cardH * 0.82)
                     .scaleEffect(0.9)
-                    .opacity(0.38)
-                    .offset(x: CGFloat(side) * (cardW * 0.58))
-                    .blur(radius: reduceMotion ? 0 : 0.6)
+                    .opacity(0.4)
+                    .offset(x: CGFloat(side) * (cardW * 0.56))
                     .allowsHitTesting(false)
             }
 
@@ -239,13 +237,32 @@ struct CourseHubWelcomeView: View {
                 .animation(.spring(response: 0.48, dampingFraction: 0.86), value: activeIndex)
                 .zIndex(2)
                 .id(activeScenario.id)
-                .transition(.asymmetric(
-                    insertion: .opacity.combined(with: .scale(scale: 0.96)),
-                    removal: .opacity
-                ))
         }
         .frame(height: cardH + 8)
         .frame(maxWidth: .infinity)
+    }
+
+    private func sidePeekCard(_ scenario: CourseHubScenario) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(scenario.category.uppercased())
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(theme.currentAccentFill)
+            Text(scenario.title)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(PD.ColorToken.text)
+                .lineLimit(2)
+            Spacer(minLength: 0)
+            Text("≈ \(scenario.minutes) мин")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Theme.Surfaces.card(RoundedRectangle(cornerRadius: 20, style: .continuous)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+        )
     }
 
     private var beatGlow: some View {
