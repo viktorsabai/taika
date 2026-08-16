@@ -17,6 +17,7 @@ struct TaikaCoreLoopOnboardingView: View {
     @State private var selectedLevel: Int?
     @State private var selectedPains = Set<Int>()
     @State private var recordingTask: Task<Void, Never>?
+    @State private var listenTask: Task<Void, Never>?
     @State private var isPreparingRecording = false
     @Namespace private var heroNamespace
 
@@ -69,6 +70,7 @@ struct TaikaCoreLoopOnboardingView: View {
         }
         .onDisappear {
             recordingTask?.cancel()
+            listenTask?.cancel()
         }
         .onChange(of: speaker.phase) { _, newPhase in
             if phase == .speak, newPhase == .recording {
@@ -258,45 +260,46 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var phraseHero: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 18) {
             Text("ОДНА ФРАЗА ДЛЯ ПРАКТИКИ")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .tracking(1.2)
                 .foregroundStyle(theme.currentAccentFill)
             phraseCard
-            Text(phase == .listen && hasPlayedPhrase ? "Слушаем" : "Нажми, чтобы услышать")
+            Text(phase == .listen ? "Слушаем фразу…" : "Одна фраза — один живой пример")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(.white.opacity(0.62))
         }
     }
 
     private var phraseCard: some View {
-        VStack(spacing: 14) {
-            Text(phraseThai)
-                .font(.system(size: 28, weight: .regular))
-                .foregroundStyle(.white)
-                .minimumScaleFactor(0.7)
-            Text(phrasePhonetic)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(theme.currentAccentFill)
+        VStack(spacing: 11) {
             Text(phraseRU)
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(.white.opacity(0.78))
-            Button {
-                playReference()
-            } label: {
-                Image(systemName: hasPlayedPhrase ? "waveform" : "speaker.wave.2.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.black)
-                    .frame(width: 54, height: 54)
-                    .background(Circle().fill(theme.currentAccentFill))
+                .font(.system(size: 26, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.82)
+            Text(phrasePhonetic)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundStyle(theme.currentAccentFill)
+                .lineLimit(1)
+            Text(phraseThai)
+                .font(.system(size: 23, weight: .regular))
+                .foregroundStyle(.white.opacity(0.72))
+                .lineLimit(1)
+            TimelineView(.animation) { timeline in
+                Capsule()
+                    .fill(theme.currentAccentFill)
+                    .frame(width: 42 + CGFloat(sin(timeline.date.timeIntervalSinceReferenceDate * 4) * 8), height: 3)
+                    .opacity(phase == .listen ? 1 : 0.46)
             }
-            .buttonStyle(.plain)
-            .sensoryFeedback(.impact(weight: .light), trigger: hasPlayedPhrase)
+            .frame(height: 10)
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 24)
+        .padding(.vertical, 22)
         .frame(maxWidth: 342)
+        .frame(height: 220)
         .matchedGeometryEffect(id: "core-hero", in: heroNamespace)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -434,12 +437,10 @@ struct TaikaCoreLoopOnboardingView: View {
                 primaryCTA("Послушать") {
                     playReference()
                     advance(.listen)
+                    scheduleListenHandoff()
                 }
             case .listen:
-                primaryCTA(hasPlayedPhrase ? "Теперь сам" : "Слушаю…") {
-                    guard hasPlayedPhrase else { return }
-                    withAnimation(transition) { phase = .speak }
-                }
+                primaryCTA("Слушаем…") { }
             case .speak:
                 primaryCTA(isPreparingRecording ? "Подготовка…" : (speaker.phase == .recording ? "Остановить" : "Говорить")) {
                     guard !isPreparingRecording else { return }
@@ -502,9 +503,18 @@ struct TaikaCoreLoopOnboardingView: View {
         if speaker.conversationExpectedThai == nil {
             speaker.startConversationDemoPhrase("Спасибо")
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+        hasPlayedPhrase = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
             speaker.playReferenceConversationExpectedIfNeeded()
             hasPlayedPhrase = true
+        }
+    }
+    private func scheduleListenHandoff() {
+        listenTask?.cancel()
+        listenTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_450_000_000)
+            guard !Task.isCancelled, phase == .listen else { return }
+            withAnimation(transition) { phase = .speak }
         }
     }
 
