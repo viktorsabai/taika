@@ -1236,6 +1236,22 @@ public final class SpeakerManager: ObservableObject {
         persistConversationHistory()
     }
 
+    /// End first-entry / demo pronunciation so main Speaker opens on a clean start — not the leftover onboarding phrase.
+    func endEphemeralPracticeSession() {
+        pendingConversationAutoRecord = false
+        activeAttemptToken = nil
+        if phase == .recording {
+            _ = recorder.stop()
+            stopMeter()
+        }
+        attemptPlayer?.stop()
+        attemptPlayer = nil
+        lastPlayed = .none
+        lastAttemptURL = nil
+        lastAttempt = nil
+        finishConversationPractice(saveScore: false)
+    }
+
     /// Закрыть тренировку/фокус: записать балл на карточку, без дубля и без залипшего скора.
     func finishConversationPractice(saveScore: Bool = true) {
         if saveScore, let id = activePracticeHistoryId {
