@@ -22,7 +22,6 @@ struct TaikaCoreLoopOnboardingView: View {
     private let levelOptions = ["Никогда не учил", "Знаю основы", "Уже говорю"]
     private enum IntroFrame: Int, Equatable {
         case brand
-        case positioning
         case level
         case pain
     }
@@ -128,8 +127,6 @@ struct TaikaCoreLoopOnboardingView: View {
             switch introFrame {
             case .brand:
                 brandReveal
-            case .positioning:
-                positioningReveal
             case .level:
                 levelReveal
             case .pain:
@@ -155,28 +152,6 @@ struct TaikaCoreLoopOnboardingView: View {
                 .shadow(color: theme.currentAccentTintColor.opacity(0.8), radius: 12)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private var positioningReveal: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("НЕ ПРОСТО ПЕРЕВОДЧИК")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .tracking(1.25)
-                .foregroundStyle(theme.currentAccentFill)
-            Text("Твоя персональная кун кру\nдля тайского.")
-                .font(.system(size: 31, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .lineSpacing(-1.5)
-                .fixedSize(horizontal: false, vertical: true)
-            Text("Taika слышит фразу, разбирает её\nи помогает сказать по-настоящему.")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(.white.opacity(0.68))
-                .fixedSize(horizontal: false, vertical: true)
-            ThaiTransformOrb(tint: theme.currentAccentTintColor, fill: theme.currentAccentFill)
-                .matchedGeometryEffect(id: "core-hero", in: heroNamespace)
-                .frame(maxWidth: .infinity)
-                .frame(height: 250)
-        }
     }
 
     private var levelReveal: some View {
@@ -442,9 +417,7 @@ struct TaikaCoreLoopOnboardingView: View {
             case .hook:
                 switch introFrame {
                 case .brand:
-                    primaryCTA("Дальше") { introFrame = .positioning }
-                case .positioning:
-                    primaryCTA("Выбрать уровень") { introFrame = .level }
+                    primaryCTA("Дальше") { introFrame = .level }
                 case .level:
                     primaryCTA("Продолжить") {
                         guard selectedLevel != nil else { return }
@@ -548,52 +521,6 @@ struct TaikaCoreLoopOnboardingView: View {
     private func repeatWithHint() {
         speaker.startConversationPronunciationCheck()
         withAnimation(transition) { phase = .speak }
-    }
-}
-
-private struct ThaiTransformOrb: View {
-    let tint: Color
-    let fill: LinearGradient
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var travel = false
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(fill.opacity(0.16))
-                .frame(width: 162, height: 162)
-                .blur(radius: 22)
-            Circle()
-                .fill(Color.black.opacity(0.58))
-                .frame(width: 146, height: 146)
-                .overlay(Circle().stroke(tint.opacity(0.55), lineWidth: 1))
-                .shadow(color: tint.opacity(0.28), radius: 28)
-            ForEach(0..<3, id: \.self) { index in
-                Circle()
-                    .trim(from: 0.08 + CGFloat(index) * 0.18, to: 0.34 + CGFloat(index) * 0.18)
-                    .stroke(tint.opacity(0.42 - Double(index) * 0.08), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
-                    .frame(width: 170 + CGFloat(index) * 20, height: 170 + CGFloat(index) * 20)
-                    .rotationEffect(.degrees(travel ? 360 : 0))
-            }
-            WaveformLine(tint: tint, active: true)
-                .frame(width: 126, height: 92)
-            Text("не остро")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.78))
-                .offset(x: travel ? -142 : -76, y: -3)
-            Text("май → пхет ↘")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(tint.opacity(0.98))
-                .offset(x: travel ? 142 : 76, y: 4)
-        }
-        .frame(width: 340, height: 238)
-        .clipped()
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 2.8).repeatForever(autoreverses: true)) {
-                travel = true
-            }
-        }
     }
 }
 
