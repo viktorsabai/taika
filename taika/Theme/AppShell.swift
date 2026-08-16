@@ -131,11 +131,30 @@ struct AppShell: View {
                         }
                     }
                 case .courseFirstTip:
-                    TaikaTabTipOverlayView(kind: .course) {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                            overlay.dismiss()
+                    CourseHubWelcomeView(
+                        onStart: {
+                            TaikaProductDemoFlags.markCourseSeen()
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                                overlay.dismiss()
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                                nav.go(.lessons(courseId: "course_b_0"))
+                            }
+                        },
+                        onBrowse: {
+                            TaikaProductDemoFlags.markCourseSeen()
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                                overlay.dismiss()
+                            }
+                        },
+                        onDismiss: {
+                            TaikaProductDemoFlags.markCourseSeen()
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                                overlay.dismiss()
+                            }
                         }
-                    }
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 case .courseFilters:
                     CourseFiltersOverlayView(onDismiss: { overlay.dismiss() })
                 case .personalCourseCreate:
