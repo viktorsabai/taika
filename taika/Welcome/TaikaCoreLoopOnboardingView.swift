@@ -158,22 +158,24 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var positioningReveal: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 18) {
             Text("НЕ ПРОСТО ПЕРЕВОДЧИК")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .tracking(1.25)
                 .foregroundStyle(theme.currentAccentFill)
-            Text("Твоя персональная\nкун кру для тайского.")
-                .font(.system(size: 35, weight: .bold, design: .rounded))
+            Text("Твоя персональная кун кру\nдля тайского.")
+                .font(.system(size: 31, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
-                .lineSpacing(-2)
-            Text("Она помогает услышать, сказать\nи запомнить живую речь.")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(.white.opacity(0.66))
-            VoiceOrb(isActive: true, tint: theme.currentAccentTintColor, fill: theme.currentAccentFill)
+                .lineSpacing(-1.5)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Taika слышит фразу, разбирает её\nи помогает сказать по-настоящему.")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(.white.opacity(0.68))
+                .fixedSize(horizontal: false, vertical: true)
+            ThaiTransformOrb(tint: theme.currentAccentTintColor, fill: theme.currentAccentFill)
                 .matchedGeometryEffect(id: "core-hero", in: heroNamespace)
                 .frame(maxWidth: .infinity)
-                .frame(height: 220)
+                .frame(height: 250)
         }
     }
 
@@ -540,6 +542,62 @@ struct TaikaCoreLoopOnboardingView: View {
     private func repeatWithHint() {
         speaker.startConversationPronunciationCheck()
         withAnimation(transition) { phase = .speak }
+    }
+}
+
+private struct ThaiTransformOrb: View {
+    let tint: Color
+    let fill: LinearGradient
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var travel = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(fill.opacity(0.16))
+                .frame(width: 162, height: 162)
+                .blur(radius: 22)
+            Circle()
+                .fill(Color.black.opacity(0.58))
+                .frame(width: 146, height: 146)
+                .overlay(Circle().stroke(tint.opacity(0.55), lineWidth: 1))
+                .shadow(color: tint.opacity(0.28), radius: 28)
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .trim(from: 0.08 + CGFloat(index) * 0.18, to: 0.34 + CGFloat(index) * 0.18)
+                    .stroke(tint.opacity(0.42 - Double(index) * 0.08), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
+                    .frame(width: 170 + CGFloat(index) * 20, height: 170 + CGFloat(index) * 20)
+                    .rotationEffect(.degrees(travel ? 360 : 0))
+            }
+            WaveformLine(tint: tint, active: true)
+                .frame(width: 126, height: 92)
+            Text("THAI")
+                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .tracking(1.4)
+                .foregroundStyle(.white.opacity(0.48))
+                .offset(y: -56)
+            Text("MEANING")
+                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .tracking(1.2)
+                .foregroundStyle(.white.opacity(0.48))
+                .offset(y: 56)
+            Text("ไม่เผ็ด")
+                .font(.system(size: 17, weight: .regular))
+                .foregroundStyle(.white.opacity(0.9))
+                .offset(x: travel ? -142 : -76, y: -3)
+            Text("mai phet")
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundStyle(tint.opacity(0.98))
+                .offset(x: travel ? 142 : 76, y: 4)
+        }
+        .frame(width: 340, height: 238)
+        .clipped()
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 2.8).repeatForever(autoreverses: true)) {
+                travel = true
+            }
+        }
     }
 }
 
