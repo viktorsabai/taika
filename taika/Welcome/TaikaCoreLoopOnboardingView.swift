@@ -333,87 +333,71 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var feedbackHero: some View {
-        VStack(spacing: 18) {
-            Text("Вот следующий шаг")
+        VStack(spacing: 22) {
+            Text("Taika услышала тебя")
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-            VStack(spacing: 15) {
-                Text(phraseThai)
-                    .font(.system(size: 26, weight: .regular))
+            VoiceOrb(isActive: false, tint: theme.currentAccentTintColor, fill: theme.currentAccentFill)
+                .frame(width: 210, height: 210)
+                .scaleEffect(0.78)
+            VStack(spacing: 10) {
+                Text("Слова \(speaker.heardConfidence)%  ·  тон \(speaker.toneAverageScore ?? speaker.displayScore)%")
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundStyle(theme.currentAccentFill)
-                Text(phrasePhonetic)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.7))
-                feedbackRow(title: "Слова", value: speaker.heardConfidence)
-                feedbackRow(title: "Тон", value: speaker.toneAverageScore ?? speaker.displayScore)
                 if let hint = speaker.taikaHints.first, !hint.isEmpty {
-                    Label(hint, systemImage: "lightbulb.fill")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.82))
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(hint)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.78))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                } else {
+                    Text("Первый раз — уже слышно, что улучшать.")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.68))
+                        .multilineTextAlignment(.center)
                 }
             }
-            .padding(22)
-            .frame(maxWidth: 342)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.white.opacity(0.025)))
-            )
-            .shadow(color: theme.currentAccentTintColor.opacity(0.16), radius: 28, y: 12)
-        }
-    }
-
-    private func feedbackRow(title: String, value: Int) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(title)
-                Spacer()
-                Text("\(max(0, value))%")
-            }
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(.white.opacity(0.82))
-            ProgressView(value: Double(max(0, min(100, value))), total: 100)
-                .tint(theme.currentAccentFill)
+            .frame(maxWidth: 320)
         }
     }
 
     private var reinforceHero: some View {
-        VStack(spacing: 22) {
-            Text("Закрепим одним жестом")
+        VStack(spacing: 24) {
+            Text("Закрепим фразу")
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-            HStack(spacing: -18) {
-                reinforcementCard(title: "Match", icon: "puzzlepiece.fill", opacity: 0.48, scale: 0.82, offset: 16)
-                reinforcementCard(title: "Разминка", icon: "flame.fill", opacity: 1, scale: 1, offset: 0)
-                reinforcementCard(title: "Audio Recall", icon: "waveform", opacity: 0.48, scale: 0.82, offset: 16)
-            }
-            .frame(height: 220)
-            Text("Одна фраза — несколько способов остаться в памяти")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white.opacity(0.62))
+            Text("Один короткий шаг — и она останется в памяти.")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(.white.opacity(0.70))
                 .multilineTextAlignment(.center)
+                .frame(maxWidth: 300)
+            VStack(spacing: 10) {
+                reinforcementStep(number: "01", title: "Услышь фразу ещё раз")
+                reinforcementStep(number: "02", title: "Повтори её вслух")
+                reinforcementStep(number: "03", title: "Узнай тон и закрепи")
+            }
+            .padding(18)
+            .frame(maxWidth: 336)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(theme.currentAccentTintColor.opacity(0.18), lineWidth: 1))
+        }
+    }
+    private func reinforcementStep(number: String, title: String) -> some View {
+        HStack(spacing: 14) {
+            Text(number)
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundStyle(theme.currentAccentFill)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(theme.currentAccentTintColor.opacity(0.18)))
+            Text(title)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.88))
+            Spacer(minLength: 0)
         }
     }
 
-    private func reinforcementCard(title: String, icon: String, opacity: Double, scale: CGFloat, offset: CGFloat) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 25, weight: .semibold))
-                .foregroundStyle(theme.currentAccentFill)
-            Text(title)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-        }
-        .frame(width: 132, height: 168)
-        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.black.opacity(0.3)).overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(theme.currentAccentTintColor.opacity(opacity), lineWidth: 1)))
-        .opacity(opacity)
-        .scaleEffect(scale)
-        .offset(y: offset)
-    }
 
     @ViewBuilder
     private var footerSlot: some View {
@@ -451,14 +435,14 @@ struct TaikaCoreLoopOnboardingView: View {
                     toggleRecording()
                 }
             case .feedback:
-                primaryCTA("Повторить с подсказкой") { repeatWithHint() }
-                Button("Дальше") { advance(.reinforce) }
+                primaryCTA("Попробовать ещё раз") { repeatWithHint() }
+                Button("Закрепить фразу") { advance(.reinforce) }
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(.white.opacity(0.68))
                     .buttonStyle(.plain)
             case .reinforce:
-                primaryCTA("Закрепить") { onFinished("course_b_1") }
-                Button("Пропустить") { onFinished("course_b_1") }
+                primaryCTA("Начать первый урок") { onFinished("course_b_1") }
+                Button("Позже") { onFinished("course_b_1") }
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.62))
                     .buttonStyle(.plain)
