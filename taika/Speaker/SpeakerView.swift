@@ -71,14 +71,31 @@ struct SpeakerView: View {
         guard force || !showSpeakerBreakdown else { return }
         showSpeakerBreakdown = true
         speaker.refreshConversationUserPhoneticFromASRIfNeeded()
-        guard pro.can(.speakerAdvanced) else { return }
+        guard hasFullToneBreakdownAccess else { return }
         let thaiSnap = speaker.conversationExpectedThai?.trimmingCharacters(in: .whitespacesAndNewlines)
         let phSnap = speaker.conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines)
+            ?? speaker.current.map { $0.face.phonetic }?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let thaiForAssess: String? = {
+            if let thaiSnap, !thaiSnap.isEmpty { return thaiSnap }
+            let thai = speaker.current?.face.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return thai.isEmpty ? nil : thai
+        }()
         speaker.requestToneBreakdownFromAPI(
-            expectedThaiForAssess: (thaiSnap?.isEmpty == false) ? thaiSnap : nil,
+            expectedThaiForAssess: thaiForAssess,
             expectedPhoneticForTones: (phSnap?.isEmpty == false) ? phSnap : nil,
             completion: {}
         )
+    }
+
+    /// Full tone breakdown: Pro, or still inside today's free attempts (incl. the last used one).
+    private var hasFullToneBreakdownAccess: Bool {
+        if pro.isPro { return true }
+        if speaker.speakerUIMode == .conversation {
+            let used = conversationAttempts.usedToday
+            return used > 0 && used <= 3
+        }
+        let used = SpeakerDailyAttemptsStore.shared.usedToday
+        return used > 0 && used <= 10
     }
 
     private func onPlayReference() {
@@ -288,6 +305,7 @@ struct SpeakerView: View {
             onRetranslateConversationDraft: { speaker.retranslateConversationDraft($0) },
             onDiscardConversationDraft: { speaker.discardConversationDraft() },
             isProUser: pro.isPro,
+            hasFullToneBreakdownAccess: hasFullToneBreakdownAccess,
             conversationRemainingToday: conversationAttempts.remainingToday,
             conversationRecordingElapsed: speaker.conversationRecordingElapsed,
             conversationRecordingMaxDuration: speaker.conversationRecordingMaxDuration,

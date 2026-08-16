@@ -198,11 +198,15 @@ public final class SpeakerConversationAttemptsStore: ObservableObject {
     public static let shared = SpeakerConversationAttemptsStore()
 
     @Published public private(set) var remainingToday: Int
+    @Published public private(set) var usedToday: Int
 
     public init() {
         self.remainingToday = conversationAttemptsLimit
+        self.usedToday = 0
         ensureDayReset()
-        remainingToday = max(0, conversationAttemptsLimit - Self.loadUsedToday())
+        let used = Self.loadUsedToday()
+        usedToday = used
+        remainingToday = max(0, conversationAttemptsLimit - used)
     }
 
     public func consume() {
@@ -212,6 +216,7 @@ public final class SpeakerConversationAttemptsStore: ObservableObject {
         guard used < conversationAttemptsLimit else { return }
         used += 1
         Self.saveUsedToday(used)
+        usedToday = used
         remainingToday = max(0, conversationAttemptsLimit - used)
     }
 
@@ -220,7 +225,9 @@ public final class SpeakerConversationAttemptsStore: ObservableObject {
     /// Call when entering conversation mode or before starting record so remainingToday is correct after day change.
     public func refreshDayIfNeeded() {
         ensureDayReset()
-        remainingToday = max(0, conversationAttemptsLimit - Self.loadUsedToday())
+        let used = Self.loadUsedToday()
+        usedToday = used
+        remainingToday = max(0, conversationAttemptsLimit - used)
     }
 
     private func ensureDayReset() {

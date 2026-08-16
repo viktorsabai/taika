@@ -119,6 +119,8 @@ public struct SpeakerDSRoot: View {
         let onDiscardConversationDraft: (() -> Void)?
         /// Is current user PRO (for demo/onboarding branching in UI).
         let isProUser: Bool
+        /// Full tone graph + syllables: Pro or still within today's free attempts.
+        let hasFullToneBreakdownAccess: Bool
         /// Conversation mode: remaining demo attempts today (free); Pro ignores.
         let conversationRemainingToday: Int
         /// Conversation mode: elapsed recording seconds for timer ring; 0 when idle.
@@ -407,6 +409,7 @@ public struct SpeakerDSRoot: View {
         onRetranslateConversationDraft: ((String) -> Void)? = nil,
         onDiscardConversationDraft: (() -> Void)? = nil,
         isProUser: Bool = false,
+        hasFullToneBreakdownAccess: Bool = false,
         conversationRemainingToday: Int = 3,
         conversationRecordingElapsed: TimeInterval = 0,
         conversationRecordingMaxDuration: TimeInterval = 45,
@@ -494,6 +497,7 @@ public struct SpeakerDSRoot: View {
             onRetranslateConversationDraft: onRetranslateConversationDraft,
             onDiscardConversationDraft: onDiscardConversationDraft,
             isProUser: isProUser,
+            hasFullToneBreakdownAccess: hasFullToneBreakdownAccess,
             conversationRemainingToday: conversationRemainingToday,
             conversationRecordingElapsed: conversationRecordingElapsed,
             conversationRecordingMaxDuration: conversationRecordingMaxDuration,
@@ -640,6 +644,18 @@ public struct SpeakerDSRoot: View {
         }
     }
 
+    private func dismissBreakdownSheet() {
+        guard effectiveShowBreakdown else { return }
+        breakdownSnapshotExpected = ""
+        breakdownSnapshotPhraseLabel = ""
+        breakdownSnapshotScore = nil
+        setEffectiveShowBreakdown(false)
+        // После тренировки из ленты — сразу к карточкам со скором, без залипшего «80%».
+        if conversationIsPracticeFlow {
+            external?.onConversationRepeat()
+        }
+    }
+
     /// Высота верхнего блока (карусель), чтобы вёрстка не скакала.
     /// Вертикальный квадрат как лайфхак — одна айдентика на оба режима.
     private let speakerTopContentHeight: CGFloat = CardDS.Metrics.stepLifehackHeight
@@ -747,6 +763,7 @@ public struct SpeakerDSRoot: View {
                     idleHelperHint
                 }
             }
+            .animation(.easeInOut(duration: 0.45), value: phase.label)
             .padding(.top, gap)
             .padding(.horizontal, padH)
             .padding(.bottom, onReturn == nil ? ToolBar.recommendedBottomInset + 18 : 10)
@@ -2240,30 +2257,26 @@ public struct SpeakerDSRoot: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
 
-            if effectiveShowBreakdown {
-                speakerBreakdownOverlayZStack(
-                    onDismiss: {
-                        breakdownSnapshotExpected = ""
-                        breakdownSnapshotPhraseLabel = ""
-                        breakdownSnapshotScore = nil
-                        setEffectiveShowBreakdown(false)
-                        // После тренировки из ленты — сразу к карточкам со скором, без залипшего «80%».
-                        if conversationIsPracticeFlow {
-                            external?.onConversationRepeat()
-                        }
-                    },
-                    snapshotExpected: $breakdownSnapshotExpected,
-                    snapshotPhraseLabel: $breakdownSnapshotPhraseLabel,
-                    snapshotScore: $breakdownSnapshotScore
-                )
-                .zIndex(10)
-            }
-
             if showSmartDictionarySheet {
                 smartSpeakerDictionarySheet
                     .zIndex(9)
                     .transition(.opacity)
             }
+        }
+        .sheet(isPresented: Binding(
+            get: { effectiveShowBreakdown },
+            set: { newValue in
+                if newValue {
+                    setEffectiveShowBreakdown(true)
+                } else {
+                    dismissBreakdownSheet()
+                }
+            }
+        )) {
+            speakerBreakdownSheet
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
         }
         .animation(.spring(response: 0.34, dampingFraction: 0.88), value: showSmartDictionarySheet)
         .animation(.easeInOut(duration: 0.18), value: phase.isFeedback)
@@ -3171,7 +3184,7 @@ public struct SpeakerDSRoot: View {
         .accessibilityLabel(count > 0 ? "Словарь, \(count) фраз" : "Словарь")
     }
 
-    /// Единый блок результата: сравнение + крупный скор сверху, CTA прижаты к низу (без дыры).
+    /// Единый блок результата: сравнение + общий скор + короткий вердикт.
     @ViewBuilder private func unifiedFeedbackBlock(
         score: Int,
         expected: String,
@@ -3183,9 +3196,14 @@ public struct SpeakerDSRoot: View {
     ) -> some View {
         let expectedDisplay = expected.isEmpty ? "—" : expected
         let userDisplay = userText.isEmpty ? "—" : userText
+        let verdict: String = {
+            if score >= 80 { return "уже звучит живо" }
+            if score >= 55 { return "хороший старт — есть куда смотреть" }
+            return "нормально — разберём по слогам"
+        }()
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("нужно было")
                             .font(.system(size: 12, weight: .semibold))
@@ -3205,22 +3223,30 @@ public struct SpeakerDSRoot: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Крупный скор по центру правой половины — не «прилипший» к краю.
                 VStack(spacing: 8) {
-                    SpeakerCountingScore(
-                        value: score,
-                        font: .taikaStat(96),
-                        color: AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                    )
-                    Text(score >= 80 ? "почти идеально" : "есть неточности")
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text("\(score)")
+                            .font(.system(size: 40, weight: .bold, design: .rounded))
+                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                            .monospacedDigit()
+                        Text("%")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundStyle(ThemeManager.shared.currentAccentFill.opacity(0.85))
+                    }
+                    .accessibilityLabel("\(score) процентов")
+
+                    TaikaTechWaveform(meter: max(0.28, Double(score) / 100.0), pace: .idle, lineCount: 2)
+                        .frame(width: 96, height: 22)
+                        .opacity(0.9)
+
+                    Text(verdict)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(PD.ColorToken.textSecondary)
                         .multilineTextAlignment(.center)
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .minimumScaleFactor(0.85)
                 }
-                .frame(maxWidth: .infinity)
-                .frame(minWidth: 132)
+                .frame(width: 118)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 4)
@@ -3229,7 +3255,7 @@ public struct SpeakerDSRoot: View {
 
             VStack(alignment: .leading, spacing: 14) {
                 Button(action: onBreakdown) {
-                    Text("получить разбор")
+                    Text("что улучшить")
                         .font(.system(size: 16, weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
@@ -3275,6 +3301,10 @@ public struct SpeakerDSRoot: View {
         }
     }
 
+    private var hasFullToneBreakdownAccess: Bool {
+        external?.hasFullToneBreakdownAccess ?? external?.isProUser ?? false
+    }
+
     /// Training mode: recording UI lives in the bottom section (card stays static).
     @ViewBuilder private var trainingRecordingBlock: some View {
         let accent = ThemeManager.shared.currentAccentFill
@@ -3289,15 +3319,16 @@ public struct SpeakerDSRoot: View {
                     .foregroundStyle(accent)
             }
             .animation(
-                .easeInOut(duration: 0.7).repeatForever(autoreverses: true),
+                .easeInOut(duration: 0.9).repeatForever(autoreverses: true),
                 value: idleMicPulse
             )
             .onAppear { idleMicPulse = true }
 
-            ConversationLiveWaveRibbon(meter: max(0.18, recordingMeter))
+            TaikaTechWaveform(meter: max(0.28, recordingMeter), pace: .recording, lineCount: 3)
                 .frame(maxWidth: .infinity)
-                .frame(height: 40)
-                .padding(.horizontal, 4)
+                .frame(height: 64)
+                .padding(.horizontal, 8)
+                .transition(.opacity)
 
             Text("нажми микрофон, чтобы остановить")
                 .font(.footnote.weight(.semibold))
@@ -3311,13 +3342,19 @@ public struct SpeakerDSRoot: View {
         .padding(.horizontal, 4)
     }
 
-    /// Training mode: analyzing UI lives in the bottom section (card stays static).
+    /// Training mode: analyzing continues the same wave — soft, not a hard cut to a spinner.
     @ViewBuilder private var trainingAnalyzingBlock: some View {
-        VStack(spacing: 10) {
-            TaikaLoadingView(label: "анализирую…", compact: true)
+        VStack(spacing: 12) {
+            Text("собираю разбор…")
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+
+            TaikaTechWaveform(meter: 0.42, pace: .analyzing, lineCount: 3)
                 .frame(maxWidth: .infinity)
-                .padding(.top, 10)
-            Text("секунду, сейчас покажу результат")
+                .frame(height: 56)
+                .padding(.horizontal, 8)
+
+            Text("волна затихает — сейчас покажу, куда смотреть")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(PD.ColorToken.textSecondary)
                 .multilineTextAlignment(.center)
@@ -3682,6 +3719,163 @@ public struct SpeakerDSRoot: View {
         return "Поработай над тоном — смотри оценку по слогам выше."
     }
 
+    /// Онбординг-стиль: без «оценки по слогам» / процентов в тексте.
+    private static func breakdownSummaryNoteHuman(syllableFeedback: [SpeakerManager.SyllableFeedback]) -> String {
+        guard !syllableFeedback.isEmpty else { return "" }
+        let avg = syllableFeedback.map(\.score).reduce(0, +) / syllableFeedback.count
+        if avg >= 90 { return "Тон отличный — так и держи." }
+        if avg >= 75 { return "Тон в целом верный — чуть чётче там, где подсвечено." }
+        if avg >= 50 { return "Есть слоги, где тон «поплыл» — повтори их отдельно." }
+        return "Сейчас главное — тоны. Послушай эталон и пройди по слогам ещё раз."
+    }
+
+    /// Слоговый разбор как в онбординге: статус словами, без % и плотных «нужно/ты» колонок.
+    @ViewBuilder
+    private func breakdownSyllableRowsHumanSection(
+        expected: String,
+        syllableFeedback: [SpeakerManager.SyllableFeedback]
+    ) -> some View {
+        let chunks = Self.translitChunksForSyllables(expected)
+        let accent = ThemeManager.shared.currentAccentTintColor
+        VStack(alignment: .leading, spacing: 10) {
+            Text("По слогам")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+
+            VStack(spacing: 10) {
+                if chunks.isEmpty {
+                    ForEach(Array(syllableFeedback.enumerated()), id: \.offset) { _, item in
+                        breakdownHumanSyllableRow(
+                            label: Self.syllableLabelWithoutArrows(item.syllable),
+                            score: item.score,
+                            toneExpected: item.toneExpected,
+                            toneActual: item.toneActual,
+                            accent: accent
+                        )
+                    }
+                } else {
+                    ForEach(Array(chunks.enumerated()), id: \.offset) { index, rawChunk in
+                        let label = Self.syllableLabelWithoutArrows(rawChunk)
+                        let item = index < syllableFeedback.count ? syllableFeedback[index] : nil
+                        breakdownHumanSyllableRow(
+                            label: label,
+                            score: item?.score,
+                            toneExpected: item?.toneExpected ?? Self.toneNameFromTranslitChunk(rawChunk),
+                            toneActual: item?.toneActual,
+                            accent: accent,
+                            isPlaceholder: item == nil
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func breakdownHumanSyllableRow(
+        label: String,
+        score: Int?,
+        toneExpected: String?,
+        toneActual: String?,
+        accent: Color,
+        isPlaceholder: Bool = false
+    ) -> some View {
+        let status: (label: String, color: Color) = {
+            guard let score, !isPlaceholder else {
+                return ("Жду оценку слога", PD.ColorToken.textSecondary)
+            }
+            if score >= 80 { return ("Держи так", Color.green.opacity(0.85)) }
+            if score >= 55 { return ("Почти — ещё раз", accent) }
+            return ("Вот сюда внимание", Color.orange.opacity(0.9))
+        }()
+        let tip: String? = {
+            guard !isPlaceholder else { return nil }
+            let exp = Self.toneNameRU(toneExpected)
+            let act = Self.toneNameRU(toneActual)
+            guard !exp.isEmpty else { return nil }
+            if act.isEmpty { return "Нужен \(exp)" }
+            if exp == act { return "Тон \(exp) — верно" }
+            return "Нужен \(exp), сейчас \(act)"
+        }()
+        let scoreValue = (!isPlaceholder ? score : nil)
+        let progress = CGFloat(max(0, min(100, scoreValue ?? 0))) / 100.0
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Circle()
+                    .fill(status.color.opacity(0.9))
+                    .frame(width: 10, height: 10)
+                    .padding(.top, 6)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(label.isEmpty ? "слог" : label)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.text)
+                    Text(status.label)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+
+                Spacer(minLength: 8)
+
+                if let scoreValue {
+                    // SF system digits — not Taika display/stat font.
+                    HStack(alignment: .firstTextBaseline, spacing: 1) {
+                        Text("\(scoreValue)")
+                            .font(.system(size: 22, weight: .semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(PD.ColorToken.text)
+                        Text("%")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                    .accessibilityLabel("\(scoreValue) процентов")
+                }
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule(style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                    Capsule(style: .continuous)
+                        .fill(
+                            scoreValue == nil
+                            ? AnyShapeStyle(Color.white.opacity(0.12))
+                            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                        )
+                        .frame(width: max(4, geo.size.width * progress))
+                        .opacity(scoreValue == nil ? 0.35 : 0.95)
+                }
+            }
+            .frame(height: 4)
+            .accessibilityHidden(true)
+
+            if let tip {
+                Text(tip)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(PD.ColorToken.chip)
+        )
+    }
+
+    private static func toneNameRU(_ raw: String?) -> String {
+        switch (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "mid", "middle", "m": return "средний"
+        case "low", "l": return "низкий"
+        case "falling", "fall", "f": return "падающий"
+        case "high", "h": return "высокий"
+        case "rising", "rise", "r": return "восходящий"
+        case "": return ""
+        default: return (raw ?? "").lowercased()
+        }
+    }
+
     private func breakdownItems(userText: String, expected: String) -> [BreakdownRow] {
         // split by '-' because that's our canonical translit format in Taika
         let u = userText.split(separator: "-").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -3718,7 +3912,88 @@ public struct SpeakerDSRoot: View {
         return out
     }
 
-    /// Оверлей «разбор»: затемнение + карточка. Снимок эталона при открытии — слоги не меняются после ответа API.
+    /// Bottom sheet «разбор» — как в онбординге: выезжает снизу, без отдельного полноэкранного окна.
+    @ViewBuilder private var speakerBreakdownSheet: some View {
+        // Умный спикер «повторить и проверить»: не подставляем транслит с карточки тренажёра.
+        let userText: String = {
+            let convPh = external?.conversationHeardPhoneticFromASR?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !convPh.isEmpty { return convPh }
+            let asr = external?.conversationHeardThaiASR?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            // Пока нет кириллицы — показываем тайский ASR сразу (не вечный «Загружаем…»).
+            if !asr.isEmpty { return asr }
+            let t = heardTranslitText.trimmingCharacters(in: .whitespacesAndNewlines)
+            return t.isEmpty ? "—" : t
+        }()
+        let (liveTranslit, livePhrase): (String, String) = {
+            if let convTranslit = external?.conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines), !convTranslit.isEmpty {
+                let convPhrase = (external?.heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                return (convTranslit, convPhrase)
+            }
+            return (
+                (currentItem?.translit ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+                (currentItem?.hint ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        }()
+        let liveScore: Int? = {
+            guard case .feedback(let score, _) = phase else { return nil }
+            return score
+        }()
+        let expected = breakdownSnapshotExpected.isEmpty ? liveTranslit : breakdownSnapshotExpected
+        let expectedDisplay = expected.isEmpty ? "—" : expected
+        let phraseLabel = breakdownSnapshotPhraseLabel.isEmpty ? livePhrase : breakdownSnapshotPhraseLabel
+        let scoreForBreakdown = breakdownSnapshotScore ?? liveScore
+        let showRecordingUnavailable = phase.isFeedback && (external?.lastAttempt == nil) && (external?.attemptCount ?? 0) > 0
+
+        let breakdownPhaseValue = external?.phase ?? .idle
+        let isRecordingFromBreakdownValue = external?.isRecordingFromBreakdown ?? false
+        let recordingMeterValue = external?.recordingMeter ?? 0
+        let referenceRevealValue = external?.referencePlaybackProgress ?? 1.0
+        let onRecordAgainValue: (() -> Void)? = external?.onRecordAgainFromBreakdown ?? (showRecordingUnavailable ? nil : {
+            dismissBreakdownSheet()
+        })
+
+        let displayScoreValue = external?.displayScore ?? scoreForBreakdown ?? 0
+        let textScoreValue = external?.heardConfidence ?? scoreForBreakdown ?? 0
+        let toneScoreValue = external?.toneAverageScore
+
+        speakerBreakdownOverlayCard(
+            userText: userText,
+            expected: expectedDisplay,
+            phraseLabel: phraseLabel,
+            displayScore: displayScoreValue,
+            textScore: textScoreValue,
+            toneScore: toneScoreValue,
+            syllableFeedback: syllableFeedback,
+            breakdownRequestInFlight: external?.breakdownRequestInFlight ?? false,
+            breakdownRequestFailed: external?.breakdownRequestFailed ?? false,
+            breakdownHybridScore: breakdownHybridScore,
+            taikaHints: taikaHints,
+            showRecordingUnavailable: showRecordingUnavailable,
+            breakdownPhase: breakdownPhaseValue,
+            isRecordingFromBreakdown: isRecordingFromBreakdownValue,
+            recordingMeter: recordingMeterValue,
+            referenceRevealProgress: referenceRevealValue,
+            isProUser: external?.isProUser ?? false,
+            hasFullToneAccess: hasFullToneBreakdownAccess,
+            onDismiss: { dismissBreakdownSheet() },
+            onRecordAgain: onRecordAgainValue,
+            onStopRecordingFromBreakdown: external?.onStopRecordingFromBreakdown,
+            onPlayReference: external?.onPlayReference,
+            onPlayAttempt: external?.onPlayAttempt,
+            presentsAsSheet: true
+        )
+        .background(PD.ColorToken.background.ignoresSafeArea())
+        .onAppear {
+            external?.onBreakdownAppear?()
+            if breakdownSnapshotExpected.isEmpty && !liveTranslit.isEmpty {
+                breakdownSnapshotExpected = liveTranslit
+                breakdownSnapshotPhraseLabel = livePhrase
+                breakdownSnapshotScore = liveScore
+            }
+        }
+    }
+
+    /// Оверлей «разбор» (legacy path — kept for previews if needed).
     @ViewBuilder private func speakerBreakdownOverlayZStack(
         onDismiss: @escaping () -> Void,
         snapshotExpected: Binding<String>,
@@ -3730,7 +4005,6 @@ public struct SpeakerDSRoot: View {
             let convPh = external?.conversationHeardPhoneticFromASR?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if !convPh.isEmpty { return convPh }
             let asr = external?.conversationHeardThaiASR?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            // Пока нет кириллицы — показываем тайский ASR сразу (не вечный «Загружаем…»).
             if !asr.isEmpty { return asr }
             let t = heardTranslitText.trimmingCharacters(in: .whitespacesAndNewlines)
             return t.isEmpty ? "—" : t
@@ -3783,11 +4057,13 @@ public struct SpeakerDSRoot: View {
             recordingMeter: recordingMeterValue,
             referenceRevealProgress: referenceRevealValue,
             isProUser: external?.isProUser ?? false,
+            hasFullToneAccess: hasFullToneBreakdownAccess,
             onDismiss: onDismiss,
             onRecordAgain: onRecordAgainValue,
             onStopRecordingFromBreakdown: external?.onStopRecordingFromBreakdown,
             onPlayReference: external?.onPlayReference,
-            onPlayAttempt: external?.onPlayAttempt
+            onPlayAttempt: external?.onPlayAttempt,
+            presentsAsSheet: false
         )
 
         ZStack {
@@ -3944,16 +4220,35 @@ public struct SpeakerDSRoot: View {
         recordingMeter: Double,
         referenceRevealProgress: Double,
         isProUser: Bool,
+        hasFullToneAccess: Bool = false,
         onDismiss: @escaping () -> Void,
         onRecordAgain: (() -> Void)? = nil,
         onStopRecordingFromBreakdown: (() -> Void)? = nil,
         onPlayReference: (() -> Void)? = nil,
-        onPlayAttempt: (() -> Void)? = nil
+        onPlayAttempt: (() -> Void)? = nil,
+        presentsAsSheet: Bool = false
     ) -> AnyView {
         let showRecordingInPlace = isRecordingFromBreakdown && breakdownPhase == .recording
+        let unlockTone = hasFullToneAccess || isProUser
+        let focusTitle: String = {
+            if let toneScore, toneScore + 12 < textScore { return "Смотри тоны" }
+            if let toneScore, textScore + 12 < toneScore { return "Смотри слова" }
+            if textScore >= 75 { return "Уже близко" }
+            return "Смотри слоги"
+        }()
+        let focusBody: String = {
+            if let toneScore, toneScore + 12 < textScore {
+                return "Слова уже читаются. Главный рычаг сейчас — тоны на каждом слоге."
+            }
+            if let toneScore, textScore + 12 < toneScore {
+                return "Тоны живые. Сделай слоги чуть чётче — и фраза соберётся."
+            }
+            return "Посмотри график и слоги: где линия совпала — держи, где слабее — повтори."
+        }()
+
         let headerView: AnyView = AnyView(
             HStack(alignment: .center, spacing: 8) {
-                Text("разбор")
+                Text(presentsAsSheet ? "Разбор" : "разбор")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(PD.ColorToken.text)
                 Spacer(minLength: 8)
@@ -3966,7 +4261,7 @@ public struct SpeakerDSRoot: View {
                         Text("Запись")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(PD.ColorToken.text)
-                        ConversationLiveWaveRibbon(meter: recordingMeter)
+                        TaikaTechWaveform(meter: max(0.2, recordingMeter), pace: .recording, lineCount: 2)
                             .frame(width: 72, height: 18)
                     }
                     .padding(.horizontal, 10)
@@ -3980,152 +4275,214 @@ public struct SpeakerDSRoot: View {
                             )
                     )
                 }
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) { onDismiss() }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .frame(width: 28, height: 28)
-                        .background(Circle().fill(Color.white.opacity(0.06)))
+                if !presentsAsSheet {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) { onDismiss() }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(Color.white.opacity(0.06)))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         )
 
         let scrollView: AnyView = AnyView(
             Group {
-                // Обычный ScrollView: TaikaRootVerticalScroll тянет rootHeaderClearance
-                // и оставляет сверху пустую серую полосу внутри модалки.
                 ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 10) {
-                    // Сразу под шапкой: фраза + две понятные метрики (текст / тон), без «скачущего» одного числа.
-                    VStack(alignment: .leading, spacing: 12) {
-                        if !phraseLabel.isEmpty {
-                            Text(phraseLabel)
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundStyle(PD.ColorToken.text)
-                                .lineLimit(3)
-                                .minimumScaleFactor(0.85)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                    VStack(alignment: .leading, spacing: presentsAsSheet ? 18 : 10) {
+                        if presentsAsSheet {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(focusTitle)
+                                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                                    .foregroundStyle(PD.ColorToken.text)
+                                Text(focusBody)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(PD.ColorToken.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
 
-                        breakdownDualScoreRow(
-                            textScore: textScore,
-                            toneScore: toneScore,
-                            overallScore: displayScore,
-                            toneLoading: breakdownRequestInFlight && toneScore == nil && isProUser,
-                            isProUser: isProUser
-                        )
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                            if !phraseLabel.isEmpty {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(phraseLabel)
+                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(PD.ColorToken.text)
+                                    PhoneticWithColoredArrowsView(
+                                        phonetic: Self.phoneticDisplayWithoutHyphens(expected),
+                                        font: .system(size: 15, weight: .medium),
+                                        alignment: .leading
+                                    )
+                                }
+                            }
 
-                    HStack(alignment: .top, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("нужно было")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(PD.ColorToken.textSecondary)
-                            PhoneticWithColoredArrowsView(
-                                phonetic: Self.phoneticDisplayWithoutHyphens(expected),
-                                font: .subheadline.weight(.medium),
-                                alignment: .leading
-                            )
-                            .lineLimit(5)
-                            .minimumScaleFactor(0.85)
-                            .fixedSize(horizontal: false, vertical: true)
+                            if unlockTone, !syllableFeedback.isEmpty || showRecordingInPlace {
+                                breakdownPhraseGraphSection(
+                                    expected: expected,
+                                    syllableFeedback: syllableFeedback,
+                                    isRecordingFromBreakdown: showRecordingInPlace,
+                                    recordingMeter: recordingMeter,
+                                    referenceRevealProgress: referenceRevealProgress,
+                                    onboardingStyle: true
+                                )
+                            } else if unlockTone, breakdownRequestInFlight {
+                                HStack(spacing: 10) {
+                                    ProgressView()
+                                    Text("Смотрю слоги…")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(PD.ColorToken.textSecondary)
+                                }
+                            } else if !unlockTone {
+                                breakdownPhraseGraphPlaceholder(expected: expected, isProLocked: true)
+                            }
+
+                            if unlockTone, !syllableFeedback.isEmpty {
+                                breakdownSyllableRowsHumanSection(
+                                    expected: expected,
+                                    syllableFeedback: syllableFeedback
+                                )
+                                let conclusion = Self.breakdownSummaryNoteHuman(syllableFeedback: syllableFeedback)
+                                if !conclusion.isEmpty {
+                                    Text(conclusion)
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(PD.ColorToken.textSecondary)
+                                }
+                            } else if unlockTone, breakdownRequestFailed {
+                                Text("Не удалось загрузить разбор. Попробуй ещё раз с хорошим интернетом.")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(PD.ColorToken.textSecondary)
+                            } else if !unlockTone {
+                                breakdownProTeaseSection(expected: expected)
+                            }
+                        } else {
+                            // Legacy dense card (non-sheet)
+                            VStack(alignment: .leading, spacing: 12) {
+                                if !phraseLabel.isEmpty {
+                                    Text(phraseLabel)
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundStyle(PD.ColorToken.text)
+                                        .lineLimit(3)
+                                        .minimumScaleFactor(0.85)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+
+                                breakdownDualScoreRow(
+                                    textScore: textScore,
+                                    toneScore: toneScore,
+                                    overallScore: displayScore,
+                                    toneLoading: breakdownRequestInFlight && toneScore == nil && unlockTone,
+                                    isProUser: unlockTone
+                                )
+                            }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            if let playRef = onPlayReference {
-                                Button { playRef() } label: {
-                                    Image(systemName: "speaker.wave.2.fill")
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+
+                            HStack(alignment: .top, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("нужно было")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(PD.ColorToken.textSecondary)
+                                    PhoneticWithColoredArrowsView(
+                                        phonetic: Self.phoneticDisplayWithoutHyphens(expected),
+                                        font: .subheadline.weight(.medium),
+                                        alignment: .leading
+                                    )
+                                    .lineLimit(5)
+                                    .minimumScaleFactor(0.85)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    if let playRef = onPlayReference {
+                                        Button { playRef() } label: {
+                                            Image(systemName: "speaker.wave.2.fill")
+                                                .font(.system(size: 14))
+                                                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
-                                .buttonStyle(.plain)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("ты сказал")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(PD.ColorToken.textSecondary)
+                                    Self.breakdownUserSaidLine(userText: userText)
+                                    if let playAttempt = onPlayAttempt {
+                                        Button(action: playAttempt) {
+                                            Image(systemName: "speaker.wave.2.fill")
+                                                .font(.system(size: 14))
+                                                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 4)
+
+                            if !syllableFeedback.isEmpty || showRecordingInPlace {
+                                breakdownPhraseGraphSection(
+                                    expected: expected,
+                                    syllableFeedback: syllableFeedback,
+                                    isRecordingFromBreakdown: showRecordingInPlace,
+                                    recordingMeter: recordingMeter,
+                                    referenceRevealProgress: referenceRevealProgress
+                                )
+                            } else {
+                                breakdownPhraseGraphPlaceholder(expected: expected, isProLocked: !unlockTone)
+                            }
+                            if !syllableFeedback.isEmpty {
+                                breakdownSyllableRowsSection(expected: expected, syllableFeedback: syllableFeedback)
+                            }
+
+                            if !syllableFeedback.isEmpty {
+                                let conclusion = Self.breakdownSummaryNote(syllableFeedback: syllableFeedback)
+                                if !conclusion.isEmpty {
+                                    Text(conclusion)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(PD.ColorToken.text)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .padding(.top, 10)
+                                        .padding(.bottom, 2)
+                                }
+                            } else if breakdownRequestInFlight {
+                                TaikaLoadingView(
+                                    label: "Загружаю разбор…",
+                                    hint: "может занять 15–30 сек",
+                                    compact: true
+                                )
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                            } else if !unlockTone {
+                                breakdownProTeaseSection(expected: expected)
+                            } else {
+                                let noToneMessage = breakdownRequestFailed
+                                    ? "Не удалось загрузить разбор. Проверь интернет и Railway: сервис /assess может требовать больше памяти."
+                                    : "Пока здесь только сравнение «ты сказал» и «нужно было». Разбор по тонам по слогам появится, когда будет подключён."
+                                Text(noToneMessage)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(PD.ColorToken.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.top, 10)
+                                    .padding(.bottom, 2)
+                            }
+                            if showRecordingUnavailable {
+                                Text("запись недоступна")
+                                    .font(.footnote)
+                                    .foregroundStyle(PD.ColorToken.textSecondary)
+                                    .opacity(0.85)
+                                    .padding(.top, 6)
                             }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("ты сказал")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(PD.ColorToken.textSecondary)
-                            Self.breakdownUserSaidLine(userText: userText)
-                            if let playAttempt = onPlayAttempt {
-                                Button(action: playAttempt) {
-                                    Image(systemName: "speaker.wave.2.fill")
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 4)
-
-                    // График: реальные данные или brand-заглушка (free / пока нет разбора).
-                    if !syllableFeedback.isEmpty || showRecordingInPlace {
-                        breakdownPhraseGraphSection(
-                            expected: expected,
-                            syllableFeedback: syllableFeedback,
-                            isRecordingFromBreakdown: showRecordingInPlace,
-                            recordingMeter: recordingMeter,
-                            referenceRevealProgress: referenceRevealProgress
-                        )
-                    } else {
-                        breakdownPhraseGraphPlaceholder(expected: expected, isProLocked: !isProUser)
-                    }
-                    if !syllableFeedback.isEmpty {
-                        breakdownSyllableRowsSection(expected: expected, syllableFeedback: syllableFeedback)
-                    }
-
-                    // Одно заключение в стиле Taika FM: без дублирования фразы/оценки, без блока «заметки».
-                    if !syllableFeedback.isEmpty {
-                        let conclusion = Self.breakdownSummaryNote(syllableFeedback: syllableFeedback)
-                        if !conclusion.isEmpty {
-                            Text(conclusion)
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(PD.ColorToken.text)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.top, 10)
-                                .padding(.bottom, 2)
-                        }
-                    } else if breakdownRequestInFlight {
-                        TaikaLoadingView(
-                            label: "Загружаю разбор…",
-                            hint: "может занять 15–30 сек",
-                            compact: true
-                        )
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                    } else if !isProUser {
-                        breakdownProTeaseSection(expected: expected)
-                    } else {
-                        let noToneMessage = breakdownRequestFailed
-                            ? "Не удалось загрузить разбор. Проверь интернет и Railway: сервис /assess может требовать больше памяти."
-                            : "Пока здесь только сравнение «ты сказал» и «нужно было». Разбор по тонам по слогам появится, когда будет подключён."
-                        Text(noToneMessage)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.top, 10)
-                            .padding(.bottom, 2)
-                    }
-                    if showRecordingUnavailable {
-                        Text("запись недоступна")
-                            .font(.footnote)
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .opacity(0.85)
-                            .padding(.top, 6)
-                    }
+                    .padding(.horizontal, presentsAsSheet ? 4 : 6)
                 }
-                .padding(.horizontal, 6)
-            }
             }
         )
 
-        let showPaywallCTA = !isProUser
+        let showPaywallCTA = !unlockTone
             && syllableFeedback.isEmpty
             && !breakdownRequestInFlight
             && !showRecordingInPlace
@@ -4136,15 +4493,16 @@ public struct SpeakerDSRoot: View {
                 Divider().padding(.top, 2)
                 if showRecordingInPlace, let stop = onStopRecordingFromBreakdown {
                     Button(action: stop) {
-                        HStack {
-                            Spacer()
+                        HStack(spacing: 8) {
+                            Image(systemName: "stop.fill")
+                                .font(.system(size: 13, weight: .semibold))
                             Text("Стоп")
                                 .font(.system(size: 15, weight: .semibold))
-                            Spacer()
                         }
-                        .padding(.vertical, 12)
-                        .background(Capsule(style: .continuous).fill(Color.red.opacity(0.85)))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.black.opacity(0.86))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Capsule(style: .continuous).fill(accent))
                     }
                     .buttonStyle(.plain)
                 } else {
@@ -4204,15 +4562,27 @@ public struct SpeakerDSRoot: View {
             footerView
         }
         .padding(.horizontal, 16)
-        .padding(.top, 12)
+        .padding(.top, presentsAsSheet ? 8 : 12)
         .padding(.bottom, 16)
-        .frame(maxHeight: UIScreen.main.bounds.height * 0.72)
-        .frame(maxWidth: 560)
-        .frame(maxWidth: .infinity, alignment: .center)
-        .taikaBlackGlassBackground(cornerRadius: 30)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-        return AnyView(card)
+        if presentsAsSheet {
+            return AnyView(
+                card
+                    .background(PD.ColorToken.background.ignoresSafeArea())
+            )
+        }
+
+        return AnyView(
+            card
+                .frame(maxHeight: UIScreen.main.bounds.height * 0.72)
+                .frame(maxWidth: 560)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .taikaBlackGlassBackground(cornerRadius: 30)
+        )
     }
+
+
 
     /// Эталонный контур тона для одного слога (полутоны): 8 точек для отображения.
     private static func referenceSegmentForTone(_ tone: String?) -> [Double] {
@@ -4320,7 +4690,8 @@ public struct SpeakerDSRoot: View {
         syllableFeedback: [SpeakerManager.SyllableFeedback],
         isRecordingFromBreakdown: Bool,
         recordingMeter: Double,
-        referenceRevealProgress: Double
+        referenceRevealProgress: Double,
+        onboardingStyle: Bool = false
     ) -> some View {
         let userContour = syllableFeedback.flatMap { $0.f0Contour ?? [] }
         let refChunks = Self.translitChunksForSyllables(expected)
@@ -4332,60 +4703,67 @@ public struct SpeakerDSRoot: View {
         let syllableLabels = chunks.map { Self.syllableLabelWithoutArrows($0) }
         guard showReference || showUser else { return AnyView(EmptyView()) }
         return AnyView(
-            VStack(alignment: .leading, spacing: 6) {
-                Text("График тона по фразе")
-                    .font(.caption.weight(.semibold))
+            VStack(alignment: .leading, spacing: onboardingStyle ? 8 : 6) {
+                Text(onboardingStyle ? "График тона" : "График тона по фразе")
+                    .font(onboardingStyle
+                          ? .system(size: 13, weight: .bold, design: .rounded)
+                          : .caption.weight(.semibold))
                     .foregroundStyle(PD.ColorToken.textSecondary)
                 if showReference {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Эталон")
-                            .font(.caption2.weight(.medium))
+                            .font(onboardingStyle
+                                  ? .system(size: 12, weight: .medium)
+                                  : .caption2.weight(.medium))
                             .foregroundStyle(PD.ColorToken.textSecondary)
                         AnimatedBreakdownSparkline(
                             values: referenceContour,
                             lineWidth: 2.5,
-                            duration: 0.9
+                            duration: onboardingStyle ? 1.15 : 0.9
                         )
                         .opacity(0.72)
-                        .frame(height: 28)
+                        .frame(height: onboardingStyle ? 30 : 28)
                     }
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Ты сказал")
-                        .font(.caption2.weight(.medium))
+                        .font(onboardingStyle
+                              ? .system(size: 12, weight: .medium)
+                              : .caption2.weight(.medium))
                         .foregroundStyle(PD.ColorToken.textSecondary)
                     if isRecordingFromBreakdown {
                         BreakdownLiveMeterLine(liveMeter: recordingMeter)
-                            .frame(height: 28)
+                            .frame(height: onboardingStyle ? 30 : 28)
                     } else if userContour.count >= 2 {
                         AnimatedBreakdownSparkline(
                             values: userContour,
                             lineWidth: 2.5,
-                            duration: 1.15
+                            duration: onboardingStyle ? 1.35 : 1.15
                         )
-                        .frame(height: 28)
+                        .frame(height: onboardingStyle ? 30 : 28)
                     } else {
-                        EmptyView().frame(height: 28)
+                        EmptyView().frame(height: onboardingStyle ? 30 : 28)
                     }
                 }
                 if !syllableLabels.isEmpty {
                     HStack(spacing: 0) {
                         ForEach(Array(syllableLabels.enumerated()), id: \.offset) { _, label in
                             Text(label)
-                                .font(.system(size: 10, weight: .medium))
+                                .font(.system(size: onboardingStyle ? 11 : 10, weight: .medium))
                                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
                                 .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                                 .frame(maxWidth: .infinity)
                         }
                     }
-                    .padding(.top, 6)
+                    .padding(.top, onboardingStyle ? 4 : 6)
                 }
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
+            .padding(onboardingStyle ? 14 : 8)
+            .padding(.horizontal, onboardingStyle ? 0 : 4)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(PD.ColorToken.chip.opacity(0.65))
+                RoundedRectangle(cornerRadius: onboardingStyle ? 16 : 10, style: .continuous)
+                    .fill(PD.ColorToken.chip.opacity(onboardingStyle ? 1 : 0.65))
             )
             .padding(.top, 4)
         )

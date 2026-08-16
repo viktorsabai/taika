@@ -122,6 +122,7 @@ struct StepView: View {
     @State private var pendingProgressPost: DispatchWorkItem? = nil
     @State private var pendingIndexPersist: DispatchWorkItem? = nil
     @State private var pendingFavoriteHydrate: DispatchWorkItem? = nil
+    @State private var pendingLearnAdvanceToken: UUID? = nil
     @State private var isMounted: Bool = false
     @State private var suppressFavoriteHydrationUntil: Date = .distantPast
     // live favorites sync
@@ -1716,23 +1717,33 @@ struct StepView: View {
             }
             // If пользователь снял отметку хотя бы с одной карточки → разрешить повторный показ summary при следующем полном завершении
             if wasLearned && !nowLearned {
+                pendingLearnAdvanceToken = nil
                 didShowSummaryOnce = false
                 if showLessonSummary {
                     withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
                 }
             }
-            // Обучение: при «запомнил» сначала закрепляем слухом (та же фраза), затем переход к следующей карточке с задержкой под TTS.
+            // Обучение: при «запомнил» сначала закрепляем слухом, затем листаем — только после конца TTS.
             if !wasLearned && nowLearned {
                 let thai = thaiLineForSpeech(from: item)
-                if !thai.isEmpty {
-                    StepAudio.shared.speakThai(thai)
+                let shouldAdvance = i < items.count - 1 || hasUnlearnedCards(excluding: i)
+                let advanceToken = UUID()
+                pendingLearnAdvanceToken = advanceToken
+
+                let advanceIfStillCurrent = {
+                    guard self.isMounted else { return }
+                    guard self.pendingLearnAdvanceToken == advanceToken else { return }
+                    self.pendingLearnAdvanceToken = nil
+                    guard shouldAdvance else { return }
+                    self.advanceToNextUnlearned(afterUIIndex: i)
                 }
-                if i < items.count - 1 || hasUnlearnedCards(excluding: i) {
-                    // Быстрый переход: не ждём весь TTS (раньше 0.48 — казалось, что «не листает»).
-                    let scrollDelay: TimeInterval = thai.isEmpty ? 0.12 : 0.22
-                    DispatchQueue.main.asyncAfter(deadline: .now() + scrollDelay) {
-                        guard isMounted else { return }
-                        advanceToNextUnlearned(afterUIIndex: i)
+
+                if thai.isEmpty {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: advanceIfStillCurrent)
+                } else {
+                    StepAudio.shared.speakThai(thai, stepItemId: item.id) {
+                        // Короткая пауза после фразы — карточка не прыгает поверх голоса.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: advanceIfStillCurrent)
                     }
                 }
             }

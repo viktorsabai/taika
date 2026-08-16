@@ -14,6 +14,7 @@ final class StepAudio: NSObject, ObservableObject {
     private var sessionConfigured = false
     private var sessionActive = false
     private var progressCallback: ((Double) -> Void)?
+    private var finishCallback: (() -> Void)?
     private var currentUtteranceLength: Int = 0
     private var pendingStepItemId: UUID?
 
@@ -30,18 +31,23 @@ final class StepAudio: NSObject, ObservableObject {
     // MARK: - Public API
 
     /// speak thai phrase with th-TH voice; falls back gracefully if no thai voice
-    func speakThai(_ text: String, stepItemId: UUID? = nil) {
-        speak(text: text, language: "th-TH", onProgress: nil, stepItemId: stepItemId)
+    func speakThai(_ text: String, stepItemId: UUID? = nil, onFinished: (() -> Void)? = nil) {
+        speak(text: text, language: "th-TH", onProgress: nil, stepItemId: stepItemId, onFinished: onFinished)
     }
 
     /// Speak Thai and report playback progress 0.0...1.0 (for syncing UI e.g. tone graph). Callback is invoked on main queue.
-    func speakThai(_ text: String, onProgress: @escaping (Double) -> Void, stepItemId: UUID? = nil) {
-        speak(text: text, language: "th-TH", onProgress: onProgress, stepItemId: stepItemId)
+    func speakThai(_ text: String, onProgress: @escaping (Double) -> Void, stepItemId: UUID? = nil, onFinished: (() -> Void)? = nil) {
+        speak(text: text, language: "th-TH", onProgress: onProgress, stepItemId: stepItemId, onFinished: onFinished)
     }
 
     /// generic speak with BCP-47 language code (e.g., "th-TH", "ru-RU")
-    func speak(text: String, language: String, onProgress: ((Double) -> Void)? = nil, stepItemId: UUID? = nil) {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+    func speak(text: String, language: String, onProgress: ((Double) -> Void)? = nil, stepItemId: UUID? = nil, onFinished: (() -> Void)? = nil) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            if let onFinished {
+                DispatchQueue.main.async { onFinished() }
+            }
+            return
+        }
         prepareSessionIfNeeded()
 
         bindStepSpeechItem(stepItemId)
@@ -52,6 +58,7 @@ final class StepAudio: NSObject, ObservableObject {
         }
 
         progressCallback = onProgress
+        finishCallback = onFinished
         currentUtteranceLength = text.utf16.count
         if let cb = progressCallback, currentUtteranceLength > 0 {
             DispatchQueue.main.async { cb(0) }
@@ -86,6 +93,7 @@ final class StepAudio: NSObject, ObservableObject {
     }
 
     func stop() {
+        finishCallback = nil
         synth.stopSpeaking(at: .immediate)
         deactivateSessionIfNeeded()
     }
@@ -182,6 +190,11 @@ extension StepAudio: AVSpeechSynthesizerDelegate {
         currentUtteranceLength = 0
         print("[StepAudio] didFinish: \(utterance.speechString.prefix(20))...")
         clearActiveStepSpeechItem()
+        let finish = finishCallback
+        finishCallback = nil
+        if let finish {
+            DispatchQueue.main.async { finish() }
+        }
         deactivateSessionIfNeeded()
     }
 
@@ -191,6 +204,7 @@ extension StepAudio: AVSpeechSynthesizerDelegate {
         }
         progressCallback = nil
         currentUtteranceLength = 0
+        finishCallback = nil
         print("[StepAudio] didCancel")
         clearActiveStepSpeechItem()
         deactivateSessionIfNeeded()

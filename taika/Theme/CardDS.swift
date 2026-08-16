@@ -2019,11 +2019,13 @@ struct TaikaFMInlineChunk {
     let isAccent: Bool
 }
 
-/// simple [[...]] parser: splits string into chunks and marks accent segments
+/// Parses `[[…]]` and markdown `**…**` into accent teaching spans (markers stripped).
 func taikaFMParseAccentChunks(_ raw: String) -> [TaikaFMInlineChunk] {
     var result: [TaikaFMInlineChunk] = []
     var buffer = ""
     var isAccent = false
+    /// Tracks which opener started the current accent span (`[[` vs `**`).
+    var accentCloser: String? = nil
 
     var index = raw.startIndex
 
@@ -2034,16 +2036,25 @@ func taikaFMParseAccentChunks(_ raw: String) -> [TaikaFMInlineChunk] {
     }
 
     while index < raw.endIndex {
-        if raw[index...].hasPrefix("[[") {
+        if !isAccent, raw[index...].hasPrefix("[[") {
             flushBuffer()
             isAccent = true
+            accentCloser = "]]"
             index = raw.index(index, offsetBy: 2)
             continue
         }
-        if raw[index...].hasPrefix("]]") {
+        if !isAccent, raw[index...].hasPrefix("**") {
+            flushBuffer()
+            isAccent = true
+            accentCloser = "**"
+            index = raw.index(index, offsetBy: 2)
+            continue
+        }
+        if isAccent, let closer = accentCloser, raw[index...].hasPrefix(closer) {
             flushBuffer()
             isAccent = false
-            index = raw.index(index, offsetBy: 2)
+            accentCloser = nil
+            index = raw.index(index, offsetBy: closer.count)
             continue
         }
 
@@ -2055,7 +2066,7 @@ func taikaFMParseAccentChunks(_ raw: String) -> [TaikaFMInlineChunk] {
     return result
 }
 
-/// builds styled Text from raw string with [[accent]] highlighting (ThemeManager accent). Shared: CardDS, FavoriteDS.
+/// builds styled Text from raw string with [[accent]] / **accent** highlighting (ThemeManager accent). Shared: CardDS, FavoriteDS.
 /// baseColor: для лайфхаков передать textSecondary/white, иначе используется text.
 func taikaFMStyledText(_ s: String, baseColor: Color? = nil) -> Text {
     let chunks = taikaFMParseAccentChunks(s)
@@ -2077,7 +2088,10 @@ func taikaFMStyledText(chunks: [TaikaFMChunk], baseColor: Color? = nil) -> Text 
     for chunk in chunks {
         let base = Text(chunk.text)
         if chunk.isAccent {
-            result = result + base.foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+            // Teaching anchors: brand gradient + bold weight.
+            result = result + base
+                .fontWeight(.bold)
+                .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
         } else {
             result = result + base.foregroundStyle(nonAccentColor)
         }
