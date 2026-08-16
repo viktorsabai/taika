@@ -367,7 +367,6 @@ struct SpeakerView: View {
             speaker.sanitizeConversationHistory()
 
             maybeStartPendingConversationRecording()
-            maybePresentSpeakerProductDemo()
 
             UserSession.shared.logActivity(
                 .speakerOpened,
@@ -379,26 +378,6 @@ struct SpeakerView: View {
         }
         .onChange(of: speaker.pendingConversationAutoRecord) { _, pending in
             if pending { maybeStartPendingConversationRecording() }
-        }
-    }
-
-    /// Первый визит в Спикер (не из тренировки курса): лёгкий tip в айдентике оверлеев.
-    private func maybePresentSpeakerProductDemo() {
-        guard !TaikaProductDemoFlags.hasSeenSpeaker else { return }
-        // Не перебиваем вход в очередь урока / избранного.
-        if pendingCourseId != nil { return }
-        if SpeakerManager.shared.speakerContextCourseId != nil { return }
-        if SpeakerRequestedCourseId.shared.courseId != nil { return }
-        if case .speakerFirstTip = overlay.overlay { return }
-        if overlay.overlay != nil { return }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            guard !TaikaProductDemoFlags.hasSeenSpeaker else { return }
-            guard pendingCourseId == nil else { return }
-            guard overlay.overlay == nil else { return }
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                overlay.present(.speakerFirstTip)
-            }
         }
     }
 
