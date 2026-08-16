@@ -310,27 +310,36 @@ struct TaikaCoreLoopOnboardingView: View {
         .matchedGeometryEffect(id: "core-hero", in: heroNamespace)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.black.opacity(0.56))
-                .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(AnyShapeStyle(theme.currentAccentFill.opacity(0.72)), lineWidth: 1))
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(Color.white.opacity(0.035))
+                )
         )
-        .shadow(color: theme.currentAccentTintColor.opacity(0.34), radius: 30, y: 12)
+        .shadow(color: theme.currentAccentTintColor.opacity(0.20), radius: 34, y: 16)
     }
 
     private var speakHero: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 20) {
             Text("ОДНА ФРАЗА ДЛЯ ПРАКТИКИ")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .tracking(1.2)
                 .foregroundStyle(theme.currentAccentFill)
-            phraseCard
-                .scaleEffect(0.82)
-                .opacity(0.72)
-                .offset(y: -10)
+            VStack(spacing: 8) {
+                Text(phraseThai)
+                    .font(.system(size: 30, weight: .regular))
+                    .foregroundStyle(.white)
+                Text(phrasePhonetic)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(theme.currentAccentFill)
+            }
+            .opacity(0.82)
             VoiceMic(isRecording: speaker.phase == .recording, tint: theme.currentAccentTintColor, fill: theme.currentAccentFill)
-                .frame(height: 132)
-            Text(speaker.phase == .recording ? "Говори" : "Нажми и повтори")
+                .frame(width: 190, height: 190)
+            Text(speaker.phase == .recording ? "Говори — Taika слушает тоны" : "Нажми и повтори")
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(.white.opacity(0.68))
+                .multilineTextAlignment(.center)
         }
     }
 
@@ -358,7 +367,12 @@ struct TaikaCoreLoopOnboardingView: View {
             }
             .padding(22)
             .frame(maxWidth: 342)
-            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.black.opacity(0.38)).overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AnyShapeStyle(theme.currentAccentFill.opacity(0.62)), lineWidth: 1)))
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.white.opacity(0.025)))
+            )
+            .shadow(color: theme.currentAccentTintColor.opacity(0.16), radius: 28, y: 12)
         }
     }
 
@@ -558,9 +572,12 @@ private struct VoiceMic: View {
                     .stroke(tint.opacity(isRecording ? 0.26 : 0.10), lineWidth: 1)
                     .scaleEffect(isRecording ? (pulse ? 1.06 + CGFloat(index) * 0.14 : 0.92 + CGFloat(index) * 0.12) : 0.86 + CGFloat(index) * 0.12)
             }
-            Circle().fill(fill).frame(width: 82, height: 82)
-            Image(systemName: isRecording ? "waveform" : "mic.fill")
-                .font(.system(size: 28, weight: .semibold))
+            Circle()
+                .fill(fill)
+                .frame(width: isRecording ? 94 : 82, height: isRecording ? 94 : 82)
+                .shadow(color: tint.opacity(0.42), radius: isRecording ? 24 : 16)
+            Image(systemName: isRecording ? "waveform.path.ecg" : "mic.fill")
+                .font(.system(size: isRecording ? 27 : 28, weight: .semibold))
                 .foregroundStyle(.black)
         }
         .onAppear { withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true } }
