@@ -1791,9 +1791,14 @@ public struct CDWeeklyRhythmModel: Equatable {
 }
 
 /// «Твой ритм»: как «за неделю» на Main — просто значения, без рамки и без мини-карточек.
+/// Пустой старт (0/0/0) → CTA вместо голых нулей.
 public struct CDWeeklyRhythmSection: View {
     public var model: CDWeeklyRhythmModel
     public var windowLabel: String = "эта неделя"
+    /// Старт: «Тайский без паники» (course_b_0).
+    public var onStartMain: (() -> Void)? = nil
+    /// Открыть вкладку «Сценарии».
+    public var onChooseScenario: (() -> Void)? = nil
 
     @State private var displayLessons: Int = 0
     @State private var displayMinutes: Int = 0
@@ -1801,36 +1806,106 @@ public struct CDWeeklyRhythmSection: View {
     @State private var appeared: Bool = false
     @State private var countTask: Task<Void, Never>?
 
-    public init(model: CDWeeklyRhythmModel, windowLabel: String = "эта неделя") {
+    public init(
+        model: CDWeeklyRhythmModel,
+        windowLabel: String = "эта неделя",
+        onStartMain: (() -> Void)? = nil,
+        onChooseScenario: (() -> Void)? = nil
+    ) {
         self.model = model
         self.windowLabel = windowLabel
+        self.onStartMain = onStartMain
+        self.onChooseScenario = onChooseScenario
+    }
+
+    private var isEmptyStart: Bool {
+        model.lessons == 0 && model.minutes == 0 && model.words == 0
+            && (onStartMain != nil || onChooseScenario != nil)
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             TaikaSectionHeaderRow("ТВОЙ РИТМ") {
-                Text(windowLabel.uppercased())
+                Text((isEmptyStart ? "старт" : windowLabel).uppercased())
                     .taikaSubsectionStyle(accent: false)
             }
             .padding(.horizontal, CD.Spacing.screen)
 
-            HStack(alignment: .firstTextBaseline, spacing: 0) {
-                rhythmValue(value: displayLessons, label: lessonWord(model.lessons), delay: 0)
-                rhythmValue(value: displayMinutes, label: "мин", delay: 0.08)
-                rhythmValue(value: displayWords, label: wordWord(model.words), delay: 0.16)
+            if isEmptyStart {
+                emptyStartCTAs
+                    .padding(.horizontal, CD.Spacing.screen)
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    rhythmValue(value: displayLessons, label: lessonWord(model.lessons), delay: 0)
+                    rhythmValue(value: displayMinutes, label: "мин", delay: 0.08)
+                    rhythmValue(value: displayWords, label: wordWord(model.words), delay: 0.16)
+                }
+                .padding(.horizontal, CD.Spacing.screen)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 10)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(
+                    "Твой ритм: \(model.lessons) \(lessonWord(model.lessons)), \(model.minutes) минут, \(model.words) \(wordWord(model.words))"
+                )
             }
-            .padding(.horizontal, CD.Spacing.screen)
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 10)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(
-                "Твой ритм: \(model.lessons) \(lessonWord(model.lessons)), \(model.minutes) минут, \(model.words) \(wordWord(model.words))"
-            )
         }
         .padding(.top, 8)
-        .onAppear { animateIn() }
-        .onChange(of: model) { _, _ in animateIn(fromCurrent: true) }
+        .onAppear {
+            if !isEmptyStart { animateIn() }
+        }
+        .onChange(of: model) { _, _ in
+            if !isEmptyStart { animateIn(fromCurrent: true) }
+        }
         .onDisappear { countTask?.cancel() }
+    }
+
+    private var emptyStartCTAs: some View {
+        let accent = ThemeManager.shared.currentAccentFill
+        return VStack(spacing: 10) {
+            Text("С чего начнём?")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let onStartMain {
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onStartMain()
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 14, weight: .bold))
+                        Text("Начать с главного")
+                            .font(.system(size: 16, weight: .bold))
+                    }
+                    .foregroundStyle(Color.black.opacity(0.88))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Capsule(style: .continuous).fill(accent))
+                }
+                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.98))
+                .accessibilityLabel("Начать с главного — Тайский без паники")
+            }
+
+            if let onChooseScenario {
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                    onChooseScenario()
+                }) {
+                    Text("Выбрать сценарий")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .background(
+                            Capsule(style: .continuous)
+                                .stroke(accent, lineWidth: 1.4)
+                        )
+                }
+                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.98))
+                .accessibilityLabel("Выбрать сценарий")
+            }
+        }
     }
 
     private func rhythmValue(value: Int, label: String, delay: TimeInterval) -> some View {

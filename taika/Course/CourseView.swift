@@ -1064,7 +1064,20 @@ struct CourseView: View {
                         // скролл оставляем страховкой для Сценариев / высоких экранов.
                         LazyVStack(spacing: max(14, Theme.Layout.sectionGap - 6)) {
                             courseTabContentView()
-                            CDWeeklyRhythmSection(model: weeklyRhythmModel())
+                            CDWeeklyRhythmSection(
+                                model: weeklyRhythmModel(),
+                                onStartMain: {
+                                    TaikaProductDemoFlags.markCourseSeen()
+                                    nav.go(.lessons(courseId: "course_b_0"))
+                                },
+                                onChooseScenario: {
+                                    TaikaProductDemoFlags.markCourseSeen()
+                                    withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+                                        selectedCourseTab = .scenarios
+                                        catalogTabState.selectedTab = .scenarios
+                                    }
+                                }
+                            )
                                 .id("weekly-rhythm-\(selectedCourseTab.rawValue)-\(selectedScenarioCategory)")
                         }
                         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -1199,29 +1212,6 @@ struct CourseView: View {
         }
         .onAppear {
             if !isPreviewEnv { installKeyboardObservers() }
-            maybePresentCourseProductDemo()
-        }
-        .onChange(of: nav.path.count) { _, count in
-            if count == 0 {
-                maybePresentCourseProductDemo()
-            }
-        }
-    }
-
-    /// Первый визит в каталог курсов: tip в black-glass, не Welcome поверх таба.
-    private func maybePresentCourseProductDemo() {
-        guard !TaikaProductDemoFlags.hasSeenCourse else { return }
-        guard !isPreviewEnv else { return }
-        if case .courseFirstTip = overlay.overlay { return }
-        if overlay.overlay != nil { return }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
-            guard !TaikaProductDemoFlags.hasSeenCourse else { return }
-            guard nav.path.isEmpty else { return }
-            guard overlay.overlay == nil else { return }
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                overlay.present(.courseFirstTip)
-            }
         }
     }
 
