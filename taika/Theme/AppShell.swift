@@ -77,7 +77,7 @@ struct AppShell: View {
                     onRequestPro: {
                         finishFirstEntry(with: .baseCourse)
                         DispatchQueue.main.async {
-                            overlay.presentPro(reason: .general, courseId: "course_b_1")
+                            overlay.presentProDirect(reason: .general)
                         }
                     },
                     onFinished: { courseId in
