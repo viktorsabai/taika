@@ -16,10 +16,11 @@ struct TaikaCoreLoopOnboardingView: View {
     @State private var introFrame: IntroFrame = .brand
     @State private var painIndex = 0
     @State private var introTask: Task<Void, Never>?
+    @State private var recordingTask: Task<Void, Never>?
     @Namespace private var heroNamespace
 
     private let painPoints = ["Не понимаю тоны", "Боюсь говорить", "Забываю фразы", "Не знаю, что учить дальше"]
-    private let hintChips = ["Как пройти к метро?", "Возьмите сдачу", "Я только учусь"]
+    private let hintChips = ["Не понимаю тоны", "Боюсь говорить", "Забываю фразы", "Не знаю, что учить"]
 
     private enum IntroFrame: Int, Equatable {
         case brand
@@ -68,10 +69,15 @@ struct TaikaCoreLoopOnboardingView: View {
         }
         .onDisappear {
             introTask?.cancel()
+            recordingTask?.cancel()
         }
         .onChange(of: speaker.phase) { _, newPhase in
+            if phase == .speak, newPhase == .recording {
+                scheduleRecordingAutoStop()
+            }
             guard phase == .speak else { return }
             if case .feedback = newPhase {
+                recordingTask?.cancel()
                 withAnimation(transition) { phase = .feedback }
             }
         }
@@ -166,7 +172,7 @@ struct TaikaCoreLoopOnboardingView: View {
             Text("Она помогает услышать, сказать\nи запомнить живую речь.")
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(.white.opacity(0.66))
-            VoiceOrb(isActive: true, tint: theme.currentAccentTintColor)
+            VoiceOrb(isActive: true, tint: theme.currentAccentTintColor, fill: theme.currentAccentFill)
                 .matchedGeometryEffect(id: "core-hero", in: heroNamespace)
                 .frame(maxWidth: .infinity)
                 .frame(height: 220)
@@ -219,48 +225,35 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var ctaReveal: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 0) {
+            Text("taikAAA")
+                .font(.custom("Onmark Trial", size: 24))
+                .foregroundStyle(theme.currentAccentFill.opacity(0.72))
+            Spacer(minLength: 32)
             Text("ТЕПЕРЬ ПОПРОБУЕМ ВМЕСТЕ")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .tracking(1.2)
                 .foregroundStyle(theme.currentAccentFill)
+            Spacer(minLength: 14)
             Text("Скажи одну фразу —\nTaika услышит слова и тоны.")
                 .font(.system(size: 31, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .lineSpacing(-1)
-            VoiceOrb(isActive: true, tint: theme.currentAccentTintColor)
+            Spacer(minLength: 30)
+            VoiceOrb(isActive: true, tint: theme.currentAccentTintColor, fill: theme.currentAccentFill)
                 .matchedGeometryEffect(id: "core-hero", in: heroNamespace)
-                .frame(height: 220)
+                .frame(height: 245)
+            Spacer(minLength: 28)
             hintRail
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var hintRail: some View {
-        HStack(spacing: 8) {
-            ForEach(Array(hintChips.enumerated()), id: \.offset) { index, chip in
-                Button {
-                    withAnimation(transition) { selectedHint = index }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: index == selectedHint ? "sparkles" : "text.quote")
-                            .font(.system(size: 10, weight: .bold))
-                        Text(chip)
-                            .lineLimit(1)
-                    }
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(index == selectedHint ? .white : .white.opacity(0.58))
-                    .padding(.horizontal, 12)
-                    .frame(height: 32)
-                    .background(Capsule().fill(index == selectedHint ? theme.currentAccentTintColor.opacity(0.26) : Color.white.opacity(0.045)))
-                    .overlay(Capsule().stroke(index == selectedHint ? theme.currentAccentTintColor.opacity(0.62) : Color.white.opacity(0.08), lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .scaleEffect(index == selectedHint ? 1 : 0.96)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .clipped()
+        InfiniteHintMarquee(chips: hintChips, tint: theme.currentAccentTintColor, reduceMotion: reduceMotion)
+            .frame(height: 42)
+            .padding(.horizontal, -24)
     }
 
     private var phraseHero: some View {
@@ -524,9 +517,19 @@ struct TaikaCoreLoopOnboardingView: View {
 
     private func toggleRecording() {
         if speaker.phase == .recording {
+            recordingTask?.cancel()
             speaker.stopConversationPronunciationCheck()
         } else {
             speaker.startConversationRecording()
+        }
+    }
+
+    private func scheduleRecordingAutoStop() {
+        recordingTask?.cancel()
+        recordingTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 4_500_000_000)
+            guard !Task.isCancelled, phase == .speak, speaker.phase == .recording else { return }
+            speaker.stopConversationPronunciationCheck()
         }
     }
 
@@ -536,27 +539,96 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 }
 
+private struct InfiniteHintMarquee: View {
+    let chips: [String]
+    let tint: Color
+    let reduceMotion: Bool
+    @State private var offset: CGFloat = 0
+
+    var body: some View {
+        GeometryReader { proxy in
+            let repeated = chips + chips + chips
+            HStack(spacing: 10) {
+                ForEach(Array(repeated.enumerated()), id: \.offset) { _, chip in
+                    HStack(spacing: 7) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 10, weight: .bold))
+                        Text(chip)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(.white.opacity(0.88))
+                    .padding(.horizontal, 15)
+                    .frame(width: 144, height: 38)
+                    .background(Capsule().fill(tint.opacity(0.12)))
+                    .overlay(Capsule().stroke(tint.opacity(0.42), lineWidth: 1))
+                }
+            }
+            .fixedSize()
+            .offset(x: offset)
+            .onAppear {
+                guard !reduceMotion else { return }
+                let cycleWidth = CGFloat(chips.count) * 154
+                withAnimation(.linear(duration: 24).repeatForever(autoreverses: false)) {
+                    offset = -cycleWidth
+                }
+            }
+        }
+        .clipped()
+        .mask(
+            LinearGradient(
+                colors: [.clear, .black, .black, .clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+    }
+}
+
 private struct VoiceOrb: View {
     let isActive: Bool
     let tint: Color
+    let fill: LinearGradient
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var breathing = false
+    @State private var rotation: Double = 0
 
     var body: some View {
         ZStack {
-            Circle().stroke(tint.opacity(0.18), lineWidth: 1).scaleEffect(breathing ? 1.08 : 0.94)
-            Circle().stroke(tint.opacity(0.24), lineWidth: 1).scaleEffect(breathing ? 0.92 : 1.04)
+            Circle()
+                .fill(fill.opacity(isActive ? 0.13 : 0.08))
+                .blur(radius: 24)
+                .scaleEffect(breathing ? 1.12 : 0.94)
+            Circle()
+                .fill(fill.opacity(0.045))
+                .overlay(Circle().stroke(tint.opacity(0.22), lineWidth: 1))
+                .scaleEffect(breathing ? 1.04 : 0.96)
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .trim(from: 0.08 + CGFloat(index) * 0.18, to: 0.34 + CGFloat(index) * 0.18)
+                    .stroke(tint.opacity(0.28 - Double(index) * 0.05), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
+                    .rotationEffect(.degrees(rotation + Double(index) * 120))
+                    .scaleEffect(1.03 + CGFloat(index) * 0.07)
+            }
             ForEach(0..<3, id: \.self) { index in
                 WaveformLine(tint: tint, active: isActive)
-                    .frame(height: 112 + CGFloat(index) * 18)
-                    .opacity(0.32 + Double(index) * 0.24)
+                    .frame(height: 108 + CGFloat(index) * 18)
+                    .opacity(0.28 + Double(index) * 0.24)
                     .scaleEffect(x: 1 + CGFloat(index) * 0.05, y: 1, anchor: .center)
             }
+            Circle()
+                .fill(fill.opacity(isActive ? 0.19 : 0.12))
+                .frame(width: 7, height: 7)
+                .shadow(color: tint.opacity(0.8), radius: 10)
         }
         .frame(width: 250, height: 250)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true)) { breathing = true }
+            withAnimation(.linear(duration: 16).repeatForever(autoreverses: false)) { rotation = 360 }
         }
     }
+
 }
 
 private struct VoiceMic: View {
