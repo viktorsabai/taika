@@ -524,7 +524,7 @@ struct TaikaCoreLoopOnboardingView: View {
             recordingTask?.cancel()
             speaker.stopConversationPronunciationCheck()
         } else {
-            speaker.startConversationRecording()
+            speaker.startConversationPronunciationCheck()
         }
     }
 
@@ -538,7 +538,7 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private func repeatWithHint() {
-        speaker.startConversationRecording()
+        speaker.startConversationPronunciationCheck()
         withAnimation(transition) { phase = .speak }
     }
 }
