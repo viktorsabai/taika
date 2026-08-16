@@ -16,7 +16,7 @@ struct CourseHubWelcomeView: View {
     @State private var autoplayTask: Task<Void, Never>?
 
     private let cards: [CourseHubWelcomeCard] = [
-        .init(id: "base", eyebrow: "БАЗА", title: "Разговорный старт", meta: "7 уроков · 12 минут", icon: "bubble.left.and.bubble.right.fill", colors: [Color(red: 0.95, green: 0.34, blue: 0.68), Color(red: 0.67, green: 0.38, blue: 0.92)]), courseId: "course_b_1"),
+        .init(id: "base", eyebrow: "БАЗА", title: "Разговорный старт", meta: "7 уроков · 12 минут", icon: "bubble.left.and.bubble.right.fill", colors: [Color(red: 0.95, green: 0.34, blue: 0.68), Color(red: 0.67, green: 0.38, blue: 0.92)], courseId: "course_b_1"),
         .init(id: "taxi", eyebrow: "ЖИЗНЬ", title: "Такси без паники", meta: "7 уроков · 15 минут", icon: "car.fill", colors: [Color(red: 0.94, green: 0.33, blue: 0.43), Color(red: 0.74, green: 0.28, blue: 0.48)], courseId: "course_l_2"),
         .init(id: "market", eyebrow: "ЖИЗНЬ", title: "Рынок и покупки", meta: "7 уроков · 14 минут", icon: "bag.fill", colors: [Color(red: 0.98, green: 0.47, blue: 0.27), Color(red: 0.75, green: 0.31, blue: 0.24)], courseId: "course_l_3"),
         .init(id: "doctor", eyebrow: "ЖИЗНЬ", title: "У врача", meta: "7 уроков · 16 минут", icon: "cross.case.fill", colors: [Color(red: 0.35, green: 0.62, blue: 0.94), Color(red: 0.37, green: 0.38, blue: 0.76)], courseId: "course_l_5")
