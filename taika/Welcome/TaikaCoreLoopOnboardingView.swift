@@ -208,6 +208,8 @@ struct TaikaCoreLoopOnboardingView: View {
             listenTask?.cancel()
             craftTask?.cancel()
             resultTask?.cancel()
+            // Shared SpeakerManager must not keep the demo phrase / recording focus after first-entry.
+            speaker.endEphemeralPracticeSession()
         }
         .onReceive(Timer.publish(every: 0.55, on: .main, in: .common).autoconnect()) { _ in
             guard phase == .hook, introFrame == .brand else { return }
