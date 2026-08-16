@@ -16,6 +16,7 @@ struct TaikaCoreLoopOnboardingView: View {
     @State private var selectedLevel: Int?
     @State private var selectedPains = Set<Int>()
     @State private var recordingTask: Task<Void, Never>?
+    @State private var isPreparingRecording = false
     @Namespace private var heroNamespace
 
     private let painPoints = ["Не понимаю тоны", "Боюсь говорить", "Забываю фразы", "Не знаю, что учить дальше"]
@@ -70,7 +71,11 @@ struct TaikaCoreLoopOnboardingView: View {
         }
         .onChange(of: speaker.phase) { _, newPhase in
             if phase == .speak, newPhase == .recording {
+                isPreparingRecording = false
                 scheduleRecordingAutoStop()
+            }
+            if newPhase == .feedback || newPhase == .idle {
+                isPreparingRecording = false
             }
             guard phase == .speak else { return }
             if case .feedback = newPhase {
@@ -117,7 +122,7 @@ struct TaikaCoreLoopOnboardingView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: phase == .hook ? 470 : 440)
+        .frame(height: 500)
         .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .bottom)), removal: .opacity))
         .animation(transition, value: phase)
     }
@@ -320,7 +325,7 @@ struct TaikaCoreLoopOnboardingView: View {
             .opacity(0.82)
             VoiceMic(isRecording: speaker.phase == .recording, tint: theme.currentAccentTintColor, fill: theme.currentAccentFill)
                 .frame(width: 190, height: 190)
-            Text(speaker.phase == .recording ? "Говори — Taika слушает тоны" : "Нажми и повтори")
+            Text(isPreparingRecording ? "Подготовка микрофона…" : (speaker.phase == .recording ? "Говори — Taika слушает тоны" : "Нажми и повтори"))
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(.white.opacity(0.68))
                 .multilineTextAlignment(.center)
@@ -441,7 +446,10 @@ struct TaikaCoreLoopOnboardingView: View {
                     withAnimation(transition) { phase = .speak }
                 }
             case .speak:
-                primaryCTA(speaker.phase == .recording ? "Остановить" : "Говорить") { toggleRecording() }
+                primaryCTA(isPreparingRecording ? "Подготовка…" : (speaker.phase == .recording ? "Остановить" : "Говорить")) {
+                    guard !isPreparingRecording else { return }
+                    toggleRecording()
+                }
             case .feedback:
                 primaryCTA("Повторить с подсказкой") { repeatWithHint() }
                 Button("Дальше") { advance(.reinforce) }
@@ -503,8 +511,10 @@ struct TaikaCoreLoopOnboardingView: View {
     private func toggleRecording() {
         if speaker.phase == .recording {
             recordingTask?.cancel()
+            isPreparingRecording = false
             speaker.stopConversationPronunciationCheck()
         } else {
+            isPreparingRecording = true
             speaker.startConversationPronunciationCheck()
         }
     }

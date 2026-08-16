@@ -70,22 +70,13 @@ struct AppShell: View {
                 .ignoresSafeArea()
 
             // Вход:
-            // • первый раз → Splash → живой core loop → LessonsView стартового курса
+            // • первый раз → единый splash внутри core loop → LessonsView стартового курса
             // • returning → короткий Splash → Main
             if !onboardingDone {
-                if firstEntryPhase == .learn {
-                    TaikaCoreLoopOnboardingView { courseId in
-                        finishFirstEntry(with: .baseCourse, landingCourseId: courseId)
-                    }
-                    .transition(.opacity)
-                } else {
-                    SplashTaikaView {
-                        withAnimation(.easeOut(duration: 0.28)) {
-                            firstEntryPhase = .learn
-                        }
-                    }
-                    .transition(.opacity)
+                TaikaCoreLoopOnboardingView { courseId in
+                    finishFirstEntry(with: .baseCourse, landingCourseId: courseId)
                 }
+                .transition(.opacity)
             } else if showBootSplash {
                 SplashTaikaView {
                     withAnimation(.easeOut(duration: 0.28)) {
