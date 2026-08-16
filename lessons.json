@@ -120,9 +120,9 @@
           "lesson_id": "course_b_1_l1",
           "order": 1,
           "title": "Приветствие",
-          "subtitle": "Саватди и улыбка — твой пропуск в любой 7-Eleven",
+          "subtitle": "Саватди и улыбка — открываем разговор",
           "duration_minutes": 4,
-          "card_count": 7,
+          "card_count": 6,
           "is_free": true,
           "tags": [],
           "preview_phrase": "здравствуйте;са-ват-ди↘",
@@ -146,7 +146,8 @@
             "steps_ref": "course_b_1_l1_steps",
             "hometask_ref": "course_b_1_l1_home"
           },
-          "assistant_tips": []
+          "assistant_tips": [],
+          "outline": "приветствие · вежливый кхрап/ка · casual привет · добрый вечер"
         },
         {
           "lesson_id": "course_b_1_l2",
@@ -254,7 +255,7 @@
           "lesson_id": "course_b_1_l5",
           "order": 5,
           "title": "Где тут?",
-          "subtitle": "Туалет, здесь, останови — без полной навигации",
+          "subtitle": "Где туалет, вайфай и как показать место",
           "duration_minutes": 4,
           "card_count": 8,
           "is_free": false,
@@ -282,7 +283,8 @@
             "steps_ref": "course_b_1_l5_steps",
             "hometask_ref": "course_b_1_l5_home"
           },
-          "assistant_tips": []
+          "assistant_tips": [],
+          "outline": "где · туалет · здесь · сюда пожалуйста · вайфай · пароль"
         },
         {
           "lesson_id": "course_b_1_l6",
@@ -322,9 +324,9 @@
           "lesson_id": "course_b_1_l7",
           "order": 7,
           "title": "Спасибо и извини",
-          "subtitle": "Вежливый минимум, без которого не обойтись",
+          "subtitle": "Спасибо, извини и мягко попрощайся",
           "duration_minutes": 3,
-          "card_count": 6,
+          "card_count": 10,
           "is_free": false,
           "tags": [],
           "preview_phrase": "спасибо;кхоп-кхун→",
@@ -350,7 +352,8 @@
             "steps_ref": "course_b_1_l7_steps",
             "hometask_ref": "course_b_1_l7_home"
           },
-          "assistant_tips": []
+          "assistant_tips": [],
+          "outline": "спасибо · большое спасибо · извини · ничего страшного · пока · до встречи · спокойной ночи"
         }
       ],
       "summary": {
