@@ -52,10 +52,6 @@ struct TaikaCoreLoopOnboardingView: View {
 
             VStack(spacing: 0) {
                 Spacer(minLength: phase == .hook ? 10 : 18)
-                if phase != .hook {
-                    promptSlot
-                }
-                Spacer(minLength: phase == .hook ? 0 : 16)
                 heroSlot
                 Spacer(minLength: phase == .hook ? 8 : 16)
                 footerSlot
@@ -97,15 +93,6 @@ struct TaikaCoreLoopOnboardingView: View {
             .ignoresSafeArea()
         }
         .allowsHitTesting(false)
-    }
-
-    private var promptSlot: some View {
-        Text(phase == .feedback ? "РАЗБОР ПРОИЗНОШЕНИЯ" : "ОДНА ФРАЗА ДЛЯ ПРАКТИКИ")
-            .font(.system(size: 11, weight: .bold, design: .rounded))
-            .tracking(1.25)
-            .foregroundStyle(theme.currentAccentFill.opacity(0.82))
-            .frame(height: 22)
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -277,17 +264,15 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var phraseHero: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 16) {
+            Text("ОДНА ФРАЗА ДЛЯ ПРАКТИКИ")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .tracking(1.2)
+                .foregroundStyle(theme.currentAccentFill)
             phraseCard
-            if phase == .listen {
-                Text(hasPlayedPhrase ? "Слушаем" : "Нажми, чтобы услышать")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
-            } else {
-                Text("Сначала услышь")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
-            }
+            Text(phase == .listen && hasPlayedPhrase ? "Слушаем" : "Нажми, чтобы услышать")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.white.opacity(0.6))
         }
     }
 
@@ -326,18 +311,23 @@ struct TaikaCoreLoopOnboardingView: View {
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color.black.opacity(0.56))
-                .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(theme.currentAccentTintColor.opacity(0.68), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(AnyShapeStyle(theme.currentAccentFill.opacity(0.72)), lineWidth: 1))
         )
         .shadow(color: theme.currentAccentTintColor.opacity(0.34), radius: 30, y: 12)
     }
 
     private var speakHero: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: 14) {
+            Text("ОДНА ФРАЗА ДЛЯ ПРАКТИКИ")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .tracking(1.2)
+                .foregroundStyle(theme.currentAccentFill)
             phraseCard
                 .scaleEffect(0.82)
                 .opacity(0.72)
-            VoiceMic(isRecording: speaker.phase == .recording, tint: theme.currentAccentTintColor)
-                .frame(height: 150)
+                .offset(y: -10)
+            VoiceMic(isRecording: speaker.phase == .recording, tint: theme.currentAccentTintColor, fill: theme.currentAccentFill)
+                .frame(height: 132)
             Text(speaker.phase == .recording ? "Говори" : "Нажми и повтори")
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(.white.opacity(0.68))
@@ -368,7 +358,7 @@ struct TaikaCoreLoopOnboardingView: View {
             }
             .padding(22)
             .frame(maxWidth: 342)
-            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.black.opacity(0.38)).overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(theme.currentAccentTintColor.opacity(0.6), lineWidth: 1)))
+            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.black.opacity(0.38)).overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AnyShapeStyle(theme.currentAccentFill.opacity(0.62)), lineWidth: 1)))
         }
     }
 
@@ -558,6 +548,7 @@ private struct VoiceOrb: View {
 private struct VoiceMic: View {
     let isRecording: Bool
     let tint: Color
+    let fill: LinearGradient
     @State private var pulse = false
 
     var body: some View {
@@ -567,7 +558,7 @@ private struct VoiceMic: View {
                     .stroke(tint.opacity(isRecording ? 0.26 : 0.10), lineWidth: 1)
                     .scaleEffect(isRecording ? (pulse ? 1.06 + CGFloat(index) * 0.14 : 0.92 + CGFloat(index) * 0.12) : 0.86 + CGFloat(index) * 0.12)
             }
-            Circle().fill(tint).frame(width: 82, height: 82)
+            Circle().fill(fill).frame(width: 82, height: 82)
             Image(systemName: isRecording ? "waveform" : "mic.fill")
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(.black)
