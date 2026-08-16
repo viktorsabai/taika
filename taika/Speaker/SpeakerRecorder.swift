@@ -17,8 +17,16 @@ protocol SpeakerRecording: AnyObject {
     var recordingMeter: Double { get }
     var partialText: String { get }
 
+    var hasMicrophoneAccess: Bool { get }
+    var hasSpeechAccess: Bool { get }
+
     func requestPermission(completion: @escaping (Bool) -> Void)
+    func requestMicrophoneAccess() async -> Bool
+    func requestSpeechAccess() async -> Bool
+    func ensureCapturePermissions() async -> Bool
     func start(completion: @escaping (URL?) -> Void)
+    /// Start capture only after mic permission is already granted.
+    func startAuthorized(completion: @escaping (URL?) -> Void)
     func stop() -> URL?
     func currentAudioURL() -> URL?
 }
@@ -67,6 +75,12 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
             return
         }
 
+        if hasMicrophoneAccess {
+            status = .starting
+            completion(true)
+            return
+        }
+
         session.requestRecordPermission { [weak self] micGranted in
             DispatchQueue.main.async {
                 guard let self = self else {
@@ -84,6 +98,48 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
         }
     }
 
+    /// Mic already authorized (or legacy granted).
+    var hasMicrophoneAccess: Bool {
+        AVAudioSession.sharedInstance().recordPermission == .granted
+    }
+
+    var hasSpeechAccess: Bool {
+        SFSpeechRecognizer.authorizationStatus() == .authorized
+    }
+
+    func requestMicrophoneAccess() async -> Bool {
+        await withCheckedContinuation { cont in
+            requestPermission { cont.resume(returning: $0) }
+        }
+    }
+
+    func requestSpeechAccess() async -> Bool {
+        let auth = SFSpeechRecognizer.authorizationStatus()
+        switch auth {
+        case .authorized:
+            return true
+        case .denied, .restricted:
+            return false
+        case .notDetermined:
+            return await withCheckedContinuation { cont in
+                SFSpeechRecognizer.requestAuthorization { status in
+                    DispatchQueue.main.async {
+                        cont.resume(returning: status == .authorized)
+                    }
+                }
+            }
+        @unknown default:
+            return false
+        }
+    }
+
+    /// Mic + speech, in order. Does not start recording.
+    func ensureCapturePermissions() async -> Bool {
+        let mic = await requestMicrophoneAccess()
+        guard mic else { return false }
+        return await requestSpeechAccess()
+    }
+
     func start(completion: @escaping (URL?) -> Void) {
         status = .starting
         lastErrorMessage = nil
@@ -97,37 +153,55 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
                 completion(nil)
                 return
             }
+            self.startAuthorized(completion: completion)
+        }
+    }
 
-            let settings: [String: Any] = [
-                AVFormatIDKey: kAudioFormatMPEG4AAC,
-                AVSampleRateKey: 44100.0,
-                AVNumberOfChannelsKey: 1,
-                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-            ]
+    /// Start capture only after mic permission is already granted.
+    func startAuthorized(completion: @escaping (URL?) -> Void) {
+        status = .starting
+        lastErrorMessage = nil
 
-            do { try FileManager.default.removeItem(at: self.currentURL) } catch {}
+        guard hasMicrophoneAccess else {
+            status = .permissionDenied
+            lastErrorMessage = "mic permission denied"
+            completion(nil)
+            return
+        }
 
-            do {
-                let r = try AVAudioRecorder(url: self.currentURL, settings: settings)
-                r.isMeteringEnabled = true
-                r.prepareToRecord()
-                r.record()
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: 44100.0,
+            AVNumberOfChannelsKey: 1,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+        ]
 
-                NotificationCenter.default.post(name: .speakerRecorderDidStart, object: nil)
+        do { try FileManager.default.removeItem(at: currentURL) } catch {}
 
-                self.recorder = r
-                self.isRecording = true
-                self.status = .recording
-                self.startLevelMeter()
-                self.partialText = ""
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            try session.setActive(true)
 
-                completion(self.currentURL)
-            } catch {
-                self.isRecording = false
-                self.status = .startFailed
-                self.lastErrorMessage = "recorder start failed"
-                completion(nil)
-            }
+            let r = try AVAudioRecorder(url: currentURL, settings: settings)
+            r.isMeteringEnabled = true
+            r.prepareToRecord()
+            r.record()
+
+            NotificationCenter.default.post(name: .speakerRecorderDidStart, object: nil)
+
+            recorder = r
+            isRecording = true
+            status = .recording
+            startLevelMeter()
+            partialText = ""
+
+            completion(currentURL)
+        } catch {
+            isRecording = false
+            status = .startFailed
+            lastErrorMessage = "recorder start failed"
+            completion(nil)
         }
     }
 

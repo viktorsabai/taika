@@ -1354,7 +1354,7 @@ public final class SpeakerManager: ObservableObject {
         recordingPartialRU = ""
         recordingMeter = 0
         conversationRecordingElapsed = 0
-        conversationRecordingStartTime = Date()
+        conversationRecordingStartTime = nil
         heardThai = nil
         heardRU = nil
         heardTranslit = nil
@@ -1362,35 +1362,58 @@ public final class SpeakerManager: ObservableObject {
         taikaHints = []
         lastPlayed = .none
 
-        setPhase(.recording)
-        startMeter()
-
         let token = UUID()
         activeAttemptToken = token
 
-        conversationRecordingTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+        let beginCapture: () -> Void = { [weak self] in
+            guard let self else { return }
+            guard self.activeAttemptToken == token else { return }
+
+            self.conversationRecordingStartTime = Date()
+            self.setPhase(.recording)
+            self.startMeter()
+
+            self.conversationRecordingTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self else { return }
+                    guard self.phase == .recording, let start = self.conversationRecordingStartTime else { return }
+                    let elapsed = Date().timeIntervalSince(start)
+                    self.conversationRecordingElapsed = min(elapsed, self.conversationRecordingMaxDuration)
+                    if elapsed >= self.conversationRecordingMaxDuration {
+                        self.conversationRecordingTimer?.invalidate()
+                        self.conversationRecordingTimer = nil
+                        self.stopConversationRecordingAndProcess()
+                    }
+                }
+            }
+            if let timer = self.conversationRecordingTimer {
+                RunLoop.main.add(timer, forMode: .common)
+            }
+
+            self.recorder.startAuthorized { [weak self] (url: URL?) in
                 guard let self else { return }
-                guard self.phase == .recording, let start = self.conversationRecordingStartTime else { return }
-                let elapsed = Date().timeIntervalSince(start)
-                self.conversationRecordingElapsed = min(elapsed, self.conversationRecordingMaxDuration)
-                if elapsed >= self.conversationRecordingMaxDuration {
-                    self.conversationRecordingTimer?.invalidate()
-                    self.conversationRecordingTimer = nil
-                    self.stopConversationRecordingAndProcess()
+                guard self.activeAttemptToken == token else { return }
+                if let url {
+                    self.lastAttemptURL = url
+                    self.lastAttempt = url
                 }
             }
         }
-        if let timer = conversationRecordingTimer {
-            RunLoop.main.add(timer, forMode: .common)
-        }
 
-        recorder.start { [weak self] url in
-            guard let self else { return }
-            guard self.activeAttemptToken == token else { return }
-            if let url {
-                self.lastAttemptURL = url
-                self.lastAttempt = url
+        if recorder.hasMicrophoneAccess {
+            beginCapture()
+        } else {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let ok = await self.recorder.requestMicrophoneAccess()
+                guard self.activeAttemptToken == token else { return }
+                guard ok else {
+                    self.activeAttemptToken = nil
+                    self.taikaHints = ["нужен доступ к микрофону"]
+                    self.setPhase(.hint)
+                    return
+                }
+                beginCapture()
             }
         }
     }
@@ -1922,18 +1945,39 @@ public final class SpeakerManager: ObservableObject {
         recordingMeter = 0
         taikaHints = []
 
-        setPhase(.recording)
-        startMeter()
-
         let token = UUID()
         activeAttemptToken = token
 
-        recorder.start { [weak self] url in
+        let beginCapture: () -> Void = { [weak self] in
             guard let self else { return }
             guard self.activeAttemptToken == token else { return }
-            if let url {
-                self.lastAttemptURL = url
-                self.lastAttempt = url
+            self.setPhase(.recording)
+            self.startMeter()
+            self.recorder.startAuthorized { [weak self] (url: URL?) in
+                guard let self else { return }
+                guard self.activeAttemptToken == token else { return }
+                if let url {
+                    self.lastAttemptURL = url
+                    self.lastAttempt = url
+                }
+            }
+        }
+
+        // Never enter .recording while the system permission sheet is up.
+        if recorder.hasMicrophoneAccess {
+            beginCapture()
+        } else {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let ok = await self.recorder.requestMicrophoneAccess()
+                guard self.activeAttemptToken == token else { return }
+                guard ok else {
+                    self.activeAttemptToken = nil
+                    self.taikaHints = ["нужен доступ к микрофону"]
+                    self.setPhase(.hint)
+                    return
+                }
+                beginCapture()
             }
         }
         return true
@@ -2527,35 +2571,49 @@ public final class SpeakerManager: ObservableObject {
         heardConfidence = 0
         taikaHints = []
 
-        // deterministic phase transition
-        setPhase(.recording)
-        startMeter()
-
-        // token to ignore late completions
         let token = UUID()
         activeAttemptToken = token
 
-        recorder.start { [weak self] (url: URL?) in
+        let beginCapture: () -> Void = { [weak self] in
             guard let self else { return }
-            // ignore if this is not the latest attempt
             guard self.activeAttemptToken == token else { return }
+            self.setPhase(.recording)
+            self.startMeter()
+            self.recorder.startAuthorized { [weak self] (url: URL?) in
+                guard let self else { return }
+                guard self.activeAttemptToken == token else { return }
 
-            guard let url else {
-                self.stopMeter()
-                self.recordingPartialThai = nil
-                self.recordingMeter = 0
-                self.taikaHints = ["не получилось начать запись. проверь доступ к микрофону"]
-                self.setPhase(.hint)
-                self.activeAttemptToken = nil
-                return
+                guard let url else {
+                    self.stopMeter()
+                    self.recordingPartialThai = nil
+                    self.recordingMeter = 0
+                    self.taikaHints = ["не получилось начать запись. проверь доступ к микрофону"]
+                    self.setPhase(.hint)
+                    self.activeAttemptToken = nil
+                    return
+                }
+
+                self.lastAttemptURL = url
+                self.lastAttempt = url
+                self.session.markActive(courseId: cur.courseId, lessonId: cur.lessonId, stepIndex: cur.index)
             }
+        }
 
-            // keep urls in sync
-            self.lastAttemptURL = url
-            self.lastAttempt = url
-
-            // keep context in sync
-            self.session.markActive(courseId: cur.courseId, lessonId: cur.lessonId, stepIndex: cur.index)
+        if recorder.hasMicrophoneAccess {
+            beginCapture()
+        } else {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let ok = await self.recorder.requestMicrophoneAccess()
+                guard self.activeAttemptToken == token else { return }
+                guard ok else {
+                    self.activeAttemptToken = nil
+                    self.taikaHints = ["нужен доступ к микрофону"]
+                    self.setPhase(.hint)
+                    return
+                }
+                beginCapture()
+            }
         }
     }
 

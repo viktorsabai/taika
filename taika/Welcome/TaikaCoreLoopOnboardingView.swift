@@ -38,6 +38,9 @@ struct TaikaCoreLoopOnboardingView: View {
     @State private var craftTask: Task<Void, Never>?
     @State private var resultTask: Task<Void, Never>?
     @State private var isPreparingRecording = false
+    @State private var accessCoach: String? = nil
+    @State private var accessCoachTitle: String? = nil
+    @State private var permissionTask: Task<Void, Never>?
     @State private var phraseRevealed = false
     @State private var isCookingResult = false
     @State private var showBreakdownSheet = false
@@ -120,8 +123,10 @@ struct TaikaCoreLoopOnboardingView: View {
         case .phrase: return "ТВОЯ ПЕРВАЯ ФРАЗА"
         case .listen: return "TAIKA ГОВОРИТ"
         case .speak:
+            if let accessCoachTitle { return accessCoachTitle }
             if isCookingResult || speaker.phase == .analyzing { return "СЧИТАЮ РЕЗУЛЬТАТ" }
             if speaker.phase == .recording { return "СЛУШАЮ ТЕБЯ" }
+            if isPreparingRecording { return "НУЖЕН ДОСТУП" }
             return "ТВОЯ ОЧЕРЕДЬ"
         case .feedback: return "TAIKA УСЛЫШАЛА"
         default: return ""
@@ -137,7 +142,8 @@ struct TaikaCoreLoopOnboardingView: View {
         case .listen:
             return "Слушай тоны внимательно"
         case .speak:
-            if isPreparingRecording { return "Готовлю микрофон…" }
+            if let accessCoach { return accessCoach }
+            if isPreparingRecording { return "Одну секунду — готовлю доступ…" }
             if speaker.phase == .recording { return "Говори спокойно — я ловлю тоны" }
             if isCookingResult || speaker.phase == .analyzing { return "Собираю разбор…" }
             return "Когда готов — нажми «Говорить»"
@@ -208,6 +214,7 @@ struct TaikaCoreLoopOnboardingView: View {
             listenTask?.cancel()
             craftTask?.cancel()
             resultTask?.cancel()
+            permissionTask?.cancel()
             // Shared SpeakerManager must not keep the demo phrase / recording focus after first-entry.
             speaker.endEphemeralPracticeSession()
         }
@@ -218,6 +225,7 @@ struct TaikaCoreLoopOnboardingView: View {
         .onChange(of: speaker.phase) { _, newPhase in
             if phase == .speak, newPhase == .recording {
                 isPreparingRecording = false
+                clearAccessCoach()
                 scheduleRecordingAutoStop()
             }
             if newPhase == .idle {
@@ -886,17 +894,84 @@ struct TaikaCoreLoopOnboardingView: View {
     private func toggleRecording() {
         if speaker.phase == .recording {
             recordingTask?.cancel()
+            permissionTask?.cancel()
             isPreparingRecording = false
+            clearAccessCoach()
             speaker.stopConversationPronunciationCheck()
             return
         }
 
+        permissionTask?.cancel()
         isPreparingRecording = true
         ensurePracticePhrase()
-        let started = speaker.startConversationPronunciationCheck()
-        if !started || speaker.phase != .recording {
-            isPreparingRecording = false
+        permissionTask = Task { @MainActor in
+            let ready = await ensureCaptureAccessWithCoach()
+            guard !Task.isCancelled, phase == .speak else {
+                isPreparingRecording = false
+                clearAccessCoach()
+                return
+            }
+            guard ready else {
+                isPreparingRecording = false
+                return
+            }
+            clearAccessCoach()
+            let started = speaker.startConversationPronunciationCheck()
+            if !started || (speaker.phase != .recording && !SpeakerRecorder.shared.hasMicrophoneAccess) {
+                // Permission path may still be finishing inside manager — keep preparing until .recording.
+                if speaker.phase != .recording {
+                    isPreparingRecording = false
+                }
+            }
         }
+    }
+
+    /// Soft Kun Kru coach: mic → speech, then record. Never capture audio before both are ready.
+    @MainActor
+    private func ensureCaptureAccessWithCoach() async -> Bool {
+        let recorder = SpeakerRecorder.shared
+
+        if !recorder.hasMicrophoneAccess {
+            withAnimation(transition) {
+                accessCoachTitle = "СЕКУНДУ"
+                accessCoach = "Мне нужен микрофон — иначе не услышу тебя."
+            }
+            let micOK = await recorder.requestMicrophoneAccess()
+            guard micOK else {
+                withAnimation(transition) {
+                    accessCoachTitle = "БЕЗ МИКРОФОНА"
+                    accessCoach = "Разреши микрофон в Настройках — и продолжим."
+                }
+                return false
+            }
+        }
+
+        if !recorder.hasSpeechAccess {
+            withAnimation(transition) {
+                accessCoachTitle = "И ЕЩЁ ОДНО"
+                accessCoach = "Нужен доступ к речи — так я разберу тоны."
+            }
+            let speechOK = await recorder.requestSpeechAccess()
+            guard speechOK else {
+                withAnimation(transition) {
+                    accessCoachTitle = "НУЖНА РЕЧЬ"
+                    accessCoach = "Без распознавания речи не соберу разбор. Разреши доступ и нажми снова."
+                }
+                return false
+            }
+        }
+
+        withAnimation(transition) {
+            accessCoachTitle = "ГОТОВО"
+            accessCoach = "Отлично — теперь говори."
+        }
+        try? await Task.sleep(nanoseconds: reduceMotion ? 120_000_000 : 280_000_000)
+        return true
+    }
+
+    private func clearAccessCoach() {
+        accessCoach = nil
+        accessCoachTitle = nil
     }
 
     private func scheduleRecordingAutoStop() {
@@ -913,10 +988,24 @@ struct TaikaCoreLoopOnboardingView: View {
         isCookingResult = false
         ensurePracticePhrase()
         withAnimation(transition) { phase = .speak }
+        permissionTask?.cancel()
         isPreparingRecording = true
-        let started = speaker.startConversationPronunciationCheck()
-        if !started || speaker.phase != .recording {
-            isPreparingRecording = false
+        permissionTask = Task { @MainActor in
+            let ready = await ensureCaptureAccessWithCoach()
+            guard !Task.isCancelled, phase == .speak else {
+                isPreparingRecording = false
+                clearAccessCoach()
+                return
+            }
+            guard ready else {
+                isPreparingRecording = false
+                return
+            }
+            clearAccessCoach()
+            let started = speaker.startConversationPronunciationCheck()
+            if !started, speaker.phase != .recording {
+                isPreparingRecording = false
+            }
         }
     }
 }
