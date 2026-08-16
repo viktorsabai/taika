@@ -531,44 +531,62 @@ private struct VoiceOrb: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var breathing = false
     @State private var rotation: Double = 0
-
     var body: some View {
         ZStack {
             Circle()
-                .fill(fill.opacity(isActive ? 0.13 : 0.08))
-                .blur(radius: 24)
-                .scaleEffect(breathing ? 1.12 : 0.94)
+                .fill(RadialGradient(colors: [tint.opacity(0.42), tint.opacity(0.16), .clear], center: .center, startRadius: 12, endRadius: 154))
+                .blur(radius: 18)
+                .scaleEffect(breathing ? 1.14 : 0.92)
             Circle()
-                .fill(fill.opacity(0.045))
-                .overlay(Circle().stroke(tint.opacity(0.22), lineWidth: 1))
-                .scaleEffect(breathing ? 1.04 : 0.96)
-            ForEach(0..<3, id: \.self) { index in
+                .fill(fill.opacity(0.10))
+                .frame(width: 230, height: 230)
+                .blur(radius: 2)
+                .overlay(Circle().stroke(tint.opacity(0.12), lineWidth: 1))
+            Circle()
+                .fill(RadialGradient(colors: [Color.white.opacity(0.12), tint.opacity(0.12), .black.opacity(0.72)], center: UnitPoint(x: 0.35, y: 0.28), startRadius: 4, endRadius: 118))
+                .frame(width: 192, height: 192)
+                .overlay(Circle().stroke(fill, lineWidth: 1.2).opacity(0.62))
+                .shadow(color: tint.opacity(0.32), radius: 26)
+            Circle()
+                .fill(RadialGradient(colors: [.white.opacity(0.16), .clear], center: .center, startRadius: 2, endRadius: 66))
+                .frame(width: 132, height: 132)
+                .blur(radius: 8)
+            ForEach(0..<4, id: \.self) { index in
                 Circle()
-                    .trim(from: 0.08 + CGFloat(index) * 0.18, to: 0.34 + CGFloat(index) * 0.18)
-                    .stroke(tint.opacity(0.28 - Double(index) * 0.05), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
-                    .rotationEffect(.degrees(rotation + Double(index) * 120))
-                    .scaleEffect(1.03 + CGFloat(index) * 0.07)
+                    .trim(from: 0.06 + CGFloat(index) * 0.17, to: 0.27 + CGFloat(index) * 0.17)
+                    .stroke(tint.opacity(0.40 - Double(index) * 0.07), style: StrokeStyle(lineWidth: index == 0 ? 2.2 : 1.1, lineCap: .round))
+                    .frame(width: 208 + CGFloat(index) * 18, height: 208 + CGFloat(index) * 18)
+                    .rotationEffect(.degrees(rotation + Double(index) * 92))
             }
-            ForEach(0..<3, id: \.self) { index in
+            ForEach(0..<7, id: \.self) { index in
+                Circle()
+                    .fill(fill)
+                    .frame(width: index == 0 ? 5 : 2.5, height: index == 0 ? 5 : 2.5)
+                    .shadow(color: tint.opacity(0.9), radius: 7)
+                    .offset(y: -122)
+                    .rotationEffect(.degrees(Double(index) * 51.4 + rotation * 0.35))
+                    .opacity(index.isMultiple(of: 2) ? 0.82 : 0.38)
+            }
+            ForEach(0..<5, id: \.self) { index in
                 WaveformLine(tint: tint, active: isActive)
-                    .frame(height: 108 + CGFloat(index) * 18)
-                    .opacity(0.28 + Double(index) * 0.24)
-                    .scaleEffect(x: 1 + CGFloat(index) * 0.05, y: 1, anchor: .center)
+                    .frame(height: 92 + CGFloat(index) * 15)
+                    .opacity(0.22 + Double(index) * 0.14)
+                    .scaleEffect(x: 0.92 + CGFloat(index) * 0.06, y: 1, anchor: .center)
             }
             Circle()
-                .fill(fill.opacity(isActive ? 0.19 : 0.12))
-                .frame(width: 7, height: 7)
-                .shadow(color: tint.opacity(0.8), radius: 10)
+                .fill(fill)
+                .frame(width: 8, height: 8)
+                .shadow(color: tint.opacity(0.95), radius: 14)
         }
-        .frame(width: 250, height: 250)
+        .frame(width: 300, height: 300)
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true)) { breathing = true }
-            withAnimation(.linear(duration: 16).repeatForever(autoreverses: false)) { rotation = 360 }
+            withAnimation(.linear(duration: 18).repeatForever(autoreverses: false)) { rotation = 360 }
         }
     }
-
 }
+
 
 private struct VoiceMic: View {
     let isRecording: Bool
