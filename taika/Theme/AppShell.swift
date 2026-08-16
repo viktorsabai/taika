@@ -73,9 +73,17 @@ struct AppShell: View {
             // • первый раз → единый splash внутри core loop → LessonsView стартового курса
             // • returning → короткий Splash → Main
             if !onboardingDone {
-                TaikaCoreLoopOnboardingView { courseId in
-                    finishFirstEntry(with: .baseCourse, landingCourseId: courseId)
-                }
+                TaikaCoreLoopOnboardingView(
+                    onRequestPro: {
+                        finishFirstEntry(with: .baseCourse)
+                        DispatchQueue.main.async {
+                            overlay.presentPro(reason: .general, courseId: "course_b_1")
+                        }
+                    },
+                    onFinished: { courseId in
+                        finishFirstEntry(with: .baseCourse, landingCourseId: courseId)
+                    }
+                )
                 .transition(.opacity)
             } else if showBootSplash {
                 SplashTaikaView {

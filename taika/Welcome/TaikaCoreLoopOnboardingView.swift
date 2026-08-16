@@ -4,6 +4,7 @@ import SwiftUI
 /// while recording and feedback are driven by the real SpeakerManager pipeline.
 struct TaikaCoreLoopOnboardingView: View {
     let onFinished: (_ courseId: String) -> Void
+    let onRequestPro: () -> Void = {}
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var theme = ThemeManager.shared
@@ -363,25 +364,35 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var reinforceHero: some View {
-        VStack(spacing: 24) {
-            Text("Закрепим фразу")
-                .font(.system(size: 30, weight: .bold, design: .rounded))
+        VStack(spacing: 22) {
+            Text("Теперь можно учиться по-настоящему")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-            Text("Один короткий шаг — и она останется в памяти.")
+            Text("Taika будет вести тебя от первой фразы к живой речи — с тонами, курсами и практикой.")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(.white.opacity(0.70))
                 .multilineTextAlignment(.center)
-                .frame(maxWidth: 300)
-            VStack(spacing: 10) {
-                reinforcementStep(number: "01", title: "Услышь фразу ещё раз")
-                reinforcementStep(number: "02", title: "Повтори её вслух")
-                reinforcementStep(number: "03", title: "Узнай тон и закрепи")
+                .frame(maxWidth: 320)
+            VStack(alignment: .leading, spacing: 12) {
+                trialValueRow("Разбор слов и тонов")
+                trialValueRow("Курсы под твой уровень")
+                trialValueRow("Закрепление фраз в практике")
             }
-            .padding(18)
+            .padding(20)
             .frame(maxWidth: 336)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(theme.currentAccentTintColor.opacity(0.18), lineWidth: 1))
+        }
+    }
+    private func trialValueRow(_ title: String) -> some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(theme.currentAccentFill)
+                .frame(width: 7, height: 7)
+            Text(title)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.88))
         }
     }
     private func reinforcementStep(number: String, title: String) -> some View {
@@ -441,11 +452,16 @@ struct TaikaCoreLoopOnboardingView: View {
                     .foregroundStyle(.white.opacity(0.68))
                     .buttonStyle(.plain)
             case .reinforce:
-                primaryCTA("Начать первый урок") { onFinished("course_b_1") }
-                Button("Позже") { onFinished("course_b_1") }
+                primaryCTA(TaikaProConfig.introTrialCTAFree) { onRequestPro() }
+                Button("Открыть первый урок") { onFinished("course_b_1") }
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(.white.opacity(0.72))
                     .buttonStyle(.plain)
+                Text(TaikaProConfig.introTrialLegalLine)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.46))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 18)
             }
         }
     }
