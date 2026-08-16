@@ -14,7 +14,7 @@ struct TaikaCoreLoopOnboardingView: View {
     @State private var isPressed = false
     @State private var introFrame: IntroFrame = .brand
     @State private var selectedLevel: Int?
-    @State private var selectedPain: Int?
+    @State private var selectedPains = Set<Int>()
     @State private var recordingTask: Task<Void, Never>?
     @Namespace private var heroNamespace
 
@@ -228,18 +228,24 @@ struct TaikaCoreLoopOnboardingView: View {
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .tracking(1.1)
                 .foregroundStyle(theme.currentAccentFill)
-            Text("Выбери свой главный стопер.")
+            Text("Выбери всё, что тебе знакомо.")
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
             VStack(spacing: 10) {
                 ForEach(Array(painPoints.enumerated()), id: \.offset) { index, pain in
-                    painRow(pain, active: selectedPain == index) {
-                        withAnimation(transition) { selectedPain = index }
+                    painRow(pain, active: selectedPains.contains(index)) {
+                        withAnimation(transition) {
+                            if selectedPains.contains(index) {
+                                selectedPains.remove(index)
+                            } else {
+                                selectedPains.insert(index)
+                            }
+                        }
                     }
                 }
             }
-            Text("Taika превратит его в первый понятный шаг.")
+            Text("Taika превратит их в первые понятные шаги.")
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(.white.opacity(0.62))
                 .multilineTextAlignment(.center)
@@ -442,12 +448,12 @@ struct TaikaCoreLoopOnboardingView: View {
                 case .level:
                     primaryCTA("Продолжить") {
                         guard selectedLevel != nil else { return }
-                        selectedPain = nil
+                        selectedPains.removeAll()
                         introFrame = .pain
                     }
                 case .pain:
-                    primaryCTA("Попробовать фразу") {
-                        guard selectedPain != nil else { return }
+                    primaryCTA(selectedPains.isEmpty ? "Выбери, что знакомо" : "Продолжить · \(selectedPains.count)") {
+                        guard !selectedPains.isEmpty else { return }
                         advance(.phrase)
                     }
                 }
@@ -503,7 +509,7 @@ struct TaikaCoreLoopOnboardingView: View {
     private func startIntroSequence() {
         introFrame = .brand
         selectedLevel = nil
-        selectedPain = nil
+        selectedPains.removeAll()
     }
 
     private func advance(_ next: Phase) {
@@ -571,21 +577,11 @@ private struct ThaiTransformOrb: View {
             }
             WaveformLine(tint: tint, active: true)
                 .frame(width: 126, height: 92)
-            Text("THAI")
-                .font(.system(size: 8, weight: .bold, design: .rounded))
-                .tracking(1.4)
-                .foregroundStyle(.white.opacity(0.48))
-                .offset(y: -56)
-            Text("MEANING")
-                .font(.system(size: 8, weight: .bold, design: .rounded))
-                .tracking(1.2)
-                .foregroundStyle(.white.opacity(0.48))
-                .offset(y: 56)
-            Text("ไม่เผ็ด")
-                .font(.system(size: 17, weight: .regular))
-                .foregroundStyle(.white.opacity(0.9))
+            Text("не остро")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.78))
                 .offset(x: travel ? -142 : -76, y: -3)
-            Text("mai phet")
+            Text("май → пхет ↘")
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(tint.opacity(0.98))
                 .offset(x: travel ? 142 : 76, y: 4)
