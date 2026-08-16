@@ -1016,29 +1016,36 @@ struct StepView: View {
 
         let primaryTitle: String = {
             switch advance {
-            case .nextLesson(_, let nextId):
-                let nextTitle = LessonsData.shared.lessonTitle(for: nextId) ?? "следующий урок"
-                return "Дальше: \(nextTitle)"
-            case .nextCourse, .end:
-                return "Закрепить голосом"
+            case .nextLesson:
+                return "Продолжить курс"
+            case .nextCourse:
+                return "Выбрать следующий курс"
+            case .end:
+                return "Посмотреть курсы"
             }
         }()
 
         let speakerTitle: String = {
             switch advance {
-            case .nextCourse:
-                return "К следующему курсу"
-            case .nextLesson:
-                return "Практика в Спикере"
-            case .end:
-                return "К каталогу курсов"
+            case .nextCourse, .nextLesson, .end:
+                return "Попробовать в Спикере"
             }
         }()
 
         let speakerIcon: String = {
             switch advance {
-            case .nextCourse, .end: return "arrow.right"
-            case .nextLesson: return "mic.fill"
+            case .nextCourse, .end, .nextLesson: return "mic.fill"
+            }
+        }()
+        let primaryCaption: String = {
+            switch advance {
+            case .nextLesson(_, let nextId):
+                let nextTitle = LessonsData.shared.lessonTitle(for: nextId) ?? "следующий урок"
+                return "Следующий урок: «\(nextTitle)»"
+            case .nextCourse:
+                return "Кун Кру советует продолжить маршрут"
+            case .end:
+                return "Кун Кру уже приготовила другие курсы"
             }
         }()
 
@@ -1050,11 +1057,15 @@ struct StepView: View {
             onPrimary: {
                 switch advance {
                 case .end:
-                    openSpeakerPractice(courseId: cid, lessonId: resolvedLessonId)
+                    withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
+                    scheduleAuthSoftWallIfNeeded()
+                    nav.openCourseCatalog()
                 case .nextLesson:
                     prepareNextLessonAndNavigate()
                 case .nextCourse:
-                    openSpeakerPractice(courseId: cid, lessonId: resolvedLessonId)
+                    withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
+                    scheduleAuthSoftWallIfNeeded()
+                    nav.openCourseCatalog()
                 }
             },
             onSecondary: {
@@ -1073,23 +1084,31 @@ struct StepView: View {
                 switch advance {
                 case .nextLesson:
                     openSpeakerPractice(courseId: cid, lessonId: resolvedLessonId)
-                case .nextCourse(let nextCourseId, let firstLessonId):
-                    navigateToNextCourse(courseId: nextCourseId, lessonId: firstLessonId)
+                case .nextCourse:
+                    openSpeakerPractice(courseId: cid, lessonId: resolvedLessonId)
                 case .end:
-                    withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
-                    scheduleAuthSoftWallIfNeeded()
-                    nav.openCourseCatalog()
+                    openSpeakerPractice(courseId: cid, lessonId: resolvedLessonId)
                 }
             },
             speakerPracticeTitle: speakerTitle,
             speakerPracticeSystemImage: speakerIcon,
-            selectedGameMode: isCourseMoment ? nil : summaryGameMode,
-            onSelectGameMode: isCourseMoment ? nil : { mode in
+            selectedGameMode: summaryGameMode,
+            onSelectGameMode: { mode in
                 withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
                     summaryGameMode = mode
                 }
             },
-            showGameReinforce: !isCourseMoment,
+            showGameReinforce: true,
+            isProUser: ProManager.shared.isPro,
+            onLockedGame: { _ in
+                OverlayPresenter.shared.presentPro(reason: .games, courseId: cid)
+            },
+            onOpenGame: { mode in
+                withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
+                scheduleAuthSoftWallIfNeeded()
+                nav.go(.game(courseId: cid, lessonId: resolvedLessonId, gameType: mode.rawValue))
+            },
+            primaryCaption: primaryCaption,
             lessonDurationText: lessonDurationTextValue(),
             overallProgressText: overallProgressTextValue(courseId: cid, lessonId: resolvedLessonId)
         )
