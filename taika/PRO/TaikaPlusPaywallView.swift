@@ -24,6 +24,7 @@ struct TaikaPlusPaywallView: View {
     @ObservedObject private var pro = ProManager.shared
     @ObservedObject private var theme = ThemeManager.shared
     @ObservedObject private var auth = AuthService.shared
+    @ObservedObject private var trainingAttempts = SpeakerDailyAttemptsStore.shared
 
     @State private var isLoadingOfferings = false
     @State private var offerings: Offerings?
@@ -137,43 +138,53 @@ struct TaikaPlusPaywallView: View {
     // MARK: - Panel
 
     private var mainPanel: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            headerBar
+        GlassSurface(cornerRadius: TaikaOverlayTokens.Layout.cardRadius) {
+            VStack(alignment: .leading, spacing: 0) {
+                headerBar
 
-            VStack(alignment: .leading, spacing: 20) {
-                heroBlock
-                planPicker
-                checkoutBlock
+                VStack(alignment: .leading, spacing: 16) {
+                    sourceContextBlock
+                    quotaBlock
+                    heroBlock
+                    planPicker
+                    checkoutBlock
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 4)
+                .padding(.bottom, 16)
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 4)
-            .padding(.bottom, 16)
         }
         .frame(maxWidth: 420)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(CD.ColorToken.card)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    accentTint.opacity(0.10),
-                                    Color.clear,
-                                    accentTint.opacity(0.05)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(accentFill.opacity(0.32), lineWidth: Theme.Strokes.strokeCardLineWidth)
-        )
-        .shadow(color: accentTint.opacity(0.16), radius: 24, y: 14)
+        .overlay {
+            RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous)
+                .strokeBorder(accentFill.opacity(0.28), lineWidth: Theme.Strokes.strokeCardLineWidth)
+        }
+        .shadow(color: accentTint.opacity(0.14), radius: 24, y: 14)
         .onTapGesture { }
+    }
+
+    @ViewBuilder
+    private var sourceContextBlock: some View {
+        if reason == .games {
+            GlassMessage(title: "Из Game Park", symbol: "gamecontroller.fill") {
+                Text("Ты открыл это предложение из закрытого игрового режима. После закрытия вернёшься в Game Park.")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.86))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var quotaBlock: some View {
+        if reason == .speakerBreakdown {
+            GlassQuota(
+                title: "Попытки Спикера",
+                detail: pro.isPro ? "без лимита" : "\(trainingAttempts.remainingToday) осталось сегодня",
+                progress: Double(trainingAttempts.remainingToday) / 10.0
+            )
+        }
     }
 
     private var headerBar: some View {
