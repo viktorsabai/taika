@@ -173,6 +173,28 @@ struct AppShell: View {
                     FavoritesFiltersOverlayView(onDismiss: { overlay.dismiss() })
                 case .favoritesSearch:
                     FavoritesSearchOverlayView(onDismiss: { overlay.dismiss() })
+                case .dictionaryQuickDrawer:
+                    DictionaryQuickDrawerView(
+                        onDismiss: { overlay.dismiss() },
+                        onOpenFullDictionary: {
+                            overlay.dismiss()
+                            FavoritesFilterState.shared.selectedTab = .dictionary
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                nav.popToRoot()
+                                selectedTab = 3
+                            }
+                        },
+                        onOpenSpeaker: {
+                            overlay.dismiss()
+                            guard selectedTab != 2 else { return }
+                            SpeakerManager.shared.setSpeakerUIMode(.conversation)
+                            SpeakerReturnContext.shared.save(tab: selectedTab, path: nav.path)
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                nav.popToRoot()
+                                selectedTab = 2
+                            }
+                        }
+                    )
                 case .accentPicker:
                     AccentPickerOverlayView(onDismiss: { overlay.dismiss() })
                 case .courseResetConfirm(let courseId):
@@ -371,6 +393,15 @@ struct AppShell: View {
                 ? Theme.Layout.rootHeaderClearanceGame
                 : Theme.Layout.rootHeaderClearance
         )
+        .overlay(alignment: .trailing) {
+            if nav.path.isEmpty && [0, 2, 3].contains(selectedTab) && overlay.overlay == nil {
+                DictionaryEdgeTab {
+                    overlay.present(.dictionaryQuickDrawer)
+                }
+                .padding(.trailing, 2)
+                .padding(.top, 82)
+            }
+        }
         .overlay(alignment: .bottom) {
             if nav.path.isEmpty {
                 ToolBar(selectedTab: tabSelection)
@@ -537,15 +568,7 @@ private struct ShellHeaderHost: View {
             onTapFavoritesSearch: { overlay.present(.favoritesSearch) },
             onTapDictionary: {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                if selectedTab == 2 {
-                    NotificationCenter.default.post(name: .taikaOpenSmartSpeakerDictionary, object: nil)
-                } else {
-                    FavoritesFilterState.shared.selectedTab = .dictionary
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                        nav.popToRoot()
-                        selectedTab = 3
-                    }
-                }
+                overlay.present(.dictionaryQuickDrawer)
             },
             dictionaryCount: favorites.smartSpeakerDictionaryCardsDTO.count
         )

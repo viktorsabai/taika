@@ -55,6 +55,8 @@ final class OverlayPresenter: ObservableObject {
         case favoritesFilters
         /// Поиск по избранным фразам (вкладка «Карточки»).
         case favoritesSearch
+        /// Быстрый личный словарь поверх текущего экрана; не меняет Speaker flow.
+        case dictionaryQuickDrawer
         /// Превью курса (описание + кнопка «Открыть курс»), открывается по тапу на иконку инфо на карточке.
         case courseInfoPreview(courseId: String)
 
