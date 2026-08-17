@@ -325,16 +325,16 @@ public enum Theme {
             .shadow(color: Color.black.opacity(0.38), radius: 28, y: 16)
         }
 
-        /// Backdrop модалок: глубокий чёрный gloss — без серой «пыли».
+        /// Backdrop модалок: translucent blur, сохраняющий читаемый исходный context.
         public static var blackGlassScrim: some View {
             ZStack {
                 Rectangle().fill(.ultraThinMaterial)
-                Color.black.opacity(0.68)
+                Color.black.opacity(0.34)
                 LinearGradient(
                     colors: [
-                        Color.white.opacity(0.10),
+                        Color.white.opacity(0.08),
                         Color.clear,
-                        Color.black.opacity(0.22)
+                        Color.black.opacity(0.10)
                     ],
                     startPoint: .top,
                     endPoint: .bottom
