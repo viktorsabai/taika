@@ -66,8 +66,12 @@ struct AppShell: View {
 
     var body: some View {
         ZStack {
-            PD.ColorToken.background
-                .ignoresSafeArea()
+            if selectedTab == 2 && onboardingDone {
+                TaikaContinuousCanvasBackground()
+            } else {
+                PD.ColorToken.background
+                    .ignoresSafeArea()
+            }
 
             // Вход:
             // • первый раз → единый splash внутри core loop → LessonsView стартового курса
@@ -409,7 +413,13 @@ struct AppShell: View {
                     }
                 }
         }
-        .background(PD.ColorToken.background)
+        .background {
+            if selectedTab == 2 {
+                TaikaContinuousCanvasBackground()
+            } else {
+                PD.ColorToken.background
+            }
+        }
         .toolbar(.hidden, for: .navigationBar)
         .environment(
             \.taikaRootHeaderClearance,
