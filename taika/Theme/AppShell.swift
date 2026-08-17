@@ -383,6 +383,13 @@ struct AppShell: View {
                                     nav.popToRoot()
                                     selectedTab = 2
                                 }
+                            },
+                            onNavigateToSpeaker: {
+                                SpeakerReturnContext.shared.save(tab: selectedTab, path: nav.path)
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                    nav.popToRoot()
+                                    selectedTab = 2
+                                }
                             }
                         )
 

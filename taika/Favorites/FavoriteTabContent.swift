@@ -895,6 +895,10 @@ private struct FDFavPhraseCompactRow: View {
     let dto: FDCardDTO
     var onPlay: () -> Void
     var showsDivider: Bool = false
+    var showsDictionaryActions: Bool = false
+    var onEdit: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
+    var onTrain: (() -> Void)? = nil
 
     private var russian: String {
         dto.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -916,7 +920,7 @@ private struct FDFavPhraseCompactRow: View {
                         )
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .minimumScaleFactor(0.85)
                     }
                     if !russian.isEmpty {
@@ -925,7 +929,7 @@ private struct FDFavPhraseCompactRow: View {
                             .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.85))
                             .multilineTextAlignment(.leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .lineLimit(2)
+                            .lineLimit(3)
                             .minimumScaleFactor(0.88)
                     }
                 }
@@ -933,13 +937,22 @@ private struct FDFavPhraseCompactRow: View {
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onPlay)
 
-                FavCircleIconButton(
-                    systemName: "speaker.wave.2.fill",
-                    isAccent: true,
-                    showChrome: false,
-                    accessibilityLabel: "Прослушать",
-                    action: onPlay
-                )
+                if showsDictionaryActions {
+                    DictionaryPhraseActionsMenu(
+                        card: dto,
+                        onEdit: onEdit,
+                        onDelete: onDelete,
+                        onTrain: onTrain
+                    )
+                } else {
+                    FavCircleIconButton(
+                        systemName: "speaker.wave.2.fill",
+                        isAccent: true,
+                        showChrome: false,
+                        accessibilityLabel: "Прослушать",
+                        action: onPlay
+                    )
+                }
             }
             .padding(.horizontal, FDFavListChrome.rowHPad)
             .padding(.vertical, FDFavListChrome.rowVPad)
@@ -1213,6 +1226,10 @@ private struct FDFavPhraseGridCard: View {
     var appearIndex: Int = 0
     var onPlay: () -> Void
     var onUnfavorite: () -> Void
+    var showsDictionaryActions: Bool = false
+    var onEdit: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
+    var onTrain: (() -> Void)? = nil
 
     @State private var appeared = false
 
@@ -1310,6 +1327,27 @@ private struct FDFavPhraseGridCard: View {
         .onTapGesture {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             onPlay()
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if showsDictionaryActions {
+                DictionaryPhraseActionsMenu(
+                    card: dto,
+                    onEdit: onEdit,
+                    onDelete: onDelete,
+                    onTrain: onTrain
+                )
+                .padding(8)
+            }
+        }
+        .contextMenu {
+            if showsDictionaryActions {
+                dictionaryPhraseContextMenu(
+                    card: dto,
+                    onEdit: onEdit,
+                    onDelete: onDelete,
+                    onTrain: onTrain
+                )
+            }
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 12)
@@ -1538,6 +1576,9 @@ struct FDFavDictionaryTabList: View {
     var onOpenSpeaker: (() -> Void)? = nil
     var onTrainInSpeaker: (() -> Void)? = nil
 
+    @EnvironmentObject private var nav: NavigationIntent
+    @State private var editingCard: DictionaryEditTarget?
+
     @AppStorage("taika.fav.dict.viewMode") private var viewModeRaw: String = FavCardsViewMode.list.rawValue
 
     private var viewMode: Binding<FavCardsViewMode> {
@@ -1562,6 +1603,14 @@ struct FDFavDictionaryTabList: View {
             )
         } else {
             dictionaryFilledContent
+                .sheet(item: $editingCard) { target in
+                    DictionaryEditSheet(card: target.card) {
+                        editingCard = nil
+                    }
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(28)
+                }
         }
     }
 
@@ -1584,7 +1633,11 @@ struct FDFavDictionaryTabList: View {
                     FDFavPhraseCompactRow(
                         dto: dto,
                         onPlay: { playCard(dto) },
-                        showsDivider: index < sortedCards.count - 1
+                        showsDivider: index < sortedCards.count - 1,
+                        showsDictionaryActions: true,
+                        onEdit: { editingCard = DictionaryEditTarget(card: dto) },
+                        onDelete: { onUnfavorite(dto) },
+                        onTrain: { trainInSpeaker() }
                     )
                 }
             }
@@ -1601,11 +1654,29 @@ struct FDFavDictionaryTabList: View {
                     size: size,
                     appearIndex: index,
                     onPlay: { playCard(dto) },
-                    onUnfavorite: { onUnfavorite(dto) }
+                    onUnfavorite: { onUnfavorite(dto) },
+                    showsDictionaryActions: true,
+                    onEdit: { editingCard = DictionaryEditTarget(card: dto) },
+                    onDelete: { onUnfavorite(dto) },
+                    onTrain: { trainInSpeaker() }
                 )
             }
         }
         .padding(.horizontal, CD.Spacing.screen)
+    }
+
+    private func trainInSpeaker() {
+        if let onTrainInSpeaker {
+            onTrainInSpeaker()
+            return
+        }
+#if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+#endif
+        SpeakerManager.shared.setSpeakerUIMode(.training)
+        SpeakerManager.shared.startSpecialTraining(poolId: "__dictionary__")
+        SpeakerReturnContext.shared.save(tab: 3, path: nav.path)
+        nav.requestTab(2)
     }
 
     private func playCard(_ dto: FDCardDTO) {

@@ -824,11 +824,53 @@ final class FavoriteManager: ObservableObject {
     }
 
     /// Совпадает с дедупликацией в `addSmartSpeakerCard` (нормализованный тайский).
-    func hasSmartSpeakerDictionaryEntry(thai: String) -> Bool {
+    func hasSmartSpeakerDictionaryEntry(thai: String, excludingId: String? = nil) -> Bool {
         let thTrim = thai.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !thTrim.isEmpty else { return false }
         let key = normalized(thTrim)
-        return items.contains { isUserDictionaryItem($0) && normalized($0.th) == key }
+        let exclude = excludingId.map { normalized($0) }
+        return items.contains { item in
+            guard isUserDictionaryItem(item) else { return false }
+            if let exclude, normalized(item.id) == exclude { return false }
+            return normalized(item.th) == key
+        }
+    }
+
+    /// Обновляет запись словаря на месте: сохраняет id, createdAt и порядок в `items`.
+    @discardableResult
+    func updateSmartSpeakerDictionaryEntry(id: String, ru: String, thai: String, phonetic: String) -> Bool {
+        let idKey = normalized(id)
+        let thTrim = thai.trimmingCharacters(in: .whitespacesAndNewlines)
+        let phTrim = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+        let ruTrim = ru.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !thTrim.isEmpty, !phTrim.isEmpty else { return false }
+        guard !hasSmartSpeakerDictionaryEntry(thai: thTrim, excludingId: idKey) else { return false }
+
+        var updated = false
+        applyFavoritesMutation {
+            guard let idx = self.items.firstIndex(where: {
+                self.normalized($0.id) == idKey && self.isUserDictionaryItem($0)
+            }) else { return }
+
+            let existing = self.items[idx]
+            self.items[idx] = FavoriteItem(
+                id: existing.id,
+                ru: ruTrim.isEmpty ? "Моя фраза" : ruTrim,
+                th: thTrim,
+                phonetic: phTrim,
+                courseId: existing.courseId,
+                lessonId: existing.lessonId,
+                lessonTitle: existing.lessonTitle,
+                createdAt: existing.createdAt
+            )
+            self.recomputeCaches()
+            self.recomputeLikedCourses()
+            self.syncToUserSession()
+            self.save()
+            self.emit()
+            updated = true
+        }
+        return updated
     }
 
     /// Resolve a personal-dictionary favorite by its step route.
