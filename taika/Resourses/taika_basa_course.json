@@ -198,7 +198,7 @@
   {
     "id": "course_l_1",
     "title": "На посту с полицией",
-    "description": "Улыбка, привет и правильные документы — и на посту всё пройдёт сабай, каа.",
+    "description": "Пройди реальную дорожную остановку: права, документы на байк, шлем, пассажир, repair-фразы и понятный следующий шаг — без паники, каа.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -207,19 +207,23 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 12
+        "type": "Сценарий остановки",
+        "count": 7
       },
       {
-        "type": "Словарь",
-        "count": 6
+        "type": "Документы и безопасность",
+        "count": 14
+      },
+      {
+        "type": "Repair и next step",
+        "count": 12
       }
     ]
   },
   {
     "id": "course_l_2",
     "title": "Таксист, вези меня домой",
-    "description": "Назови место, обсуди цену — и такси довезёт домой без кружка по храмам, 555.",
+    "description": "От первого адреса до оплаты: цена до посадки, маршрут, остановка, пробка и Grab.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -228,19 +232,19 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 14
+        "type": "Ситуационный flow",
+        "count": 7
       },
       {
-        "type": "Словарь",
-        "count": 8
+        "type": "Контекстные repair/exit branches",
+        "count": 7
       }
     ]
   },
   {
     "id": "course_l_3",
     "title": "Король рынка",
-    "description": "Торгуйся мягко, считай числа, бери лучшее манго — станешь королём рынка, каа.",
+    "description": "Рынок без хаоса: числа, единицы, цена, мягкий торг, выбор фруктов и честный итог.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -249,23 +253,19 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Числа",
-        "count": 18
+        "type": "Ситуационный flow",
+        "count": 7
       },
       {
-        "type": "Фразы",
-        "count": 10
-      },
-      {
-        "type": "Словарь",
-        "count": 10
+        "type": "Контекстные repair/exit branches",
+        "count": 7
       }
     ]
   },
   {
     "id": "course_l_4",
     "title": "Вселенная тайской еды",
-    "description": "Стритфуд, фудкорты и макашницы: вкус, острота и любимые блюда не из туристического меню, каа.",
+    "description": "Тайская еда без сюрпризов: блюда, острота, ограничения, добавки, фудкорт, аллергии и счёт.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -274,23 +274,19 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 12
+        "type": "Ситуационный flow",
+        "count": 7
       },
       {
-        "type": "Названия блюд",
-        "count": 12
-      },
-      {
-        "type": "Словарь",
-        "count": 6
+        "type": "Контекстные repair/exit branches",
+        "count": 7
       }
     ]
   },
   {
     "id": "course_l_5",
     "title": "Доктор Тайка дежурит",
-    "description": "Объясняй симптомы в аптеке и не покупай ненужное. Лекарства и дозировки по-тайски.",
+    "description": "Аптека и клиника безопасно: симптом, лекарство, дозировка, аллергии и следующий шаг без самодиагностики.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -299,19 +295,19 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 10
+        "type": "Ситуационный flow",
+        "count": 7
       },
       {
-        "type": "Словарь",
-        "count": 12
+        "type": "Контекстные repair/exit branches",
+        "count": 7
       }
     ]
   },
   {
     "id": "course_l_6",
     "title": "Белый лотос на максималках",
-    "description": "Номер, уборка, полотенце, кондиционер — общайся с ресепшеном отеля без хаоса, каа.",
+    "description": "Отель без хаоса: заселение, ключ, уборка, кондиционер, ранний заезд, счёт и checkout.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -320,11 +316,11 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 11
+        "type": "Ситуационный flow",
+        "count": 7
       },
       {
-        "type": "Словарь",
+        "type": "Контекстные repair/exit branches",
         "count": 7
       }
     ]
@@ -332,7 +328,7 @@
   {
     "id": "course_l_7",
     "title": "Пляж как состояние",
-    "description": "Тень, кокос, шезлонг, снорклинг — сабай-день на пляже без приключений, каа.",
+    "description": "Пляжный день: место, лежак, напитки, снорклинг и вода без риска.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -341,19 +337,19 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 9
+        "type": "Ситуационный flow",
+        "count": 7
       },
       {
-        "type": "Словарь",
-        "count": 6
+        "type": "Контекстные repair/exit branches",
+        "count": 7
       }
     ]
   },
   {
     "id": "course_l_8",
     "title": "Магазинные приключения",
-    "description": "Big C, Tesco, Boots: найти товар, спросить цену, касса, пакет — без стресса, каа.",
+    "description": "Магазин в Таиланде: найти товар, понять цену, оплатить, взять чек и вернуть покупку.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -362,19 +358,19 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 10
+        "type": "Ситуационный flow",
+        "count": 7
       },
       {
-        "type": "Словарь",
-        "count": 11
+        "type": "Контекстные repair/exit branches",
+        "count": 7
       }
     ]
   },
   {
     "id": "course_l_9",
     "title": "Срочная помощь",
-    "description": "Полиция, скорая, пожарные. Помогите, больница, украли — чётко и быстро, каа.",
+    "description": "Экстренная помощь: вызвать службу, дать адрес, описать проблему и дождаться помощи.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -383,19 +379,19 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 12
+        "type": "Ситуационный flow",
+        "count": 7
       },
       {
-        "type": "Словарь",
-        "count": 8
+        "type": "Контекстные repair/exit branches",
+        "count": 7
       }
     ]
   },
   {
     "id": "course_l_10",
     "title": "Между подходами",
-    "description": "Зал по-тайски: абонемент, тренировка, веса, тренер. Джим-бро вайб, каа.",
+    "description": "Зал без неловкости: абонемент, расписание, оборудование, тренер и безопасная тренировка.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -404,19 +400,19 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 12
+        "type": "Ситуационный flow",
+        "count": 7
       },
       {
-        "type": "Словарь",
-        "count": 10
+        "type": "Контекстные repair/exit branches",
+        "count": 7
       }
     ]
   },
   {
     "id": "course_l_11",
     "title": "Сезон Сонгкрана и не только",
-    "description": "Сонгкран, Лой Кратонг, Йи Пенг — поздравления и традиции. Чувствуй ритм страны, каа.",
+    "description": "Праздники Таиланда: Сонгкран, Лой Кратонг, Йи Пенг, поздравления, фото и уважительные границы.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -425,19 +421,19 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 18
+        "type": "Ситуационный flow",
+        "count": 7
       },
       {
-        "type": "Словарь",
-        "count": 10
+        "type": "Контекстные repair/exit branches",
+        "count": 7
       }
     ]
   },
   {
     "id": "course_l_12",
     "title": "Новый тайский образ",
-    "description": "Салон: стрижка, массаж головы, борода. Длина, форма — выйди обновлённым, каа.",
+    "description": "Салон без сюрпризов: фото, длина, форма, массаж, границы, цена, результат и оплата.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 6,
@@ -446,19 +442,19 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 10
+        "type": "Ситуационный flow",
+        "count": 6
       },
       {
-        "type": "Словарь",
-        "count": 10
+        "type": "Контекстные repair/exit branches",
+        "count": 6
       }
     ]
   },
   {
     "id": "course_l_13",
     "title": "Хозяин дома — почти сосед",
-    "description": "Протечка, оплата, кондиционер — решай с арендодателем в чате мягко и по делу, каа.",
+    "description": "Аренда жилья без хаоса: протечка, кондиционер, оплата, мастер, доступ, follow-up и соседи.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -467,19 +463,19 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 14
+        "type": "Housing incident flow",
+        "count": 7
       },
       {
-        "type": "Словарь",
-        "count": 8
+        "type": "Repair, access and follow-up branches",
+        "count": 7
       }
     ]
   },
   {
     "id": "course_l_14",
     "title": "Таиланд доставляет",
-    "description": "Lazada, Shopee, курьер: адрес, трек-номер, когда привезёт. Чтобы ничего не потерялось, каа.",
+    "description": "Доставка в Таиланде от заказа до получения: адрес, башня/этаж, трек, курьер, проверка посылки и delay/damage support.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -488,19 +484,19 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 9
+        "type": "Delivery journey",
+        "count": 7
       },
       {
-        "type": "Словарь",
-        "count": 9
+        "type": "Delay, damage and support branches",
+        "count": 7
       }
     ]
   },
   {
     "id": "course_l_15",
     "title": "После заката всё интереснее",
-    "description": "Бары, караоке, small talk, напитки. Заказывай, знакомься, ориентируйся в ночной жизни без кринжа, каа.",
+    "description": "Вечер без потери контроля: заказ, small talk, границы, счёт и безопасный выход.",
     "category": "Тайский для жизни",
     "is_pro": true,
     "lesson_count": 7,
@@ -509,12 +505,12 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 14
+        "type": "Ситуационный flow",
+        "count": 7
       },
       {
-        "type": "Словарь",
-        "count": 8
+        "type": "Контекстные repair/exit branches",
+        "count": 7
       }
     ]
   },
