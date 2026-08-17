@@ -176,12 +176,6 @@ struct AppShell: View {
                 case .dictionaryQuickDrawer:
                     DictionaryQuickDrawerView(
                         onDismiss: { overlay.dismiss() },
-                        onOpenFullDictionary: {
-                            overlay.dismiss()
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                                nav.set(.dictionary)
-                            }
-                        },
                         onOpenSpeaker: {
                             overlay.dismiss()
                             guard selectedTab != 2 else { return }
