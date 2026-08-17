@@ -2047,7 +2047,10 @@ public struct LessonSummaryOverlay: View {
     @State private var animateIntro: Bool = false
     @State private var animateReward: Bool = false
     @State private var animateCTA: Bool = false
+    @State private var animateHint: Bool = false
+    @State private var checkBurst: Bool = false
     @State private var approvedActionInFlight: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(
         title: String,
@@ -2169,19 +2172,35 @@ public struct LessonSummaryOverlay: View {
     private func startIntroAnimationIfNeeded() {
         guard !animateIntro else { return }
 
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.88)) {
+        if reduceMotion {
             animateIntro = true
+            animateReward = true
+            animateCTA = true
+            animateHint = true
+            checkBurst = true
+            return
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+        withAnimation(.spring(response: 0.52, dampingFraction: 0.72)) {
+            animateIntro = true
+            checkBurst = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) {
+            withAnimation(.spring(response: 0.48, dampingFraction: 0.84)) {
                 animateReward = true
             }
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+            withAnimation(.spring(response: 0.48, dampingFraction: 0.84)) {
                 animateCTA = true
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.72) {
+            withAnimation(.easeInOut(duration: 0.9).repeatCount(3, autoreverses: true)) {
+                animateHint = true
             }
         }
     }
@@ -2452,104 +2471,132 @@ public struct LessonSummaryOverlay: View {
     private func approvedCompletionMetaRibbon() -> some View {
         let duration = approvedMetaValue(lessonDurationText)
         let progress = approvedMetaValue(overallProgressText)
-        HStack(spacing: 9) {
-            Label(approvedIsFinalState ? "курс завершён" : "урок завершён", systemImage: approvedIsFinalState ? "checkmark.seal" : "sparkles")
-                .lineLimit(1)
+        HStack(spacing: 8) {
+            approvedMetaChip(
+                approvedIsFinalState ? "курс закрыт" : "урок закрыт",
+                system: approvedIsFinalState ? "checkmark.seal.fill" : "sparkles"
+            )
             if let progress {
-                Text("•")
-                Text(progress)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
+                approvedMetaChip(progress, system: "book.closed")
             }
             if let duration {
-                Text("•")
-                Label(duration, systemImage: "clock")
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
+                approvedMetaChip(duration, system: "clock")
             }
         }
-        .font(.system(size: 12, weight: .medium))
-        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
-        .padding(.horizontal, 14)
-        .frame(minHeight: 38)
-        .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.48)))
-        .overlay(Capsule(style: .continuous).stroke(Theme.Strokes.strokeSubtle, lineWidth: 1))
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
-    private func approvedCompletionFooter() -> some View {
-        VStack(alignment: .leading, spacing: 15) {
-            Button(action: {
-                runApprovedAction {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    onPrimary()
-                }
-            }) {
-                Text(primaryTitle)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(Color.black.opacity(0.92))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.76)
-                    .frame(maxWidth: .infinity, minHeight: 54)
-                    .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
-                    .overlay(Capsule(style: .continuous).fill(LinearGradient(colors: [Color.white.opacity(0.14), .clear], startPoint: .top, endPoint: .center)).blendMode(.plusLighter))
-                    .clipShape(Capsule(style: .continuous))
-            }
-            .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+    private func approvedMetaChip(_ text: String, system: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: system)
+                .font(.system(size: 12, weight: .semibold))
+            Text(text)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+        }
+        .foregroundStyle(CD.ColorToken.textSecondary)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 36)
+        .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.55)))
+        .overlay(Capsule(style: .continuous).stroke(Theme.Strokes.strokeSubtle, lineWidth: 1))
+    }
 
-            Text(approvedPrimaryCaption)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
-                .lineLimit(2)
-                .minimumScaleFactor(0.82)
+    @ViewBuilder
+    private func approvedCompletionFooter() -> some View {
+        VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 10) {
+                TaikaSectionLabel(title: "ДАЛЬШЕ")
+                Button(action: {
+                    runApprovedAction {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        onPrimary()
+                    }
+                }) {
+                    Text(primaryTitle)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Color.black.opacity(0.92))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                        .frame(maxWidth: .infinity, minHeight: 58)
+                        .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
+                        .overlay(Capsule(style: .continuous).fill(LinearGradient(colors: [Color.white.opacity(0.16), .clear], startPoint: .top, endPoint: .center)).blendMode(.plusLighter))
+                        .clipShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+                .scaleEffect(animateHint ? 1.025 : 1)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "hand.tap.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(approvedPrimaryCaption)
+                        .font(.system(size: 14, weight: .medium))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+                }
+                .foregroundStyle(CD.ColorToken.textSecondary.opacity(animateHint ? 1 : 0.72))
                 .frame(maxWidth: .infinity, alignment: .center)
+            }
 
             if let onSpeakerPractice {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(approvedIsFinalState ? "Закрепь результат" : "Кун Кру советует")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
+                VStack(alignment: .leading, spacing: 10) {
+                    TaikaSectionLabel(title: approvedIsFinalState ? "ЗАКРЕПИТЬ" : "КУН КРУ СОВЕТУЕТ")
                     Button(action: {
                         runApprovedAction {
                             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                             onSpeakerPractice()
                         }
                     }) {
-                        HStack(spacing: 11) {
-                            Image(systemName: "mic.fill")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                            Text(speakerPracticeTitle == "К каталогу курсов" ? "Попробовать в Спикере" : speakerPracticeTitle)
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(CD.ColorToken.text)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.78)
+                        HStack(spacing: 14) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(ThemeManager.shared.currentAccentFill.opacity(0.18))
+                                    .frame(width: 48, height: 48)
+                                Image(systemName: "mic.fill")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                            }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(speakerPracticeTitle == "К каталогу курсов" ? "Попробовать в Спикере" : speakerPracticeTitle)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(CD.ColorToken.text)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                Text("Скажи вслух — я поймаю тоны")
+                                    .font(.system(size: 13, weight: .regular))
+                                    .foregroundStyle(CD.ColorToken.textSecondary)
+                                    .lineLimit(2)
+                            }
                             Spacer(minLength: 0)
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 14, weight: .bold))
                                 .foregroundStyle(ThemeManager.shared.currentAccentFill)
                         }
-                        .padding(.horizontal, 16)
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.42)))
-                        .overlay(Capsule(style: .continuous).stroke(ThemeManager.shared.currentAccentFill.opacity(0.82), lineWidth: 1.2))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(CD.ColorToken.card.opacity(0.52))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .stroke(ThemeManager.shared.currentAccentFill.opacity(0.7), lineWidth: 1.2)
+                        )
                     }
-                    .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.98))
-                    Text("Скажи фразы вслух — я помогу услышать тоны")
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.88))
-                        .lineLimit(2)
+                    .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
                 }
-                .padding(.top, 4)
             }
 
             if showGameReinforce, let onSelectGameMode {
-                VStack(alignment: .leading, spacing: 9) {
-                    Text("Или закрепи в игре")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
-                    HStack(spacing: 7) {
+                VStack(alignment: .leading, spacing: 10) {
+                    TaikaSectionHeaderRow("ИЛИ ИГРА") {
+                        Text("откроется сразу")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
+                    }
+                    VStack(spacing: 8) {
                         ForEach(GameModeType.modesLessonAndPark, id: \.rawValue) { mode in
                             approvedGameChip(mode, selected: selectedGameMode == mode, onSelect: onSelectGameMode)
                         }
@@ -2562,9 +2609,9 @@ public struct LessonSummaryOverlay: View {
                 onClose()
             }) {
                 Text(approvedIsFinalState ? "Вернуться к курсам" : "Остаться в курсе")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(CD.ColorToken.textSecondary)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
         }
@@ -2574,7 +2621,7 @@ public struct LessonSummaryOverlay: View {
     private func approvedGameChip(_ mode: GameModeType, selected: Bool, onSelect: @escaping (GameModeType) -> Void) -> some View {
         let locked = mode.isPro && !isProUser
         Button(action: {
-            UIImpactFeedbackGenerator(style: locked ? .light : .soft).impactOccurred()
+            UIImpactFeedbackGenerator(style: locked ? .light : .medium).impactOccurred()
             if locked {
                 onLockedGame?(mode)
             } else {
@@ -2588,54 +2635,70 @@ public struct LessonSummaryOverlay: View {
                 }
             }
         }) {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 7) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            locked
+                            ? AnyShapeStyle(CD.ColorToken.card.opacity(0.7))
+                            : AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(selected ? 0.28 : 0.16))
+                        )
+                        .frame(width: 48, height: 48)
                     Image(systemName: approvedGameIcon(mode))
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(
                             locked
                             ? AnyShapeStyle(CD.ColorToken.textSecondary)
                             : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
                         )
-                    if locked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.8))
-                    }
                 }
-                Text(approvedGameTitle(mode))
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(locked ? CD.ColorToken.textSecondary : CD.ColorToken.text)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-                Text(approvedGameHint(mode))
-                    .font(.system(size: 10, weight: .regular))
-                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.82))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.68)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(approvedGameTitle(mode))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(locked ? CD.ColorToken.textSecondary : CD.ColorToken.text)
+                        .lineLimit(1)
+                    Text(locked ? "Taika+ · \(approvedGameHint(mode))" : approvedGameHint(mode))
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                if locked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                } else {
+                    Text(selected ? "играть" : "")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 9)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(
                         selected && !locked
-                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.16))
+                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.14))
                         : AnyShapeStyle(CD.ColorToken.card.opacity(0.48))
                     )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(
                         selected && !locked
-                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.85))
+                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.9))
                         : AnyShapeStyle(Theme.Strokes.strokeSubtle),
-                        lineWidth: selected && !locked ? 1.2 : 1
+                        lineWidth: selected && !locked ? 1.4 : 1
                     )
             )
+            .opacity(locked ? 0.82 : 1)
         }
-        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.98))
+        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
     }
 
     private func approvedGameTitle(_ mode: GameModeType) -> String {
@@ -2862,87 +2925,95 @@ public struct LessonSummaryOverlay: View {
 
     public var body: some View {
         GeometryReader { proxy in
-            let panelW = min(max(proxy.size.width - 24, 300), 520)
-            let panelH = max(proxy.size.height - max(proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom, 32), 1)
-            ZStack {
-                Color.clear
-                    .contentShape(Rectangle())
+            ZStack(alignment: .topTrailing) {
+                PD.ColorToken.background
                     .ignoresSafeArea()
 
+                Circle()
+                    .fill(ThemeManager.shared.currentAccentTintColor.opacity(checkBurst ? 0.34 : 0.08))
+                    .frame(width: 280, height: 280)
+                    .blur(radius: 48)
+                    .offset(y: -40)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .allowsHitTesting(false)
+
                 TaikaRootVerticalScroll {
-                    ProStyleModalPanel(maxWidth: panelW) {
-                        ZStack(alignment: .topTrailing) {
-                            VStack(alignment: .leading, spacing: 16) {
-                                HStack {
-                                    Text("taikA")
-                                        .font(.taikaLogo(16))
-                                        .foregroundStyle(CD.ColorToken.text)
-                                    Spacer(minLength: 0)
-                                }
+                    VStack(alignment: .leading, spacing: 22) {
+                        HStack {
+                            Text("taikA")
+                                .font(.taikaLogo(18))
+                                .foregroundStyle(CD.ColorToken.text)
+                            Spacer(minLength: 44)
+                        }
 
-                                ZStack {
-                                    Circle()
-                                        .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 2.2)
-                                        .frame(width: 72, height: 72)
-                                        .shadow(color: ThemeManager.shared.currentAccentTintColor.opacity(0.55), radius: 14)
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 31, weight: .bold))
-                                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .scaleEffect(animateIntro ? 1 : 0.92)
-                                .opacity(animateIntro ? 1 : 0)
-
-                                VStack(alignment: .center, spacing: 7) {
-                                    Text(title)
-                                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                                        .foregroundStyle(CD.ColorToken.text)
-                                        .multilineTextAlignment(.center)
-                                        .frame(maxWidth: .infinity)
-                                    Text(subtitle)
-                                        .font(.system(size: 16, weight: .regular))
-                                        .foregroundStyle(CD.ColorToken.textSecondary)
-                                        .multilineTextAlignment(.center)
-                                        .lineLimit(3)
-                                        .minimumScaleFactor(0.82)
-                                }
-                                .opacity(animateIntro ? 1 : 0)
-                                .offset(y: animateIntro ? 0 : 8)
-
-                                approvedCompletionMetaRibbon()
-                                    .opacity(animateIntro ? 1 : 0)
-                                    .offset(y: animateIntro ? 0 : 8)
-
-                                approvedCompletionFooter()
-                                    .opacity(animateCTA ? 1 : 0)
-                                    .offset(y: animateCTA ? 0 : 12)
-
-                                if let hacksAccessory {
-                                    hacksAccessory
-                                        .frame(maxWidth: .infinity)
-                                        .hidden()
-                                        .frame(height: 0)
-                                }
+                        VStack(spacing: 16) {
+                            ZStack {
+                                Circle()
+                                    .fill(ThemeManager.shared.currentAccentTintColor.opacity(0.18))
+                                    .frame(width: 108, height: 108)
+                                    .scaleEffect(checkBurst ? 1.18 : 0.7)
+                                    .opacity(checkBurst ? 0.9 : 0)
+                                Circle()
+                                    .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 2.6)
+                                    .frame(width: 88, height: 88)
+                                    .shadow(color: ThemeManager.shared.currentAccentTintColor.opacity(0.55), radius: 16)
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 36, weight: .bold))
+                                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 10)
-                            .padding(.horizontal, 4)
+                            .scaleEffect(animateIntro ? 1 : 0.78)
+                            .opacity(animateIntro ? 1 : 0)
 
-                            Button(action: { onClose() }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 14, weight: .bold))
+                            VStack(alignment: .center, spacing: 8) {
+                                Text(title)
+                                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                                    .foregroundStyle(CD.ColorToken.text)
+                                    .multilineTextAlignment(.center)
+                                    .frame(maxWidth: .infinity)
+                                Text(subtitle)
+                                    .font(.system(size: 17, weight: .regular))
                                     .foregroundStyle(CD.ColorToken.textSecondary)
-                                    .frame(width: 34, height: 34)
-                                    .background(Circle().fill(Color.white.opacity(0.08)))
-                                    .overlay(Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: 1))
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(3)
+                                    .minimumScaleFactor(0.85)
                             }
-                            .buttonStyle(.plain)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .opacity(animateIntro ? 1 : 0)
+                        .offset(y: animateIntro ? 0 : 16)
+
+                        approvedCompletionMetaRibbon()
+                            .opacity(animateReward ? 1 : 0)
+                            .offset(y: animateReward ? 0 : 12)
+
+                        approvedCompletionFooter()
+                            .opacity(animateCTA ? 1 : 0)
+                            .offset(y: animateCTA ? 0 : 18)
+
+                        if let hacksAccessory {
+                            hacksAccessory
+                                .frame(maxWidth: .infinity)
+                                .hidden()
+                                .frame(height: 0)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 18)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
+                    .padding(.top, max(proxy.safeAreaInsets.top, 10) + 6)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 16) + 12)
                 }
-                .frame(width: panelW, height: panelH, alignment: .top)
+
+                Button(action: { onClose() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Color.white.opacity(0.08)))
+                        .overlay(Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, max(proxy.safeAreaInsets.top, 10) + 4)
+                .padding(.trailing, 16)
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
             .onAppear { startIntroAnimationIfNeeded() }
@@ -2950,9 +3021,12 @@ public struct LessonSummaryOverlay: View {
                 animateIntro = false
                 animateReward = false
                 animateCTA = false
+                animateHint = false
+                checkBurst = false
                 startIntroAnimationIfNeeded()
             }
         }
+        .ignoresSafeArea()
     }
 
 }

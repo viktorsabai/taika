@@ -1117,10 +1117,10 @@ struct StepView: View {
             lessonDurationText: lessonDurationTextValue(),
             overallProgressText: overallProgressTextValue(courseId: cid, lessonId: resolvedLessonId)
         )
-        .scaleEffect(summaryOverlaySettled ? 1.0 : 0.975)
         .opacity(summaryOverlaySettled ? 1.0 : 0.0)
-        .animation(.spring(response: 0.34, dampingFraction: 0.88), value: summaryOverlaySettled)
-        .transition(.scale.combined(with: .opacity))
+        .offset(y: summaryOverlaySettled ? 0 : 28)
+        .animation(.spring(response: 0.42, dampingFraction: 0.88), value: summaryOverlaySettled)
+        .transition(.opacity)
         .zIndex(1)
     }
 
@@ -1331,10 +1331,6 @@ struct StepView: View {
                 }
                 stepMainContent(proxy)
                 if showLessonSummary {
-                    Theme.Surfaces.blackGlassScrim
-                        .ignoresSafeArea()
-                        .transition(.opacity)
-                        .allowsHitTesting(false)
                     summaryOverlayView()
                 }
             }
