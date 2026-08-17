@@ -773,7 +773,7 @@
   {
     "id": "course_long_1",
     "title": "Виза, продление, иммиграция",
-    "description": "90-day report, продление визы, TM.30, фото 4×6. Без паники и агентов — сам в иммигрейшене, каа.",
+    "description": "Документы, окно, срок и спокойный следующий шаг.",
     "category": "Тайский для долгожителей",
     "is_pro": true,
     "lesson_count": 6,
@@ -782,19 +782,19 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 12
+        "type": "scenario",
+        "count": 6
       },
       {
-        "type": "Формы",
-        "count": 5
+        "type": "phrase",
+        "count": 50
       }
     ]
   },
   {
     "id": "course_long_2",
     "title": "Банки, деньги, крипта",
-    "description": "Открыть счёт, Wise, PromptPay, крипто-обменники. Перевод не пришёл, карта заблокирована — решаем по-тайски.",
+    "description": "Счёт, PromptPay, комиссии и безопасный перевод.",
     "category": "Тайский для долгожителей",
     "is_pro": true,
     "lesson_count": 6,
@@ -803,19 +803,19 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 10
+        "type": "scenario",
+        "count": 6
       },
       {
-        "type": "Словарь",
-        "count": 8
+        "type": "phrase",
+        "count": 50
       }
     ]
   },
   {
     "id": "course_long_3",
     "title": "Полная медицина и страховка",
-    "description": "Медицина и страховка для резидента. Аптечный минимум — в «Доктор Тайка».",
+    "description": "Врач, анализы, аллергии, ассистанс и аптека.",
     "category": "Тайский для долгожителей",
     "is_pro": true,
     "lesson_count": 7,
@@ -824,19 +824,19 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 15
+        "type": "scenario",
+        "count": 7
       },
       {
-        "type": "Симптомы",
-        "count": 10
+        "type": "phrase",
+        "count": 58
       }
     ]
   },
   {
     "id": "course_long_4",
     "title": "Транспорт для своих",
-    "description": "Мототакси, GrabBike, аренда байка, шлем, страховка. Сонгтео: останови здесь. Как местный, каа.",
+    "description": "Мототакси, байк, шлем, страховка и сонгтео.",
     "category": "Тайский для долгожителей",
     "is_pro": true,
     "lesson_count": 6,
@@ -845,19 +845,19 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 12
+        "type": "scenario",
+        "count": 6
       },
       {
-        "type": "Словарь",
-        "count": 8
+        "type": "phrase",
+        "count": 50
       }
     ]
   },
   {
     "id": "course_long_5",
     "title": "Соседи, кондо, правила дома",
-    "description": "Шум, курение на балконе, общие зоны. Кто-то оставил мусор, собрание жильцов. Жить без конфликтов, каа.",
+    "description": "Шум, общие зоны, мусор и собрание жильцов.",
     "category": "Тайский для долгожителей",
     "is_pro": true,
     "lesson_count": 6,
@@ -866,19 +866,19 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 10
+        "type": "scenario",
+        "count": 6
       },
       {
-        "type": "Словарь",
-        "count": 6
+        "type": "phrase",
+        "count": 50
       }
     ]
   },
   {
     "id": "course_long_6",
     "title": "Питомцы в Таиланде",
-    "description": "Ветеринар, прививки, пёс кашляет, груминг. Можно в отель с животным? Дог-френдли по-тайски, каа.",
+    "description": "Ветклиника, прививки, симптомы, груминг и поездки.",
     "category": "Тайский для долгожителей",
     "is_pro": true,
     "lesson_count": 6,
@@ -887,19 +887,19 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "Фразы",
-        "count": 10
+        "type": "scenario",
+        "count": 6
       },
       {
-        "type": "Словарь",
-        "count": 8
+        "type": "phrase",
+        "count": 49
       }
     ]
   },
   {
     "id": "course_long_7",
     "title": "Тайский юмор, мемы, поп-культура",
-    "description": "Мемы, дорамы, тренды для своих. Базовый сленг — в «О чём говорят».",
+    "description": "555, чаты, дорамы, TikTok и мягкий подкол.",
     "category": "Тайский для долгожителей",
     "is_pro": true,
     "lesson_count": 6,
@@ -908,12 +908,12 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "Выражения",
-        "count": 15
+        "type": "scenario",
+        "count": 6
       },
       {
-        "type": "Мемы",
-        "count": 10
+        "type": "phrase",
+        "count": 50
       }
     ]
   }
