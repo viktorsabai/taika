@@ -12,14 +12,22 @@ import UIKit
 
 struct DictionaryQuickDrawerView: View {
     @ObservedObject private var favorites = FavoriteManager.shared
+    @EnvironmentObject private var nav: NavigationIntent
+    @EnvironmentObject private var overlay: OverlayPresenter
 
     let onDismiss: () -> Void
     let onOpenSpeaker: () -> Void
-    var onTrainInSpeaker: (() -> Void)? = nil
+    /// nil = all phrases; non-empty = only selected card source ids.
+    var onTrainInSpeaker: ((Set<String>?) -> Void)? = nil
 
     @State private var drawerOffset: CGFloat = 0
     @State private var didAppear = false
     @State private var editingCard: DictionaryEditTarget?
+    @State private var previewCard: FDCardDTO?
+    @State private var isSelectionMode = false
+    @State private var selectedIds: Set<String> = []
+    @State private var gamePickerExpanded = false
+    @State private var selectedGameMode: GameModeType = .match
 
     private var cards: [FDCardDTO] {
         favorites.smartSpeakerDictionaryCardsDTO
@@ -29,7 +37,11 @@ struct DictionaryQuickDrawerView: View {
         AnyShapeStyle(ThemeManager.shared.currentAccentFill)
     }
 
-    /// Слева остаётся узкая полоска основного экрана — «два экрана в одном».
+    private var effectiveSelection: Set<String>? {
+        if isSelectionMode, !selectedIds.isEmpty { return selectedIds }
+        return nil
+    }
+
     private var peekWidth: CGFloat { 52 }
 
     private var panelWidth: CGFloat {
@@ -67,41 +79,69 @@ struct DictionaryQuickDrawerView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(28)
         }
+        .sheet(item: $previewCard) { card in
+            DictionaryCardPreviewSheet(
+                card: card,
+                accent: accent,
+                onEdit: {
+                    previewCard = nil
+                    editingCard = DictionaryEditTarget(card: card)
+                },
+                onDelete: {
+                    previewCard = nil
+                    favorites.remove(id: DictionaryPhraseActions.cardId(card))
+                },
+                onTrain: {
+                    previewCard = nil
+                    trainInSpeaker(selected: [card.sourceId])
+                },
+                onDismiss: { previewCard = nil }
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
+        }
     }
 
     private var panel: some View {
         VStack(spacing: 0) {
             header
-            statsRow
-            chipsRow
 
             if cards.isEmpty {
                 emptyState
             } else {
                 ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 10) {
+                    LazyVStack(spacing: 12) {
                         ForEach(cards) { card in
                             DictionaryDrawerRow(
                                 card: card,
                                 accent: accent,
+                                isSelectionMode: isSelectionMode,
+                                isSelected: selectedIds.contains(card.sourceId),
+                                onToggleSelect: { toggleSelection(card) },
+                                onTap: {
+                                    if isSelectionMode {
+                                        toggleSelection(card)
+                                    } else {
+                                        previewCard = card
+                                    }
+                                },
                                 onEdit: { editingCard = DictionaryEditTarget(card: card) },
                                 onDelete: {
                                     favorites.remove(id: DictionaryPhraseActions.cardId(card))
+                                    selectedIds.remove(card.sourceId)
                                 },
-                                onTrain: {
-                                    if let onTrainInSpeaker {
-                                        onTrainInSpeaker()
-                                    } else {
-                                        onOpenSpeaker()
-                                    }
-                                },
-                                showsActionsMenu: true
+                                onTrain: { trainInSpeaker(selected: [card.sourceId]) },
+                                showsActionsMenu: !isSelectionMode
                             )
                         }
                     }
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
-                    .padding(.bottom, ToolBar.recommendedBottomInset + 20)
+                    .padding(.top, 4)
+                    .padding(.bottom, 16)
                 }
+
+                footerBar
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -127,12 +167,22 @@ struct DictionaryQuickDrawerView: View {
                 Text("Мой словарь")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(CD.ColorToken.text)
-                Text("Твои фразы для жизни в Таиланде")
+                Text(headerSubtitle)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(CD.ColorToken.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
+
+            if !cards.isEmpty {
+                Button(action: toggleSelectionMode) {
+                    Text(isSelectionMode ? "Готово" : "Выбрать")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(accent)
+                }
+                .buttonStyle(.plain)
+            }
+
             Button(action: dismissAnimated) {
                 Image(systemName: "xmark")
                     .font(.system(size: 14, weight: .bold))
@@ -146,43 +196,132 @@ struct DictionaryQuickDrawerView: View {
         }
         .padding(.horizontal, Theme.Layout.pageHorizontal)
         .padding(.top, Theme.Layout.rootHeaderClearance + 8)
-        .padding(.bottom, 14)
+        .padding(.bottom, 16)
     }
 
-    private var statsRow: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "bookmark.fill")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(accent)
-            Text(dictionaryPhraseCountLabel(cards.count))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(CD.ColorToken.textSecondary)
-            Spacer(minLength: 0)
-            Text("личные")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.72))
+    private var headerSubtitle: String {
+        if cards.isEmpty {
+            return "Твои фразы для жизни в Таиланде"
         }
-        .padding(.horizontal, Theme.Layout.pageHorizontal)
-        .padding(.bottom, 10)
+        if isSelectionMode, !selectedIds.isEmpty {
+            return "Выбрано \(selectedIds.count) · \(dictionaryPhraseCountLabel(cards.count))"
+        }
+        return "\(dictionaryPhraseCountLabel(cards.count)) · для жизни в Таиланде"
     }
 
-    private var chipsRow: some View {
-        HStack(spacing: 8) {
-            Text("Все фразы")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.black)
-                .padding(.horizontal, 14)
-                .frame(height: 32)
-                .background(Capsule().fill(ThemeManager.shared.currentAccentFill))
-            if cards.count > 0 {
-                Text("\(cards.count) личных")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(CD.ColorToken.textSecondary)
+    private var footerBar: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(PD.ColorToken.stroke.opacity(0.55))
+                .frame(height: 1)
+
+            if gamePickerExpanded {
+                gamePickerSection
+            } else {
+                actionButtonsRow
             }
-            Spacer(minLength: 0)
+        }
+        .padding(.bottom, ToolBar.recommendedBottomInset + 8)
+        .background(CD.ColorToken.background.opacity(0.96))
+        .animation(.easeInOut(duration: 0.22), value: gamePickerExpanded)
+    }
+
+    private var actionButtonsRow: some View {
+        HStack(spacing: 10) {
+            Button { trainInSpeaker(selected: effectiveSelection) } label: {
+                footerActionLabel(
+                    icon: "person.wave.2.fill",
+                    title: trainButtonTitle
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(isSelectionMode && selectedIds.isEmpty)
+
+            Button {
+                withAnimation { gamePickerExpanded = true }
+            } label: {
+                footerActionLabel(
+                    icon: "gamecontroller.fill",
+                    title: reinforceButtonTitle,
+                    compact: true
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(isSelectionMode && selectedIds.isEmpty)
         }
         .padding(.horizontal, Theme.Layout.pageHorizontal)
-        .padding(.bottom, 12)
+        .padding(.vertical, 14)
+    }
+
+    private var gamePickerSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(reinforceButtonTitle)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(CD.ColorToken.text)
+                Spacer(minLength: 0)
+                Button("Назад") {
+                    withAnimation { gamePickerExpanded = false }
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(CD.ColorToken.textSecondary)
+            }
+            .padding(.horizontal, Theme.Layout.pageHorizontal)
+            .padding(.top, 14)
+
+            GameModePickerDS(
+                selected: $selectedGameMode,
+                isProUser: ProManager.shared.isPro,
+                onStart: { mode in startGame(mode: mode) },
+                onClose: { withAnimation { gamePickerExpanded = false } },
+                onLockedTap: { mode in
+                    if mode.isPro && !ProManager.shared.isPro {
+                        overlay.presentPro(reason: .games)
+                    }
+                },
+                modes: GameModeType.modesLessonAndPark,
+                embedInEtalon: false,
+                contentHorizontalInset: Theme.Layout.pageHorizontal,
+                contentBottomInset: 12
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func footerActionLabel(icon: String, title: String, compact: Bool = false) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: compact ? 14 : 15, weight: .semibold))
+            Text(title)
+                .font(.system(size: compact ? 14 : 15, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .foregroundStyle(CD.ColorToken.text)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, compact ? 12 : 13)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(CD.ColorToken.chip.opacity(0.92))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(PD.ColorToken.stroke.opacity(0.55), lineWidth: 1)
+        )
+    }
+
+    private var trainButtonTitle: String {
+        if isSelectionMode, !selectedIds.isEmpty {
+            return "Тренировать (\(selectedIds.count))"
+        }
+        return "Тренировать все"
+    }
+
+    private var reinforceButtonTitle: String {
+        if isSelectionMode, !selectedIds.isEmpty {
+            return "Закрепить (\(selectedIds.count))"
+        }
+        return "Закрепить все"
     }
 
     private var emptyState: some View {
@@ -206,6 +345,57 @@ struct DictionaryQuickDrawerView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func toggleSelectionMode() {
+#if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+#endif
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isSelectionMode.toggle()
+            if !isSelectionMode {
+                selectedIds.removeAll()
+                gamePickerExpanded = false
+            }
+        }
+    }
+
+    private func toggleSelection(_ card: FDCardDTO) {
+#if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+#endif
+        if selectedIds.contains(card.sourceId) {
+            selectedIds.remove(card.sourceId)
+        } else {
+            selectedIds.insert(card.sourceId)
+        }
+    }
+
+    private func trainInSpeaker(selected: Set<String>?) {
+#if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+#endif
+        DictionarySessionSelection.shared.activate(selected)
+        if let onTrainInSpeaker {
+            onTrainInSpeaker(selected)
+        } else {
+            onOpenSpeaker()
+        }
+    }
+
+    private func startGame(mode: GameModeType) {
+#if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+#endif
+        DictionarySessionSelection.shared.activate(effectiveSelection)
+        dismissAnimated()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
+            nav.go(.game(
+                courseId: DictionaryGameSource.courseId,
+                lessonId: nil,
+                gameType: mode.rawValue
+            ))
+        }
     }
 
     private var drawerDrag: some Gesture {
@@ -238,6 +428,84 @@ struct DictionaryQuickDrawerView: View {
     }
 }
 
+// MARK: - Card preview sheet
+
+private struct DictionaryCardPreviewSheet: View {
+    let card: FDCardDTO
+    let accent: AnyShapeStyle
+    var onEdit: (() -> Void)?
+    var onDelete: (() -> Void)?
+    var onTrain: (() -> Void)?
+    let onDismiss: () -> Void
+
+    private var phonetic: String { dictionaryCardPhonetic(card) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            if !phonetic.isEmpty {
+                TaikaPhoneticText.styled(
+                    phonetic,
+                    font: .system(size: 24, weight: .bold),
+                    baseColor: CD.ColorToken.text
+                )
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if !card.title.isEmpty {
+                Text(card.title)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+            }
+            if !card.subtitle.isEmpty {
+                Text(card.subtitle)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.8))
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    DictionaryPhraseActions.play(card)
+                } label: {
+                    Label("Послушать", systemImage: "speaker.wave.2.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(ThemeManager.shared.currentAccentTintColor)
+
+                if let onTrain {
+                    Button(action: onTrain) {
+                        Image(systemName: "person.wave.2.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            HStack(spacing: 16) {
+                if let onEdit {
+                    Button("Изменить", action: onEdit)
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                if let onDelete {
+                    Button("Удалить", role: .destructive, action: onDelete)
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                Spacer(minLength: 0)
+                Button("Закрыть", action: onDismiss)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+            }
+        }
+        .padding(.horizontal, Theme.Layout.pageHorizontal)
+        .padding(.top, 8)
+        .padding(.bottom, 24)
+        .presentationBackground(CD.ColorToken.background)
+    }
+}
+
 private func dictionaryPhraseCountLabel(_ count: Int) -> String {
     let mod10 = count % 10
     let mod100 = count % 100
@@ -252,63 +520,127 @@ private func dictionaryPhraseCountLabel(_ count: Int) -> String {
 struct DictionaryDrawerRow: View {
     let card: FDCardDTO
     let accent: AnyShapeStyle
+    var isSelectionMode: Bool = false
+    var isSelected: Bool = false
+    var onToggleSelect: (() -> Void)? = nil
+    var onTap: (() -> Void)? = nil
     var onSpeak: (() -> Void)? = nil
     var onEdit: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
     var onTrain: (() -> Void)? = nil
     var showsActionsMenu: Bool = false
 
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(card.title)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(CD.ColorToken.text)
-                    .lineLimit(3)
-                    .minimumScaleFactor(0.88)
-                Text(card.meta)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(accent)
-                    .lineLimit(3)
-                    .minimumScaleFactor(0.85)
-                if !card.subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(card.subtitle)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
-                        .lineLimit(2)
-                }
-            }
-            Spacer(minLength: 0)
+    private var phonetic: String { dictionaryCardPhonetic(card) }
 
-            if showsActionsMenu {
-                DictionaryPhraseActionsMenu(
-                    card: card,
-                    onEdit: onEdit,
-                    onDelete: onDelete,
-                    onTrain: onTrain
-                )
-            } else if let onSpeak {
-                Button(action: onSpeak) {
-                    Image(systemName: "speaker.wave.2.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(accent)
-                        .frame(width: 34, height: 34)
-                        .background(Circle().fill(CD.ColorToken.chip))
+    private var thai: String {
+        card.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 0) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(accent)
+                .frame(width: 3)
+                .padding(.vertical, 12)
+
+            HStack(alignment: .center, spacing: 12) {
+                if isSelectionMode {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(isSelected ? accent : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.5)))
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Послушать")
+
+                VStack(alignment: .leading, spacing: 6) {
+                    if !phonetic.isEmpty {
+                        TaikaPhoneticText.styled(
+                            phonetic,
+                            font: .system(size: 17, weight: .semibold),
+                            baseColor: CD.ColorToken.text
+                        )
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .lineLimit(isSelectionMode ? 2 : 3)
+                        .minimumScaleFactor(0.85)
+                    }
+                    if !card.title.isEmpty {
+                        Text(card.title)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(CD.ColorToken.textSecondary)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.88)
+                    }
+                    if !thai.isEmpty, !isSelectionMode {
+                        Text(thai)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.72))
+                            .lineLimit(2)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if let onTap { onTap() }
+                }
+
+                if !isSelectionMode {
+                    Button {
+                        DictionaryPhraseActions.play(card)
+                    } label: {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(accent)
+                            .frame(width: 36, height: 36)
+                            .background(Circle().fill(CD.ColorToken.chip))
+                            .overlay(Circle().stroke(PD.ColorToken.stroke.opacity(0.65), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Послушать")
+
+                    if showsActionsMenu {
+                        DictionaryPhraseActionsMenu(
+                            card: card,
+                            onEdit: onEdit,
+                            onDelete: onDelete,
+                            onTrain: onTrain
+                        )
+                    } else if let onSpeak {
+                        Button(action: onSpeak) {
+                            Image(systemName: "speaker.wave.2.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(accent)
+                                .frame(width: 34, height: 34)
+                                .background(Circle().fill(CD.ColorToken.chip))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Послушать")
+                    }
+                }
             }
+            .padding(.leading, 12)
+            .padding(.trailing, 14)
+            .padding(.vertical, 14)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 13)
         .background(
-            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                .fill(CD.ColorToken.card.opacity(0.74))
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(isSelected ? CD.ColorToken.card.opacity(0.95) : CD.ColorToken.card.opacity(0.82))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                .stroke(PD.ColorToken.stroke.opacity(0.7), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(
+                    isSelected
+                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                    : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.72)),
+                    lineWidth: isSelected ? 1.5 : 1
+                )
         )
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .onTapGesture {
+            if isSelectionMode {
+                onToggleSelect?()
+            } else {
+                onTap?()
+            }
+        }
         .contextMenu {
             if showsActionsMenu {
                 dictionaryPhraseContextMenu(
@@ -320,6 +652,12 @@ struct DictionaryDrawerRow: View {
             }
         }
     }
+}
+
+private func dictionaryCardPhonetic(_ card: FDCardDTO) -> String {
+    var meta = card.meta
+    if meta.hasPrefix("card:") { meta = String(meta.dropFirst("card:".count)) }
+    return meta.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
 struct DictionaryPhraseActionsMenu: View {
@@ -419,129 +757,23 @@ enum DictionaryPhraseActions {
 struct DictionaryFullView: View {
     @ObservedObject private var favorites = FavoriteManager.shared
     @EnvironmentObject private var nav: NavigationIntent
+    @EnvironmentObject private var overlay: OverlayPresenter
 
     let onBack: () -> Void
     let onOpenSpeaker: () -> Void
     var onNavigateToSpeaker: (() -> Void)? = nil
 
-    @State private var editingCard: DictionaryEditTarget?
-
-    private var cards: [FDCardDTO] {
-        favorites.smartSpeakerDictionaryCardsDTO
-    }
-
-    private var accent: AnyShapeStyle {
-        AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-    }
-
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            chipsRow
-
-            if cards.isEmpty {
-                emptyState
-            } else {
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 10) {
-                        ForEach(cards) { card in
-                            DictionaryDrawerRow(
-                                card: card,
-                                accent: accent,
-                                onEdit: { editingCard = DictionaryEditTarget(card: card) },
-                                onDelete: { deleteCard(card) },
-                                onTrain: { trainInSpeaker() },
-                                showsActionsMenu: true
-                            )
-                        }
-                    }
-                    .padding(.horizontal, Theme.Layout.pageHorizontal)
-                    .padding(.bottom, ToolBar.recommendedBottomInset + 24)
-                }
+        DictionaryQuickDrawerView(
+            onDismiss: onBack,
+            onOpenSpeaker: onOpenSpeaker,
+            onTrainInSpeaker: { selected in
+                DictionarySessionSelection.shared.activate(selected)
+                trainInSpeaker()
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(CD.ColorToken.background.ignoresSafeArea())
-        .sheet(item: $editingCard) { target in
-            DictionaryEditSheet(card: target.card) {
-                editingCard = nil
-            }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(28)
-        }
-    }
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(CD.ColorToken.text)
-                    .frame(width: 40, height: 40)
-                    .background(Circle().fill(CD.ColorToken.chip))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Назад")
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Мой словарь")
-                    .font(.system(size: 25, weight: .bold))
-                    .foregroundStyle(CD.ColorToken.text)
-                Text("Твои фразы для жизни в Таиланде")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(CD.ColorToken.textSecondary)
-            }
-            Spacer(minLength: 0)
-            Image(systemName: "bookmark.fill")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(ThemeManager.shared.currentAccentFill)
-        }
-        .padding(.horizontal, Theme.Layout.pageHorizontal)
-        .padding(.top, Theme.Layout.rootHeaderClearance + 10)
-        .padding(.bottom, 18)
-    }
-
-    private var chipsRow: some View {
-        HStack(spacing: 8) {
-            Text("Все фразы")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.black)
-                .padding(.horizontal, 14)
-                .frame(height: 32)
-                .background(Capsule().fill(ThemeManager.shared.currentAccentFill))
-            Text("\(cards.count) личных")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(CD.ColorToken.textSecondary)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, Theme.Layout.pageHorizontal)
-        .padding(.bottom, 12)
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Image(systemName: "bookmark")
-                .font(.system(size: 30, weight: .medium))
-                .foregroundStyle(ThemeManager.shared.currentAccentFill)
-            Text("Здесь будут твои личные фразы")
-                .font(.system(size: 17, weight: .bold))
-                .foregroundStyle(CD.ColorToken.text)
-            Text("Создай первую фразу в Speaker и сохрани её в словарь.")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(CD.ColorToken.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-            Spacer()
-        }
-    }
-
-    private func deleteCard(_ card: FDCardDTO) {
-#if canImport(UIKit)
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-#endif
-        favorites.remove(id: DictionaryPhraseActions.cardId(card))
+        )
+        .environmentObject(nav)
+        .environmentObject(overlay)
     }
 
     private func trainInSpeaker() {
@@ -549,7 +781,13 @@ struct DictionaryFullView: View {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 #endif
         SpeakerManager.shared.setSpeakerUIMode(.training)
+        SpeakerRequestedCourseId.shared.set("__dictionary__")
         SpeakerManager.shared.startSpecialTraining(poolId: "__dictionary__")
+        if nav.path.contains(where: { if case .dictionary = $0 { return true }; return false }) {
+            SpeakerReturnContext.shared.save(tab: 0, path: nav.path)
+        } else {
+            SpeakerReturnContext.shared.saveFromDictionary(tab: 3)
+        }
         if let onNavigateToSpeaker {
             onNavigateToSpeaker()
         } else {

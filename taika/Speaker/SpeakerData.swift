@@ -343,19 +343,49 @@ public final class SpeakerRequestedCourseId: ObservableObject {
     }
 }
 
+// MARK: - Dictionary session scope (multi-select → train / games)
+@MainActor
+public final class DictionarySessionSelection {
+    public static let shared = DictionarySessionSelection()
+    /// nil = all dictionary phrases; non-empty = only these FavoriteItem ids.
+    private(set) var activeSourceIds: Set<String>?
+    private init() {}
+
+    public func activate(_ ids: Set<String>?) {
+        activeSourceIds = ids
+    }
+
+    public func clear() {
+        activeSourceIds = nil
+    }
+}
+
 // MARK: - Return context when Speaker was opened from a pushed screen (lesson/course) — back restores tab + path.
 // Root tab ↔ tab (Избранное → Спикер) не сохраняем: иначе ложный back на одном уровне.
+public enum SpeakerReturnSource: Equatable {
+    case navigation
+    case dictionary
+}
+
+public struct SpeakerReturnPayload: Equatable {
+    public let tab: Int
+    public let path: [NavigationIntent.Route]
+    public let source: SpeakerReturnSource
+}
+
 @MainActor
 public final class SpeakerReturnContext: ObservableObject {
     public static let shared = SpeakerReturnContext()
     private var savedTab: Int?
     private var savedPath: [NavigationIntent.Route] = []
+    private var source: SpeakerReturnSource = .navigation
     private init() {}
 
     public var hasContext: Bool { savedTab != nil }
 
-    /// Подпись CTA «вернуться»: из курса/урока/игры → обучение; из избранного → избранное.
+    /// Подпись CTA «вернуться»: из курса/урока/игры → обучение; из избранного → избранное; из словаря → словарь.
     public var returnActionTitle: String {
+        if source == .dictionary { return "К словарю" }
         switch savedTab {
         case 1: return "К обучению"
         case 3: return "К избранному"
@@ -365,6 +395,7 @@ public final class SpeakerReturnContext: ObservableObject {
     }
 
     public var returnActionIcon: String {
+        if source == .dictionary { return "bookmark.fill" }
         switch savedTab {
         case 1: return "graduationcap.fill"
         case 3: return "heart.fill"
@@ -394,25 +425,46 @@ public final class SpeakerReturnContext: ObservableObject {
         }
         savedTab = tab
         savedPath = cleaned
+        source = .navigation
+        objectWillChange.send()
+        ShellHeaderDriver.shared.bump()
+    }
+
+    /// Словарь открыт как оверлей — путь пустой, но «назад» должен вернуть в панель словаря.
+    public func saveFromDictionary(tab: Int) {
+        savedTab = tab
+        savedPath = []
+        source = .dictionary
+        objectWillChange.send()
+        ShellHeaderDriver.shared.bump()
+    }
+
+    /// Явный переход в Спикер с корня вкладки (без push-стека) — нужна CTA «назад» на ту же вкладку.
+    public func saveFromRootTab(_ tab: Int) {
+        savedTab = tab
+        savedPath = []
+        source = .navigation
         objectWillChange.send()
         ShellHeaderDriver.shared.bump()
     }
 
     public func clear() {
-        guard savedTab != nil || !savedPath.isEmpty else { return }
+        guard savedTab != nil || !savedPath.isEmpty || source != .navigation else { return }
         savedTab = nil
         savedPath = []
+        source = .navigation
         objectWillChange.send()
         ShellHeaderDriver.shared.bump()
     }
 
-    public func consume() -> (tab: Int, path: [NavigationIntent.Route])? {
+    public func consume() -> SpeakerReturnPayload? {
         guard let tab = savedTab else { return nil }
-        let path = savedPath
+        let payload = SpeakerReturnPayload(tab: tab, path: savedPath, source: source)
         savedTab = nil
         savedPath = []
+        source = .navigation
         objectWillChange.send()
         ShellHeaderDriver.shared.bump()
-        return (tab, path)
+        return payload
     }
 }

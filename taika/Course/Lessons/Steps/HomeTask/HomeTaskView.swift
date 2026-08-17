@@ -144,6 +144,9 @@ public struct HomeTaskView: View {
         }
         .onDisappear {
             GameHeaderStore.shared.config = nil
+            if isDictionaryContext {
+                DictionarySessionSelection.shared.clear()
+            }
         }
         .onChange(of: gameElapsedSeconds) { _, _ in
             GameHeaderStore.shared.config = gameHeaderConfigForMatch()
@@ -199,6 +202,7 @@ public struct HomeTaskView: View {
     private func courseTitleForSection() -> String {
         let (ccid, _) = canonicalIds()
         if isFavoritesContext { return "Избранное" }
+        if isDictionaryContext { return "Мой словарь" }
         if isLearnedParkContext { return "Все выученные" }
         return CourseData.shared.title(for: ccid) ?? CourseData.shared.title(for: courseId) ?? ccid
     }
@@ -614,6 +618,8 @@ public struct HomeTaskView: View {
         if lessonId.isEmpty {
             if isFavoritesContext {
                 triples = store.userTriplesForCourse(courseId: "__favorites__", lessonIds: [])
+            } else if isDictionaryContext {
+                triples = store.userTriplesForCourse(courseId: DictionaryGameSource.courseId, lessonIds: [])
             } else if isLearnedParkContext {
                 triples = store.userTriplesForCourse(courseId: LearnedGameSource.pseudoCourseId, lessonIds: [])
             } else {
@@ -732,6 +738,7 @@ public struct HomeTaskView: View {
     /// Course or lesson name for second header (unified with Speaker).
     private func gameContextSourceTitle() -> String {
         if isFavoritesContext { return "Избранное" }
+        if isDictionaryContext { return "Мой словарь" }
         if isLearnedParkContext { return "Все выученные" }
         let (ccid, _) = canonicalIds()
         if !lessonId.isEmpty {
@@ -824,12 +831,16 @@ public struct HomeTaskView: View {
         return raw == "__favorites__" || raw == "--favorites--"
     }
 
+    private var isDictionaryContext: Bool {
+        DictionaryGameSource.isDictionaryCourseId(courseId)
+    }
+
     private var isLearnedParkContext: Bool {
         LearnedGameSource.isPseudoCourseId(courseId)
     }
 
     private var isGlobalParkContext: Bool {
-        isFavoritesContext || isLearnedParkContext
+        isFavoritesContext || isDictionaryContext || isLearnedParkContext
     }
 
     /// Lessons catalog for course-level mode (lessonId == "").
@@ -869,6 +880,8 @@ public struct HomeTaskView: View {
             // COURSE MODE / FAVORITES / ALL LEARNED (парк с Main)
             if isFavoritesContext {
                 triples = store.userTriplesForCourse(courseId: "__favorites__", lessonIds: [])
+            } else if isDictionaryContext {
+                triples = store.userTriplesForCourse(courseId: DictionaryGameSource.courseId, lessonIds: [])
             } else if isLearnedParkContext {
                 triples = store.userTriplesForCourse(courseId: LearnedGameSource.pseudoCourseId, lessonIds: [])
             } else {

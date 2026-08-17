@@ -139,6 +139,7 @@ extension HomeTaskView {
         let cid = courseId.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !lid.isEmpty else { return false }
         if cid == "__favorites__" || cid == "--favorites--" { return false }
+        if DictionaryGameSource.isDictionaryCourseId(cid) { return false }
         if LearnedGameSource.isPseudoCourseId(cid) { return false }
         return true
     }

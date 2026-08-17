@@ -209,8 +209,6 @@ public struct SpeakerDSRoot: View {
     @State private var expandedTrainingCourseId: String? = nil
     @Environment(\.taikaRootHeaderClearance) private var rootHeaderClearance
     @State private var conversationThaiCopiedFlash = false
-    @State private var showSmartDictionarySheet = false
-    @State private var smartDictionaryIsEditing = false
     /// По умолчанию true — иначе при сбое onAppear старт спикера остаётся невидимым.
     @State private var speakerInviteAppeared = true
     @State private var idleMicPulse = false
@@ -1445,7 +1443,7 @@ public struct SpeakerDSRoot: View {
         let thai = item.thai.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !thai.isEmpty else { return }
         if favoriteManager.hasSmartSpeakerDictionaryEntry(thai: thai) {
-            showSmartDictionarySheet = true
+            NotificationCenter.default.post(name: .taikaOpenSmartSpeakerDictionary, object: nil)
         } else {
             favoriteManager.addSmartSpeakerCard(
                 ru: item.russian,
@@ -2256,12 +2254,6 @@ public struct SpeakerDSRoot: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
-
-            if showSmartDictionarySheet {
-                smartSpeakerDictionarySheet
-                    .zIndex(9)
-                    .transition(.opacity)
-            }
         }
         .sheet(isPresented: Binding(
             get: { effectiveShowBreakdown },
@@ -2278,12 +2270,7 @@ public struct SpeakerDSRoot: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
         }
-        .animation(.spring(response: 0.34, dampingFraction: 0.88), value: showSmartDictionarySheet)
         .animation(.easeInOut(duration: 0.18), value: phase.isFeedback)
-        .onReceive(NotificationCenter.default.publisher(for: .taikaOpenSmartSpeakerDictionary)) { _ in
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            showSmartDictionarySheet = true
-        }
         .onChange(of: extSelectedId) { newValue in
             if let v = newValue { localSelectedId = v }
         }
@@ -3125,63 +3112,6 @@ public struct SpeakerDSRoot: View {
         default:
             return nil
         }
-    }
-
-    private func dismissSmartDictionaryModal() {
-        showSmartDictionarySheet = false
-        smartDictionaryIsEditing = false
-    }
-
-    private var smartSpeakerDictionarySheet: some View {
-        let cards = favoriteManager.smartSpeakerDictionaryCardsDTO
-        return ZStack {
-            OverlayEtalonBackground(onDismiss: { dismissSmartDictionaryModal() })
-            OverlayEtalonCard(title: "Словарь", onDismiss: { dismissSmartDictionaryModal() }) {
-                SmartSpeakerDictionaryPanel(
-                    cards: cards,
-                    isEditing: $smartDictionaryIsEditing,
-                    onRemove: { FavoriteManager.shared.remove(id: $0.sourceId) }
-                )
-                .frame(maxHeight: 420)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .padding(.bottom, 24)
-        }
-    }
-
-    private var dictionaryHeaderChip: some View {
-        let count = favoriteManager.smartSpeakerDictionaryCardsDTO.count
-        return Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            showSmartDictionarySheet = true
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "bookmark.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.system(size: 13, weight: .semibold))
-                        .monospacedDigit()
-                }
-            }
-            .foregroundStyle(
-                count > 0
-                ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.92))
-            )
-            .padding(.horizontal, 12)
-            .frame(height: 32)
-            .background(
-                ZStack {
-                    let shape = Capsule(style: .continuous)
-                    shape.fill(CD.ColorToken.card.opacity(0.78))
-                    shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                }
-            )
-            .contentShape(Capsule(style: .continuous))
-        }
-        .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
-        .accessibilityLabel(count > 0 ? "Словарь, \(count) фраз" : "Словарь")
     }
 
     /// Единый блок результата: сравнение + общий скор + короткий вердикт.
@@ -4949,6 +4879,47 @@ public struct SpeakerDSRoot: View {
         .frame(height: 22, alignment: .center)
     }
     // MARK: sub-header — заголовок + режим; курсы — в иконке хедера (бывшая плашка попыток).
+    private var isSpecialTrainingContext: Bool {
+        guard let cid = external?.courseContextCourseId else { return false }
+        return cid == "__dictionary__" || cid == "__favorites__"
+    }
+
+    private var trainingModePickerTitle: String {
+        switch external?.courseContextCourseId {
+        case "__dictionary__": return "Мой словарь"
+        case "__favorites__": return "Избранное"
+        default: return "Закрепление курсов"
+        }
+    }
+
+    private var dictionaryContextBadge: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "bookmark.fill")
+                .font(.system(size: 12, weight: .semibold))
+            Text("Мой словарь")
+                .font(.system(size: 13, weight: .bold))
+        }
+        .foregroundStyle(.black)
+        .padding(.horizontal, 14)
+        .frame(height: 32)
+        .background(Capsule().fill(ThemeManager.shared.currentAccentFill))
+        .accessibilityLabel("Режим: мой словарь")
+    }
+
+    private var favoritesContextBadge: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 12, weight: .semibold))
+            Text("Избранное")
+                .font(.system(size: 13, weight: .bold))
+        }
+        .foregroundStyle(.black)
+        .padding(.horizontal, 14)
+        .frame(height: 32)
+        .background(Capsule().fill(ThemeManager.shared.currentAccentFill))
+        .accessibilityLabel("Режим: избранное")
+    }
+
     private var topChrome: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 8) {
@@ -4967,17 +4938,46 @@ public struct SpeakerDSRoot: View {
                     )
                 }
 
-                AppInlineFilterPicker(
-                    titles: ["Закрепление курсов", "Скажи сам"],
-                    selectedIndex: speakerUIMode == .conversation ? 1 : 0
-                ) { index in
-                    let mode: SpeakerManager.SpeakerUIMode = index == 1 ? .conversation : .training
-                    external?.onSpeakerUIModeChange(mode)
+                if speakerUIMode == .training, external?.courseContextCourseId == "__dictionary__" {
+                    dictionaryContextBadge
+                    Button {
+                        external?.onSpeakerUIModeChange(.conversation)
+                    } label: {
+                        Text("Скажи сам")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.textSecondary)
+                            .padding(.horizontal, 12)
+                            .frame(height: 32)
+                            .background(Capsule().fill(CD.ColorToken.chip))
+                    }
+                    .buttonStyle(.plain)
+                } else if speakerUIMode == .training, external?.courseContextCourseId == "__favorites__" {
+                    favoritesContextBadge
+                    Button {
+                        external?.onSpeakerUIModeChange(.conversation)
+                    } label: {
+                        Text("Скажи сам")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.textSecondary)
+                            .padding(.horizontal, 12)
+                            .frame(height: 32)
+                            .background(Capsule().fill(CD.ColorToken.chip))
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    AppInlineFilterPicker(
+                        titles: [trainingModePickerTitle, "Скажи сам"],
+                        selectedIndex: speakerUIMode == .conversation ? 1 : 0
+                    ) { index in
+                        let mode: SpeakerManager.SpeakerUIMode = index == 1 ? .conversation : .training
+                        external?.onSpeakerUIModeChange(mode)
+                    }
                 }
             }
             .padding(.horizontal, CD.Spacing.screen)
 
             if speakerUIMode == .training,
+               !isSpecialTrainingContext,
                !allSpeakerItems.isEmpty,
                let lessonIds = external?.learnedLessonIds,
                lessonIds.count > 1,
@@ -5847,119 +5847,6 @@ private struct SmartSpeakerPolitenessMenuButton: View {
             )
         }
         .accessibilityLabel("Вежливость речи, \(shortLabel)")
-    }
-}
-
-/// Панель словаря в оверлее (вместо боковой закладки).
-private struct SmartSpeakerDictionaryPanel: View {
-    let cards: [FDCardDTO]
-    @Binding var isEditing: Bool
-    let onRemove: (FDCardDTO) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if !cards.isEmpty {
-                HStack {
-                    Text("\(cards.count) \(phraseLabel(cards.count))")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                    Spacer()
-                    Button(isEditing ? "Готово" : "Править") {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        isEditing.toggle()
-                    }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                }
-                .padding(.horizontal, CD.Spacing.screen)
-                .padding(.bottom, 10)
-            }
-
-            if cards.isEmpty {
-                VStack(spacing: 10) {
-                    TaikaEmptyStateIcon(systemName: "bookmark", size: 28)
-                    Text("Сохраняй фразы кнопкой «в мой словарь» после перевода")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 36)
-            } else {
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 8) {
-                        ForEach(cards) { card in
-                            dictionaryRow(card)
-                        }
-                    }
-                    .padding(.horizontal, CD.Spacing.screen)
-                    .padding(.bottom, 16)
-                }
-            }
-        }
-    }
-
-    private func phraseLabel(_ n: Int) -> String {
-        let mod10 = n % 10
-        let mod100 = n % 100
-        if mod100 >= 11 && mod100 <= 14 { return "фраз" }
-        switch mod10 {
-        case 1: return "фраза"
-        case 2, 3, 4: return "фразы"
-        default: return "фраз"
-        }
-    }
-
-    private func dictionaryRow(_ card: FDCardDTO) -> some View {
-        HStack(alignment: .center, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                let ph = card.meta.trimmingCharacters(in: .whitespacesAndNewlines)
-                    .replacingOccurrences(of: "card:", with: "")
-                if !ph.isEmpty {
-                    Text(ph)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                        .lineLimit(1)
-                }
-                Text(card.title.trimmingCharacters(in: .whitespacesAndNewlines))
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                    .lineLimit(2)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if isEditing {
-                Button { onRemove(card) } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.red.opacity(0.88))
-                        .frame(width: 32, height: 32)
-                }
-                .buttonStyle(.plain)
-            } else {
-                Button {
-                    let thai = card.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !thai.isEmpty { StepAudio.shared.speakThai(thai) }
-                } label: {
-                    Image(systemName: "speaker.wave.2.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                        .frame(width: 32, height: 32)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(PD.ColorToken.card.opacity(0.62))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-        )
     }
 }
 

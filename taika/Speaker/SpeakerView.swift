@@ -387,6 +387,11 @@ struct SpeakerView: View {
             if let ctx = SpeakerReturnContext.shared.consume() {
                 selectedTab = ctx.tab
                 nav.path = ctx.path
+                if ctx.source == .dictionary {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                        overlay.present(.dictionaryQuickDrawer)
+                    }
+                }
             } else {
                 nav.popToRoot()
                 selectedTab = 1

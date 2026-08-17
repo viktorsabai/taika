@@ -274,10 +274,22 @@ struct FavoriteView: View {
         SpeakerManager.shared.setSpeakerUIMode(.training)
         if selectedTab == .dictionary {
             SpeakerRequestedCourseId.shared.set("__dictionary__")
+            DictionarySessionSelection.shared.activate(nil)
+            SpeakerManager.shared.startSpecialTraining(poolId: "__dictionary__")
+            if nav.path.isEmpty {
+                SpeakerReturnContext.shared.saveFromRootTab(3)
+            } else {
+                SpeakerReturnContext.shared.save(tab: 3, path: nav.path)
+            }
         } else {
             SpeakerRequestedCourseId.shared.set("__favorites__")
+            SpeakerManager.shared.startSpecialTraining(poolId: "__favorites__")
+            if nav.path.isEmpty {
+                SpeakerReturnContext.shared.saveFromRootTab(3)
+            } else {
+                SpeakerReturnContext.shared.save(tab: 3, path: nav.path)
+            }
         }
-        SpeakerReturnContext.shared.save(tab: 3, path: nav.path)
         nav.requestTab(2)
     }
 

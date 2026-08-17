@@ -141,6 +141,49 @@ public enum FavoritesGameSource {
     }
 }
 
+/// Персональный словарь умного спикера — пул для игр «закрепить» из drawer.
+@MainActor
+public enum DictionaryGameSource {
+    public static let courseId = "__dictionary__"
+    public typealias Triple = HomeTaskManager.LearnedTriple
+
+    public static func isDictionaryCourseId(_ raw: String) -> Bool {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == courseId
+    }
+
+    public static func triples(selectedSourceIds: Set<String>? = nil) -> [Triple] {
+        let cards = FavoriteManager.shared.smartSpeakerDictionaryCardsDTO
+        let filtered: [FDCardDTO]
+        if let ids = selectedSourceIds, !ids.isEmpty {
+            let normalized = Set(ids.map { $0.lowercased() })
+            filtered = cards.filter { normalized.contains($0.sourceId.lowercased()) }
+        } else {
+            filtered = cards
+        }
+        var seen = Set<String>()
+        var result: [Triple] = []
+        for dto in filtered {
+            let ru = dto.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !ru.isEmpty else { continue }
+            let th = dto.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+            var phRaw = dto.meta.trimmingCharacters(in: .whitespacesAndNewlines)
+            if phRaw.hasPrefix("card:") { phRaw = String(phRaw.dropFirst("card:".count)) }
+            let ph = phRaw.isEmpty ? ru : phRaw
+            if seen.insert(ru.lowercased()).inserted {
+                result.append(.init(ru: ru, th: th, ph: ph, lessonId: nil))
+            }
+        }
+        return result
+    }
+
+    public static var hasPlayableCards: Bool {
+        triples().contains {
+            !$0.ru.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !$0.ph.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+}
+
 /// Псевдо-курс игрового парка с Main: все выученные карточки по всем курсам.
 @MainActor
 public enum LearnedGameSource {
@@ -405,6 +448,11 @@ public final class HomeTaskManager: ObservableObject {
     @MainActor
     private func favoritesTriples() -> [LearnedTriple] {
         FavoritesGameSource.triples()
+    }
+
+    @MainActor
+    private func dictionaryTriples() -> [LearnedTriple] {
+        DictionaryGameSource.triples(selectedSourceIds: DictionarySessionSelection.shared.activeSourceIds)
     }
 
     /// Варианты lessonId для резолва (case-insensitive + underscore/dash), чтобы избранное работало при разном формате ключей в steps.json.
@@ -983,6 +1031,7 @@ public final class HomeTaskManager: ObservableObject {
     public func userTriples(for courseId: String, lessonId: String) -> [LearnedTriple] {
         if LearnedGameSource.isPseudoCourseId(courseId) { return allLearnedUserTriples() }
         if courseId == "__favorites__" { return favoritesTriples() }
+        if DictionaryGameSource.isDictionaryCourseId(courseId) { return dictionaryTriples() }
         let raw = learnedTriples(courseId: courseId, lessonId: lessonId)
         var seen = Set<String>()
         var result: [LearnedTriple] = []
@@ -1007,6 +1056,7 @@ public final class HomeTaskManager: ObservableObject {
     ) -> [LearnedTriple] {
         if LearnedGameSource.isPseudoCourseId(courseId) { return allLearnedUserTriples() }
         if courseId == "__favorites__" { return favoritesTriples() }
+        if DictionaryGameSource.isDictionaryCourseId(courseId) { return dictionaryTriples() }
         var raw: [LearnedTriple] = []
         for lid in lessonIds {
             raw.append(contentsOf: learnedTriples(courseId: courseId, lessonId: lid))

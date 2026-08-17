@@ -640,6 +640,10 @@ public final class SpeakerManager: ObservableObject {
     /// Быстрый старт: избранное уроков или словарь.
     public func startSpecialTraining(poolId: String) {
         guard poolId == "__favorites__" || poolId == "__dictionary__" else { return }
+        if poolId == "__dictionary__" {
+            startDictionaryTraining(selectedSourceIds: DictionarySessionSelection.shared.activeSourceIds)
+            return
+        }
         prepareTrainingPoolIfNeeded()
         loadQueueForCourse(poolId)
         if !queue.isEmpty {
@@ -670,6 +674,56 @@ public final class SpeakerManager: ObservableObject {
             ordered.append(SpeakerTrainingLessonOption(id: lid, title: title, count: c))
         }
         return ordered
+    }
+
+    /// Тренировка словаря; `selectedSourceIds` nil = все фразы.
+    public func startDictionaryTraining(selectedSourceIds: Set<String>? = nil) {
+        prepareTrainingPoolIfNeeded()
+        speakerContextCourseId = "__dictionary__"
+        activeFilterId = SpeakerMode.favoritesMode.id
+        var fav = buildFavoritesQueue().filter {
+            $0.courseId == "user_dict" && $0.lessonId == "smart_speaker"
+        }
+        if let ids = selectedSourceIds, !ids.isEmpty {
+            let selectedThai = Set(
+                FavoriteManager.shared.items
+                    .filter { ids.contains($0.id) }
+                    .map { $0.th.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            )
+            fav = fav.filter {
+                selectedThai.contains($0.face.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+            }
+        }
+        applySpecialTrainingQueue(fav, emptyHint: "в словаре пока пусто")
+    }
+
+    private func applySpecialTrainingQueue(_ fav: [StepData.SpeakerResolved], emptyHint: String) {
+        if fav.isEmpty {
+            queue = []
+            current = nil
+            heardThai = nil
+            heardRU = nil
+            heardTranslit = nil
+            heardConfidence = 0
+            taikaHints = [emptyHint]
+            recordingPartialThai = nil
+            recordingMeter = 0
+            lastAttemptURL = nil
+            lastAttempt = nil
+            attemptCount = 0
+            sessionScores = []
+            lastPlayed = .none
+            attemptPlayer?.stop()
+            attemptPlayer = nil
+            setPhase(.hint)
+        } else {
+            queue = fav
+            if shuffleQueue { shuffle() }
+            current = queue.first
+            if let cur = current { restoreAttemptResult(for: cur) }
+            setPhase(.idle)
+            taikaHints = []
+        }
     }
 
     /// Start a training session scoped to the courses (and optional lessons) picked on the launcher.

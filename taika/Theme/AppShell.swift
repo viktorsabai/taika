@@ -186,11 +186,13 @@ struct AppShell: View {
                                 selectedTab = 2
                             }
                         },
-                        onTrainInSpeaker: {
+                        onTrainInSpeaker: { selectedIds in
                             overlay.dismiss()
+                            DictionarySessionSelection.shared.activate(selectedIds)
                             SpeakerManager.shared.setSpeakerUIMode(.training)
+                            SpeakerRequestedCourseId.shared.set("__dictionary__")
                             SpeakerManager.shared.startSpecialTraining(poolId: "__dictionary__")
-                            SpeakerReturnContext.shared.save(tab: selectedTab, path: nav.path)
+                            SpeakerReturnContext.shared.saveFromDictionary(tab: selectedTab)
                             withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
                                 nav.popToRoot()
                                 selectedTab = 2
@@ -424,7 +426,9 @@ struct AppShell: View {
             guard let tab = newValue, (0...4).contains(tab) else { return }
             if tab == 2 {
                 if nav.path.isEmpty {
-                    SpeakerReturnContext.shared.clear()
+                    if !SpeakerReturnContext.shared.hasContext {
+                        SpeakerReturnContext.shared.clear()
+                    }
                 } else {
                     SpeakerReturnContext.shared.save(tab: selectedTab, path: nav.path)
                 }
@@ -442,6 +446,9 @@ struct AppShell: View {
             if !onGame, gameHeaderStore.config != nil {
                 gameHeaderStore.config = nil
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .taikaOpenSmartSpeakerDictionary)) { _ in
+            overlay.present(.dictionaryQuickDrawer)
         }
     }
 
