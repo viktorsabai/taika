@@ -178,10 +178,8 @@ struct AppShell: View {
                         onDismiss: { overlay.dismiss() },
                         onOpenFullDictionary: {
                             overlay.dismiss()
-                            FavoritesFilterState.shared.selectedTab = .dictionary
-                            withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                                nav.popToRoot()
-                                selectedTab = 3
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                                nav.set(.dictionary)
                             }
                         },
                         onOpenSpeaker: {
@@ -239,7 +237,7 @@ struct AppShell: View {
             nav.popToRoot()
         }
         .overlay(alignment: .top) {
-            if welcomeSeen && onboardingDone && !showBootSplash && firstEntryPhase == .none {
+            if welcomeSeen && onboardingDone && !showBootSplash && firstEntryPhase == .none && overlay.overlay != .dictionaryQuickDrawer {
                 ShellHeaderHost(
                     selectedTab: $selectedTab,
                     speakerPendingCourseId: $speakerPendingCourseId,
@@ -375,6 +373,19 @@ struct AppShell: View {
                             gameType: gameType
                         )
 
+                    case .dictionary:
+                        DictionaryFullView(
+                            onBack: { nav.popToRoot() },
+                            onOpenSpeaker: {
+                                SpeakerManager.shared.setSpeakerUIMode(.conversation)
+                                SpeakerReturnContext.shared.save(tab: selectedTab, path: nav.path)
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                    nav.popToRoot()
+                                    selectedTab = 2
+                                }
+                            }
+                        )
+
                     case let .favoritesAll(initialFilter):
                         Color.clear
                             .onAppear {
@@ -393,15 +404,6 @@ struct AppShell: View {
                 ? Theme.Layout.rootHeaderClearanceGame
                 : Theme.Layout.rootHeaderClearance
         )
-        .overlay(alignment: .trailing) {
-            if nav.path.isEmpty && [0, 2, 3].contains(selectedTab) && overlay.overlay == nil {
-                DictionaryEdgeTab {
-                    overlay.present(.dictionaryQuickDrawer)
-                }
-                .padding(.trailing, 2)
-                .padding(.top, 82)
-            }
-        }
         .overlay(alignment: .bottom) {
             if nav.path.isEmpty {
                 ToolBar(selectedTab: tabSelection)

@@ -75,6 +75,8 @@ public final class NavigationIntent: ObservableObject {
         case game(courseId: String, lessonId: String?, gameType: String)
         /// Список «Показать всё» на табе избранного (глобальный push).
         case favoritesAll(initialFilter: FDK)
+        /// Полноценный личный словарь; не является Favorites filter.
+        case dictionary
 
         public static func lessons(_ courseId: String) -> Route {
             .lessons(courseId: courseId)

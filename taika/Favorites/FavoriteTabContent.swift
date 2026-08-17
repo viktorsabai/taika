@@ -31,7 +31,8 @@ public enum FavoriteScreenTab: String, CaseIterable, Identifiable {
 
     public var taikaFMScope: TaikaFMScope { .fav }
 
-    public static var mvpTabs: [FavoriteScreenTab] { [.cards, .dictionary, .hacks, .courses] }
+    /// Favorites contains only course-derived saved material; personal dictionary has its own route.
+    public static var mvpTabs: [FavoriteScreenTab] { [.cards, .hacks, .courses] }
 
     public init(fdk: FDK) {
         switch fdk {
