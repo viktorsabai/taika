@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "courses": [
     {
       "course_id": "course_b_0",
@@ -2427,7 +2426,7 @@
           "title": "Напомнить о сроке",
           "subtitle": "Уточнить дедлайн без нажима",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 7,
           "is_free": false,
           "tags": [
             "работа",
@@ -2450,7 +2449,7 @@
             }
           ],
           "outcomes": [
-            "Напомнишь о сроке и предложишь следующий шаг вместо жёсткого «почему ещё нет»."
+            "Напомнишь о сроке и уточнишь, кто отвечает за следующий шаг, без жёсткого «почему ещё нет»."
           ],
           "prerequisites": [
             "course_e_2_l2"
@@ -2598,7 +2597,7 @@
           "title": "Крэнг-джай",
           "subtitle": "Не давить на собеседника",
           "duration_minutes": 3,
-          "card_count": 8,
+          "card_count": 6,
           "is_free": true,
           "tags": [
             "культура",
@@ -7197,7 +7196,7 @@
           "title": "Repair-сцена",
           "subtitle": "Собрать конфликт в решение",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 6,
           "is_free": false,
           "tags": [
             "repair",
