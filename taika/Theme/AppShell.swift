@@ -191,6 +191,16 @@ struct AppShell: View {
                                 nav.popToRoot()
                                 selectedTab = 2
                             }
+                        },
+                        onTrainInSpeaker: {
+                            overlay.dismiss()
+                            SpeakerManager.shared.setSpeakerUIMode(.training)
+                            SpeakerManager.shared.startSpecialTraining(poolId: "__dictionary__")
+                            SpeakerReturnContext.shared.save(tab: selectedTab, path: nav.path)
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                nav.popToRoot()
+                                selectedTab = 2
+                            }
                         }
                     )
                 case .accentPicker:

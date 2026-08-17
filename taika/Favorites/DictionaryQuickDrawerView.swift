@@ -19,9 +19,11 @@ struct DictionaryQuickDrawerView: View {
     let onDismiss: () -> Void
     let onOpenFullDictionary: () -> Void
     let onOpenSpeaker: () -> Void
+    var onTrainInSpeaker: (() -> Void)? = nil
 
     @State private var drawerOffset: CGFloat = 0
     @State private var didAppear = false
+    @State private var editingCard: DictionaryEditTarget?
 
     private var cards: [FDCardDTO] {
         Array(favorites.smartSpeakerDictionaryCardsDTO.prefix(5))
@@ -56,6 +58,14 @@ struct DictionaryQuickDrawerView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Быстрый словарь")
+        .sheet(item: $editingCard) { target in
+            DictionaryEditSheet(card: target.card) {
+                editingCard = nil
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
+        }
     }
 
     private var drawer: some View {
@@ -116,7 +126,18 @@ struct DictionaryQuickDrawerView: View {
                             DictionaryDrawerRow(
                                 card: card,
                                 accent: accent,
-                                onSpeak: onOpenSpeaker
+                                onEdit: { editingCard = DictionaryEditTarget(card: card) },
+                                onDelete: {
+                                    favorites.remove(id: DictionaryPhraseActions.cardId(card))
+                                },
+                                onTrain: {
+                                    if let onTrainInSpeaker {
+                                        onTrainInSpeaker()
+                                    } else {
+                                        onOpenSpeaker()
+                                    }
+                                },
+                                showsActionsMenu: true
                             )
                         }
                     }
