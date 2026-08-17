@@ -2592,7 +2592,11 @@ public struct LessonSummaryOverlay: View {
                 HStack(spacing: 7) {
                     Image(systemName: approvedGameIcon(mode))
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(locked ? CD.ColorToken.textSecondary : ThemeManager.shared.currentAccentFill)
+                        .foregroundStyle(
+                            locked
+                            ? AnyShapeStyle(CD.ColorToken.textSecondary)
+                            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                        )
                     if locked {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 9, weight: .bold))
@@ -2613,8 +2617,23 @@ public struct LessonSummaryOverlay: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 9)
             .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(selected && !locked ? ThemeManager.shared.currentAccentFill.opacity(0.16) : CD.ColorToken.card.opacity(0.48)))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(selected && !locked ? ThemeManager.shared.currentAccentFill.opacity(0.85) : Theme.Strokes.strokeSubtle, lineWidth: selected && !locked ? 1.2 : 1))
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        selected && !locked
+                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.16))
+                        : AnyShapeStyle(CD.ColorToken.card.opacity(0.48))
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        selected && !locked
+                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.85))
+                        : AnyShapeStyle(Theme.Strokes.strokeSubtle),
+                        lineWidth: selected && !locked ? 1.2 : 1
+                    )
+            )
         }
         .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.98))
     }
@@ -2865,7 +2884,7 @@ public struct LessonSummaryOverlay: View {
                                     Circle()
                                         .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 2.2)
                                         .frame(width: 72, height: 72)
-                                        .shadow(color: ThemeManager.shared.currentAccentFill.opacity(0.55), radius: 14)
+                                        .shadow(color: ThemeManager.shared.currentAccentTintColor.opacity(0.55), radius: 14)
                                     Image(systemName: "checkmark")
                                         .font(.system(size: 31, weight: .bold))
                                         .foregroundStyle(ThemeManager.shared.currentAccentFill)
