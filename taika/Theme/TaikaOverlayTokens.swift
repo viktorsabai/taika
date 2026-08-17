@@ -141,36 +141,56 @@ struct GlassChoice<Content: View>: View {
         self.content = content
     }
 
+    private var indicatorSystemName: String {
+        isSelected ? "checkmark.circle.fill" : "chevron.right"
+    }
+
+    private var indicatorForeground: AnyShapeStyle {
+        if isSelected {
+            return AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+        }
+        return AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.7))
+    }
+
+    @ViewBuilder
+    private var titleContent: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(CD.ColorToken.text)
+            if let subtitle, !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.system(size: 11, weight: .regular, design: .rounded))
+                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.75))
+                    .lineLimit(2)
+            }
+        }
+    }
+
+    private var cardBackground: some View {
+        let fillOpacity = isSelected ? 0.10 : 0.045
+        let strokeOpacity = isSelected ? 0.22 : 0.10
+        return RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.compactRadius, style: .continuous)
+            .fill(Color.white.opacity(fillOpacity))
+            .overlay {
+                RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.compactRadius, style: .continuous)
+                    .strokeBorder(Color.white.opacity(strokeOpacity), lineWidth: 1)
+            }
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(CD.ColorToken.text)
-                    if let subtitle, !subtitle.isEmpty {
-                        Text(subtitle)
-                            .font(.system(size: 11, weight: .regular, design: .rounded))
-                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.75))
-                            .lineLimit(2)
-                    }
-                }
+                titleContent
                 Spacer(minLength: 0)
                 content()
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "chevron.right")
+                Image(systemName: indicatorSystemName)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(AnyShapeStyle(isSelected ? ThemeManager.shared.currentAccentFill : CD.ColorToken.textSecondary.opacity(0.7)))
+                    .foregroundStyle(indicatorForeground)
             }
             .padding(.horizontal, 14)
             .frame(minHeight: TaikaOverlayTokens.Layout.compactControlHeight)
-            .background {
-                RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.compactRadius, style: .continuous)
-                    .fill(Color.white.opacity(isSelected ? 0.10 : 0.045))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.compactRadius, style: .continuous)
-                            .strokeBorder(Color.white.opacity(isSelected ? 0.22 : 0.10), lineWidth: 1)
-                    }
-            }
+            .background(cardBackground)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
