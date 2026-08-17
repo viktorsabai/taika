@@ -177,17 +177,29 @@ struct FavoriteView: View {
             .padding(.top, Theme.Layout.rootHeaderClearance)
         }
         .onAppear {
+            if favFilter.selectedTab == .dictionary {
+                favFilter.selectedTab = .cards
+            }
             selectedTab = favFilter.selectedTab
             StepData.shared.preload()
         }
         .onChange(of: selectedTab) { _, newValue in
-            if favFilter.selectedTab != newValue {
-                favFilter.selectedTab = newValue
+            let normalized = newValue == .dictionary ? .cards : newValue
+            if selectedTab != normalized {
+                selectedTab = normalized
+                return
+            }
+            if favFilter.selectedTab != normalized {
+                favFilter.selectedTab = normalized
             }
         }
         .onChange(of: favFilter.selectedTab) { _, newValue in
-            if selectedTab != newValue {
-                selectedTab = newValue
+            let normalized = newValue == .dictionary ? .cards : newValue
+            if selectedTab != normalized {
+                selectedTab = normalized
+            }
+            if favFilter.selectedTab != normalized {
+                favFilter.selectedTab = normalized
             }
         }
     }

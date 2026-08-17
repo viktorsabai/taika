@@ -413,7 +413,7 @@ public struct AppHeader: View {
         )
     }
 
-    /// Словарь: закладка (+ счётчик).
+    /// Личный словарь: единый books glyph (+ счётчик); bookmark остаётся только для Favorites.
     @ViewBuilder
     private func dictionaryHeaderButton(
         count: Int,
@@ -423,12 +423,12 @@ public struct AppHeader: View {
         Button(action: action) {
             if count > 0 {
                 headerCounterBadge(
-                    icon: "bookmark.fill",
+                    icon: "books.vertical.fill",
                     text: "\(count)",
                     active: isAccent || count > 0
                 )
             } else {
-                headerIcon("bookmark", isAccent: isAccent)
+                headerIcon("books.vertical", isAccent: isAccent)
             }
         }
         .buttonStyle(TaikaHeaderButtonStyle())

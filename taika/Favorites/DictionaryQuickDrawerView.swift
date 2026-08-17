@@ -221,7 +221,7 @@ struct DictionaryQuickDrawerView: View {
     }
 }
 
-private struct DictionaryDrawerRow: View {
+struct DictionaryDrawerRow: View {
     let card: FDCardDTO
     let accent: AnyShapeStyle
     let onSpeak: () -> Void
@@ -268,52 +268,95 @@ private struct DictionaryDrawerRow: View {
     }
 }
 
-struct DictionaryEdgeTab: View {
-    let onOpen: () -> Void
-    @State private var pullOffset: CGFloat = 0
+struct DictionaryFullView: View {
+    @ObservedObject private var favorites = FavoriteManager.shared
+    @EnvironmentObject private var nav: NavigationIntent
+
+    let onBack: () -> Void
+    let onOpenSpeaker: () -> Void
+
+    private var cards: [FDCardDTO] {
+        favorites.smartSpeakerDictionaryCardsDTO
+    }
 
     var body: some View {
-        HStack(spacing: 0) {
-            Image(systemName: "books.vertical.fill")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(.black)
-                .frame(width: 24, height: 76)
-                .background(
-                    RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .fill(ThemeManager.shared.currentAccentFill)
-                )
-                .overlay(alignment: .leading) {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.55))
-                        .frame(width: 1)
-                        .padding(.vertical, 15)
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(CD.ColorToken.text)
+                        .frame(width: 40, height: 40)
+                        .background(Circle().fill(CD.ColorToken.chip))
                 }
-                .shadow(color: ThemeManager.shared.currentAccentFill.opacity(0.28), radius: 10, x: -3, y: 0)
-        }
-        .offset(x: max(-pullOffset, -18))
-        .contentShape(Rectangle())
-        .onTapGesture {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            onOpen()
-        }
-        .gesture(
-            DragGesture(minimumDistance: 12, coordinateSpace: .local)
-                .onChanged { value in
-                    guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                    pullOffset = max(0, -value.translation.width)
+                .buttonStyle(.plain)
+                .accessibilityLabel("Назад")
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Мой словарь")
+                        .font(.system(size: 25, weight: .bold))
+                        .foregroundStyle(CD.ColorToken.text)
+                    Text("Твои фразы для жизни в Таиланде")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
                 }
-                .onEnded { value in
-                    if value.translation.width < -36 || value.predictedEndTranslation.width < -60 {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        onOpen()
+                Spacer(minLength: 0)
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            }
+            .padding(.horizontal, Theme.Layout.pageHorizontal)
+            .padding(.top, Theme.Layout.rootHeaderClearance + 10)
+            .padding(.bottom, 18)
+
+            HStack(spacing: 8) {
+                Text("Все фразы")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 14)
+                    .frame(height: 32)
+                    .background(Capsule().fill(ThemeManager.shared.currentAccentFill))
+                Text("\(cards.count) личных")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, Theme.Layout.pageHorizontal)
+            .padding(.bottom, 12)
+
+            if cards.isEmpty {
+                VStack(spacing: 12) {
+                    Spacer()
+                    Image(systemName: "books.vertical")
+                        .font(.system(size: 30, weight: .medium))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    Text("Здесь будут твои личные фразы")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(CD.ColorToken.text)
+                    Text("Создай первую фразу в Speaker и сохрани её в словарь.")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                    Spacer()
+                }
+            } else {
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(spacing: 10) {
+                        ForEach(cards) { card in
+                            DictionaryDrawerRow(
+                                card: card,
+                                accent: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                                onSpeak: onOpenSpeaker
+                            )
+                        }
                     }
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.86)) {
-                        pullOffset = 0
-                    }
+                    .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    .padding(.bottom, ToolBar.recommendedBottomInset + 24)
                 }
-        )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Открыть мой словарь")
-        .accessibilityHint("Потяни вкладку влево")
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(CD.ColorToken.background.ignoresSafeArea())
     }
 }

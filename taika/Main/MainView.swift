@@ -314,8 +314,53 @@ struct MainView: View {
                 }
             }
         }
-        .padding(.horizontal, Theme.Layout.pageHorizontal)
         .accessibilityLabel("Разминка, таймер до обновления")
+    }
+
+    private var dictionaryMainButton: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            overlay.present(.dictionaryQuickDrawer)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Мой словарь")
+                    .font(.system(size: 13, weight: .bold))
+                    .lineLimit(1)
+                let count = FavoriteManager.shared.smartSpeakerDictionaryCardsDTO.count
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.system(size: 12, weight: .bold))
+                        .padding(.horizontal, 7)
+                        .frame(height: 22)
+                        .background(Capsule().fill(PD.ColorToken.background.opacity(0.24)))
+                }
+            }
+            .foregroundStyle(PD.ColorToken.text)
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(PD.ColorToken.card.opacity(0.72))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(ThemeManager.shared.currentAccentFill.opacity(0.54), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+        .accessibilityLabel("Мой словарь")
+    }
+
+    private var mainUtilityRow: some View {
+        HStack(spacing: 10) {
+            warmupRow
+                .frame(maxWidth: .infinity)
+            dictionaryMainButton
+                .frame(width: 142)
+        }
+        .padding(.horizontal, Theme.Layout.pageHorizontal)
     }
 
     private func dayWord(_ n: Int) -> String {
@@ -834,7 +879,7 @@ struct MainView: View {
                 continueSection
                     .padding(.top, sectionBreath)
 
-                warmupRow
+                mainUtilityRow
                     .padding(.top, 12)
 
                 forYouSection
