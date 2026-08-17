@@ -535,7 +535,10 @@ public struct AppHeader: View {
                             .accessibilityLabel("Выбрать курсы, попыток \(speakerDailyAttemptsRemaining)")
                         }
                     case 3:
-                        // Спикер / консоль — нижние CTA на экране; в хедере только поиск.
+                        // Favorites: личный словарь — отдельная utility entry point, не фильтр.
+                        if let onDict = onTapDictionary {
+                            dictionaryHeaderButton(count: dictionaryCount, action: onDict)
+                        }
                         if let onSearch = onTapFavoritesSearch {
                             headerIconButton("magnifyingglass", action: onSearch)
                         }
