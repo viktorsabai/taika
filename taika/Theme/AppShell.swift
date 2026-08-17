@@ -125,11 +125,12 @@ struct AppShell: View {
                         }
                     )
                 case .speakerFirstTip:
-                    TaikaTabTipOverlayView(kind: .speaker) {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                    // Legacy tip removed — Speakers opens into product directly.
+                    Color.clear
+                        .onAppear {
+                            TaikaProductDemoFlags.markSpeakerSeen()
                             overlay.dismiss()
                         }
-                    }
                 case .courseFirstTip:
                     // Legacy case: Course Hub demo removed — empty rhythm CTAs replace it.
                     Color.clear
