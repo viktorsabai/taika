@@ -87,10 +87,7 @@ let overlayEtalonBackgroundOpacity: Double = 0.34
 struct OverlayEtalonBackground: View {
     let onDismiss: () -> Void
     var body: some View {
-        Theme.Surfaces.blackGlassScrim
-            .ignoresSafeArea()
-            .onTapGesture(perform: onDismiss)
-            .accessibilityHidden(true)
+        GlassBackdrop(onDismiss: onDismiss)
     }
 }
 
@@ -124,7 +121,12 @@ struct OverlayEtalonCard<Content: View>: View {
 
             content()
         }
-        .taikaBlackGlassBackground(cornerRadius: 28)
+        .background {
+            Theme.Surfaces.blackGlass(
+                RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous)
+            )
+        }
+        .clipShape(RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous))
         .frame(maxWidth: 420)
         .padding(.horizontal, 20)
         .padding(.top, Theme.Layout.rootHeaderClearance)
@@ -147,18 +149,7 @@ struct OverlayEtalonPrimaryButton: View {
     let title: String
     let action: () -> Void
     var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(ThemeManager.shared.currentAccentFill)
-                )
-        }
-        .buttonStyle(.plain)
+        OverlayGlassPrimaryButton(title: title, action: action)
     }
 }
 
@@ -1042,6 +1033,7 @@ enum GameParkSource {
 struct GameParkOverlayView: View {
     var source: GameParkSource = .main
     @State private var selectedMode: GameModeType = .match
+    @State private var lockedMode: GameModeType?
     @EnvironmentObject private var nav: NavigationIntent
     @EnvironmentObject private var overlay: OverlayPresenter
     var onDismiss: () -> Void
@@ -1063,7 +1055,7 @@ struct GameParkOverlayView: View {
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             OverlayEtalonBackground(onDismiss: onDismiss)
             if hasCards {
                 OverlayEtalonCard(title: "Выбери режим", onDismiss: onDismiss) {
@@ -1086,18 +1078,14 @@ struct GameParkOverlayView: View {
                         },
                         onClose: onDismiss,
                         onLockedTap: { mode in
-                            if mode.isPro && !ProManager.shared.isPro {
-                                // Сначала закрыть парк — иначе пейвол поверх пикера = два сообщения.
-                                onDismiss()
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                                    overlay.presentPro(reason: .games)
-                                }
-                            } else {
+                            // Sprint 2: stay in Game Park. Explain the locked state
+                            // contextually; launch the existing paywall only from an
+                            // explicit CTA inside the peek.
+                            lockedMode = mode
 #if os(iOS)
-                                let gen = UINotificationFeedbackGenerator()
-                                gen.notificationOccurred(.warning)
+                            let gen = UINotificationFeedbackGenerator()
+                            gen.notificationOccurred(.warning)
 #endif
-                            }
                         },
                         modes: GameModeType.modesLessonAndPark,
                         embedInEtalon: false
@@ -1106,7 +1094,85 @@ struct GameParkOverlayView: View {
             } else {
                 emptyState
             }
+
+            if let lockedMode {
+                lockedModePeek(for: lockedMode)
+                    .padding(.horizontal, CD.Spacing.screen)
+                    .padding(.bottom, CD.Spacing.screen)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(2)
+            }
         }
+        .animation(.easeOut(duration: 0.22), value: lockedMode)
+    }
+
+    @ViewBuilder
+    private func lockedModePeek(for mode: GameModeType) -> some View {
+        GlassSurface(cornerRadius: TaikaOverlayTokens.Layout.cardRadius) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    Image(systemName: mode.isPro ? "lock.fill" : "clock.arrow.circlepath")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(mode.isPro ? "Режим доступен в Taika+" : "Режим пока закрыт")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(CD.ColorToken.text)
+                        Text(mode.title)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(CD.ColorToken.textSecondary)
+                    }
+                    Spacer(minLength: 0)
+                    Button {
+                        lockedMode = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(CD.ColorToken.textSecondary)
+                            .frame(width: 30, height: 30)
+                            .background(Circle().fill(Color.white.opacity(0.07)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Закрыть объяснение")
+                }
+
+                Text(lockedModeDetail(for: mode))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if mode.isPro && !ProManager.shared.isPro {
+                    OverlayGlassPrimaryButton(title: "Посмотреть Taika+") {
+                        lockedMode = nil
+                        onDismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                            overlay.presentPro(reason: .games)
+                        }
+                    }
+                }
+
+                Button {
+                    lockedMode = nil
+                } label: {
+                    Text("Не сейчас")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Не сейчас, вернуться в игровой парк")
+            }
+            .padding(16)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private func lockedModeDetail(for mode: GameModeType) -> String {
+        if mode.isPro && !ProManager.shared.isPro {
+            return "Открой больше игровых раундов и продолжай закреплять фразы в разных форматах."
+        }
+        return "Сначала заверши нужную часть курса — после этого этот режим откроется здесь автоматически."
     }
 
     @ViewBuilder

@@ -1259,7 +1259,8 @@ public final class SpeakerManager: ObservableObject {
         StepAudio.shared.speak(text: thai, language: "th-TH")
     }
 
-    /// Commit current translation into the history feed (deduped). Call on success and before starting a new phrase.
+    /// Commit current translation only when the user explicitly starts pronunciation training.
+    /// The Dictionary save action uses FavoriteManager independently.
     func commitConversationToHistoryIfNeeded() {
         // Тренировка существующей фразы — только балл на карточке, без новой записи.
         if activePracticeHistoryId != nil || conversationExpectedThai != nil { return }
@@ -1338,7 +1339,6 @@ public final class SpeakerManager: ObservableObject {
             finishConversationPractice(saveScore: true)
             return
         }
-        commitConversationToHistoryIfNeeded()
         conversationExpectedThai = nil
         conversationExpectedTranslitForFeedback = nil
         conversationHeardThaiASR = nil
@@ -1392,8 +1392,6 @@ public final class SpeakerManager: ObservableObject {
             setPhase(.hint)
             return
         }
-
-        commitConversationToHistoryIfNeeded()
 
         activePracticeHistoryId = nil
         conversationExpectedThai = nil
@@ -1504,7 +1502,6 @@ public final class SpeakerManager: ObservableObject {
         }
 
         if consumeAttempt {
-            commitConversationToHistoryIfNeeded()
             clearConversationResult()
         } else {
             // Edit in place: keep RU, drop old Thai until new translate lands.
@@ -1573,7 +1570,9 @@ public final class SpeakerManager: ObservableObject {
         let ph = (heardTranslit ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !ru.isEmpty, !thai.isEmpty || !ph.isEmpty else { return }
 
-        commitConversationToHistoryIfNeeded()
+        if startPractice {
+            commitConversationToHistoryIfNeeded()
+        }
 
         if addToDictionary, !thai.isEmpty, !ph.isEmpty {
             FavoriteManager.shared.addSmartSpeakerCard(ru: ru, thai: thai, phonetic: ph)
