@@ -950,11 +950,11 @@ public struct SpeakerDSRoot: View {
     }
 
     @ViewBuilder private var conversationFocusGlassBackdrop: some View {
-        ZStack {
-            Rectangle()
-                .fill(.ultraThinMaterial)
-            Color.black.opacity(0.58)
-            LinearGradient(
+            ZStack {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                Color.black.opacity(0.18)
+                LinearGradient(
                 colors: [
                     Color.white.opacity(0.14),
                     Color.white.opacity(0.04),
@@ -2254,7 +2254,7 @@ public struct SpeakerDSRoot: View {
 
     public var body: some View {
         ZStack {
-            T.Colors.backgroundPrimary.ignoresSafeArea()
+            TaikaContinuousCanvasBackground()
 
             VStack(spacing: 0) {
                 topChrome

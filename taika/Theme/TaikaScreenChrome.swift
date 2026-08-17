@@ -166,11 +166,40 @@ struct TaikaLiquidGlassCapsule: View {
     }
 }
 
+/// Continuous canvas background shared by root screens under the floating header.
+/// Keeps the header and body on one visual plane while preserving the existing chrome API.
+struct TaikaContinuousCanvasBackground: View {
+    var body: some View {
+        ZStack {
+            Color.black
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.035),
+                    Color.clear,
+                    Color.black.opacity(0.20)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            RadialGradient(
+                colors: [
+                    Color(red: 0.56, green: 0.16, blue: 0.42).opacity(0.12),
+                    Color.clear
+                ],
+                center: .center,
+                startRadius: 40,
+                endRadius: 520
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
 /// Full-width header blur — even frosted strip, no accent blobs.
 struct TaikaLiquidGlassHeaderBackdrop: View {
     var body: some View {
-        TaikaNeutralGlassFill(tint: TaikaGlassTokens.headerTint)
-            .mask {
+            TaikaNeutralGlassFill(tint: TaikaGlassTokens.headerTint * 0.72)
+                .mask {
                 VStack(spacing: 0) {
                     Rectangle().fill(Color.black)
                     LinearGradient(
@@ -178,7 +207,7 @@ struct TaikaLiquidGlassHeaderBackdrop: View {
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                    .frame(height: 36)
+                    .frame(height: 72)
                 }
             }
             .compositingGroup()
