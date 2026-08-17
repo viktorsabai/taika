@@ -555,7 +555,7 @@ public struct SpeakerDSRoot: View {
             phrase: cur.face.subtitleTH,
             translit: cur.face.phonetic,
             hint: cur.face.titleRU,
-            lessonTitle: external?.lessonTitleForLessonId?(cur.lessonId),
+            lessonTitle: speakerItemLessonTitle(for: cur.lessonId),
             kindTag: "фраза",
             isFavorite: false,
             isProLocked: false
@@ -662,7 +662,23 @@ public struct SpeakerDSRoot: View {
 
     /// Подписи режимов — ценность, не «умный vs тупой».
     private var speakerModeChipTitle: String {
-        speakerUIMode == .conversation ? "скажи сам" : "закрепление курсов"
+        switch external?.courseContextCourseId {
+        case "__dictionary__": return "мой словарь"
+        case "__favorites__": return "избранное"
+        default:
+            return speakerUIMode == .conversation ? "скажи сам" : "закрепление курсов"
+        }
+    }
+
+    private func speakerItemLessonTitle(for lessonId: String) -> String? {
+        switch external?.courseContextCourseId {
+        case "__dictionary__": return "мой словарь"
+        case "__favorites__": return "избранное"
+        default:
+            let title = external?.lessonTitleForLessonId?(lessonId)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return (title?.isEmpty == false) ? title : nil
+        }
     }
 
     private func conversationPhraseFontSize(for text: String, base: CGFloat = 17) -> CGFloat {
@@ -5045,7 +5061,7 @@ public struct SpeakerDSRoot: View {
                         phrase: cur.face.subtitleTH,
                         translit: cur.face.phonetic,
                         hint: cur.face.titleRU,
-                        lessonTitle: external?.lessonTitleForLessonId?(cur.lessonId),
+                        lessonTitle: speakerItemLessonTitle(for: cur.lessonId),
                         kindTag: "фраза",
                         isFavorite: false,
                         isProLocked: false
@@ -6397,8 +6413,16 @@ private struct SpeakerTopCard: View {
     @ViewBuilder private var lessonTitlePill: some View {
         let title = (item.lessonTitle ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let label = title.isEmpty ? "закрепление курсов" : title
+        let isDictionary = label.localizedCaseInsensitiveContains("словар")
+        let isFavorites = label.localizedCaseInsensitiveContains("избранн")
         HStack(spacing: 5) {
-            if !title.isEmpty {
+            if isDictionary {
+                Image(systemName: "bookmark.fill")
+                    .font(.system(size: 11, weight: .semibold))
+            } else if isFavorites {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 11, weight: .semibold))
+            } else if !title.isEmpty {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 11, weight: .semibold))
             }

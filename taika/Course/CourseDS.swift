@@ -1860,30 +1860,18 @@ public struct CDWeeklyRhythmSection: View {
     }
 
     private var emptyStartCTAs: some View {
-        let accent = ThemeManager.shared.currentAccentFill
-        return VStack(spacing: 10) {
-            Text("С чего начнём?")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
+        VStack(spacing: 10) {
             if let onStartMain {
                 Button(action: {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     onStartMain()
                 }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 14, weight: .bold))
-                        Text("Начать с главного")
-                            .font(.system(size: 16, weight: .bold))
-                    }
-                    .foregroundStyle(Color.black.opacity(0.88))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Capsule(style: .continuous).fill(accent))
+                    DictionarySoftActionLabel(
+                        icon: "arrow.right",
+                        title: "Начать с главного"
+                    )
                 }
-                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.98))
+                .buttonStyle(.plain)
                 .accessibilityLabel("Начать с главного — Тайский без паники")
             }
 
@@ -1892,17 +1880,12 @@ public struct CDWeeklyRhythmSection: View {
                     UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                     onChooseScenario()
                 }) {
-                    Text("Выбрать сценарий")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(accent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .background(
-                            Capsule(style: .continuous)
-                                .stroke(accent, lineWidth: 1.4)
-                        )
+                    DictionarySoftActionLabel(
+                        icon: "square.grid.2x2.fill",
+                        title: "Выбрать сценарий"
+                    )
                 }
-                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.98))
+                .buttonStyle(.plain)
                 .accessibilityLabel("Выбрать сценарий")
             }
         }

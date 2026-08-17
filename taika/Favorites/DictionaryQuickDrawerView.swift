@@ -10,6 +10,34 @@ import SwiftUI
 import UIKit
 #endif
 
+/// Мягкая полноширинная CTA: словарь, первый заход в курсы.
+struct DictionarySoftActionLabel: View {
+    let icon: String
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+            Text(title)
+                .font(.system(size: 15, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .foregroundStyle(CD.ColorToken.text)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 13)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(CD.ColorToken.chip.opacity(0.92))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(PD.ColorToken.stroke.opacity(0.55), lineWidth: 1)
+        )
+    }
+}
+
 struct DictionaryQuickDrawerView: View {
     @ObservedObject private var favorites = FavoriteManager.shared
     @EnvironmentObject private var nav: NavigationIntent
@@ -111,37 +139,39 @@ struct DictionaryQuickDrawerView: View {
                 emptyState
             } else {
                 ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 12) {
-                        ForEach(cards) { card in
-                            DictionaryDrawerRow(
-                                card: card,
-                                accent: accent,
-                                isSelectionMode: isSelectionMode,
-                                isSelected: selectedIds.contains(card.sourceId),
-                                onToggleSelect: { toggleSelection(card) },
-                                onTap: {
-                                    if isSelectionMode {
-                                        toggleSelection(card)
-                                    } else {
-                                        previewCard = card
-                                    }
-                                },
-                                onEdit: { editingCard = DictionaryEditTarget(card: card) },
-                                onDelete: {
-                                    favorites.remove(id: DictionaryPhraseActions.cardId(card))
-                                    selectedIds.remove(card.sourceId)
-                                },
-                                onTrain: { trainInSpeaker(selected: [card.sourceId]) },
-                                showsActionsMenu: !isSelectionMode
-                            )
+                    VStack(spacing: 0) {
+                        LazyVStack(spacing: 12) {
+                            ForEach(cards) { card in
+                                DictionaryDrawerRow(
+                                    card: card,
+                                    accent: accent,
+                                    isSelectionMode: isSelectionMode,
+                                    isSelected: selectedIds.contains(card.sourceId),
+                                    onToggleSelect: { toggleSelection(card) },
+                                    onTap: {
+                                        if isSelectionMode {
+                                            toggleSelection(card)
+                                        } else {
+                                            previewCard = card
+                                        }
+                                    },
+                                    onEdit: { editingCard = DictionaryEditTarget(card: card) },
+                                    onDelete: {
+                                        favorites.remove(id: DictionaryPhraseActions.cardId(card))
+                                        selectedIds.remove(card.sourceId)
+                                    },
+                                    onTrain: { trainInSpeaker(selected: [card.sourceId]) },
+                                    showsActionsMenu: !isSelectionMode
+                                )
+                            }
                         }
-                    }
-                    .padding(.horizontal, Theme.Layout.pageHorizontal)
-                    .padding(.top, 4)
-                    .padding(.bottom, 16)
-                }
+                        .padding(.horizontal, Theme.Layout.pageHorizontal)
+                        .padding(.top, 8)
+                        .padding(.bottom, 18)
 
-                footerBar
+                        footerBar
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -196,7 +226,7 @@ struct DictionaryQuickDrawerView: View {
         }
         .padding(.horizontal, Theme.Layout.pageHorizontal)
         .padding(.top, Theme.Layout.rootHeaderClearance + 8)
-        .padding(.bottom, 16)
+        .padding(.bottom, 10)
     }
 
     private var headerSubtitle: String {
@@ -211,23 +241,18 @@ struct DictionaryQuickDrawerView: View {
 
     private var footerBar: some View {
         VStack(spacing: 0) {
-            Rectangle()
-                .fill(PD.ColorToken.stroke.opacity(0.55))
-                .frame(height: 1)
-
             if gamePickerExpanded {
                 gamePickerSection
             } else {
                 actionButtonsRow
             }
         }
-        .padding(.bottom, ToolBar.recommendedBottomInset + 8)
-        .background(CD.ColorToken.background.opacity(0.96))
+        .padding(.bottom, ToolBar.recommendedBottomInset + 12)
         .animation(.easeInOut(duration: 0.22), value: gamePickerExpanded)
     }
 
     private var actionButtonsRow: some View {
-        HStack(spacing: 10) {
+        VStack(spacing: 10) {
             Button { trainInSpeaker(selected: effectiveSelection) } label: {
                 footerActionLabel(
                     icon: "person.wave.2.fill",
@@ -242,8 +267,7 @@ struct DictionaryQuickDrawerView: View {
             } label: {
                 footerActionLabel(
                     icon: "gamecontroller.fill",
-                    title: reinforceButtonTitle,
-                    compact: true
+                    title: reinforceButtonTitle
                 )
             }
             .buttonStyle(.plain)
@@ -288,26 +312,8 @@ struct DictionaryQuickDrawerView: View {
     }
 
     @ViewBuilder
-    private func footerActionLabel(icon: String, title: String, compact: Bool = false) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: compact ? 14 : 15, weight: .semibold))
-            Text(title)
-                .font(.system(size: compact ? 14 : 15, weight: .bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-        }
-        .foregroundStyle(CD.ColorToken.text)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, compact ? 12 : 13)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(CD.ColorToken.chip.opacity(0.92))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(PD.ColorToken.stroke.opacity(0.55), lineWidth: 1)
-        )
+    private func footerActionLabel(icon: String, title: String) -> some View {
+        DictionarySoftActionLabel(icon: icon, title: title)
     }
 
     private var trainButtonTitle: String {

@@ -40,6 +40,7 @@ struct SpeakerView: View {
 
     /// Читаемое название урока для чипа на карточке (из контента, не «урок 1»).
     private func displayLessonTitle(for lessonId: String) -> String {
+        if lessonId == "smart_speaker" { return "мой словарь" }
         if let title = LessonsData.shared.lessonTitle(for: lessonId),
            !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return title.trimmingCharacters(in: .whitespacesAndNewlines)
