@@ -162,7 +162,7 @@ struct DictionaryQuickDrawerView: View {
         .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .stroke(ThemeManager.shared.currentAccentFill.opacity(0.42), lineWidth: 1)
+                .stroke(AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.42)), lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.36), radius: 28, x: -10, y: 0)
         .padding(.vertical, 10)
@@ -288,7 +288,7 @@ struct DictionaryEdgeTab: View {
                         .frame(width: 1)
                         .padding(.vertical, 15)
                 }
-                .shadow(color: ThemeManager.shared.currentAccentFill.opacity(0.28), radius: 10, x: -3, y: 0)
+                .shadow(color: ThemeManager.shared.currentAccentTintColor.opacity(0.28), radius: 10, x: -3, y: 0)
         }
         .offset(x: max(-pullOffset, -18))
         .contentShape(Rectangle())
