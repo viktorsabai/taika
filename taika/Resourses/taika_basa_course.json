@@ -782,11 +782,11 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "scenario",
+        "type": "Сценарии",
         "count": 6
       },
       {
-        "type": "phrase",
+        "type": "Фразы",
         "count": 50
       }
     ]
@@ -803,11 +803,11 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "scenario",
+        "type": "Сценарии",
         "count": 6
       },
       {
-        "type": "phrase",
+        "type": "Фразы",
         "count": 50
       }
     ]
@@ -824,11 +824,11 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "scenario",
+        "type": "Сценарии",
         "count": 7
       },
       {
-        "type": "phrase",
+        "type": "Фразы",
         "count": 58
       }
     ]
@@ -845,11 +845,11 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "scenario",
+        "type": "Сценарии",
         "count": 6
       },
       {
-        "type": "phrase",
+        "type": "Фразы",
         "count": 50
       }
     ]
@@ -866,11 +866,11 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "scenario",
+        "type": "Сценарии",
         "count": 6
       },
       {
-        "type": "phrase",
+        "type": "Фразы",
         "count": 50
       }
     ]
@@ -887,11 +887,11 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "scenario",
+        "type": "Сценарии",
         "count": 6
       },
       {
-        "type": "phrase",
+        "type": "Фразы",
         "count": 49
       }
     ]
@@ -908,11 +908,11 @@
     "is_new": true,
     "learning_outcomes": [
       {
-        "type": "scenario",
+        "type": "Сценарии",
         "count": 6
       },
       {
-        "type": "phrase",
+        "type": "Фразы",
         "count": 50
       }
     ]
