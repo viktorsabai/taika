@@ -1861,7 +1861,7 @@ public struct SpeakerDSRoot: View {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 14, weight: .bold))
-                    Text("В ленту и словарь")
+                    Text("Сохранить в словарь")
                         .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
                 }
@@ -1875,7 +1875,7 @@ public struct SpeakerDSRoot: View {
                 )
             }
             .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
-            .accessibilityLabel("В ленту и словарь")
+            .accessibilityLabel("Сохранить в словарь")
         }
     }
 
