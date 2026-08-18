@@ -6731,51 +6731,44 @@ private struct ConversationVoiceOrb: View {
 
     var body: some View {
         let brand = ThemeManager.shared.currentAccentFill
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
-            let reactive: CGFloat = {
-                switch mode {
-                case .listening, .practice:
-                    return 0.92 + level * 0.28 + 0.04 * CGFloat(sin(t * 6))
-                case .processing:
-                    return 1.0 + 0.06 * CGFloat(sin(t * 2.2))
-                }
-            }()
+        let pace: TaikaTechWaveform.Pace = {
+            switch mode {
+            case .listening, .practice: return .recording
+            case .processing: return .analyzing
+            }
+        }()
+        ZStack {
+            RadialGradient(
+                colors: [
+                    brand.opacity(0.20 + Double(level) * 0.12),
+                    brand.opacity(0.06),
+                    Color.clear
+                ],
+                center: .center,
+                startRadius: 8,
+                endRadius: 116
+            )
+            .blur(radius: 20)
+            .scaleEffect(1.08 + level * 0.12)
 
-            ZStack {
-                Circle()
-                    .fill(brand.opacity(mode == .processing ? 0.22 : 0.16 + Double(level) * 0.18))
-                    .blur(radius: 22)
-                    .scaleEffect(reactive * 1.18)
-
-                ForEach(0..<3, id: \.self) { i in
+            Circle()
+                .fill(Color.black.opacity(0.34))
+                .frame(width: 112, height: 112)
+                .overlay {
                     Circle()
-                        .stroke(
-                            brand.opacity(0.55 - Double(i) * 0.12),
-                            lineWidth: mode == .processing ? 1.4 : 1.8
-                        )
-                        .frame(width: 118 + CGFloat(i) * 28, height: 118 + CGFloat(i) * 28)
-                        .scaleEffect(reactive * (1.0 + CGFloat(i) * 0.02))
-                        .rotationEffect(.degrees(spin + Double(i) * 40 + (mode == .processing ? t * 28 : t * 12)))
-                        .opacity(0.85 - Double(i) * 0.15)
+                        .stroke(brand.opacity(0.34), lineWidth: 1)
                 }
 
-                Circle()
-                    .fill(Color.black.opacity(0.42))
-                    .frame(width: 96, height: 96)
-                    .overlay(
-                        Circle()
-                            .stroke(brand.opacity(0.45), lineWidth: 1.4)
-                    )
-            }
+            TaikaTechWaveform(
+                meter: max(0.24, min(1.0, meter)),
+                pace: pace,
+                lineCount: 4
+            )
+            .frame(width: 118, height: 54)
+            .clipShape(Capsule(style: .continuous))
+            .allowsHitTesting(false)
         }
-        .onAppear {
-            let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
-            guard !isPreview else { return }
-            withAnimation(.linear(duration: mode == .processing ? 8 : 14).repeatForever(autoreverses: false)) {
-                spin = 360
-            }
-        }
+        .frame(width: 164, height: 164)
         .accessibilityHidden(true)
     }
 }

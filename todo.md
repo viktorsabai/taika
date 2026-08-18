@@ -668,4 +668,16 @@
 | Убрать жёсткую линию через единый translucent blur/material transition | Готово в AppHeader |
 | Заменить неуместные диаграммы на технологичную onboarding wave | Готово в Speaker breakdown и locked placeholder |
 | Проверить Swift diff, доступные static/build checks и scope regressions | Static: git diff --check; swiftc недоступен в sandbox |
-| Подготовить текущую release branch для device test без создания новой ветки | Не начато |
+| Подготовить текущую release branch для device test без создания новой ветки | Готово: pushed `5961a7c` в `origin/2026-01-21-k7hb-d2004` |
+
+
+# Follow-up diagnosis — commit 5961a7c visually unchanged
+
+| Задача | Статус |
+|---|---|
+| Сопоставить экран на скриншоте с фактическими Speaker/AppShell render paths | Готово: screenshot = ShellHeaderHost + conversationLiveStage |
+| Найти реальный источник горизонтального header seam | Готово: backdrop был ограничен AppHeader height |
+| Найти реальный центральный waveform/diagram component | Готово: ConversationVoiceOrb + ConversationLiveWaveRibbon |
+| Проверить, почему изменения 5961a7c не затронули наблюдаемый экран | Готово: был изменён breakdown overlay, а не live conversation screen |
+| Исправить фактические слои в той же release branch | В работе: ShellHeaderHost + ConversationVoiceOrb |
+| Проверить новый diff и передать device-test commit | Не начато |

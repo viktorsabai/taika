@@ -254,10 +254,12 @@ struct AppShell: View {
                     speakerPendingLessonId: $speakerPendingLessonId
                 )
                 .frame(maxWidth: .infinity)
-                // The root canvas now owns the material. Keeping a second opaque
-                // header strip recreates the exact header/body seam this epic removes.
+                // The header material must extend below the content row. A backdrop
+                // confined to AppHeader's 56pt height cannot soften the real seam.
                 .background(alignment: .top) {
-                    Color.clear
+                    TaikaLiquidGlassHeaderBackdrop()
+                        .frame(height: 148)
+                        .frame(maxWidth: .infinity, alignment: .top)
                 }
             }
         }
