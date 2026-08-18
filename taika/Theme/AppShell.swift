@@ -248,18 +248,21 @@ struct AppShell: View {
         }
         .overlay(alignment: .top) {
             if welcomeSeen && onboardingDone && !showBootSplash && firstEntryPhase == .none && overlay.overlay != .dictionaryQuickDrawer {
-                ShellHeaderHost(
-                    selectedTab: $selectedTab,
-                    speakerPendingCourseId: $speakerPendingCourseId,
-                    speakerPendingLessonId: $speakerPendingLessonId
-                )
-                .frame(maxWidth: .infinity)
-                // The header material must extend below the content row. A backdrop
-                // confined to AppHeader's 56pt height cannot soften the real seam.
-                .background(alignment: .top) {
+                ZStack(alignment: .top) {
+                    // The transition layer is behind the header content and extends
+                    // into the canvas without becoming an opaque page strip.
                     TaikaLiquidGlassHeaderBackdrop()
                         .frame(height: 148)
                         .frame(maxWidth: .infinity, alignment: .top)
+                        .allowsHitTesting(false)
+
+                    ShellHeaderHost(
+                        selectedTab: $selectedTab,
+                        speakerPendingCourseId: $speakerPendingCourseId,
+                        speakerPendingLessonId: $speakerPendingLessonId
+                    )
+                    .frame(maxWidth: .infinity)
+                    .zIndex(1)
                 }
             }
         }

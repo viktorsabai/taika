@@ -681,3 +681,13 @@
 | Проверить, почему изменения 5961a7c не затронули наблюдаемый экран | Готово: был изменён breakdown overlay, а не live conversation screen |
 | Исправить фактические слои в той же release branch | В работе: ShellHeaderHost + ConversationVoiceOrb |
 | Проверить новый diff и передать device-test commit | Не начато |
+
+
+# Follow-up — header content contrast regression
+
+| Задача | Статус |
+|---|---|
+| Проверить, почему расширенный backdrop перекрывает заголовок и controls | Готово: backdrop был modifier-level и перекрывал content ordering |
+| Сохранить blur ниже header без отдельной opaque полосы | В работе: explicit ZStack transition layer |
+| Вернуть читаемую content zone для title/status/header controls | В работе: ShellHeaderHost zIndex(1) |
+| Проверить новый diff и device-test handoff в той же ветке | Не начато |
