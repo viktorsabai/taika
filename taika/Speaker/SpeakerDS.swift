@@ -953,7 +953,8 @@ public struct SpeakerDSRoot: View {
             ZStack {
                 Rectangle()
                     .fill(.ultraThinMaterial)
-                Color.black.opacity(0.08)
+                    .opacity(0.24)
+                Color.black.opacity(0.42)
                 LinearGradient(
                 colors: [
                     Color.white.opacity(0.08),
