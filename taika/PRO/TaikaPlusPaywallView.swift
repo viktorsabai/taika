@@ -94,8 +94,8 @@ struct TaikaPlusPaywallView: View {
 
             mainPanel
                 .padding(.horizontal, 16)
-                .padding(.top, Theme.Layout.rootHeaderClearance)
-                .padding(.bottom, 10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .padding(.vertical, 24)
                 .scaleEffect(contentVisible ? 1 : 0.96)
                 .opacity(contentVisible && !showProSuccess ? 1 : 0)
                 .offset(y: contentVisible ? 0 : 18)

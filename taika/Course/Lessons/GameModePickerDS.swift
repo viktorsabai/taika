@@ -193,14 +193,23 @@ public struct GameModePickerDS: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color.white.opacity(0.06))
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.black.opacity(isLocked ? 0.18 : 0.08))
+                )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(
+                    isLocked
+                        ? Theme.Strokes.strokeSubtle.opacity(0.62)
+                        : ThemeManager.shared.currentAccentFill.opacity(0.20),
+                    lineWidth: Theme.Strokes.strokeLineWidth
+                )
         )
-        .opacity(isLocked ? 0.72 : 1)
+        .opacity(isLocked ? 0.82 : 1)
     }
 
     private func lockedDescription(for mode: GameModeType) -> String {

@@ -95,6 +95,9 @@ struct OverlayEtalonBackground: View {
 struct OverlayEtalonCard<Content: View>: View {
     let title: String
     let onDismiss: () -> Void
+    /// Game Park uses the surrounding canvas as its placement context; legacy
+    /// overlays keep the root-header clearance for compatibility.
+    var usesContextPlacement: Bool = false
     @ViewBuilder let content: () -> Content
 
     var body: some View {
@@ -129,7 +132,7 @@ struct OverlayEtalonCard<Content: View>: View {
         .clipShape(RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous))
         .frame(maxWidth: 420)
         .padding(.horizontal, 20)
-        .padding(.top, Theme.Layout.rootHeaderClearance)
+        .padding(.top, usesContextPlacement ? 0 : Theme.Layout.rootHeaderClearance)
     }
 }
 
@@ -1055,10 +1058,10 @@ struct GameParkOverlayView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             OverlayEtalonBackground(onDismiss: onDismiss)
             if hasCards {
-                OverlayEtalonCard(title: "Выбери режим", onDismiss: onDismiss) {
+                OverlayEtalonCard(title: "Выбери режим", onDismiss: onDismiss, usesContextPlacement: true) {
                     GameModePickerDS(
                         selected: $selectedMode,
                         isProUser: ProManager.shared.isPro,
@@ -1096,11 +1099,14 @@ struct GameParkOverlayView: View {
             }
 
             if let lockedMode {
-                lockedModePeek(for: lockedMode)
-                    .padding(.horizontal, CD.Spacing.screen)
-                    .padding(.bottom, CD.Spacing.screen)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .zIndex(2)
+                VStack {
+                    Spacer(minLength: 0)
+                    lockedModePeek(for: lockedMode)
+                        .padding(.horizontal, CD.Spacing.screen)
+                        .padding(.bottom, CD.Spacing.screen)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(2)
             }
         }
         .animation(.easeOut(duration: 0.22), value: lockedMode)
@@ -1177,7 +1183,7 @@ struct GameParkOverlayView: View {
 
     @ViewBuilder
     private var emptyState: some View {
-        OverlayEtalonCard(title: "Игровой парк", onDismiss: onDismiss) {
+                OverlayEtalonCard(title: "Игровой парк", onDismiss: onDismiss, usesContextPlacement: true) {
             VStack(spacing: 0) {
                 VStack(spacing: 14) {
                     Image(systemName: "gamecontroller")

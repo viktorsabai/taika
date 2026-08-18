@@ -953,13 +953,13 @@ public struct SpeakerDSRoot: View {
             ZStack {
                 Rectangle()
                     .fill(.ultraThinMaterial)
-                Color.black.opacity(0.18)
+                Color.black.opacity(0.08)
                 LinearGradient(
                 colors: [
-                    Color.white.opacity(0.14),
-                    Color.white.opacity(0.04),
+                    Color.white.opacity(0.08),
+                    Color.white.opacity(0.02),
                     Color.clear,
-                    Color.black.opacity(0.22)
+                    Color.black.opacity(0.08)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -1010,7 +1010,7 @@ public struct SpeakerDSRoot: View {
                     mode: mode,
                     accent: accentTint
                 )
-                .frame(width: 220, height: 220)
+                .frame(width: 164, height: 164)
 
                 if isBusy {
                     ZStack {
@@ -1035,12 +1035,12 @@ public struct SpeakerDSRoot: View {
                     .accessibilityLabel(isRec ? "Стоп" : "Микрофон")
                 }
             }
-            .frame(height: 230)
+            .frame(height: 178)
 
             if isRec {
                 ConversationLiveWaveRibbon(meter: recordingMeter)
-                    .frame(height: 36)
-                    .frame(maxWidth: 280)
+                    .frame(height: 30)
+                    .frame(maxWidth: 240)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             } else if isBusy {
                 ConversationLiveProcessTicks()
@@ -2045,7 +2045,10 @@ public struct SpeakerDSRoot: View {
             }
         }
         .padding(18)
-        .background(Theme.Surfaces.blackGlass(shape))
+        .background(Theme.Surfaces.contextGlass(shape))
+        .overlay(
+            shape.stroke(Theme.Strokes.strokeSubtle.opacity(0.8), lineWidth: Theme.Strokes.strokeLineWidth)
+        )
     }
 
     private func collapseConversationTextComposer(clearText: Bool) {

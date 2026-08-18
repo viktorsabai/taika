@@ -66,7 +66,7 @@ struct AppShell: View {
 
     var body: some View {
         ZStack {
-            if selectedTab == 2 && onboardingDone {
+            if onboardingDone {
                 TaikaContinuousCanvasBackground()
             } else {
                 PD.ColorToken.background
@@ -254,8 +254,10 @@ struct AppShell: View {
                     speakerPendingLessonId: $speakerPendingLessonId
                 )
                 .frame(maxWidth: .infinity)
+                // The root canvas now owns the material. Keeping a second opaque
+                // header strip recreates the exact header/body seam this epic removes.
                 .background(alignment: .top) {
-                    TaikaLiquidGlassHeaderBackdrop()
+                    Color.clear
                 }
             }
         }
