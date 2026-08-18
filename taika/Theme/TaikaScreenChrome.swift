@@ -171,19 +171,19 @@ struct TaikaLiquidGlassCapsule: View {
 struct TaikaContinuousCanvasBackground: View {
     var body: some View {
         ZStack {
-            Color.black
+            Color.black.opacity(0.985)
             LinearGradient(
                 colors: [
-                    Color.white.opacity(0.035),
+                    Color.white.opacity(0.010),
                     Color.clear,
-                    Color.black.opacity(0.20)
+                    Color.black.opacity(0.16)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             RadialGradient(
                 colors: [
-                    Color(red: 0.56, green: 0.16, blue: 0.42).opacity(0.12),
+                    Color(red: 0.56, green: 0.16, blue: 0.42).opacity(0.035),
                     Color.clear
                 ],
                 center: .center,
@@ -198,7 +198,7 @@ struct TaikaContinuousCanvasBackground: View {
 /// Full-width header blur — even frosted strip, no accent blobs.
 struct TaikaLiquidGlassHeaderBackdrop: View {
     var body: some View {
-            TaikaNeutralGlassFill(tint: TaikaGlassTokens.headerTint * 0.72)
+            TaikaNeutralGlassFill(tint: TaikaGlassTokens.headerTint * 0.24)
                 .mask {
                 VStack(spacing: 0) {
                     Rectangle().fill(Color.black)

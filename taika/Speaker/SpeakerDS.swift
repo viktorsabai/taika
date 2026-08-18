@@ -964,7 +964,7 @@ public struct SpeakerDSRoot: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .blendMode(.plusLighter)
+            .opacity(0.82)
             ConversationLiveAmbientGlow(
                 accent: ThemeManager.shared.currentAccentTintColor,
                 intense: conversationIsRecording
