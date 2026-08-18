@@ -122,7 +122,7 @@ struct OverlayEtalonCard<Content: View>: View {
             content()
         }
         .background {
-            Theme.Surfaces.blackGlass(
+            Theme.Surfaces.contextGlass(
                 RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous)
             )
         }

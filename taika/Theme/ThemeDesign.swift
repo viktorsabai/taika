@@ -325,6 +325,17 @@ public enum Theme {
             .shadow(color: Color.black.opacity(0.38), radius: 28, y: 16)
         }
 
+        /// Лёгкая context surface для overlay sheets: исходный экран остаётся виден сквозь material.
+        public static func contextGlass<S: Shape>(_ shape: S) -> some View {
+            ZStack {
+                shape.fill(.ultraThinMaterial)
+                shape.fill(Color.black.opacity(0.28))
+                shape.stroke(Color.white.opacity(0.18), lineWidth: Theme.Strokes.strokeLineWidth)
+            }
+            .compositingGroup()
+            .shadow(color: Color.black.opacity(0.28), radius: 24, y: 12)
+        }
+
         /// Backdrop модалок: translucent blur, сохраняющий читаемый исходный context.
         public static var blackGlassScrim: some View {
             ZStack {
