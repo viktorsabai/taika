@@ -4558,79 +4558,57 @@ public struct SpeakerDSRoot: View {
     }
 
     /// Заглушка графика тона: эталонный контур + «твоя линия» (locked / скоро).
-    @ViewBuilder private func breakdownPhraseGraphPlaceholder(expected: String, isProLocked: Bool) -> some View {
-        let refChunks = Self.translitChunksForSyllables(expected)
-        let referenceContour = refChunks.flatMap { Self.referenceSegmentForTone(Self.toneNameFromTranslitChunk($0)) }
-        let syllableLabels = refChunks.map { Self.syllableLabelWithoutArrows($0) }
+        @ViewBuilder private func breakdownPhraseGraphPlaceholder(expected: String, isProLocked: Bool) -> some View {
+        let syllableLabels = Self.translitChunksForSyllables(expected)
+            .map { Self.syllableLabelWithoutArrows($0) }
         let accent = ThemeManager.shared.currentAccentFill
-
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Text("График тона по фразе")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
+                Image(systemName: "waveform.circle.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(accent)
+                Text("Ритм фразы")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(PD.ColorToken.text)
+                Spacer(minLength: 0)
                 if isProLocked {
                     Text("Taika+")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(accent)
                 }
-                Spacer(minLength: 0)
             }
-
-            if referenceContour.count >= 2 {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Эталон")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                    AnimatedBreakdownSparkline(
-                        values: referenceContour,
-                        lineWidth: 2.5,
-                        duration: 0.9
-                    )
-                    .opacity(0.72)
-                    .frame(height: 28)
-                }
+            TaikaTechWaveform(meter: 0.28, pace: .idle, lineCount: 3)
+                .frame(height: 34)
+                .padding(.horizontal, 2)
+            HStack(spacing: 8) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(isProLocked ? "Контур голоса откроется в Taika+" : "Контур появится после разбора")
+                    .font(.caption.weight(.medium))
             }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Ты сказал")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(PD.ColorToken.chip.opacity(0.55))
-                        .frame(height: 28)
-                    if isProLocked {
-                        HStack(spacing: 6) {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 11, weight: .semibold))
-                            Text("контур голоса — в Taika+")
-                                .font(.caption.weight(.semibold))
-                        }
-                        .foregroundStyle(accent)
-                    } else {
-                        Text("контур появится после разбора")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.75))
-                    }
-                }
-                .frame(height: 28)
-            }
-
+            .foregroundStyle(isProLocked ? AnyShapeStyle(accent) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.75)))
             if !syllableLabels.isEmpty {
                 HStack(spacing: 0) {
                     ForEach(Array(syllableLabels.enumerated()), id: \.offset) { _, label in
                         Text(label)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.82))
                             .lineLimit(1)
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .padding(.top, 4)
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .background {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.032))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.075), lineWidth: 1)
+                }
+        }
         .padding(.top, 2)
     }
 
@@ -4643,78 +4621,68 @@ public struct SpeakerDSRoot: View {
         referenceRevealProgress: Double,
         onboardingStyle: Bool = false
     ) -> some View {
-        let userContour = syllableFeedback.flatMap { $0.f0Contour ?? [] }
-        let refChunks = Self.translitChunksForSyllables(expected)
-        let referenceContour = refChunks.flatMap { Self.referenceSegmentForTone(Self.toneNameFromTranslitChunk($0)) }
-        let showReference = referenceContour.count >= 2
-        let showUser = isRecordingFromBreakdown || userContour.count >= 2
-        // Ось X всегда по разбираемой фразе: все слоги из эталона (expected), а не по ответу API.
-        let chunks = Self.translitChunksForSyllables(expected)
-        let syllableLabels = chunks.map { Self.syllableLabelWithoutArrows($0) }
-        guard showReference || showUser else { return AnyView(EmptyView()) }
+        let syllableLabels = Self.translitChunksForSyllables(expected)
+            .map { Self.syllableLabelWithoutArrows($0) }
+        let hasFeedback = !syllableFeedback.isEmpty
+        guard isRecordingFromBreakdown || hasFeedback || !expected.isEmpty else {
+            return AnyView(EmptyView())
+        }
+
+        let waveMeter = isRecordingFromBreakdown
+            ? max(0.18, min(1.0, recordingMeter))
+            : (hasFeedback ? 0.42 : 0.28)
+        let wavePace: TaikaTechWaveform.Pace = isRecordingFromBreakdown
+            ? .recording
+            : (hasFeedback ? .analyzing : .idle)
+
         return AnyView(
-            VStack(alignment: .leading, spacing: onboardingStyle ? 8 : 6) {
-                Text(onboardingStyle ? "График тона" : "График тона по фразе")
-                    .font(onboardingStyle
-                          ? .system(size: 13, weight: .bold, design: .rounded)
-                          : .caption.weight(.semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                if showReference {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Эталон")
-                            .font(onboardingStyle
-                                  ? .system(size: 12, weight: .medium)
-                                  : .caption2.weight(.medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                        AnimatedBreakdownSparkline(
-                            values: referenceContour,
-                            lineWidth: 2.5,
-                            duration: onboardingStyle ? 1.15 : 0.9
-                        )
-                        .opacity(0.72)
-                        .frame(height: onboardingStyle ? 30 : 28)
+            VStack(alignment: .leading, spacing: onboardingStyle ? 9 : 7) {
+                HStack(spacing: 8) {
+                    Image(systemName: isRecordingFromBreakdown ? "waveform" : "waveform.circle.fill")
+                        .font(.system(size: onboardingStyle ? 13 : 12, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    Text(isRecordingFromBreakdown ? "Слушаю ритм" : "Ритм фразы")
+                        .font(.system(size: onboardingStyle ? 13 : 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(PD.ColorToken.text)
+                    Spacer(minLength: 0)
+                    if hasFeedback {
+                        Text("готово")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
                     }
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Ты сказал")
-                        .font(onboardingStyle
-                              ? .system(size: 12, weight: .medium)
-                              : .caption2.weight(.medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                    if isRecordingFromBreakdown {
-                        BreakdownLiveMeterLine(liveMeter: recordingMeter)
-                            .frame(height: onboardingStyle ? 30 : 28)
-                    } else if userContour.count >= 2 {
-                        AnimatedBreakdownSparkline(
-                            values: userContour,
-                            lineWidth: 2.5,
-                            duration: onboardingStyle ? 1.35 : 1.15
-                        )
-                        .frame(height: onboardingStyle ? 30 : 28)
-                    } else {
-                        EmptyView().frame(height: onboardingStyle ? 30 : 28)
-                    }
-                }
+
+                TaikaTechWaveform(
+                    meter: waveMeter,
+                    pace: wavePace,
+                    lineCount: onboardingStyle ? 4 : 3
+                )
+                .frame(height: onboardingStyle ? 42 : 34)
+                .padding(.horizontal, 2)
+
                 if !syllableLabels.isEmpty {
                     HStack(spacing: 0) {
                         ForEach(Array(syllableLabels.enumerated()), id: \.offset) { _, label in
                             Text(label)
-                                .font(.system(size: onboardingStyle ? 11 : 10, weight: .medium))
-                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
+                                .font(.system(size: onboardingStyle ? 10 : 9, weight: .medium))
+                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.82))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
                                 .frame(maxWidth: .infinity)
                         }
                     }
-                    .padding(.top, onboardingStyle ? 4 : 6)
                 }
             }
-            .padding(onboardingStyle ? 14 : 8)
-            .padding(.horizontal, onboardingStyle ? 0 : 4)
-            .background(
-                RoundedRectangle(cornerRadius: onboardingStyle ? 16 : 10, style: .continuous)
-                    .fill(PD.ColorToken.chip.opacity(onboardingStyle ? 1 : 0.65))
-            )
+            .padding(.vertical, onboardingStyle ? 12 : 10)
+            .padding(.horizontal, onboardingStyle ? 14 : 10)
+            .background {
+                RoundedRectangle(cornerRadius: onboardingStyle ? 16 : 12, style: .continuous)
+                    .fill(Color.white.opacity(onboardingStyle ? 0.045 : 0.032))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: onboardingStyle ? 16 : 12, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.075), lineWidth: 1)
+                    }
+            }
             .padding(.top, 4)
         )
     }

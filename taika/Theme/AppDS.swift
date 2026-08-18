@@ -653,7 +653,11 @@ public struct AppHeader: View {
         }
         .padding(.horizontal, CD.Spacing.screen)
         .frame(maxWidth: .infinity, minHeight: headerMinHeight, alignment: .leading)
-        .background(Color.clear)
+        // Continuous canvas: the header is a translucent field that fades into the body,
+        // never a separate opaque strip with a visible horizontal seam.
+        .background {
+            TaikaLiquidGlassHeaderBackdrop()
+        }
     }
 
     private func gameHeaderPrimaryTitle(_ config: GameHeaderConfig) -> String {
