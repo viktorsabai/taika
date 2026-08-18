@@ -1057,45 +1057,58 @@ struct GameParkOverlayView: View {
         }
     }
 
+    private var sourceSubtitle: String {
+        switch source {
+        case .main: return "Закрепи выученные фразы в игре"
+        case .favorites: return "Закрепи свои сохранённые фразы"
+        }
+    }
+
     var body: some View {
         ZStack {
             OverlayEtalonBackground(onDismiss: onDismiss)
-            if hasCards {
-                OverlayEtalonCard(title: "Выбери режим", onDismiss: onDismiss, usesContextPlacement: true) {
-                    GameModePickerDS(
-                        selected: $selectedMode,
-                        isProUser: ProManager.shared.isPro,
-                        onStart: { gameType in
-                            onDismiss()
-                            switch source {
-                            case .main:
-                                // Все выученные карточки по всем курсам (как «выучено N» на Main).
-                                nav.go(.game(
-                                    courseId: LearnedGameSource.pseudoCourseId,
-                                    lessonId: nil,
-                                    gameType: gameType.rawValue
-                                ))
-                            case .favorites:
-                                nav.go(.game(courseId: "__favorites__", lessonId: nil, gameType: gameType.rawValue))
+
+            TaikaRootVerticalScroll {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(alignment: .center, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Игровой парк")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundStyle(CD.ColorToken.text)
+                            Text(sourceSubtitle)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(CD.ColorToken.textSecondary)
+                        }
+                        Spacer(minLength: 0)
+                        Button(action: onDismiss) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(CD.ColorToken.textSecondary)
+                                .frame(width: 36, height: 36)
+                                .background(Circle().fill(Color.white.opacity(0.08)))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Закрыть игровой парк")
+                    }
+
+                    if hasCards {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Выбери тренировку")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundStyle(CD.ColorToken.textSecondary)
+                                .textCase(.uppercase)
+                                .tracking(0.8)
+                            ForEach(GameModeType.modesLessonAndPark, id: \.self) { mode in
+                                gameModeCard(mode)
                             }
-                        },
-                        onClose: onDismiss,
-                        onLockedTap: { mode in
-                            // Sprint 2: stay in Game Park. Explain the locked state
-                            // contextually; launch the existing paywall only from an
-                            // explicit CTA inside the peek.
-                            lockedMode = mode
-#if os(iOS)
-                            let gen = UINotificationFeedbackGenerator()
-                            gen.notificationOccurred(.warning)
-#endif
-                        },
-                        modes: GameModeType.modesLessonAndPark,
-                        embedInEtalon: false
-                    )
+                        }
+                    } else {
+                        emptyState
+                    }
                 }
-            } else {
-                emptyState
+                .padding(.horizontal, CD.Spacing.screen)
+                .padding(.top, max(Theme.Layout.rootHeaderClearance - 8, 56))
+                .padding(.bottom, 120)
             }
 
             if let lockedMode {
@@ -1110,6 +1123,95 @@ struct GameParkOverlayView: View {
             }
         }
         .animation(.easeOut(duration: 0.22), value: lockedMode)
+    }
+
+    private func gameModeDescription(_ mode: GameModeType) -> String {
+        switch mode {
+        case .match:
+            return "Закрепи пары слов и фраз из уже выученного."
+        case .recall:
+            return "Быстрый раунд для повторения без лишних настроек."
+        case .audioRecall:
+            return "Услышь реплику и выбери правильный ответ на слух."
+        case .grandDialogue:
+            return "Собери полноценную сцену из материалов курса."
+        }
+    }
+
+    @ViewBuilder
+    private func gameModeCard(_ mode: GameModeType) -> some View {
+        let isLocked = mode.isPro && !ProManager.shared.isPro
+        Button {
+            if isLocked {
+                lockedMode = mode
+#if os(iOS)
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+#endif
+            } else {
+                onDismiss()
+                switch source {
+                case .main:
+                    nav.go(.game(
+                        courseId: LearnedGameSource.pseudoCourseId,
+                        lessonId: nil,
+                        gameType: mode.rawValue
+                    ))
+                case .favorites:
+                    nav.go(.game(courseId: "__favorites__", lessonId: nil, gameType: mode.rawValue))
+                }
+            }
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(isLocked ? Color.white.opacity(0.06) : ThemeManager.shared.currentAccentTintColor.opacity(0.18))
+                    Image(systemName: isLocked ? "lock.fill" : "gamecontroller.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(isLocked ? AnyShapeStyle(CD.ColorToken.textSecondary) : AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                }
+                .frame(width: 44, height: 44)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 7) {
+                        Text(mode.title)
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(CD.ColorToken.text)
+                        if mode.isPro {
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        }
+                    }
+                    Text(gameModeDescription(mode))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+                Image(systemName: isLocked ? "lock.fill" : "chevron.right")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(isLocked ? AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.72)) : AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .background {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color.white.opacity(isLocked ? 0.035 : 0.06))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .strokeBorder(
+                                isLocked
+                                    ? Color.white.opacity(0.07)
+                                    : ThemeManager.shared.currentAccentFill.opacity(0.22),
+                                lineWidth: 1
+                            )
+                    }
+            }
+        }
+        .buttonStyle(.plain)
+        .opacity(isLocked ? 0.78 : 1)
+        .accessibilityHint(isLocked ? "Открыть информацию о доступе" : "Запустить игру")
     }
 
     @ViewBuilder
@@ -1183,45 +1285,55 @@ struct GameParkOverlayView: View {
 
     @ViewBuilder
     private var emptyState: some View {
-                OverlayEtalonCard(title: "Игровой парк", onDismiss: onDismiss, usesContextPlacement: true) {
-            VStack(spacing: 0) {
-                VStack(spacing: 14) {
-                    Image(systemName: "gamecontroller")
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.7))
-
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                Image(systemName: "gamecontroller.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    .frame(width: 48, height: 48)
+                    .background(Circle().fill(ThemeManager.shared.currentAccentTintColor.opacity(0.18)))
+                VStack(alignment: .leading, spacing: 4) {
                     Text(emptyTitle)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 19, weight: .semibold, design: .rounded))
                         .foregroundStyle(CD.ColorToken.text)
-                        .multilineTextAlignment(.center)
-
                     Text(emptyMessage)
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
-                        .multilineTextAlignment(.center)
+                        .foregroundStyle(CD.ColorToken.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 8)
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        emptyStep(number: 1, text: emptyStepOne)
-                        emptyStep(number: 2, text: emptyStepTwo)
-                    }
-                    .padding(.top, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 20)
-
-                OverlayEtalonPrimaryButton(title: emptyButtonTitle) {
-#if os(iOS)
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-#endif
-                    onOpenCourses()
-                }
-                .padding(.horizontal, CD.Spacing.screen)
-                .padding(.bottom, 20)
             }
+
+            VStack(alignment: .leading, spacing: 10) {
+                emptyStep(number: 1, text: emptyStepOne)
+                emptyStep(number: 2, text: emptyStepTwo)
+            }
+
+            Button {
+#if os(iOS)
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+#endif
+                onOpenCourses()
+            } label: {
+                HStack(spacing: 8) {
+                    Text(emptyButtonTitle)
+                    Image(systemName: "arrow.right")
+                }
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(ThemeManager.shared.currentAccentFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(18)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.white.opacity(0.045))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+                }
         }
     }
 
