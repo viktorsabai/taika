@@ -1038,13 +1038,7 @@ public struct SpeakerDSRoot: View {
             }
             .frame(height: 214)
 
-            if isRec {
-                ConversationLiveWaveRibbon(meter: recordingMeter)
-                    .frame(height: 62)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 2)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            } else if isBusy {
+            if isBusy {
                 ConversationLiveProcessTicks()
                     .frame(height: 28)
                     .transition(.opacity)
@@ -1703,7 +1697,7 @@ public struct SpeakerDSRoot: View {
     }
 
     @ViewBuilder private var conversationWidgetErrorCenter: some View {
-        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+        // System recovery state: content-only status, no framed card competing with the Speaker canvas.
         VStack(spacing: 10) {
             Image(systemName: "ear.trianglebadge.exclamationmark")
                 .font(.system(size: 22, weight: .semibold))
@@ -1723,11 +1717,9 @@ public struct SpeakerDSRoot: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 22)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
-        .background(Theme.Surfaces.blackGlass(shape))
     }
-
     @ViewBuilder private func conversationWidgetPhoneticStack(
         russian: String?,
         phonetic: String,
