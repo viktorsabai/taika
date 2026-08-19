@@ -116,8 +116,10 @@ struct ProfileView: View {
             }
         }
         .buttonStyle(.plain)
-        .listRowInsets(listRowInsets)
-        .listRowBackground(PD.ColorToken.card.opacity(0.35))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .background(PD.ColorToken.card.opacity(0.38), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.58), lineWidth: 1))
     }
 
     private func performFullReset() {
@@ -139,15 +141,30 @@ struct ProfileView: View {
 
     var body: some View {
         ZStack {
-            PD.ColorToken.background
-                .ignoresSafeArea()
+            ZStack {
+                PD.ColorToken.background
+                    .ignoresSafeArea()
+                Circle()
+                    .fill(theme.currentAccentFill)
+                    .frame(width: 280, height: 280)
+                    .blur(radius: 110)
+                    .opacity(0.10)
+                    .offset(x: 130, y: -300)
+                Circle()
+                    .fill(Color.purple.opacity(0.22))
+                    .frame(width: 220, height: 220)
+                    .blur(radius: 100)
+                    .opacity(0.10)
+                    .offset(x: -150, y: 260)
+            }
 
             VStack(spacing: 0) {
                 TaikaScreenPageTitle(title: "Профиль")
                     .padding(.top, 4)
                     .padding(.bottom, 4)
 
-                List {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 16) {
                     if let badge = TaikaBuildChannel.badgeTitle {
                         Section {
                             HStack(alignment: .top, spacing: 14) {
@@ -275,12 +292,12 @@ struct ProfileView: View {
                             showMoreSheet = true
                         }
                     }
+                    }
+                    .id(viewReloadToken)
+                    .padding(.horizontal, PD.Spacing.screen)
+                    .padding(.top, 12)
+                    .padding(.bottom, 36)
                 }
-                .id(viewReloadToken)
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .listSectionSpacing(14)
-                .listRowSeparatorTint(PD.ColorToken.stroke.opacity(0.45))
             }
             .padding(.top, Theme.Layout.rootHeaderClearance)
         }
