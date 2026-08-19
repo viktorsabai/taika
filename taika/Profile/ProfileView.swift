@@ -167,7 +167,9 @@ struct ProfileView: View {
                         appVersionLabel: appVersionLabel,
                         authInProgress: authInProgress,
                         authErrorMessage: authErrorMessage,
+                        restoreInFlight: restoreInFlight,
                         onAppleID: { signInWithAppleTapped() },
+                        onRestore: { Task { await restorePurchasesTapped() } },
                         onTaikaPlus: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showProSheet = true
