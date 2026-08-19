@@ -1311,7 +1311,6 @@ extension LessonsView {
                     }
                 }
             },
-            selectedLessonIds: isCompletedCourse ? Set(effectiveReinforcementLessonIds) : [],
             onTapAccessory: isTheoryBonusCourse || isCompletedCourse ? nil : { item in
                 let arr = lessonsSorted
                 guard item.index >= 0 && item.index < arr.count else { return }
@@ -1356,6 +1355,7 @@ extension LessonsView {
                     UINotificationFeedbackGenerator().notificationOccurred(.warning)
                 }
             },
+            selectedLessonIds: isCompletedCourse ? Set(effectiveReinforcementLessonIds) : [],
             onSpeaker: isTheoryBonusCourse || isCompletedCourse ? nil : { item in
                 guard let cid = currentCourse?.courseID else { return }
                 UserSession.shared.markActive(courseId: cid, lessonId: item.id, stepIndex: 0)
