@@ -1208,7 +1208,6 @@ public struct SpeakerDSRoot: View {
 
     @ViewBuilder private func conversationHistoryFeed(_ history: [SpeakerConversationHistoryItem]) -> some View {
         let visibleHistory = Array(history.prefix(6))
-        let cardWidth = min(UIScreen.main.bounds.width - 56, 334)
 
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
@@ -1226,8 +1225,7 @@ public struct SpeakerDSRoot: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
                     ForEach(visibleHistory) { item in
-                        conversationHistoryRow(item)
-                            .frame(width: cardWidth, alignment: .leading)
+                        conversationHistoryChip(item)
                             .onTapGesture {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 conversationEngine.activateConversationHistoryItem(item)
@@ -1243,6 +1241,41 @@ public struct SpeakerDSRoot: View {
             .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder private func conversationHistoryChip(_ item: SpeakerConversationHistoryItem) -> some View {
+        let label = item.russian.isEmpty ? item.thai : item.russian
+        let score = item.lastPracticeScore
+
+        HStack(spacing: 8) {
+            Image(systemName: "waveform")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(ThemeManager.shared.currentAccentTintColor)
+
+            Text(label.isEmpty ? "Фраза" : label)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(PD.ColorToken.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+
+            if let score {
+                Text("\(score)")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(ThemeManager.shared.currentAccentTintColor)
+            }
+        }
+        .padding(.horizontal, 13)
+        .frame(minWidth: 128, maxWidth: 230, minHeight: 38)
+        .background(
+            Capsule(style: .continuous)
+                .fill(PD.ColorToken.chip.opacity(0.72))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Theme.Strokes.strokeSubtle, lineWidth: 1)
+        )
+        .contentShape(Capsule(style: .continuous))
     }
 
     @ViewBuilder private func conversationHistoryRow(_ item: SpeakerConversationHistoryItem) -> some View {
