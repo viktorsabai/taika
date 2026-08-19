@@ -511,52 +511,118 @@ struct ProfileGlassRow: View {
     }
 }
 
+private struct ProfileValueItem: Identifiable {
+    let id: String
+    let title: String
+    let detail: String
+    let systemImage: String
+    let eyebrow: String
+}
+
+private struct ProfileValueCarouselCard: View {
+    @EnvironmentObject private var theme: ThemeManager
+    let item: ProfileValueItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: item.systemImage)
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundStyle(theme.currentAccentFill)
+                    .frame(width: 46, height: 46)
+                    .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.title)
+                        .font(PD.FontToken.title(21, weight: .bold))
+                        .foregroundStyle(PD.ColorToken.text)
+                        .lineLimit(2)
+                    Text(item.eyebrow)
+                        .font(PD.FontToken.caption(11, weight: .semibold))
+                        .foregroundStyle(theme.currentAccentFill)
+                        .tracking(0.9)
+                }
+                Spacer(minLength: 0)
+            }
+            Text(item.detail)
+                .font(PD.FontToken.body(15, weight: .regular))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            HStack(spacing: 7) {
+                Capsule()
+                    .fill(theme.currentAccentFill)
+                    .frame(width: 28, height: 3)
+                Text("Taika · смысл и действие")
+                    .font(PD.FontToken.caption(11, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.84))
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, minHeight: 196, alignment: .leading)
+        .background(PD.ColorToken.card.opacity(0.46), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.68), lineWidth: 1))
+        .shadow(color: Color.black.opacity(0.22), radius: 16, y: 8)
+    }
+}
+
 struct ProfileValuesView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var theme: ThemeManager
 
-    private let values: [(String, String, String)] = [
-        ("Сценарные курсы", "Нужные фразы для жизни в Таиланде — от аренды до разговора с полицией.", "book.closed"),
-        ("Speaker", "Переводит твою мысль и помогает спокойно тренировать произношение.", "waveform"),
-        ("Игровая практика", "Закрепляет слова и фразы короткими действиями, а не тестами ради тестов.", "gamecontroller"),
-        ("Личный ритм", "Собирает твой прогресс и подсказывает следующий полезный шаг.", "circle.dotted.and.circle")
+    private let values: [ProfileValueItem] = [
+        ProfileValueItem(id: "courses", title: "Сценарные курсы", detail: "Нужные фразы для жизни в Таиланде — в правильном контексте, а не случайный набор слов.", systemImage: "book.closed", eyebrow: "01  ·  TAika system"),
+        ProfileValueItem(id: "speaker", title: "Speaker", detail: "Переводи свою мысль, слышь тайскую речь и спокойно тренируй произношение, тон и голос.", systemImage: "waveform", eyebrow: "02  ·  VOICE PRACTICE"),
+        ProfileValueItem(id: "games", title: "Игровая практика", detail: "Закрепляй слова короткими действиями, чтобы знание переходило в реакцию в реальной жизни.", systemImage: "gamecontroller", eyebrow: "03  ·  ACTIVE MEMORY"),
+        ProfileValueItem(id: "rhythm", title: "Личный ритм", detail: "Taika собирает твою практику и подсказывает следующий полезный шаг без рейтингов и давления.", systemImage: "circle.dotted.and.circle", eyebrow: "04  ·  YOUR ROUTE")
     ]
 
     var body: some View {
         NavigationStack {
             ProfileGlassBackdrop {
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 18) {
-                        VStack(spacing: 10) {
-                            ProfileMotionOrb(phase: 0.35, reduceMotion: true)
-                                .frame(height: 120)
+                    VStack(spacing: 14) {
+                        VStack(spacing: 8) {
+                            ProfileMotionOrb(phase: 0.35, reduceMotion: reduceMotion, scale: 0.36)
+                                .frame(height: 74)
+                                .opacity(0.78)
                             Text("Taika — твой личный Kun Kru")
-                                .font(PD.FontToken.title(26, weight: .bold))
+                                .font(PD.FontToken.title(25, weight: .bold))
                                 .foregroundStyle(PD.ColorToken.text)
                                 .multilineTextAlignment(.center)
-                            Text("Не просто переводчик. Платформа, которая помогает говорить, понимать и действовать увереннее в Таиланде.")
+                            Text("Платформа, которая помогает говорить, понимать и действовать увереннее в Таиланде.")
                                 .font(PD.FontToken.caption(14))
                                 .foregroundStyle(PD.ColorToken.textSecondary)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                        .padding(.top, 10)
 
-                        ForEach(Array(values.enumerated()), id: \.offset) { _, value in
-                            ProfileGlassRow(title: value.0, subtitle: value.1, systemImage: value.2, trailing: "checkmark") {}
+                        MDTwoRowCourseCarousel(
+                            freeTitle: .init(title: "", showsTitle: false, topPadding: 0, bottomPadding: 0),
+                            proTitle: .init(title: "", showsTitle: false, topPadding: 0, bottomPadding: 0),
+                            free: values,
+                            pro: [],
+                            cardWidth: 304,
+                            cardSpacing: 12
+                        ) { item in
+                            ProfileValueCarouselCard(item: item)
                                 .environmentObject(theme)
+                                .frame(height: 196)
                         }
+                        .frame(height: 220)
 
-                        Text("Смысл · контекст · тон · голос")
+                        Text("Свайпни, чтобы увидеть, как Taika помогает тебе в жизни")
                             .font(PD.FontToken.caption(12, weight: .semibold))
                             .foregroundStyle(theme.currentAccentFill)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 4)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 18)
                     }
                     .padding(.horizontal, PD.Spacing.screen)
-                    .padding(.top, 18)
-                    .padding(.bottom, 34)
+                    .padding(.top, 12)
+                    .padding(.bottom, 36)
                 }
             }
             .navigationTitle("Как устроена Taika")
