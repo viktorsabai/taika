@@ -2580,6 +2580,85 @@ private struct CardBackActionButtonStyle: ButtonStyle {
     }
 }
 
+fileprivate struct CDOrganicWaveShape: Shape {
+    var phase: CGFloat
+    var seed: CGFloat
+
+    var animatableData: CGFloat {
+        get { phase }
+        set { phase = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let shift = sin(phase * .pi * 2 + seed) * 18
+        let y = rect.height * (0.68 + 0.08 * sin(seed))
+        var path = Path()
+        path.move(to: CGPoint(x: -28, y: y + shift))
+        path.addCurve(
+            to: CGPoint(x: rect.width * 0.42, y: rect.height * 0.54 + shift * 0.35),
+            control1: CGPoint(x: rect.width * 0.14, y: rect.height * 0.42 - shift),
+            control2: CGPoint(x: rect.width * 0.20, y: rect.height * 0.82 + shift)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.width + 28, y: rect.height * 0.34 - shift * 0.25),
+            control1: CGPoint(x: rect.width * 0.60, y: rect.height * 0.28 + shift),
+            control2: CGPoint(x: rect.width * 0.78, y: rect.height * 0.56 - shift)
+        )
+        return path
+    }
+}
+
+fileprivate struct CDOrganicLearnedTreatment: View {
+    let glow: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var phase: CGFloat = 0
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
+                .fill(Color.black.opacity(0.12))
+
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [glow.opacity(0.16), glow.opacity(0.035), Color.clear],
+                        center: .center,
+                        startRadius: 8,
+                        endRadius: 132
+                    )
+                )
+                .frame(width: 210, height: 150)
+                .blur(radius: 18)
+                .offset(x: 70, y: -70)
+
+            ForEach(Array([0.2, 1.35, 2.5].enumerated()), id: \.offset) { index, seed in
+                CDOrganicWaveShape(
+                    phase: reduceMotion ? 0 : phase,
+                    seed: seed
+                )
+                .stroke(
+                    glow.opacity(index == 1 ? 0.30 : 0.18),
+                    style: StrokeStyle(
+                        lineWidth: index == 1 ? 1.35 : 0.9,
+                        lineCap: .round,
+                        lineJoin: .round
+                    )
+                )
+                .blur(radius: index == 1 ? 0.15 : 0.45)
+                .scaleEffect(1 + CGFloat(index - 1) * 0.035)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
+        .allowsHitTesting(false)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 14).repeatForever(autoreverses: true)) {
+                phase = 1
+            }
+        }
+    }
+}
+
 public struct CourseLessonCard: View {
     // Content
     public let title: String
@@ -2848,29 +2927,8 @@ public struct CourseLessonCard: View {
         switch effectiveAccentTreatment {
         case .none:
             EmptyView()
-        case let .taikaValues(fill, glow):
-            ZStack {
-                RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
-                    .fill(fill)
-                    .opacity(0.72)
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [glow.opacity(0.24), glow.opacity(0.06), Color.clear],
-                            center: .center,
-                            startRadius: 3,
-                            endRadius: 112
-                        )
-                    )
-                    .frame(width: 164, height: 164)
-                    .blur(radius: 14)
-                    .offset(x: 82, y: -58)
-                // The canonical card shell supplies the only outer edge; the learned treatment
-                // stays internal so completed cards do not acquire a second hard border.
-
-                // Keep the learned surface clean: no decorative line strokes compete with mastery data.
-            }
-            .allowsHitTesting(false)
+        case let .taikaValues(_, glow):
+            CDOrganicLearnedTreatment(glow: glow)
         }
     }
 
