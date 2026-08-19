@@ -691,3 +691,12 @@
 | Сохранить blur ниже header без отдельной opaque полосы | В работе: explicit ZStack transition layer |
 | Вернуть читаемую content zone для title/status/header controls | В работе: ShellHeaderHost zIndex(1) |
 | Проверить новый diff и device-test handoff в той же ветке | Не начато |
+
+
+# Completed-lessons-only Speaker selection regression
+
+- [ ] Reproduce the StepView → Speaker lesson-selection path from commit 50ae26b.
+- [ ] Confirm the current-course scope and completed lesson status source.
+- [ ] Show only completed lessons in the selection UI.
+- [ ] Prevent unavailable/uncompleted selection from falling back to the initial Speaker state.
+- [ ] Validate navigation and push the fix to the test branch.

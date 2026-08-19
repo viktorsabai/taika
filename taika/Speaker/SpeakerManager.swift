@@ -652,13 +652,25 @@ public final class SpeakerManager: ObservableObject {
         }
     }
 
-    /// Выученные уроки курса с числом фраз — для чекбоксов на лаунчере / в сессии.
+    /// Только полностью пройденные уроки курса с числом фраз — для чекбоксов на лаунчере / в сессии.
+    /// Наличие отдельных выученных фраз недостаточно: незавершённый урок не должен появляться
+    /// в scope picker, иначе Speaker может стартовать без валидного training context.
     public func learnedTrainingLessonOptions(courseId: String) -> [SpeakerTrainingLessonOption] {
+        let completedLessonIds = Set(
+            LessonsManager.shared.progress[courseId, default: [:]]
+                .compactMap { lessonId, progress in
+                    progress.status == .completed ? lessonId : nil
+                }
+        )
+
+        guard !completedLessonIds.isEmpty else { return [] }
+
         var counts: [String: Int] = [:]
-        for r in baseQueue where r.courseId == courseId {
+        for r in baseQueue where r.courseId == courseId && completedLessonIds.contains(r.lessonId) {
             counts[r.lessonId, default: 0] += 1
         }
         guard !counts.isEmpty else { return [] }
+
         let bundles = LessonsData.shared.lessons(for: courseId)
         var ordered: [SpeakerTrainingLessonOption] = []
         var seen = Set<String>()
@@ -668,7 +680,7 @@ public final class SpeakerManager: ObservableObject {
             let title = LessonsData.shared.lessonTitle(for: lesson.lessonID) ?? lesson.lessonID
             ordered.append(SpeakerTrainingLessonOption(id: lesson.lessonID, title: title, count: c))
         }
-        // Уроки вне каталога (старые id) — в конец.
+        // Уроки вне каталога (старые id) — в конец, но только если их progress status completed.
         for (lid, c) in counts.sorted(by: { $0.key < $1.key }) where !seen.contains(lid) {
             let title = LessonsData.shared.lessonTitle(for: lid) ?? lid
             ordered.append(SpeakerTrainingLessonOption(id: lid, title: title, count: c))

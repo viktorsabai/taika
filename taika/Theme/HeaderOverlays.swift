@@ -606,7 +606,9 @@ struct SpeakerCoursesOverlayView: View {
     private var selectedLessonIds: Set<String> {
         var out = Set<String>()
         for cid in selected {
-            out.formUnion(selectedLessonIdsByCourse[cid] ?? defaultLessons(for: cid))
+            let available = defaultLessons(for: cid)
+            let picked = selectedLessonIdsByCourse[cid] ?? available
+            out.formUnion(picked.intersection(available))
         }
         return out
     }
