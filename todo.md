@@ -1108,3 +1108,16 @@
 - [ ] Resolve TaikaWordmarkLockup Color versus LinearGradient/AnyShapeStyle mismatch.
 - [ ] Reorder glossyBlackSurface argument before onLockedTap at CardDS callsites.
 - [ ] Run static validation and push corrective commit to 2026-01-21-k7hb-d2004.
+
+# Simulator build validation
+
+- [ ] Check whether Xcode, xcodebuild, simctl and an iOS project/scheme are available in the current environment.
+- [ ] Run the strongest available build/test validation without claiming Simulator success if unavailable.
+- [ ] Report exact build/test status and Mac command if external simulator is required.
+
+# Speaker canonical sphere layout
+
+- [ ] Find and remove the oversized idle microphone composition.
+- [ ] Keep one reduced onboarding-style MDVoiceSphere centered across idle/recording/processing.
+- [ ] Drive sphere motion from recordingMeter without moving the hero vertically.
+- [ ] Validate idle-to-recording-to-result layout continuity and push one commit.

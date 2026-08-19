@@ -985,18 +985,12 @@ public struct SpeakerDSRoot: View {
             .shadow(color: Color.black.opacity(0.28), radius: 20, y: 8)
     }
 
-    /// Immersive live: орб + live-текст + mic в центре. Не серая «карточка статуса».
+    /// Immersive live: одна компактная onboarding-style sphere остаётся в центре во всех voice states.
     @ViewBuilder private var conversationLiveStage: some View {
         let isRec = conversationIsRecording
         let isBusy = phase == .analyzing
-        VStack(spacing: 18) {
-            conversationLiveStatusChip
-
-            conversationLiveHeroText
-                .frame(minHeight: 72)
-                .frame(maxHeight: 160)
-                .padding(.horizontal, 8)
-
+        let sphereSize: CGFloat = 156
+        VStack(spacing: 14) {
             ZStack {
                 MDVoiceSphere(
                     symbol: isBusy ? "ellipsis" : (isRec ? "stop.fill" : "mic.fill"),
@@ -1022,7 +1016,14 @@ public struct SpeakerDSRoot: View {
                         .accessibilityLabel("Обработка")
                 }
             }
-            .frame(height: 200)
+            .frame(width: sphereSize, height: sphereSize)
+
+            conversationLiveHeroText
+                .frame(minHeight: 56)
+                .frame(maxHeight: 128)
+                .padding(.horizontal, 8)
+
+            conversationLiveStatusChip
 
             if isBusy {
                 ConversationLiveProcessTicks()
@@ -1520,7 +1521,7 @@ public struct SpeakerDSRoot: View {
                 meter: 0,
                 action: { external?.onMicTap() }
             )
-            .frame(height: 200)
+            .frame(width: 156, height: 156)
             Text("Готова слушать")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.text)
