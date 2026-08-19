@@ -162,28 +162,45 @@ struct ProfileStatisticsView: View {
         }
     }
 
+    private var activityDaysForDisplay: [PDActivityDay] {
+        Array(profile.activityWeekDays.suffix(7))
+    }
+
     private var activitySection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Активность")
                 .font(PD.FontToken.caption(13, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.textSecondary)
                 .textCase(.uppercase)
-            HStack(alignment: .bottom, spacing: 8) {
-                ForEach(Array(profile.activityWeekDays.suffix(7).enumerated()), id: \.offset) { _, day in
-                    VStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(day.intensity01 > 0 ? theme.currentAccentFill : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.45)))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: max(10, 18 + CGFloat(day.intensity01) * 54))
-                        Text(day.title.prefix(2))
-                            .font(.caption2)
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                    }
-                }
+            activityBars
+        }
+    }
+
+    private var activityBars: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            ForEach(activityDaysForDisplay, id: \.key) { day in
+                activityBar(for: day)
             }
-            .padding(16)
-            .background(PD.ColorToken.card.opacity(0.36), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.55), lineWidth: 1))
+        }
+        .padding(16)
+        .background(PD.ColorToken.card.opacity(0.36), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.55), lineWidth: 1))
+    }
+
+    private func activityBar(for day: PDActivityDay) -> some View {
+        let barHeight: CGFloat = max(10, 18 + CGFloat(day.intensity01) * 54)
+        let activeFill = AnyShapeStyle(theme.currentAccentFill)
+        let inactiveFill = AnyShapeStyle(PD.ColorToken.stroke.opacity(0.45))
+        let fill = day.intensity01 > 0 ? activeFill : inactiveFill
+
+        return VStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(fill)
+                .frame(maxWidth: .infinity)
+                .frame(height: barHeight)
+            Text(String(day.title.prefix(2)))
+                .font(.caption2)
+                .foregroundStyle(PD.ColorToken.textSecondary)
         }
     }
 
