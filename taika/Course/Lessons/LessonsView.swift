@@ -892,8 +892,8 @@ extension LessonsView {
         return VStack(spacing: 10) {
             LSLessonHeader(
                 title: headerTitle,
-                subtitle: subtitleResolved,
-                progressSlots: slotsResolved,
+                subtitle: courseIsCompleted ? "" : subtitleResolved,
+                progressSlots: courseIsCompleted ? nil : slotsResolved,
                 selectedIndex: activeLessonIndex,
                 onTapSlot: { idx in
                 let arr = lessonsSorted
@@ -952,59 +952,52 @@ extension LessonsView {
         }
 
         return AnyView(
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 7) {
                 HStack(spacing: 8) {
                     Image(systemName: legacyRecord ? "arrow.triangle.2.circlepath" : "checkmark.seal.fill")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
-                    Text(legacyRecord ? "Игра пройдена — связываем с курсом" : "Зачёт по игре")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.94))
+                    Text(legacyRecord ? "Тренировка курса" : "Курс готов к закреплению")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.92))
                     Spacer(minLength: 4)
                     if let score {
                         Text("\(score)%")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+                            .font(Theme.Fonts.metric(13))
+                            .foregroundStyle(.white.opacity(0.92))
                     }
                 }
 
                 Text(
                     legacyRecord
-                    ? "Старый результат не содержит привязки к карточкам уроков. Пройди игру из этого курса один раз — после этого Тайка покажет совпадения и соберёт практику над ошибками."
-                    : "В игре найдено \(covered) карточек курса\(totalCards > 0 ? " из \(totalCards)" : ""). Тайка может продолжить работу с тем, что ещё не закреплено."
+                    ? "Старый результат ещё не связан с карточками этого курса."
+                    : "В игре: \(covered) карточек\(totalCards > 0 ? " из \(totalCards)" : "") · \(sessions) \(sessions == 1 ? "игра" : "игр")."
                 )
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.68))
-                .fixedSize(horizontal: false, vertical: true)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.white.opacity(0.62))
+                .lineLimit(2)
 
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     if let matchedPercent {
                         Text("совпало \(matchedPercent)%")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
-                    }
-                    if !legacyRecord {
-                        Text("\(sessions) \(sessions == 1 ? "игра" : "игр")")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.55))
+                            .font(Theme.Fonts.metric(11))
+                            .foregroundStyle(.white.opacity(0.78))
                     }
                     Spacer(minLength: 4)
                     Button(action: action) {
-                        Text(legacyRecord ? "Синхронизировать" : "Закрепить дальше")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
-                            .padding(.horizontal, 11)
-                            .padding(.vertical, 7)
-                            .background(Capsule().fill(Color.black.opacity(0.72)))
-                            .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
+                        HStack(spacing: 5) {
+                            Text(legacyRecord ? "Связать игру" : "Закрепить дальше")
+                                .font(.system(size: 11, weight: .semibold))
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
                     }
                     .buttonStyle(.plain)
-                    .contentShape(Capsule())
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.black.opacity(0.22)))
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
         )
     }
 

@@ -1199,3 +1199,12 @@
 - [ ] Completed back: remove redundant Taika label and rebuild as a concise course grade sheet.
 - [ ] Completed back: use neutral-light metric values, one useful reinforcement CTA, and no duplicate action row.
 - [ ] Run static validation and push final CourseView card-flow commit.
+
+# Final LessonsView retention flow
+
+- [ ] Completed course header: replace lesson check slots/description with training status and compact effectiveness summary.
+- [ ] Surface real matched/error-practice signals from game/pronunciation data when available.
+- [ ] Completed lesson cards: use same green mastery language and show useful next-practice state.
+- [ ] Replace large lower action buttons with line-style Speaker/Game actions and one clear retention CTA.
+- [ ] Include concise Taika FM guidance without duplicating course card content.
+- [ ] Run static validation and push final LessonsView retention commit.

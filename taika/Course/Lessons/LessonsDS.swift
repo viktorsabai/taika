@@ -1755,16 +1755,12 @@ public struct LSCoursePracticeDock: View {
                 }
                 .foregroundStyle(PD.ColorToken.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(PD.ColorToken.chip.opacity(0.72))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(PD.ColorToken.stroke.opacity(0.52), lineWidth: 1)
-                        )
-                )
+                .padding(.vertical, 10)
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(PD.ColorToken.stroke.opacity(0.48))
+                        .frame(height: 1)
+                }
             }
             .disabled(completedLessons.isEmpty)
             .accessibilityLabel("Выбор уроков для закрепления")
@@ -1784,9 +1780,21 @@ public struct LSCoursePracticeDock: View {
                 .padding(.horizontal, 4)
             }
 
-            HStack(spacing: 8) {
-                quickActionRow(icon: "mic.fill", title: "Спикер", isEnabled: onSpeaker != nil && !selectedScope.isEmpty, action: onSpeaker)
-                quickActionRow(icon: "gamecontroller.fill", title: "Игры", isEnabled: onGamePark != nil && !selectedScope.isEmpty, action: onGamePark)
+            VStack(spacing: 0) {
+                quickActionRow(
+                    icon: "mic.fill",
+                    title: "Закрепить в Спикере",
+                    detail: "Потренировать произношение выбранных уроков",
+                    isEnabled: onSpeaker != nil && !selectedScope.isEmpty,
+                    action: onSpeaker
+                )
+                quickActionRow(
+                    icon: "gamecontroller.fill",
+                    title: "Повторить в игре",
+                    detail: "Проверить, что уже удерживается в памяти",
+                    isEnabled: onGamePark != nil && !selectedScope.isEmpty,
+                    action: onGamePark
+                )
             }
         }
         .padding(.top, 2)
@@ -1795,15 +1803,39 @@ public struct LSCoursePracticeDock: View {
     }
 
     @ViewBuilder
-    private func quickActionRow(icon: String, title: String, isEnabled: Bool, action: (() -> Void)?) -> some View {
-        if isEnabled, let action {
-            Button(action: action) {
-                DictionarySoftActionLabel(icon: icon, title: title)
+    private func quickActionRow(icon: String, title: String, detail: String, isEnabled: Bool, action: (() -> Void)?) -> some View {
+        let content = HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isEnabled ? AnyShapeStyle(TaikaMasteryTokens.green) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.55)))
+                .frame(width: 22, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(isEnabled ? PD.ColorToken.text : PD.ColorToken.textSecondary.opacity(0.55))
+                Text(detail)
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(isEnabled ? 0.82 : 0.45))
+                    .lineLimit(1)
             }
-            .buttonStyle(.plain)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(isEnabled ? 0.85 : 0.42))
+        }
+        .padding(.vertical, 10)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(PD.ColorToken.stroke.opacity(0.42))
+                .frame(height: 1)
+        }
+        .contentShape(Rectangle())
+
+        if isEnabled, let action {
+            Button(action: action) { content }
+                .buttonStyle(.plain)
         } else {
-            DictionarySoftActionLabel(icon: "lock.fill", title: title)
-                .opacity(0.48)
+            content
         }
     }
 }
