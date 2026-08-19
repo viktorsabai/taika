@@ -1122,8 +1122,8 @@ struct GameParkOverlayView: View {
 
                 OverlayEtalonCard(
                     title: "Игровой парк",
-                    role: .choice,
                     onDismiss: onDismiss,
+                    role: .choice,
                     usesContextPlacement: true
                 ) {
                     VStack(alignment: .leading, spacing: 18) {
@@ -1186,7 +1186,20 @@ struct GameParkOverlayView: View {
 
     @ViewBuilder
     private func gameModeCard(_ mode: GameModeType) -> some View {
-        let isLocked = mode.isPro && !ProManager.shared.isPro
+        let isLocked: Bool = mode.isPro && !ProManager.shared.isPro
+        let iconFill: Color = isLocked
+            ? Color.white.opacity(0.06)
+            : ThemeManager.shared.currentAccentTintColor.opacity(0.18)
+        let iconStyle: AnyShapeStyle = isLocked
+            ? AnyShapeStyle(CD.ColorToken.textSecondary)
+            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+        let trailingStyle: AnyShapeStyle = isLocked
+            ? AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.72))
+            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+        let borderStyle: AnyShapeStyle = isLocked
+            ? AnyShapeStyle(Color.white.opacity(0.07))
+            : AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.22))
+
         Button {
             if isLocked {
                 lockedMode = mode
@@ -1210,10 +1223,10 @@ struct GameParkOverlayView: View {
             HStack(spacing: 14) {
                 ZStack {
                     Circle()
-                        .fill(isLocked ? Color.white.opacity(0.06) : ThemeManager.shared.currentAccentTintColor.opacity(0.18))
+                        .fill(iconFill)
                     Image(systemName: isLocked ? "lock.fill" : "gamecontroller.fill")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(isLocked ? AnyShapeStyle(CD.ColorToken.textSecondary) : AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                        .foregroundStyle(iconStyle)
                 }
                 .frame(width: 44, height: 44)
 
@@ -1237,7 +1250,7 @@ struct GameParkOverlayView: View {
                 Spacer(minLength: 0)
                 Image(systemName: isLocked ? "lock.fill" : "chevron.right")
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(isLocked ? AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.72)) : AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                    .foregroundStyle(trailingStyle)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 13)
@@ -1246,12 +1259,7 @@ struct GameParkOverlayView: View {
                     .fill(Color.white.opacity(isLocked ? 0.035 : 0.06))
                     .overlay {
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .strokeBorder(
-                                isLocked
-                                    ? Color.white.opacity(0.07)
-                                    : ThemeManager.shared.currentAccentFill.opacity(0.22),
-                                lineWidth: 1
-                            )
+                            .strokeBorder(borderStyle, lineWidth: 1)
                     }
             }
         }
