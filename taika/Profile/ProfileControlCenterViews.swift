@@ -1065,7 +1065,7 @@ private struct ProfileTaikaPlusCard: View {
     }
 
     private var statusColor: Color {
-        pro.isPro ? Color.green : theme.currentAccentFill
+        pro.isPro ? Color.green : theme.currentAccentTintColor
     }
 
     private var statusSubtitle: String {
