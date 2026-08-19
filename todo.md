@@ -1174,3 +1174,8 @@
 - [ ] Make progress slot Group/ViewBuilder concrete around line 419.
 - [ ] Make horizontal alignment/context explicit around line 457.
 - [ ] Run diff check and push corrective commit.
+
+# LSProgressStrip initializer compatibility
+
+- [ ] Add backward-compatible isCompletedCourse parameter to the active LSProgressStrip initializer.
+- [ ] Run diff check and push corrective commit.

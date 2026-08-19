@@ -394,8 +394,7 @@ public struct LSLessonHeader: View {
             LSProgressStrip(
                 done: done,
                 total: ttl,
-                progressSlots: progressSlots,
-                isCompletedCourse: isCompletedCourse
+                progressSlots: progressSlots
             )
             .frame(maxWidth: .infinity, alignment: .center)
         } else {
