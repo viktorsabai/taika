@@ -1287,3 +1287,13 @@
 - [ ] Пересобрать back-face metrics с крупными светлыми monospaced values.
 - [ ] Сделать retention CTA визуально главным и явно объяснить действие.
 - [ ] Проверить contrast, CTA и static diff перед push.
+
+# Completed LessonsView redesign pass
+
+- [ ] Сжать верхний completed course summary до компактного training header.
+- [ ] Перевести всю страницу completed mode, включая header controls/status accents, в единый jungle-green system.
+- [ ] Убрать лишние зелёные рамки вокруг lesson cards; оставить green только для selected/mastery signals.
+- [ ] Сделать единый читаемый status treatment на header, card front и card back.
+- [ ] Сделать нижнюю training panel главным героем: selected count, ошибки, Speaker и Game Park.
+- [ ] Проверить, что выбор нескольких уроков не выглядит как одиночный dropdown и handoff сохраняет набор.
+- [ ] Выполнить static validation и consolidated push.

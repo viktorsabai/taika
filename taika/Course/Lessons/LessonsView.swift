@@ -583,7 +583,14 @@ public struct LessonsView: View {
     @ViewBuilder
     private var overlayStackView: some View {
         ZStack(alignment: .bottom) {
-            PD.ColorToken.background.ignoresSafeArea()
+            if isCompletedCourse {
+                Rectangle()
+                    .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.08)))
+                    .ignoresSafeArea()
+            } else {
+                PD.ColorToken.background
+                    .ignoresSafeArea()
+            }
 
             mainContent
 
@@ -958,7 +965,8 @@ extension LessonsView {
                 },
                 completionSummary: courseIsCompleted ? completedCourseSummary : courseGameSummary,
                 isCompletedCourse: courseIsCompleted,
-                bottomAccessory: AnyView(courseMaterialsPicker)
+                // In completed mode the training dock owns material selection; avoid a second, oversized picker in the header card.
+                bottomAccessory: courseIsCompleted ? nil : AnyView(courseMaterialsPicker)
             )
         }
     }
@@ -984,12 +992,17 @@ extension LessonsView {
         return AnyView(
             VStack(alignment: .leading, spacing: 7) {
                 HStack(spacing: 8) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
-                    Text("КУРС ПРОЙДЕН")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
+                    HStack(spacing: 5) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("КУРС ПРОЙДЕН")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .kerning(0.35)
+                    }
+                    .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(Capsule(style: .continuous).fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient)))
                     Spacer(minLength: 4)
                     if let score {
                         Text("\(score)%")

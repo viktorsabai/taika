@@ -355,7 +355,13 @@ public struct LSLessonHeader: View {
     private func cardBackgroundWithNotch() -> some View {
         ZStack(alignment: .topLeading) {
             let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-            Theme.Surfaces.card(round)
+            if isCompletedCourse {
+                round
+                    .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.24)))
+                    .overlay(round.stroke(TaikaMasteryTokens.greenGlow.opacity(0.42), lineWidth: 1))
+            } else {
+                Theme.Surfaces.card(round)
+            }
 
             if onBack != nil {
                 Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onBack?() }) {
@@ -1443,8 +1449,8 @@ public struct LSLessonCardV: View {
             sectionChrome: .none,
             accentTreatment: item.status == .completed
                 ? .taikaValues(
-                    fill: AnyShapeStyle(TaikaMasteryTokens.green),
-                    glow: TaikaMasteryTokens.green.opacity(0.62)
+                    fill: AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.34)),
+                    glow: TaikaMasteryTokens.greenGlow.opacity(0.72)
                 )
                 : .none,
             primaryCTA: primaryCTA,
@@ -1470,21 +1476,17 @@ public struct LSLessonCardV: View {
             onSpeakerTap: onSpeaker,
             showsInlineProgress: true
         )
-        .overlay {
+        .overlay(alignment: .topTrailing) {
             if isTrainingSelected {
-                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                    .stroke(TaikaMasteryTokens.green, lineWidth: 2)
-                    .overlay(alignment: .topTrailing) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "checkmark.circle.fill")
-                            Text("ВЫБРАН")
-                        }
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
-                        .padding(.top, 14)
-                        .padding(.trailing, 16)
-                    }
-                    .allowsHitTesting(false)
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("ВЫБРАН")
+                }
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
+                .padding(.top, 14)
+                .padding(.trailing, 16)
+                .allowsHitTesting(false)
             }
         }
     }
@@ -1841,7 +1843,15 @@ public struct LSCoursePracticeDock: View {
                 )
             }
         }
-        .padding(.top, 2)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.16)))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(TaikaMasteryTokens.greenGlow.opacity(0.34), lineWidth: 1)
+                )
+        )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Закрепление пройденных уроков")
     }
