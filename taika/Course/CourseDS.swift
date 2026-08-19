@@ -998,6 +998,12 @@ public enum CDLessonCarouselCanonical {
 
 fileprivate let CDCardWidth: CGFloat = CDLessonCarouselCanonical.cardWidth   // match canonical Course/Lesson card width
 fileprivate let CDCardHeight: CGFloat = CDLessonCarouselCanonical.courseLessonCardHeight
+
+/// Completed course cards use a deep jungle-green learned surface; pink stays reserved for actions.
+fileprivate enum CDLearnedCardTokens {
+    static let fill = AnyShapeStyle(Color(red: 0.08, green: 0.30, blue: 0.18))
+    static let glow = Color(red: 0.20, green: 0.72, blue: 0.38)
+}
 // depth & peek tokens to match CardDS calendar
 fileprivate let CDCarouselPeekMin: CGFloat = 14           // visible neighbors per side
 fileprivate let CDDepthNormWidthFactor: CGFloat = 0.60    // wider influence → сильнее эффект
@@ -1228,8 +1234,8 @@ public struct CDReelCourseCard: View {
             sectionChrome: .none,
             accentTreatment: status == .done
                 ? .taikaValues(
-                    fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
-                    glow: ThemeManager.shared.currentAccentTintColor
+                    fill: CDLearnedCardTokens.fill,
+                    glow: CDLearnedCardTokens.glow
                 )
                 : .none,
             primaryCTA: {
