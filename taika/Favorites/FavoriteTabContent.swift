@@ -293,7 +293,7 @@ private struct FavInsetGroup<Content: View>: View {
     private var accentWash: LinearGradient {
         LinearGradient(
             colors: [
-                ThemeManager.shared.currentAccentFill.opacity(0.12),
+                ThemeManager.shared.currentAccentTintColor.opacity(0.12),
                 Color.clear
             ],
             startPoint: .topLeading,
