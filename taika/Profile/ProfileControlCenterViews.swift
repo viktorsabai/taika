@@ -322,6 +322,13 @@ struct ProfileStatisticsView: View {
 private struct ProfileMotionOrb: View {
     let phase: CGFloat
     let reduceMotion: Bool
+    let scale: CGFloat
+
+    init(phase: CGFloat, reduceMotion: Bool, scale: CGFloat = 1) {
+        self.phase = phase
+        self.reduceMotion = reduceMotion
+        self.scale = scale
+    }
 
     var body: some View {
         ZStack {
@@ -339,6 +346,7 @@ private struct ProfileMotionOrb: View {
                 .frame(width: 156, height: 156)
                 .rotationEffect(.degrees(reduceMotion ? 0 : -Double(phase) * 240))
         }
+        .scaleEffect(scale)
         .compositingGroup()
         .opacity(0.9)
     }
@@ -1011,23 +1019,25 @@ private struct ProfileTaikaPlusCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 8) {
+                ZStack(alignment: .topTrailing) {
                     VStack(alignment: .leading, spacing: 5) {
                         HStack(spacing: 8) {
                             Text(pro.isPro ? "Taika+ активен" : "Открыть Taika+")
-                                .font(PD.FontToken.title(21, weight: .bold))
+                                .font(PD.FontToken.title(20, weight: .bold))
                                 .foregroundStyle(PD.ColorToken.text)
                             Image(systemName: "crown.fill")
                                 .foregroundStyle(theme.currentAccentFill)
                         }
                         Text(pro.isPro ? "Курсы, Speaker и игры открыты" : "7 дней бесплатно — разминка, курсы и Speaker")
-                            .font(PD.FontToken.caption(14))
+                            .font(PD.FontToken.caption(13))
                             .foregroundStyle(PD.ColorToken.textSecondary)
+                            .lineLimit(1)
                     }
-                    Spacer()
-                    ProfileMotionOrb(phase: 0.4, reduceMotion: true)
-                        .frame(width: 86, height: 70)
+                    ProfileMotionOrb(phase: 0.4, reduceMotion: true, scale: 0.42)
+                        .frame(width: 64, height: 50)
+                        .opacity(0.72)
+                        .allowsHitTesting(false)
                 }
                 HStack(spacing: 0) {
                     profileCapability("book.closed", "Курсы", pro.isPro)
@@ -1038,9 +1048,9 @@ private struct ProfileTaikaPlusCard: View {
                 }
                 .padding(.top, 6)
             }
-            .padding(18)
-            .background(PD.ColorToken.card.opacity(0.44), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.64), lineWidth: 1))
+            .padding(14)
+            .background(PD.ColorToken.card.opacity(0.44), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.64), lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
