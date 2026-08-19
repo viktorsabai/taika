@@ -895,8 +895,6 @@ extension LessonsView {
                 subtitle: subtitleResolved,
                 progressSlots: slotsResolved,
                 selectedIndex: activeLessonIndex,
-                isCompletedCourse: courseIsCompleted,
-                completionSummary: courseGameSummary,
                 onTapSlot: { idx in
                 let arr = lessonsSorted
                 if idx >= 0 && idx < arr.count {
@@ -922,6 +920,8 @@ extension LessonsView {
                         if !nav.path.isEmpty { nav.path.removeLast() }
                     }
                 },
+                completionSummary: courseGameSummary,
+                isCompletedCourse: courseIsCompleted,
                 bottomAccessory: AnyView(courseMaterialsPicker)
             )
         }

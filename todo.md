@@ -1163,3 +1163,8 @@
 
 - [ ] Move selectedIndex before isCompletedCourse at LessonsView LSLessonHeader callsite.
 - [ ] Run diff check and push corrective commit.
+
+# Lessons header onTapSlot argument order
+
+- [ ] Move onTapSlot before isCompletedCourse at the current LSLessonHeader callsite.
+- [ ] Run diff check and push corrective commit.
