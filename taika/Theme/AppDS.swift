@@ -1222,6 +1222,8 @@ public struct AppCardIconButton: View {
     public var forceAccent: Bool = false
     /// Нейтральная glossy-black action surface для Speaker/Game actions.
     public var glossyBlackSurface: Bool = false
+    /// Completed course actions use mastery green without the global pink accent.
+    public var forceMasteryGreen: Bool = false
     /// Если задан — тап по заблокированной иконке не молчит (shake + callback).
     public var onLockedTap: (() -> Void)? = nil
     public var onTap: () -> Void
@@ -1233,6 +1235,7 @@ public struct AppCardIconButton: View {
                 isEnabled: Bool = true,
                 forceAccent: Bool = false,
                 glossyBlackSurface: Bool = false,
+                forceMasteryGreen: Bool = false,
                 onLockedTap: (() -> Void)? = nil,
                 onTap: @escaping () -> Void = {}) {
         self.kind = kind
@@ -1240,6 +1243,7 @@ public struct AppCardIconButton: View {
         self.isEnabled = isEnabled
         self.forceAccent = forceAccent
         self.glossyBlackSurface = glossyBlackSurface
+        self.forceMasteryGreen = forceMasteryGreen
         self.onLockedTap = onLockedTap
         self.onTap = onTap
     }
@@ -1324,6 +1328,9 @@ public struct AppCardIconButton: View {
     }
 
     private var iconInkStyle: AnyShapeStyle {
+        if forceMasteryGreen, isEnabled {
+            return AnyShapeStyle(TaikaMasteryTokens.green)
+        }
         if glossyBlackSurface, isEnabled {
             return AnyShapeStyle(TaikaMasteryTokens.green)
         }

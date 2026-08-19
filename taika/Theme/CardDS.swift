@@ -2955,24 +2955,16 @@ public struct CourseLessonCard: View {
         let progressFraction: Double? = {
             guard showsInlineProgress else { return nil }
             if showProCrown || showProTeaserChip { return nil }
+            // Detailed mastery belongs to the back-side course grade sheet.
+            if statusKind == .completed { return nil }
             return (completionFraction ?? 0).clamped01
         }()
         @ViewBuilder
         func topContent(isBack: Bool) -> some View {
-            // Blank-brain: locked = корона; teaser = AppProChip; opened = статус.
-                        if isBack {
+            if isBack {
                 HStack(alignment: .center, spacing: 8) {
-                    TaikaWordmarkLockup(
-                        fontSize: 16,
-                        accentColor: statusKind == .completed ? TaikaMasteryTokens.green : nil
-                    )
                     Spacer(minLength: 0)
-
-                    if showProCrown {
-                        CourseProAnimatedCrown(onTap: { onPrimaryTap?() })
-                    } else if showProTeaserChip {
-                        CourseProAnimatedCrown(onTap: nil)
-                    } else if showStatusOnFace, let statusKind {
+                    if showStatusOnFace, let statusKind {
                         Button {
                             if flipEnabled {
                                 withAnimation(.spring(response: 0.42, dampingFraction: 0.85)) {
@@ -2984,25 +2976,24 @@ public struct CourseLessonCard: View {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
-                                    .opacity(0.85)
                                 AppStatusChip(kind: statusKind, title: title.lowercased())
                             }
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Свернуть зачёт курса")
+                        .accessibilityLabel("Вернуться к карточке курса")
                     }
                 }
                 .padding(.top, 18)
                 .padding(.bottom, 0)
             } else {
                 HStack(alignment: .center, spacing: 8) {
-                                        TaikaWordmarkLockup(
+                    TaikaWordmarkLockup(
                         fontSize: 16,
                         accentColor: statusKind == .completed ? TaikaMasteryTokens.green : nil
                     )
                     Spacer(minLength: 0)
                     HStack(spacing: 8) {
-                        if let onTapInfo {
+                        if statusKind != .completed, let onTapInfo {
                             Button(action: onTapInfo) {
                                 Image(systemName: "info.circle")
                                     .font(.system(size: 15, weight: .semibold))
@@ -3029,11 +3020,10 @@ public struct CourseLessonCard: View {
                                     Image(systemName: isFlipped ? "chevron.up" : "chevron.right")
                                         .font(.system(size: 11, weight: .semibold))
                                         .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
-                                        .opacity(0.85)
                                 }
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Открыть или свернуть план закрепления")
+                            .accessibilityLabel("Открыть зачёт курса")
                         }
                     }
                 }
@@ -3080,7 +3070,7 @@ public struct CourseLessonCard: View {
                 HStack(spacing: 20) {
                     AppCardIconButton(
                         kind: .play,
-                        forceAccent: !showProCrown,
+                        forceMasteryGreen: !showProCrown,
                         onTap: { onPrimaryTap?() }
                     )
                     .contentShape(Rectangle())
@@ -3104,7 +3094,7 @@ public struct CourseLessonCard: View {
                         AppCardIconButton(
                             kind: .console,
                             isEnabled: consoleIsEnabled,
-                            glossyBlackSurface: true,
+                            forceMasteryGreen: true,
                             onLockedTap: {
                                 showLockedActionHint("Игры откроются после первого урока")
                             },
@@ -3115,8 +3105,7 @@ public struct CourseLessonCard: View {
                         AppCardIconButton(
                             kind: .speaker,
                             isEnabled: consoleIsEnabled,
-                            forceAccent: consoleIsEnabled,
-                            glossyBlackSurface: true,
+                            forceMasteryGreen: consoleIsEnabled,
                             onLockedTap: {
                                 showLockedActionHint("Спикер курса откроется после первого урока")
                             },
@@ -3132,7 +3121,7 @@ public struct CourseLessonCard: View {
 
         func metaContent(isBack: Bool) -> some View {
             HStack(spacing: 8) {
-                if !isBack, let courseCategory, !courseCategory.isEmpty {
+                if !isBack, statusKind != .completed, let courseCategory, !courseCategory.isEmpty {
                     AppMiniChip(
                         title: courseCategory.lowercased(),
                         style: .neutral
@@ -3199,8 +3188,8 @@ public struct CourseLessonCard: View {
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(
                             value == "ещё нет"
-                            ? AnyShapeStyle(Color.white.opacity(0.62))
-                            : AnyShapeStyle(TaikaMasteryTokens.green)
+                            ? AnyShapeStyle(Color.white.opacity(0.52))
+                            : AnyShapeStyle(Color.white.opacity(0.92))
                         )
                         .lineLimit(1)
                 }
@@ -3280,14 +3269,14 @@ public struct CourseLessonCard: View {
             case .courseGradeSheet:
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Зачёт по курсу")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(Color.white.opacity(0.96))
 
-                    Text("Повторяй через игры и спикер — так навык останется с тобой.")
+                    Text("Что уже закреплено и что полезно повторить дальше.")
                         .font(.system(size: 11, weight: .regular))
                         .foregroundStyle(Color.white.opacity(0.62))
                         .lineSpacing(1)
-                        .lineLimit(3)
+                        .lineLimit(2)
 
                     let reinforcementValue: String = {
                         if let score = reinforcementScore {
@@ -3297,19 +3286,31 @@ public struct CourseLessonCard: View {
                     }()
 
                     gradeRow(title: "Закрепление", value: reinforcementValue)
-                    if reinforcementCoveredCards > 0 {
-                        gradeRow(title: "Карточки в игре", value: "\(reinforcementCoveredCards)")
-                    }
-
+                    gradeRow(
+                        title: "Карточки в игре",
+                        value: reinforcementCoveredCards > 0 ? "\(reinforcementCoveredCards)" : "ещё нет"
+                    )
                     gradeRow(
                         title: "Произношение",
                         value: pronunciationPercent.map { "\($0)%" } ?? "ещё нет"
                     )
 
-                    gradeRow(
-                        title: TaikaReleaseFlags.showGrandDialogue ? "Диалог курса" : "Игры PRO",
-                        value: isProUser ? "доступно" : "нужен Taika+"
-                    )
+                    if let title = backPrimaryActionTitle, let action = onBackPrimaryAction {
+                        Button {
+                            action()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(title)
+                                    .font(.system(size: 12, weight: .semibold))
+                                Image(systemName: "arrow.up.right")
+                                    .font(.system(size: 11, weight: .semibold))
+                            }
+                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 6)
+                        .accessibilityLabel(title)
+                    }
                 }
             }
         }
@@ -3367,7 +3368,7 @@ public struct CourseLessonCard: View {
             isFluidWidth: false,
             brandText: brandText,
             top: { topContent(isBack: true) },
-            bottom: { bottomContent() },
+            bottom: { EmptyView() },
             meta: { metaContent(isBack: true) },
             tags: { tagsContent(isBack: true) },
             belowTitle: { backPlanBelowTitle() }

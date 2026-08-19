@@ -1936,7 +1936,7 @@ public struct CDWeeklyRhythmSection: View {
             valueText: "\(value)",
             label: label,
             valueSize: 64,
-            accent: true,
+            accent: false,
             appeared: appeared,
             delay: delay
         )

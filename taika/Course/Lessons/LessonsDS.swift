@@ -1885,7 +1885,7 @@ public struct LSCourseOverview: View {
                     valueText: "\(displayLessonsDone)/\(stats.totalLessons)",
                     label: "уроки",
                     valueSize: 44,
-                    accent: true,
+                    accent: false,
                     appeared: appeared,
                     delay: 0
                 )
@@ -1893,7 +1893,7 @@ public struct LSCourseOverview: View {
                     valueText: "\(displayWords)",
                     label: "слова",
                     valueSize: 44,
-                    accent: true,
+                    accent: false,
                     appeared: appeared,
                     delay: 0.06
                 )
@@ -1901,7 +1901,7 @@ public struct LSCourseOverview: View {
                     valueText: "\(displayFavorites)",
                     label: "избранное",
                     valueSize: 44,
-                    accent: true,
+                    accent: false,
                     appeared: appeared,
                     delay: 0.12
                 )
@@ -1909,7 +1909,7 @@ public struct LSCourseOverview: View {
                     valueText: "\(displayMinutes)",
                     label: "мин",
                     valueSize: 44,
-                    accent: true,
+                    accent: false,
                     appeared: appeared,
                     delay: 0.18
                 )

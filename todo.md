@@ -1191,3 +1191,11 @@
 - [ ] Replace remaining decorative/rounded metric fonts with shared technical metric style.
 - [ ] Keep labels and educational copy readable; do not change hierarchy unrelated to metrics.
 - [ ] Run static validation and push one typography corrective commit.
+
+# Final completed course card flow
+
+- [ ] Completed front: remove redundant 100% progress copy and keep only clear green completion status.
+- [ ] Completed front: keep game/speaker actions green and favorite pink only; avoid oversized visual emphasis.
+- [ ] Completed back: remove redundant Taika label and rebuild as a concise course grade sheet.
+- [ ] Completed back: use neutral-light metric values, one useful reinforcement CTA, and no duplicate action row.
+- [ ] Run static validation and push final CourseView card-flow commit.
