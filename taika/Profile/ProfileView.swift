@@ -58,7 +58,6 @@ struct ProfileView: View {
     @State private var viewReloadToken = UUID()
     @State private var showDebugSheet = false
     @State private var showValues = false
-    @State private var showMoreSheet = false
     @State private var showProSheet = false
     @State private var showStatistics = false
     @State private var showSupport = false
@@ -164,135 +163,34 @@ struct ProfileView: View {
                     .padding(.bottom, 4)
 
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 16) {
-                    if let badge = TaikaBuildChannel.badgeTitle {
-                        Section {
-                            HStack(alignment: .top, spacing: 14) {
-                                Image(systemName: "hammer.fill")
-                                    .font(.body.weight(.medium))
-                                    .foregroundStyle(theme.currentAccentFill)
-                                    .frame(width: 24, alignment: .center)
-                                    .padding(.top, 2)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(badge)
-                                        .font(.body.weight(.semibold))
-                                        .foregroundStyle(PD.ColorToken.text)
-                                    if let sub = TaikaBuildChannel.badgeSubtitle {
-                                        Text(sub)
-                                            .font(.caption)
-                                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.92))
-                                            .fixedSize(horizontal: false, vertical: true)
-                                    }
-                                    Text(appVersionLabel)
-                                        .font(.caption.monospacedDigit())
-                                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
-                                }
-                                Spacer(minLength: 0)
-                            }
-                            .listRowInsets(listRowInsets)
-                            .listRowBackground(PD.ColorToken.card.opacity(0.35))
-                        }
-                    }
-
-                    Section {
-                        if auth.isLoggedIn {
-                            if let name = auth.displayName, !name.isEmpty {
-                                Text(name)
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(PD.ColorToken.text)
-                                    .listRowInsets(listRowInsets)
-                                    .listRowBackground(PD.ColorToken.card.opacity(0.35))
-                            }
-                            Button("Выйти", role: .destructive) {
-                                try? auth.signOut()
-                                ProManager.shared.reset()
-                            }
-                            .listRowInsets(listRowInsets)
-                            .listRowBackground(PD.ColorToken.card.opacity(0.35))
-                        } else {
-                            Button {
-                                signInWithAppleTapped()
-                            } label: {
-                                HStack(spacing: 14) {
-                                    Image(systemName: "apple.logo")
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(PD.ColorToken.textSecondary)
-                                    Text("Привязать Apple ID")
-                                        .font(.body)
-                                        .foregroundStyle(PD.ColorToken.text)
-                                    if authInProgress {
-                                        Spacer(minLength: 8)
-                                        ProgressView()
-                                    }
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(authInProgress)
-                            .listRowInsets(listRowInsets)
-                            .listRowBackground(PD.ColorToken.card.opacity(0.35))
-                        }
-                    } header: {
-                        sectionHeader("Аккаунт")
-                    }
-
-                    if let msg = authErrorMessage, !auth.isLoggedIn {
-                        Section {
-                            Text(msg)
-                                .font(.footnote)
-                                .foregroundStyle(PD.ColorToken.textSecondary)
-                                .listRowInsets(listRowInsets)
-                                .listRowBackground(PD.ColorToken.card.opacity(0.35))
-                        }
-                    }
-
-                    Section {
-                        profileLinkRow(
-                            title: pro.isPro ? pro.subscriptionStatusTitle : "Открыть Taika+",
-                            subtitle: pro.subscriptionStatusSubtitle,
-                            systemImage: "crown.fill"
-                        ) {
+                    ProfileRootContent(
+                        appVersionLabel: appVersionLabel,
+                        authInProgress: authInProgress,
+                        authErrorMessage: authErrorMessage,
+                        onAppleID: { signInWithAppleTapped() },
+                        onTaikaPlus: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showProSheet = true
-                        }
-                    } header: {
-                        sectionHeader("Taika+")
-                    }
-
-                    Section {
-                        profileLinkRow(
-                            title: "Твой ритм",
-                            subtitle: "Прогресс, активность и следующий шаг",
-                            systemImage: "waveform.path.ecg"
-                        ) {
+                        },
+                        onRhythm: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showStatistics = true
-                        }
-                        profileLinkRow(
-                            title: "Как устроена Taika",
-                            subtitle: "Не переводчик · уроки · игры · Спикер",
-                            systemImage: "sparkles"
-                        ) {
+                        },
+                        onValues: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showValues = true
-                        }
-                        profileLinkRow(
-                            title: "Поддержка и обратная связь",
-                            subtitle: "Помощь, вопросы и сообщения о проблемах",
-                            systemImage: "questionmark.bubble"
-                        ) {
+                        },
+                        onSupport: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showSupport = true
-                        }
-                        profileLinkRow(
-                            title: "Ещё",
-                            subtitle: "Сайт, правовые документы, сброс и версия",
-                            systemImage: "ellipsis.circle"
-                        ) {
+                        },
+                        onLegal: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            showMoreSheet = true
-                        }
-                    }
-                    }
+                            showLegal = true
+                        },
+                        onReset: { showResetAllConfirm = true },
+                        onDebug: { showDebugSheet = true }
+                    )
                     .id(viewReloadToken)
                     .padding(.horizontal, PD.Spacing.screen)
                     .padding(.top, 12)
@@ -344,15 +242,6 @@ struct ProfileView: View {
         .sheet(isPresented: $showLegal) {
             ProfileLegalView()
                 .environmentObject(theme)
-        }
-        .sheet(isPresented: $showMoreSheet) {
-            ProfileMoreGlassSheet(
-                appVersionLabel: appVersionLabel,
-                showResetAllConfirm: $showResetAllConfirm,
-                showDebugSheet: $showDebugSheet,
-                showLegal: $showLegal
-            )
-            .environmentObject(theme)
         }
         .sheet(isPresented: $showDebugSheet) {
             ProfileDebugSheet()

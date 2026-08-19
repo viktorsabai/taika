@@ -824,3 +824,252 @@ private struct ProfileWaveLine: Shape {
         return path
     }
 }
+
+
+struct ProfileRootContent: View {
+    @EnvironmentObject private var theme: ThemeManager
+    @ObservedObject private var pro = ProManager.shared
+    @ObservedObject private var auth = AuthService.shared
+
+    let appVersionLabel: String
+    let authInProgress: Bool
+    let authErrorMessage: String?
+    let onAppleID: () -> Void
+    let onTaikaPlus: () -> Void
+    let onRhythm: () -> Void
+    let onValues: () -> Void
+    let onSupport: () -> Void
+    let onLegal: () -> Void
+    let onReset: () -> Void
+    let onDebug: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if TaikaBuildChannel.badgeTitle != nil {
+                ProfileBuildCard(appVersionLabel: appVersionLabel)
+            }
+
+            rootSectionLabel("АККАУНТ")
+            ProfileAccountCard(
+                isLoggedIn: auth.isLoggedIn,
+                displayName: auth.displayName,
+                isLoading: authInProgress,
+                errorMessage: authErrorMessage,
+                onAppleID: onAppleID,
+                onSignOut: {
+                    try? auth.signOut()
+                    ProManager.shared.reset()
+                }
+            )
+            .environmentObject(theme)
+
+            rootSectionLabel("ДОСТУП")
+            ProfileTaikaPlusCard(pro: pro, onTap: onTaikaPlus)
+                .environmentObject(theme)
+
+            ProfileGlassRow(title: "Твой ритм", subtitle: "Прогресс, активность и следующий шаг", systemImage: "waveform.path.ecg", trailing: "chevron.right", action: onRhythm)
+                .environmentObject(theme)
+
+            ProfileGlassRow(title: "Как устроена Taika", subtitle: "Методика, подход и ключевые принципы", systemImage: "sparkles", trailing: "chevron.right", action: onValues)
+                .environmentObject(theme)
+
+            ProfileGlassRow(title: "Поддержка и обратная связь", subtitle: "Поможем и учтём твои пожелания", systemImage: "questionmark.bubble", trailing: "chevron.right", action: onSupport)
+                .environmentObject(theme)
+
+            rootSectionLabel("О ПРИЛОЖЕНИИ")
+            VStack(spacing: 0) {
+                ProfileAppRow(title: "Что нового", subtitle: "Версия \(appVersionLabel)", systemImage: "info.circle", action: {})
+                Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
+                ProfileAppRow(title: "Правовые документы", subtitle: "Политика и условия использования", systemImage: "doc.on.doc", action: onLegal)
+                #if DEBUG
+                Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
+                ProfileAppRow(title: "Сбросить прогресс", subtitle: "Только локальные данные", systemImage: "trash", action: onReset)
+                Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
+                ProfileAppRow(title: "Отладка", subtitle: "Только для Debug-сборки", systemImage: "wrench.and.screwdriver", action: onDebug)
+                #endif
+            }
+            .padding(.horizontal, 16)
+            .background(PD.ColorToken.card.opacity(0.34), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.54), lineWidth: 1))
+        }
+    }
+
+    private func rootSectionLabel(_ title: String) -> some View {
+        Text(title)
+            .font(PD.FontToken.caption(12, weight: .semibold))
+            .foregroundStyle(PD.ColorToken.textSecondary)
+            .tracking(1.1)
+            .padding(.leading, 2)
+    }
+}
+
+private struct ProfileBuildCard: View {
+    let appVersionLabel: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "hammer.fill")
+                .foregroundStyle(PD.ColorToken.accent)
+                .frame(width: 26)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(TaikaBuildChannel.badgeTitle ?? "Debug")
+                    .font(PD.FontToken.body(16, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                Text(TaikaBuildChannel.badgeSubtitle ?? "Локальная сборка для разработки")
+                    .font(PD.FontToken.caption(12))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                Text(appVersionLabel)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.76))
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .background(PD.ColorToken.card.opacity(0.30), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.48), lineWidth: 1))
+    }
+}
+
+private struct ProfileAccountCard: View {
+    @EnvironmentObject private var theme: ThemeManager
+    let isLoggedIn: Bool
+    let displayName: String?
+    let isLoading: Bool
+    let errorMessage: String?
+    let onAppleID: () -> Void
+    let onSignOut: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button(action: isLoggedIn ? onSignOut : onAppleID) {
+                HStack(spacing: 14) {
+                    Image(systemName: "apple.logo")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(PD.ColorToken.text)
+                        .frame(width: 42, height: 42)
+                        .background(Color.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(isLoggedIn ? "Аккаунт" : "Аккаунт")
+                            .font(PD.FontToken.body(17, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.text)
+                        Text(isLoggedIn ? (displayName ?? "Вход с Apple ID") : "Вход с Apple ID")
+                            .font(PD.FontToken.caption(13))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                    Spacer()
+                    if isLoading {
+                        ProgressView()
+                    } else {
+                        Text(isLoggedIn ? "Активен" : "Войти")
+                            .font(PD.FontToken.caption(12, weight: .semibold))
+                            .foregroundStyle(isLoggedIn ? Color.green.opacity(0.95) : theme.currentAccentFill)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background((isLoggedIn ? Color.green : theme.currentAccentTintColor).opacity(0.16), in: Capsule())
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(isLoading)
+            if let errorMessage, !errorMessage.isEmpty, !isLoggedIn {
+                Text(errorMessage)
+                    .font(PD.FontToken.caption(12))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(16)
+        .background(PD.ColorToken.card.opacity(0.40), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.60), lineWidth: 1))
+    }
+}
+
+private struct ProfileTaikaPlusCard: View {
+    @EnvironmentObject private var theme: ThemeManager
+    @ObservedObject var pro: ProManager
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 8) {
+                            Text(pro.isPro ? "Taika+ активен" : "Открыть Taika+")
+                                .font(PD.FontToken.title(21, weight: .bold))
+                                .foregroundStyle(PD.ColorToken.text)
+                            Image(systemName: "crown.fill")
+                                .foregroundStyle(theme.currentAccentFill)
+                        }
+                        Text(pro.isPro ? "Курсы, Speaker и игры открыты" : "7 дней бесплатно — разминка, курсы и Speaker")
+                            .font(PD.FontToken.caption(14))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                    Spacer()
+                    ProfileMotionOrb(phase: 0.4, reduceMotion: true)
+                        .frame(width: 86, height: 70)
+                }
+                HStack(spacing: 0) {
+                    profileCapability("book.closed", "Курсы", pro.isPro)
+                    Divider().frame(height: 38).overlay(PD.ColorToken.stroke.opacity(0.4))
+                    profileCapability("waveform", "Speaker", pro.isPro)
+                    Divider().frame(height: 38).overlay(PD.ColorToken.stroke.opacity(0.4))
+                    profileCapability("gamecontroller", "Игры", pro.isPro)
+                }
+                .padding(.top, 6)
+            }
+            .padding(18)
+            .background(PD.ColorToken.card.opacity(0.44), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.64), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func profileCapability(_ image: String, _ title: String, _ available: Bool) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: image)
+                .foregroundStyle(available ? theme.currentAccentFill : PD.ColorToken.textSecondary)
+            Text(title)
+                .font(PD.FontToken.caption(11))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            Text(available ? "доступны" : "Taika+")
+                .font(PD.FontToken.caption(10, weight: .semibold))
+                .foregroundStyle(available ? theme.currentAccentFill : PD.ColorToken.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct ProfileAppRow: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: systemImage)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(PD.ColorToken.accent)
+                    .frame(width: 26)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(PD.FontToken.body(16, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.text)
+                    Text(subtitle)
+                        .font(PD.FontToken.caption(12))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+    }
+}
