@@ -252,8 +252,9 @@ struct AppShell: View {
                     // The transition layer is behind the header content and extends
                     // into the canvas without becoming an opaque page strip.
                     TaikaLiquidGlassHeaderBackdrop()
-                        .frame(height: 148)
+                        .frame(height: 124)
                         .frame(maxWidth: .infinity, alignment: .top)
+                        .opacity(0.84)
                         .allowsHitTesting(false)
 
                     ShellHeaderHost(

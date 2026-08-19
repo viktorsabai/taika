@@ -1011,7 +1011,7 @@ public struct SpeakerDSRoot: View {
                     mode: mode,
                     accent: accentTint
                 )
-                .frame(width: 164, height: 164)
+                .frame(width: 210, height: 210)
 
                 if isBusy {
                     ZStack {
@@ -1036,12 +1036,13 @@ public struct SpeakerDSRoot: View {
                     .accessibilityLabel(isRec ? "Стоп" : "Микрофон")
                 }
             }
-            .frame(height: 178)
+            .frame(height: 214)
 
             if isRec {
                 ConversationLiveWaveRibbon(meter: recordingMeter)
-                    .frame(height: 30)
-                    .frame(maxWidth: 240)
+                    .frame(height: 62)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 2)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             } else if isBusy {
                 ConversationLiveProcessTicks()
@@ -6723,52 +6724,70 @@ private struct ConversationVoiceOrb: View {
     let mode: Mode
     let accent: Color
 
-    @State private var spin: Double = 0
-
     private var level: CGFloat {
         CGFloat(max(0, min(1, meter)))
     }
 
     var body: some View {
         let brand = ThemeManager.shared.currentAccentFill
-        let pace: TaikaTechWaveform.Pace = {
-            switch mode {
-            case .listening, .practice: return .recording
-            case .processing: return .analyzing
-            }
+        let isProcessing: Bool = {
+            if case .processing = mode { return true }
+            return false
         }()
         ZStack {
             RadialGradient(
                 colors: [
-                    brand.opacity(0.20 + Double(level) * 0.12),
-                    brand.opacity(0.06),
+                    brand.opacity(0.16 + Double(level) * 0.10),
+                    brand.opacity(0.045),
                     Color.clear
                 ],
                 center: .center,
-                startRadius: 8,
-                endRadius: 116
+                startRadius: 10,
+                endRadius: 128
             )
-            .blur(radius: 20)
-            .scaleEffect(1.08 + level * 0.12)
+            .blur(radius: 24)
+            .scaleEffect(1.05 + level * 0.10)
+
+            ConversationAmbientRings(
+                color: brand,
+                intensity: isProcessing ? 0.55 : 1.0
+            )
+            .frame(width: 210, height: 210)
+            .allowsHitTesting(false)
 
             Circle()
-                .fill(Color.black.opacity(0.34))
+                .fill(Color.black.opacity(0.28))
                 .frame(width: 112, height: 112)
                 .overlay {
                     Circle()
-                        .stroke(brand.opacity(0.34), lineWidth: 1)
+                        .stroke(brand.opacity(0.28), lineWidth: 1)
                 }
-
-            TaikaTechWaveform(
-                meter: max(0.24, min(1.0, meter)),
-                pace: pace,
-                lineCount: 4
-            )
-            .frame(width: 118, height: 54)
-            .clipShape(Capsule(style: .continuous))
-            .allowsHitTesting(false)
         }
-        .frame(width: 164, height: 164)
+        .frame(width: 210, height: 210)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct ConversationAmbientRings: View {
+    let color: LinearGradient
+    let intensity: Double
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            ZStack {
+                ForEach(0..<4, id: \.self) { index in
+                    let phase = (t * 0.18 + Double(index) * 0.24).truncatingRemainder(dividingBy: 1.0)
+                    let scale = 0.70 + CGFloat(phase) * 0.42
+                    let opacity = (0.34 - phase * 0.24) * intensity
+                    Circle()
+                        .stroke(color.opacity(opacity), lineWidth: index == 0 ? 1.2 : 0.9)
+                        .frame(width: 104, height: 104)
+                        .scaleEffect(scale)
+                        .blur(radius: index == 0 ? 0.2 : 0.5)
+                }
+            }
+        }
         .accessibilityHidden(true)
     }
 }
@@ -6777,21 +6796,24 @@ private struct ConversationLiveWaveRibbon: View {
     let meter: Double
     /// Игнорируется: всегда бренд-градиент (не solid tint).
     var accent: Color = .clear
-    private let barCount = 28
+    private let barCount = 72
 
     var body: some View {
         let fill = ThemeManager.shared.currentAccentFill
-        TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
-            let amp = max(0.12, min(1.0, meter))
-            HStack(alignment: .center, spacing: 2.5) {
+            let amp = max(0.18, min(1.0, meter))
+            HStack(alignment: .center, spacing: 1.5) {
                 ForEach(0..<barCount, id: \.self) { i in
-                    let wave = 0.32 + 0.68 * abs(sin(t * 7.2 + Double(i) * 0.42))
-                    let h = 5 + 30 * amp * wave * (i % 3 == 0 ? 1.05 : (i % 2 == 0 ? 0.82 : 0.68))
+                    let x = Double(i) / Double(max(1, barCount - 1))
+                    let envelope = 0.34 + 0.66 * sin(.pi * x)
+                    let carrier = sin(t * 0.82 + Double(i) * 0.18) * 0.5
+                        + sin(t * 0.46 + Double(i) * 0.07) * 0.5
+                    let height = 4 + 42 * amp * envelope * (0.42 + 0.58 * abs(carrier))
                     Capsule(style: .continuous)
                         .fill(fill)
-                        .opacity(0.55 + 0.45 * amp)
-                        .frame(width: 3.5, height: h)
+                        .opacity(0.42 + 0.42 * amp)
+                        .frame(width: 2.4, height: height)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
