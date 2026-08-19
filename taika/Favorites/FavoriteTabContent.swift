@@ -286,24 +286,28 @@ private enum FDFavListChrome {
 private struct FavInsetGroup<Content: View>: View {
     @ViewBuilder var content: Content
 
+    private var groupShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: FDFavListChrome.rowCorner, style: .continuous)
+    }
+
+    private var accentWash: LinearGradient {
+        LinearGradient(
+            colors: [
+                ThemeManager.shared.currentAccentFill.opacity(0.12),
+                Color.clear
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: FDFavListChrome.rowCorner, style: .continuous)
         VStack(spacing: 0) {
             content
         }
-        .background(Theme.Surfaces.card(shape))
-        .overlay(
-            LinearGradient(
-                colors: [
-                    ThemeManager.shared.currentAccentFill.opacity(0.12),
-                    Color.clear
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .clipShape(shape)
-        )
-        .clipShape(shape)
+        .background(.ultraThinMaterial, in: groupShape)
+        .overlay(accentWash.clipShape(groupShape))
+        .clipShape(groupShape)
         .padding(.horizontal, CD.Spacing.screen)
     }
 }
