@@ -1410,14 +1410,14 @@ public struct LSLessonCardV: View {
             completionFraction: item.progress,
             flipEnabled: item.status == .completed,
             backFaceKind: item.status == .completed ? .lessonReminders(lines: reminderLines) : .courseGradeSheet,
-            favoriteCount: favoriteCount,
-            onFavoriteTap: onFavorite,
-            onConsoleTap: { onConsole?() },
-            onSpeakerTap: onSpeaker,
             backPrimaryActionTitle: item.status == .completed ? "Закрепить сейчас" : nil,
             onBackPrimaryAction: item.status == .completed ? onConsole : nil,
             backSecondaryActionTitle: item.status == .completed ? "Следующий урок" : nil,
             onBackSecondaryAction: item.status == .completed ? onNext : nil,
+            favoriteCount: favoriteCount,
+            onFavoriteTap: onFavorite,
+            onConsoleTap: { onConsole?() },
+            onSpeakerTap: onSpeaker,
             showsInlineProgress: true
         )
     }

@@ -743,3 +743,11 @@
 - [x] Add completed-card flip summary with clear next-action hierarchy.
 - [x] Reuse existing games, Speaker, favorites and lesson navigation actions.
 - [x] Static-check and package all pipeline changes in one commit for branch testing.
+
+
+# CourseLessonCard argument-order compile fix
+
+- [x] Inspect initializer declaration and every call site for named-argument order.
+- [x] Correct the completed-card call and scan for the same ordering issue elsewhere.
+- [x] Run strict static checks and verify no unresolved new labels remain.
+- [x] Create and push a corrective commit before sending a new test command.
