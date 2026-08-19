@@ -8,6 +8,11 @@
 import SwiftUI
 import UIKit
 
+/// Shared semantic color for completed/mastery surfaces; accessible across design-system files.
+public enum TaikaMasteryTokens {
+    public static let green = Color(red: 0.20, green: 0.72, blue: 0.38)
+}
+
 // MARK: - Unified App Header Style
 public enum AppHeaderStyle {
     /// Root header; tab 0=Main, 1=Course, 2=Speaker, 3=Favorites, 4=Profile. onBack: when set (e.g. Speaker from Favorites), show back button left of logo.
@@ -1318,7 +1323,7 @@ public struct AppCardIconButton: View {
 
     private var iconInkStyle: AnyShapeStyle {
         if glossyBlackSurface, isEnabled {
-            return AnyShapeStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+            return AnyShapeStyle(TaikaMasteryTokens.green)
         }
         if isAccent {
             return AnyShapeStyle(ThemeManager.shared.currentAccentFill)

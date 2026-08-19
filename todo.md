@@ -1096,3 +1096,8 @@
 - [x] Keep pink out of completed semantic states and use black glossy action controls.
 - [ ] Validate partial game, full game, mixed lesson selection, repeat sessions and empty states.
 - [ ] Run static validation, inspect diff, create one consolidated commit and push current branch.
+
+# Corrective compile fix
+
+- [ ] Replace inaccessible CDLearnedCardTokens reference in AppDS.swift with an accessible jungle-green token.
+- [ ] Run diff/static validation and push corrective commit to 2026-01-21-k7hb-d2004.
