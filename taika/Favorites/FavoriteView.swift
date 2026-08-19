@@ -219,55 +219,60 @@ struct FavoriteView: View {
         .padding(.top, 8)
     }
 
-    /// Один ряд вместо typewriter + нижнего бара: Спикер | игровая консоль.
+    /// Dictionary-style action rail: both actions share one quiet glass treatment.
     private func favoritesTopActionRow() -> some View {
         HStack(spacing: 10) {
-            Button {
+            favoritesQuickAction(
+                icon: "person.wave.2.fill",
+                title: "Спикер",
+                accessibilityLabel: "Тренировать избранное в спикере"
+            ) {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 trainCurrentTabInSpeaker()
-            } label: {
-                HStack(spacing: 7) {
-                    Image(systemName: "person.wave.2.fill")
-                        .font(.system(size: 13, weight: .bold))
-                    Text("В Спикер")
-                        .font(.system(size: 14, weight: .bold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                }
-                .foregroundColor(.black)
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
             }
-            .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
-            .accessibilityLabel("Тренировать в спикере")
 
-            Button {
+            favoritesQuickAction(
+                icon: "gamecontroller.fill",
+                title: "Игры",
+                accessibilityLabel: "Открыть игры для избранного"
+            ) {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 overlay.present(.gameParkFromFavorites)
-            } label: {
-                HStack(spacing: 7) {
-                    Image(systemName: "gamecontroller.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("В игры")
-                        .font(.system(size: 14, weight: .semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                }
-                .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(Capsule(style: .continuous).fill(Color.clear))
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 1.5)
-                )
-                .contentShape(Capsule())
             }
-            .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
-            .accessibilityLabel("Открыть игровую консоль")
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func favoritesQuickAction(
+        icon: String,
+        title: String,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            .frame(maxWidth: .infinity)
+            .frame(height: 42)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(CD.ColorToken.card.opacity(0.72))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(PD.ColorToken.stroke.opacity(0.58), lineWidth: 1)
+            )
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private func trainCurrentTabInSpeaker() {
