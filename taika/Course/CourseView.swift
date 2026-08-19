@@ -337,6 +337,7 @@ struct CourseView: View {
                 id: stableUUID(c.id),
                 title: c.title,
                 subtitle: subtitleResolved,
+                applicationLine: sanitizedDescription.isEmpty ? nil : sanitizedDescription,
                 category: c.category,
                 lessons: c.lessonCount,
                 durationMin: c.durationMinutes,

@@ -1414,6 +1414,8 @@ public struct CDCourseItem: Identifiable {
     public var id: UUID = UUID()
     public var title: String
     public var subtitle: String
+    /// One-line practical context from course JSON description, shown under completed course title.
+    public var applicationLine: String? = nil
     public var category: String
     public var lessons: Int
     public var durationMin: Int
@@ -1456,6 +1458,7 @@ public struct CDCourseItem: Identifiable {
         id: UUID = UUID(),
         title: String,
         subtitle: String,
+        applicationLine: String? = nil,
         category: String = "",
         lessons: Int,
         durationMin: Int,
@@ -1486,6 +1489,7 @@ public struct CDCourseItem: Identifiable {
         self.id = id
         self.title = title
         self.subtitle = subtitle
+        self.applicationLine = applicationLine
         self.category = category
         self.lessons = lessons
         self.durationMin = durationMin
@@ -1648,10 +1652,11 @@ public struct CDBaseSection: View {
             ) { item in
                 CourseLessonCard(
                     title: item.title,
-                    subtitle: "",
+                    subtitle: item.status == .done ? (item.applicationLine ?? "") : "",
                     lessonsCount: item.lessons,
                     durationText: "≈ \(item.durationMin) мин",
                     statusKind: item.showProCrown ? nil : item.status.map { toAppStatus($0) },
+                    statusChipTitle: item.status == .done ? "курс пройден" : nil,
                     courseCategory: item.category,
                     isPro: item.isPro,
                     showProCrown: item.showProCrown,
@@ -1751,10 +1756,11 @@ public struct CDAllCoursesSection<Trailing: View>: View {
             ) { item in
                 CourseLessonCard(
                     title: item.title,
-                    subtitle: "",
+                    subtitle: item.status == .done ? (item.applicationLine ?? "") : "",
                     lessonsCount: item.lessons,
                     durationText: "≈ \(item.durationMin) мин",
                     statusKind: item.showProCrown ? nil : item.status.map { toAppStatus($0) },
+                    statusChipTitle: item.status == .done ? "курс пройден" : nil,
                     courseCategory: item.category,
                     isPro: item.isPro,
                     showProCrown: item.showProCrown,

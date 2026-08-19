@@ -2696,6 +2696,8 @@ public struct CourseLessonCard: View {
     public let lessonsCount: Int?
     public let durationText: String?
     public let statusKind: AppStatusKind?
+    /// Optional explicit status copy used when completion needs to be immediately legible.
+    public let statusChipTitle: String?
     public let courseCategory: String?
     public let isPro: Bool
     public let showProCrown: Bool
@@ -2794,6 +2796,7 @@ public struct CourseLessonCard: View {
         lessonsCount: Int? = nil,
         durationText: String? = nil,
         statusKind: AppStatusKind? = nil,
+        statusChipTitle: String? = nil,
         courseCategory: String? = nil,
         isPro: Bool = false,
         showProCrown: Bool = false,
@@ -2841,6 +2844,7 @@ public struct CourseLessonCard: View {
         self.lessonsCount = lessonsCount
         self.durationText = durationText
         self.statusKind = statusKind
+        self.statusChipTitle = statusChipTitle
         self.courseCategory = courseCategory
         self.isPro = isPro
         self.showProCrown = showProCrown
@@ -2976,7 +2980,7 @@ public struct CourseLessonCard: View {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
-                                AppStatusChip(kind: statusKind, title: title.lowercased())
+                                AppStatusChip(kind: statusKind, title: statusChipTitle ?? title.lowercased())
                             }
                         }
                         .buttonStyle(.plain)
@@ -3016,7 +3020,7 @@ public struct CourseLessonCard: View {
                                 }
                             } label: {
                                 HStack(spacing: 5) {
-                                    AppStatusChip(kind: statusKind)
+                                    AppStatusChip(kind: statusKind, title: statusChipTitle)
                                     Image(systemName: isFlipped ? "chevron.up" : "chevron.right")
                                         .font(.system(size: 11, weight: .semibold))
                                         .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
