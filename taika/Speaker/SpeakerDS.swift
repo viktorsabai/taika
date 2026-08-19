@@ -1508,20 +1508,19 @@ public struct SpeakerDSRoot: View {
         } else if conversationEngine.conversationHistory.isEmpty {
             conversationWidgetIdleCenter
         } else {
-            Text("Скажи или напиши")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.8))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+            conversationWidgetIdleCenter
         }
     }
 
     @ViewBuilder private var conversationWidgetIdleCenter: some View {
         VStack(spacing: 14) {
-            Spacer(minLength: 0)
-
-            TaikaEmptyStateIcon(systemName: "mic")
-
+            MDVoiceSphere(
+                symbol: "mic.fill",
+                accessibilityLabel: "Начать запись",
+                meter: 0,
+                action: { external?.onMicTap() }
+            )
+            .frame(height: 200)
             Text("Скажи или напиши")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.text)
