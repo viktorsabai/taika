@@ -1215,6 +1215,8 @@ public struct AppCardIconButton: View {
     public var isEnabled: Bool = true   // when false, shows locked/disabled visual
     /// Для .play — всегда показывать акцентом (главная CTA «запустить урок»).
     public var forceAccent: Bool = false
+    /// Нейтральная glossy-black action surface для Speaker/Game actions.
+    public var glossyBlackSurface: Bool = false
     /// Если задан — тап по заблокированной иконке не молчит (shake + callback).
     public var onLockedTap: (() -> Void)? = nil
     public var onTap: () -> Void
@@ -1225,12 +1227,14 @@ public struct AppCardIconButton: View {
                 isActive: Bool = false,
                 isEnabled: Bool = true,
                 forceAccent: Bool = false,
+                glossyBlackSurface: Bool = false,
                 onLockedTap: (() -> Void)? = nil,
                 onTap: @escaping () -> Void = {}) {
         self.kind = kind
         self.isActive = isActive
         self.isEnabled = isEnabled
         self.forceAccent = forceAccent
+        self.glossyBlackSurface = glossyBlackSurface
         self.onLockedTap = onLockedTap
         self.onTap = onTap
     }
@@ -1289,10 +1293,33 @@ public struct AppCardIconButton: View {
             )
             .animation(.spring(response: 0.32, dampingFraction: 0.72), value: isOn)
             .frame(minWidth: minTapSize, minHeight: minTapSize)
+            .padding(glossyBlackSurface ? 7 : 0)
+            .background {
+                if glossyBlackSurface {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.black.opacity(0.72))
+                        .overlay(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.10), Color.clear, Color.black.opacity(0.16)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.24), radius: 8, y: 4)
+                }
+            }
             .contentShape(Rectangle())
     }
 
     private var iconInkStyle: AnyShapeStyle {
+        if glossyBlackSurface, isEnabled {
+            return AnyShapeStyle(CDLearnedCardTokens.fill)
+        }
         if isAccent {
             return AnyShapeStyle(ThemeManager.shared.currentAccentFill)
         }

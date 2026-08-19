@@ -16,11 +16,14 @@ public struct TaikaWordmarkLockup: View {
     /// Opacity for the white `tai` half (accent half uses `accentOpacity`).
     public var taiOpacity: Double
     public var accentOpacity: Double
+    /// Optional semantic tint for completed cards; nil preserves the global brand accent.
+    public var accentColor: Color?
 
-    public init(fontSize: CGFloat = 16, taiOpacity: Double = 1, accentOpacity: Double = 1) {
+    public init(fontSize: CGFloat = 16, taiOpacity: Double = 1, accentOpacity: Double = 1, accentColor: Color? = nil) {
         self.fontSize = fontSize
         self.taiOpacity = taiOpacity
         self.accentOpacity = accentOpacity
+        self.accentColor = accentColor
     }
 
     public var body: some View {
@@ -31,7 +34,7 @@ public struct TaikaWordmarkLockup: View {
                 .foregroundColor(CD.ColorToken.text.opacity(taiOpacity))
             Text("kAAA")
                 .font(.custom("Onmark Trial", size: fontSize))
-                .foregroundStyle(ThemeManager.shared.currentAccentFill.opacity(accentOpacity))
+                .foregroundStyle((accentColor ?? ThemeManager.shared.currentAccentFill).opacity(accentOpacity))
         }
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityLabel("taikAAA")
@@ -2573,16 +2576,23 @@ private struct CardBackActionButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(isPrimary
-                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                        : AnyShapeStyle(Color.white.opacity(0.08)))
+                    .fill(AnyShapeStyle(Color.black.opacity(isPrimary ? 0.78 : 0.62)))
+                    .overlay(
+                        LinearGradient(
+                            colors: [Color.white.opacity(isPrimary ? 0.10 : 0.06), Color.clear, Color.black.opacity(0.16)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .stroke(Color.white.opacity(isPrimary ? 0.12 : 0.10), lineWidth: 1)
+                    .stroke(Color.white.opacity(isPrimary ? 0.18 : 0.13), lineWidth: 1)
             )
             .opacity(configuration.isPressed ? 0.72 : 1)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .shadow(color: Color.black.opacity(0.24), radius: 8, y: 4)
     }
 }
 
@@ -2946,10 +2956,12 @@ public struct CourseLessonCard: View {
         @ViewBuilder
         func topContent(isBack: Bool) -> some View {
             // Blank-brain: locked = корона; teaser = AppProChip; opened = статус.
-            if isBack {
+                        if isBack {
                 HStack(alignment: .center, spacing: 8) {
-                    TaikaWordmarkLockup(fontSize: 16)
-
+                    TaikaWordmarkLockup(
+                        fontSize: 16,
+                        accentColor: statusKind == .completed ? CDLearnedCardTokens.fill : nil
+                    )
                     Spacer(minLength: 0)
 
                     if showProCrown {
@@ -2967,7 +2979,7 @@ public struct CourseLessonCard: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                                    .foregroundStyle(AnyShapeStyle(CDLearnedCardTokens.fill))
                                     .opacity(0.85)
                                 AppStatusChip(kind: statusKind, title: title.lowercased())
                             }
@@ -2980,10 +2992,11 @@ public struct CourseLessonCard: View {
                 .padding(.bottom, 0)
             } else {
                 HStack(alignment: .center, spacing: 8) {
-                    TaikaWordmarkLockup(fontSize: 16)
-
+                                        TaikaWordmarkLockup(
+                        fontSize: 16,
+                        accentColor: statusKind == .completed ? CDLearnedCardTokens.fill : nil
+                    )
                     Spacer(minLength: 0)
-
                     HStack(spacing: 8) {
                         if let onTapInfo {
                             Button(action: onTapInfo) {
@@ -3011,7 +3024,7 @@ public struct CourseLessonCard: View {
                                     AppStatusChip(kind: statusKind)
                                     Image(systemName: isFlipped ? "chevron.up" : "chevron.right")
                                         .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                                        .foregroundStyle(AnyShapeStyle(CDLearnedCardTokens.fill))
                                         .opacity(0.85)
                                 }
                             }
@@ -3089,6 +3102,7 @@ public struct CourseLessonCard: View {
                             onLockedTap: {
                                 showLockedActionHint("Игры откроются после первого урока")
                             },
+                            glossyBlackSurface: true,
                             onTap: { onConsoleTap?() }
                         )
                     }
@@ -3100,6 +3114,7 @@ public struct CourseLessonCard: View {
                             onLockedTap: {
                                 showLockedActionHint("Спикер курса откроется после первого урока")
                             },
+                            glossyBlackSurface: true,
                             onTap: onSpeaker
                         )
                     }
@@ -3180,7 +3195,7 @@ public struct CourseLessonCard: View {
                         .foregroundStyle(
                             value == "ещё нет"
                             ? AnyShapeStyle(Color.white.opacity(0.62))
-                            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                            : AnyShapeStyle(CDLearnedCardTokens.fill)
                         )
                         .lineLimit(1)
                 }
@@ -3197,7 +3212,7 @@ public struct CourseLessonCard: View {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.seal.fill")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                            .foregroundStyle(AnyShapeStyle(CDLearnedCardTokens.fill))
                         Text(reinforcementScore != nil && pronunciationPercent != nil ? "зачёт получен" : "урок выучен")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(Color.white.opacity(0.96))
@@ -3232,7 +3247,7 @@ public struct CourseLessonCard: View {
                     ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                         HStack(alignment: .top, spacing: 8) {
                             Circle()
-                                .fill(ThemeManager.shared.currentAccentFill.opacity(0.55))
+                                .fill(CDLearnedCardTokens.fill.opacity(0.62))
                                 .frame(width: 5, height: 5)
                                 .padding(.top, 5)
                             Text(line)

@@ -1059,3 +1059,22 @@
 - [ ] Add concise ready-to-listen copy without a second competing card.
 - [ ] Restore chips only after a conversation result exists.
 - [ ] Validate idle-to-recording-to-result transitions and push one cleanup commit.
+
+# Course mastery synchronization
+
+- [ ] Audit Game Park completion/result persistence and lesson/course mastery readers.
+- [ ] Separate material completion from pronunciation reinforcement in the shared model.
+- [ ] Map matched game cards back to source lesson cards without inflating or zeroing unrelated lessons.
+- [ ] Show course-level green completion state in the top description card.
+- [ ] Show reinforcement count and a useful CTA for weak/unpracticed cards.
+- [ ] Keep lesson cards and course summary mutually consistent after returning from Game Park.
+- [ ] Validate with static grep/diff and create one branch commit.
+
+# Green mastery / black actions visual pass
+
+- [ ] Use jungle-green for Taika brand chip and completed/mastery status.
+- [ ] Remove pink from completed-state semantic labels, progress and flip-back actions.
+- [ ] Use black glossy glass buttons for Speaker and Game Park actions.
+- [ ] Use the same black glossy treatment for card flip actions.
+- [ ] Add native press feedback without introducing new decorative borders or pink glow.
+- [ ] Keep pink only where it remains a non-semantic brand accent outside completed/action states.

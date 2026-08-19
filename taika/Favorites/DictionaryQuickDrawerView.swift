@@ -29,12 +29,22 @@ struct DictionarySoftActionLabel: View {
         .padding(.vertical, 13)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(CD.ColorToken.chip.opacity(0.92))
+                .fill(Color.black.opacity(0.72))
+                .overlay(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.10), Color.clear, Color.black.opacity(0.16)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(PD.ColorToken.stroke.opacity(0.55), lineWidth: 1)
+                .stroke(Color.white.opacity(0.16), lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(0.24), radius: 10, y: 5)
+        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.92, useBouncySpring: true, flashOpacity: 0.08))
     }
 }
 
