@@ -150,8 +150,8 @@ struct FavoriteView: View {
                 if showsBottomTrainingBar {
                     favoritesTopActionRow()
                         .padding(.horizontal, CD.Spacing.screen)
-                        .padding(.top, 10)
-                        .padding(.bottom, 10)
+                        .padding(.top, 8)
+                        .padding(.bottom, 8)
                 }
 
                 if let empty = currentEmptySpec {
@@ -216,12 +216,12 @@ struct FavoriteView: View {
                 )
             }
         }
-        .padding(.top, 8)
+        .padding(.top, 4)
     }
 
     /// Dictionary-style action rail: both actions share one quiet glass treatment.
     private func favoritesTopActionRow() -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             favoritesQuickAction(
                 icon: "person.wave.2.fill",
                 title: "Спикер",
@@ -241,6 +241,7 @@ struct FavoriteView: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .frame(height: 42)
     }
 
     private func favoritesQuickAction(

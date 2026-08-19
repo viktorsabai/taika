@@ -2833,21 +2833,30 @@ public struct CourseLessonCard: View {
         }
     }
 
+    private var effectiveAccentTreatment: CardDS.AccentTreatment {
+        if case .none = accentTreatment, statusKind == .completed {
+            return .taikaValues(
+                fill: AnyShapeStyle(Color(red: 0.08, green: 0.30, blue: 0.18)),
+                glow: Color(red: 0.20, green: 0.72, blue: 0.38)
+            )
+        }
+        return accentTreatment
+    }
+
     @ViewBuilder
     private var accentTreatmentOverlay: some View {
-        switch accentTreatment {
+        switch effectiveAccentTreatment {
         case .none:
             EmptyView()
         case let .taikaValues(fill, glow):
             ZStack {
                 RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
                     .fill(fill)
-                    .opacity(0.44)
-                    .blendMode(.screen)
+                    .opacity(0.72)
                 Circle()
                     .fill(
                         RadialGradient(
-                            colors: [glow.opacity(0.30), glow.opacity(0.08), Color.clear],
+                            colors: [glow.opacity(0.24), glow.opacity(0.06), Color.clear],
                             center: .center,
                             startRadius: 3,
                             endRadius: 112

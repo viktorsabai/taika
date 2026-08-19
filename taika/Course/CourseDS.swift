@@ -1656,8 +1656,8 @@ public struct CDBaseSection: View {
                     sectionChrome: .none,
                     accentTreatment: item.status == .done
                         ? .taikaValues(
-                            fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
-                            glow: ThemeManager.shared.currentAccentTintColor
+                            fill: CDLearnedCardTokens.fill,
+                            glow: CDLearnedCardTokens.glow
                         )
                         : .none,
                     primaryCTA: {
@@ -1758,8 +1758,8 @@ public struct CDAllCoursesSection<Trailing: View>: View {
                     sectionChrome: .none,
                     accentTreatment: item.status == .done
                         ? .taikaValues(
-                            fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
-                            glow: ThemeManager.shared.currentAccentTintColor
+                            fill: CDLearnedCardTokens.fill,
+                            glow: CDLearnedCardTokens.glow
                         )
                         : .none,
                     primaryCTA: {
