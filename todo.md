@@ -777,3 +777,21 @@
 - [x] Keep current in-progress or next lesson focused after return/progress changes.
 - [x] Preserve favorites, reinforcement, next lesson, Speaker and course scope.
 - [x] Static-check and prepare one clean testable commit.
+
+
+# LessonsView course action dock
+
+- [ ] Audit current Итоги/Прогресс block and existing Speaker/Game Park actions.
+- [ ] Design compact dock with current lesson context and clear primary actions.
+- [ ] Preserve course progress metrics and existing access gates.
+- [ ] Implement without duplicating dictionary or Speaker UI architecture.
+- [ ] Validate navigation and prepare test handoff.
+
+
+# Course Practice Dock implementation
+
+- [x] Replace the lower Итоги/Прогресс dashboard with a compact practice dock.
+- [x] Add context-aware Speaker course and Game Park entry cards.
+- [x] Preserve existing navigation, access gates and current lesson context.
+- [x] Keep detailed metrics as a secondary compact line.
+- [x] Validate dock states and push one testable commit.

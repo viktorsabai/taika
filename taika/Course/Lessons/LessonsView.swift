@@ -460,7 +460,7 @@ public struct LessonsView: View {
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
                             .padding(.top, Theme.Layout.sectionTop)
 
-                        LSCourseOverview(
+                        LSCoursePracticeDock(
                             stats: LSCourseStats(
                                 completedLessons: headerProgress.completed,
                                 totalLessons: headerProgress.total,
@@ -469,17 +469,14 @@ public struct LessonsView: View {
                                 streakDays: 0,
                                 timeMinutes: courseOverviewStats.spentMinutes
                             ),
-                            category: "",
+                            currentLessonTitle: currentLesson.flatMap { lessonsManager.lessonTitle(for: $0.lessonID) },
                             etaMinutes: remainingCourseMinutes > 0 ? remainingCourseMinutes : nil,
-                            onCTA: {
-                                selectedLessonId = smartResumeLessonId
-                            },
+                            onSpeaker: isTheoryBonusCourse ? nil : { lessonsHeaderStore.onSpeaker?() },
+                            onGamePark: isTheoryBonusCourse ? nil : { lessonsHeaderStore.onReinforce?() },
                             onReset: {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 presentCourseResetOverlay()
-                            },
-                            onSpeaker: nil,
-                            onReinforce: nil
+                            }
                         )
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
                     }

@@ -1581,6 +1581,156 @@ private struct LSCourseETATimer: View {
     }
 }
 
+// MARK: - Course Practice Dock
+// Compact continuation surface for the course: progress first, practice actions second.
+public struct LSCoursePracticeDock: View {
+    public let stats: LSCourseStats
+    public let currentLessonTitle: String?
+    public let etaMinutes: Int?
+    public let onSpeaker: (() -> Void)?
+    public let onGamePark: (() -> Void)?
+    public let onReset: (() -> Void)?
+
+    private var progress: Double {
+        guard stats.totalLessons > 0 else { return 0 }
+        return min(1, max(0, Double(stats.completedLessons) / Double(stats.totalLessons)))
+    }
+
+    public init(
+        stats: LSCourseStats,
+        currentLessonTitle: String? = nil,
+        etaMinutes: Int? = nil,
+        onSpeaker: (() -> Void)? = nil,
+        onGamePark: (() -> Void)? = nil,
+        onReset: (() -> Void)? = nil
+    ) {
+        self.stats = stats
+        self.currentLessonTitle = currentLessonTitle
+        self.etaMinutes = etaMinutes
+        self.onSpeaker = onSpeaker
+        self.onGamePark = onGamePark
+        self.onReset = onReset
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("ТВОЙ СЛЕДУЮЩИЙ ШАГ")
+                        .taikaSectionTitleStyle()
+                    Text("\(stats.completedLessons) из \(stats.totalLessons) уроков пройдено")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.text)
+                }
+                Spacer(minLength: 8)
+                if let etaMinutes, etaMinutes > 0 {
+                    Text("ещё ≈ \(etaMinutes) мин")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+            }
+
+            AppProgressBar(value: CGFloat(progress), height: 6)
+                .animation(.spring(response: 0.42, dampingFraction: 0.86), value: progress)
+
+            HStack(spacing: 10) {
+                practiceCard(
+                    title: "Спикер курса",
+                    subtitle: currentLessonTitle.map { "\($0) · голосовая практика" } ?? "Тренируй фразы голосом",
+                    icon: "mic.fill",
+                    isEnabled: onSpeaker != nil,
+                    action: onSpeaker
+                )
+                practiceCard(
+                    title: "Игровой парк",
+                    subtitle: stats.completedLessons > 0 ? "Закрепить пройденное" : "Сначала пройди урок",
+                    icon: "gamecontroller.fill",
+                    isEnabled: onGamePark != nil && stats.completedLessons > 0,
+                    action: onGamePark
+                )
+            }
+
+            HStack(spacing: 8) {
+                Text("\(stats.learnedWords) слов · \(stats.timeMinutes) мин практики · \(stats.favorites) в избранном")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+                Spacer(minLength: 4)
+                if let onReset {
+                    Button("сбросить", action: onReset)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.top, 2)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(stats.completedLessons) из \(stats.totalLessons) уроков пройдено")
+    }
+
+    @ViewBuilder
+    private func practiceCard(
+        title: String,
+        subtitle: String,
+        icon: String,
+        isEnabled: Bool,
+        action: (() -> Void)?
+    ) -> some View {
+        Button(action: { action?() }) {
+            HStack(alignment: .center, spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            isEnabled
+                                ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                                : AnyShapeStyle(Color.white.opacity(0.10))
+                        )
+                        .frame(width: 34, height: 34)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(isEnabled ? Color.black.opacity(0.82) : PD.ColorToken.textSecondary)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(isEnabled ? PD.ColorToken.text : PD.ColorToken.textSecondary)
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 2)
+                Image(systemName: isEnabled ? "chevron.right" : "lock.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(
+                        isEnabled
+                            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                            : AnyShapeStyle(PD.ColorToken.textSecondary)
+                    )
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+                    .fill(isEnabled ? PD.ColorToken.card : PD.ColorToken.card.opacity(0.55))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+                    .stroke(isEnabled ? Theme.Strokes.strokeSubtle : Theme.Strokes.strokeSubtle.opacity(0.55), lineWidth: Theme.Strokes.strokeLineWidth)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(Text(title))
+        .accessibilityValue(Text(subtitle))
+    }
+}
+
 public struct LSCourseOverview: View {
     public let stats: LSCourseStats
     /// Course title (displayed as main heading).
