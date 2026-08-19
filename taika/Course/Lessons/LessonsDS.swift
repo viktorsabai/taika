@@ -1608,35 +1608,41 @@ public struct LSCoursePracticeDock: View {
     public let stats: LSCourseStats
     public let currentLessonTitle: String?
     public let completedLessons: [LSCompletedLessonOption]
-    public let onSelectLesson: ((String?) -> Void)?
+    public let onSelectionChange: ((Set<String>?) -> Void)?
     public let onSpeaker: (() -> Void)?
     public let onGamePark: (() -> Void)?
-    @State private var selectedLessonId: String?
+    @State private var selectedLessonIds: Set<String>?
 
     public init(
         stats: LSCourseStats,
         currentLessonTitle: String? = nil,
         completedLessons: [LSCompletedLessonOption] = [],
-        selectedLessonId: String? = nil,
-        onSelectLesson: ((String?) -> Void)? = nil,
+        selectedLessonIds: Set<String>? = nil,
+        onSelectionChange: ((Set<String>?) -> Void)? = nil,
         onSpeaker: (() -> Void)? = nil,
         onGamePark: (() -> Void)? = nil
     ) {
         self.stats = stats
         self.currentLessonTitle = currentLessonTitle
         self.completedLessons = completedLessons
-        self.onSelectLesson = onSelectLesson
+        self.onSelectionChange = onSelectionChange
         self.onSpeaker = onSpeaker
         self.onGamePark = onGamePark
-        self._selectedLessonId = State(initialValue: selectedLessonId)
+        self._selectedLessonIds = State(initialValue: selectedLessonIds)
+    }
+
+    private var selectedScope: Set<String> {
+        let all = Set(completedLessons.map(\.id))
+        return selectedLessonIds ?? all
     }
 
     private var selectedTitle: String {
-        guard let selectedLessonId,
-              let option = completedLessons.first(where: { $0.id == selectedLessonId }) else {
+        let count = selectedScope.count
+        if count == completedLessons.count {
             return "Все пройденные уроки · \(completedLessons.count)"
         }
-        return option.title
+        if count == 0 { return "Выберите уроки для закрепления" }
+        return "Выбрано уроков · \(count)"
     }
 
     public var body: some View {
@@ -1655,17 +1661,24 @@ public struct LSCoursePracticeDock: View {
 
             Menu {
                 Button {
-                    selectedLessonId = nil
-                    onSelectLesson?(nil)
+                    selectedLessonIds = nil
+                    onSelectionChange?(nil)
                 } label: {
-                    Label("Все пройденные уроки", systemImage: selectedLessonId == nil ? "checkmark" : "square")
+                    Label("Все пройденные уроки", systemImage: selectedLessonIds == nil || selectedScope.count == completedLessons.count ? "checkmark" : "square")
                 }
                 ForEach(completedLessons) { option in
                     Button {
-                        selectedLessonId = option.id
-                        onSelectLesson?(option.id)
+                        var updated = selectedScope
+                        if updated.contains(option.id) {
+                            updated.remove(option.id)
+                        } else {
+                            updated.insert(option.id)
+                        }
+                        let all = Set(completedLessons.map(\.id))
+                        selectedLessonIds = updated == all ? nil : updated
+                        onSelectionChange?(selectedLessonIds)
                     } label: {
-                        Label(option.title, systemImage: selectedLessonId == option.id ? "checkmark" : "square")
+                        Label(option.title, systemImage: selectedScope.contains(option.id) ? "checkmark" : "square")
                     }
                 }
             } label: {
@@ -1697,8 +1710,8 @@ public struct LSCoursePracticeDock: View {
             .accessibilityLabel("Выбор уроков для закрепления")
 
             HStack(spacing: 8) {
-                quickActionRow(icon: "mic.fill", title: "Спикер", isEnabled: onSpeaker != nil, action: onSpeaker)
-                quickActionRow(icon: "gamecontroller.fill", title: "Игры", isEnabled: onGamePark != nil && stats.completedLessons > 0, action: onGamePark)
+                quickActionRow(icon: "mic.fill", title: "Спикер", isEnabled: onSpeaker != nil && !selectedScope.isEmpty, action: onSpeaker)
+                quickActionRow(icon: "gamecontroller.fill", title: "Игры", isEnabled: onGamePark != nil && !selectedScope.isEmpty, action: onGamePark)
             }
         }
         .padding(.top, 2)

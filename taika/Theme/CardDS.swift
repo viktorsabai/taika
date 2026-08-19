@@ -2817,7 +2817,8 @@ public struct CourseLessonCard: View {
             ZStack {
                 RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
                     .fill(fill)
-                    .opacity(0.28)
+                    .opacity(0.44)
+                    .blendMode(.screen)
                 Circle()
                     .fill(
                         RadialGradient(
@@ -2830,18 +2831,18 @@ public struct CourseLessonCard: View {
                     .frame(width: 164, height: 164)
                     .blur(radius: 14)
                     .offset(x: 82, y: -58)
-                RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
-                    .stroke(fill.opacity(0.52), lineWidth: 1.05)
+                // The canonical card shell supplies the only outer edge; the learned treatment
+                // stays internal so completed cards do not acquire a second hard border.
 
                 // Premium Taika-techno motif: two quiet waveform bands inside the existing
                 // accent layer. They add depth without introducing a second card chrome.
                 VStack(spacing: 18) {
                     Capsule(style: .continuous)
-                        .stroke(glow.opacity(0.20), lineWidth: 1.2)
+                        .stroke(glow.opacity(0.28), lineWidth: 1.2)
                         .frame(width: 230, height: 44)
                         .rotationEffect(.degrees(-12))
                     Capsule(style: .continuous)
-                        .stroke(fill.opacity(0.16), lineWidth: 1.0)
+                        .stroke(fill.opacity(0.22), lineWidth: 1.0)
                         .frame(width: 190, height: 36)
                         .rotationEffect(.degrees(-12))
                 }

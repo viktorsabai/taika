@@ -63,6 +63,7 @@ struct AppShell: View {
     /// When switching to Speaker tab from course card, pass consumed courseId so Speaker shows full course queue (onAppear may not run in time).
     @State private var speakerPendingCourseId: String? = nil
     @State private var speakerPendingLessonId: String? = nil
+    @State private var speakerPendingLessonIds: [String]? = nil
 
     var body: some View {
         ZStack {
@@ -456,6 +457,7 @@ struct AppShell: View {
                 if let ctx = SpeakerRequestedCourseId.shared.consume() {
                     speakerPendingCourseId = ctx.courseId
                     speakerPendingLessonId = ctx.lessonId
+                    speakerPendingLessonIds = ctx.lessonIds
                 }
             }
             nav.popToRoot()
@@ -481,11 +483,12 @@ struct AppShell: View {
         case 1:
             CourseView()
         case 2:
-            SpeakerView(
-                pendingCourseId: $speakerPendingCourseId,
-                pendingLessonId: $speakerPendingLessonId,
-                selectedTab: $selectedTab
-            )
+                SpeakerView(
+                    pendingCourseId: $speakerPendingCourseId,
+                    pendingLessonId: $speakerPendingLessonId,
+                    pendingLessonIds: $speakerPendingLessonIds,
+                    selectedTab: $selectedTab
+                )
         case 3:
             FavoriteView()
         case 4:

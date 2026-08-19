@@ -141,6 +141,22 @@ private extension LessonsView {
         }
     }
 
+    private var effectiveReinforcementLessonIds: [String] {
+        let available = Set(completedLessonOptions.map(\.id))
+        let selected = selectedReinforcementLessonIds ?? available
+        return Array(selected.intersection(available)).sorted()
+    }
+
+    private func updateReinforcementSelection(_ ids: Set<String>?) {
+        let available = Set(completedLessonOptions.map(\.id))
+        guard let ids else {
+            selectedReinforcementLessonIds = nil
+            return
+        }
+        let scoped = ids.intersection(available)
+        selectedReinforcementLessonIds = scoped.count == available.count ? nil : scoped
+    }
+
     /// Теория-only бонус (`course_b_0`): без игр/спикера в хедере и на карточках.
     var isTheoryBonusCourse: Bool {
         guard let cid = currentCourse?.courseID else { return false }
@@ -377,6 +393,9 @@ public struct LessonsView: View {
     @State private var showGameOverlay: Bool = false
     @State private var selectedGameLessonId: String? = nil
     @State private var selectedLessonId: String? = nil
+    /// Reinforcement queue selection is independent from the visible carousel focus.
+    /// nil means all completed lessons; a non-nil set is the explicit multi-select scope.
+    @State private var selectedReinforcementLessonIds: Set<String>? = nil
     @State private var courseContentMode: LSCourseContentMode = .lessons
     @State private var headerChipResolved: String? = nil
     @State private var headerSubtitleResolved: String = ""
@@ -483,13 +502,23 @@ public struct LessonsView: View {
                             ),
                             currentLessonTitle: currentLesson.flatMap { lessonsManager.lessonTitle(for: $0.lessonID) },
                             completedLessons: completedLessonOptions,
-                            selectedLessonId: completedLessonOptions.contains(where: { $0.id == selectedLessonId }) ? selectedLessonId : nil,
-                            onSelectLesson: { lessonId in
-                                selectedLessonId = lessonId
-                                selectedGameLessonId = lessonId
+                            selectedLessonIds: selectedReinforcementLessonIds,
+                            onSelectionChange: { ids in
+                                updateReinforcementSelection(ids)
                             },
-                            onSpeaker: isTheoryBonusCourse || completedLessonOptions.isEmpty ? nil : { lessonsHeaderStore.onSpeaker?() },
-                            onGamePark: isTheoryBonusCourse || completedLessonOptions.isEmpty ? nil : { lessonsHeaderStore.onReinforce?() }
+                            onSpeaker: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : {
+                                guard let cid = currentCourse?.courseID else { return }
+                                let ids = effectiveReinforcementLessonIds
+                                SpeakerRequestedCourseId.shared.set(cid, lessonIds: ids)
+                                UserSession.shared.markActive(courseId: cid, lessonId: ids.first, stepIndex: 0)
+                                NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+                                nav.requestTab(2)
+                            },
+                            onGamePark: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : {
+                                // The current Games route is course-scoped; preserve the selected scope for the next game launcher pass.
+                                selectedGameLessonId = effectiveReinforcementLessonIds.count == 1 ? effectiveReinforcementLessonIds.first : nil
+                                lessonsHeaderStore.onReinforce?()
+                            }
                         )
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
                     }
@@ -673,14 +702,11 @@ let withTasks = base
             lessonsHeaderStore.setActions(
                 onSpeaker: {
                     guard let cid = currentCourse?.courseID else { return }
-                    let lid = selectedLessonId
-                    if let lid {
-                        UserSession.shared.markActive(courseId: cid, lessonId: lid, stepIndex: 0)
-                    } else {
-                        UserSession.shared.markActive(courseId: cid)
-                    }
+                    let ids = effectiveReinforcementLessonIds
+                    guard !ids.isEmpty else { return }
+                    UserSession.shared.markActive(courseId: cid, lessonId: ids.first, stepIndex: 0)
                     NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                    SpeakerRequestedCourseId.shared.set(cid, lessonId: lid)
+                    SpeakerRequestedCourseId.shared.set(cid, lessonIds: ids)
                     nav.requestTab(2)
                 },
                 onReinforce: {

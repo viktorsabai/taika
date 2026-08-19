@@ -325,21 +325,26 @@ enum SpeakerConversationHistoryStore {
 public final class SpeakerRequestedCourseId: ObservableObject {
     public static let shared = SpeakerRequestedCourseId()
     @Published public var courseId: String?
-    /// Optional lesson scope — when set, Speaker opens only learned cards from this lesson.
+    /// Optional single-lesson scope kept for existing entry points.
     @Published public var lessonId: String?
+    /// Optional multi-lesson scope used by course reinforcement selection.
+    @Published public var lessonIds: [String]?
     private init() {}
 
-    public func set(_ id: String?, lessonId: String? = nil) {
+    public func set(_ id: String?, lessonId: String? = nil, lessonIds: [String]? = nil) {
         courseId = id
         self.lessonId = lessonId
+        self.lessonIds = lessonIds
     }
 
-    public func consume() -> (courseId: String, lessonId: String?)? {
+    public func consume() -> (courseId: String, lessonId: String?, lessonIds: [String]?)? {
         guard let cid = courseId else { return nil }
         let lid = lessonId
+        let lids = lessonIds
         courseId = nil
         lessonId = nil
-        return (cid, lid)
+        lessonIds = nil
+        return (cid, lid, lids)
     }
 }
 

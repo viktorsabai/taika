@@ -20,18 +20,22 @@ struct SpeakerView: View {
     @State private var isRecordingFromBreakdown = false
     /// When non-nil, shell switched to Speaker tab from course card; we load this course and clear. (Fixes onAppear not running in time.)
     @Binding var pendingCourseId: String?
-    /// Optional lesson scope when opened from Step summary / lesson CTA.
+    /// Optional single-lesson scope when opened from Step summary / lesson CTA.
     @Binding var pendingLessonId: String?
+    /// Optional multi-lesson scope assembled in LessonsView before tapping Speaker.
+    @Binding var pendingLessonIds: [String]?
     /// Shell tab — для CTA «К обучению» без back в хедере.
     @Binding var selectedTab: Int
 
     init(
         pendingCourseId: Binding<String?> = .constant(nil),
         pendingLessonId: Binding<String?> = .constant(nil),
+        pendingLessonIds: Binding<[String]?> = .constant(nil),
         selectedTab: Binding<Int> = .constant(2)
     ) {
         _pendingCourseId = pendingCourseId
         _pendingLessonId = pendingLessonId
+        _pendingLessonIds = pendingLessonIds
         _selectedTab = selectedTab
         _speakerFilterState = ObservedObject(wrappedValue: SpeakerFilterState.shared)
         _speaker = ObservedObject(wrappedValue: SpeakerManager.shared)
@@ -344,20 +348,22 @@ struct SpeakerView: View {
         }
         .onChange(of: pendingCourseId) { _, newValue in
             if let cid = newValue {
-                speaker.loadQueueForCourse(cid, lessonId: pendingLessonId)
+                speaker.loadQueueForCourse(cid, lessonId: pendingLessonId, lessonIds: pendingLessonIds)
                 pendingCourseId = nil
                 pendingLessonId = nil
+                pendingLessonIds = nil
             }
         }
         .onAppear {
-            // Контекст из Step/курса → очередь урока. Иначе — лаунчер (или текущая сессия, если уже идёт).
-            let pending = pendingCourseId.map { ($0, pendingLessonId) }
-                ?? SpeakerRequestedCourseId.shared.consume().map { ($0.courseId, $0.lessonId) }
-            if let (cid, lid) = pending {
+            // Контекст из Step/курса → одна очередь; multi-select lessons остаётся единым scope.
+            let pending = pendingCourseId.map { ($0, pendingLessonId, pendingLessonIds) }
+                ?? SpeakerRequestedCourseId.shared.consume().map { ($0.courseId, $0.lessonId, $0.lessonIds) }
+            if let (cid, lid, lids) = pending {
                 speaker.prepareTrainingPoolIfNeeded()
-                speaker.loadQueueForCourse(cid, lessonId: lid)
+                speaker.loadQueueForCourse(cid, lessonId: lid, lessonIds: lids)
                 pendingCourseId = nil
                 pendingLessonId = nil
+                pendingLessonIds = nil
                 speakerFilterState.selectedFilterId = speaker.activeFilterId
             } else {
                 speaker.loadIfNeeded()

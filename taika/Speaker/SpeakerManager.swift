@@ -961,8 +961,9 @@ public final class SpeakerManager: ObservableObject {
 
     /// Загрузить очередь только карточек из указанного курса (тап по иконке Speaker на карточке курса).
     /// Спец. id: `__favorites__` — всё избранное; `__dictionary__` — только словарь умного спикера.
-    /// `lessonId` — опционально сузить до выученных карточек конкретного урока.
-    func loadQueueForCourse(_ courseId: String, lessonId: String? = nil) {
+    /// `lessonId` — опционально сузить до одного урока.
+    /// `lessonIds` — multi-select scope из LessonsView; в него попадают только выбранные уроки.
+    func loadQueueForCourse(_ courseId: String, lessonId: String? = nil, lessonIds: [String]? = nil) {
         if courseId == "__favorites__" || courseId == "__dictionary__" {
             speakerContextCourseId = courseId
             activeFilterId = SpeakerMode.favoritesMode.id
@@ -1015,8 +1016,17 @@ public final class SpeakerManager: ObservableObject {
         let preferredLessonRaw = lessonId?.trimmingCharacters(in: .whitespacesAndNewlines)
         let preferredLesson = (preferredLessonRaw?.isEmpty == false) ? preferredLessonRaw : nil
         let preferredLower = preferredLesson?.lowercased()
+        let selectedLessonSet = Set(
+            (lessonIds ?? []).compactMap { raw in
+                let value = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                return value.isEmpty ? nil : value
+            }
+        )
 
         let filtered: [StepData.SpeakerResolved] = {
+            if !selectedLessonSet.isEmpty {
+                return byCourse.filter { selectedLessonSet.contains($0.lessonId.lowercased()) }
+            }
             guard let preferredLower else { return byCourse }
             let byLesson = byCourse.filter { $0.lessonId.lowercased() == preferredLower }
             // Если в этом уроке ещё нет выученных — не молчим: весь курс, но старт с предпочитаемого места.
@@ -1024,10 +1034,14 @@ public final class SpeakerManager: ObservableObject {
         }()
         speakerContextCourseId = courseId
         activeFilterId = SpeakerMode.learned.id
-        learnedLessonIds = Array(Set(byCourse.map(\.lessonId))).sorted()
-        // Если открыли конкретный урок — зафиксируем фильтр; иначе «все выученные» курса.
-        if let preferredLower,
-           byCourse.contains(where: { $0.lessonId.lowercased() == preferredLower }) {
+        learnedLessonIds = !selectedLessonSet.isEmpty
+            ? Array(Set(byCourse.filter { selectedLessonSet.contains($0.lessonId.lowercased()) }.map(\.lessonId))).sorted()
+            : Array(Set(byCourse.map(\.lessonId))).sorted()
+        // Single lesson keeps its chip; a multi-select session is already scoped and shows no misleading one-lesson chip.
+        if !selectedLessonSet.isEmpty {
+            learnedLessonFilter = nil
+        } else if let preferredLower,
+                  byCourse.contains(where: { $0.lessonId.lowercased() == preferredLower }) {
             learnedLessonFilter = byCourse.first(where: { $0.lessonId.lowercased() == preferredLower })?.lessonId
         } else {
             learnedLessonFilter = nil
