@@ -1208,3 +1208,35 @@
 - [ ] Replace large lower action buttons with line-style Speaker/Game actions and one clear retention CTA.
 - [ ] Include concise Taika FM guidance without duplicating course card content.
 - [ ] Run static validation and push final LessonsView retention commit.
+
+# CourseView completed card usage context
+
+- [ ] Find the canonical application/use-case field in course JSON.
+- [ ] Thread application line into CourseView card model with safe fallback.
+- [ ] Make completed status explicit as green status-only treatment.
+- [ ] Add compact native card navigation affordance without a new button row.
+- [ ] Run static validation and push CourseView refinement commit.
+
+# LessonsView — completed course training UX refinement
+
+- [ ] Зафиксировать роли экрана: курс пройден, текущая цель — тренировка и закрепление.
+- [ ] Упростить верхний completed summary: зелёный mastery-state, эффективность, ошибки и одна понятная рекомендация.
+- [ ] Убрать ощущение одиночного dropdown и сделать multi-select уроков с явными selected states.
+- [ ] Разделить действия: «Закрепить в Спикере» и «Повторить в игре» должны работать по выбранному набору материалов.
+- [ ] Перестроить нижнюю панель в компактный native action rail с понятным количеством выбранных уроков.
+- [ ] Синхронизировать ошибки/метрики из ReinforcementStore с подсветкой уроков.
+- [ ] Сохранить completed-карточки зелёными, без розовых completion accents; розовый оставить только для favorite.
+- [ ] Проверить, что стартовый фокус и переходы не сбрасываются на первый урок.
+- [ ] Выполнить статическую проверку diff и подготовить consolidated commit после согласованной реализации.
+
+# LessonsView — approved implementation scope
+
+- [ ] Перевести полностью пройденный курс в единый completed-training режим с jungle-green visual hierarchy.
+- [ ] Перестроить header summary вокруг закрепления, ошибок и следующего действия.
+- [ ] Реализовать multi-select по пройденным урокам вместо одиночного выбора через dropdown.
+- [ ] Связать выбранный набор одинаково с Speaker и Game Park handoff.
+- [ ] Добавить быстрый выбор уроков с ошибками и явный selected count.
+- [ ] Перестроить нижнюю action panel в компактный native action rail.
+- [ ] Синхронизировать per-lesson covered cards, sessions и scores из ReinforcementStore.
+- [ ] Сохранить текущий lesson focus при возврате из тренировки и не стартовать на первой карточке без причины.
+- [ ] Проверить все связанные Swift callsites и подготовить один consolidated commit в `2026-01-21-k7hb-d2004`.

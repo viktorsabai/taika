@@ -1248,6 +1248,8 @@ public struct LSLessonCardV: View {
     let onConsole: (() -> Void)?
     let onSpeaker: (() -> Void)?
     let onNext: (() -> Void)?
+    let isTrainingSelected: Bool
+    let onTrainingToggle: (() -> Void)?
     @AppStorage("LSLessonActivity.lastActiveLessonId") private var lastActiveLessonId: String = ""
 
     public init(item: LS.Item,
@@ -1257,7 +1259,9 @@ public struct LSLessonCardV: View {
                 favoriteCount: Int = 0,
                 onConsole: (() -> Void)? = nil,
                 onSpeaker: (() -> Void)? = nil,
-                onNext: (() -> Void)? = nil) {
+                onNext: (() -> Void)? = nil,
+                isTrainingSelected: Bool = false,
+                onTrainingToggle: (() -> Void)? = nil) {
         self.item = item
         self.role = role
         self.onTap = onTap
@@ -1266,6 +1270,8 @@ public struct LSLessonCardV: View {
         self.onConsole = onConsole
         self.onSpeaker = onSpeaker
         self.onNext = onNext
+        self.isTrainingSelected = isTrainingSelected
+        self.onTrainingToggle = onTrainingToggle
     }
 
     // MARK: - Extracted subviews to help the type-checker
@@ -1437,8 +1443,8 @@ public struct LSLessonCardV: View {
             sectionChrome: .none,
             accentTreatment: item.status == .completed
                 ? .taikaValues(
-                    fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
-                    glow: ThemeManager.shared.currentAccentTintColor
+                    fill: AnyShapeStyle(TaikaMasteryTokens.green),
+                    glow: TaikaMasteryTokens.green.opacity(0.62)
                 )
                 : .none,
             primaryCTA: primaryCTA,
@@ -1464,6 +1470,23 @@ public struct LSLessonCardV: View {
             onSpeakerTap: onSpeaker,
             showsInlineProgress: true
         )
+        .overlay {
+            if isTrainingSelected {
+                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+                    .stroke(TaikaMasteryTokens.green, lineWidth: 2)
+                    .overlay(alignment: .topTrailing) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("ВЫБРАН")
+                        }
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
+                        .padding(.top, 14)
+                        .padding(.trailing, 16)
+                    }
+                    .allowsHitTesting(false)
+            }
+        }
     }
 }
 
@@ -1482,6 +1505,7 @@ public struct LSLessonReels: View {
     let onFavorite: ((LS.Item) -> Void)?
     let onSpeaker: ((LS.Item) -> Void)?
     let onNext: ((LS.Item) -> Void)?
+    let selectedLessonIds: Set<String>
 
     @State private var currentIndex: Int = 0
     @State private var isCollapsed: Bool
@@ -1497,7 +1521,8 @@ public struct LSLessonReels: View {
                 onFavorite: ((LS.Item) -> Void)? = nil,
                 onSpeaker: ((LS.Item) -> Void)? = nil,
                 onNext: ((LS.Item) -> Void)? = nil,
-                selectedIndex: Int? = nil) {
+                selectedIndex: Int? = nil,
+                selectedLessonIds: Set<String> = []) {
         self.title = title
         self.items = items
         self.collapsible = collapsible
@@ -1511,6 +1536,7 @@ public struct LSLessonReels: View {
         self.onSpeaker = onSpeaker
         self.onNext = onNext
         self.selectedIndex = selectedIndex
+        self.selectedLessonIds = selectedLessonIds
     }
 
     public var body: some View {
@@ -1561,7 +1587,9 @@ public struct LSLessonReels: View {
                                     favoriteCount: item.favoriteCount,
                                     onConsole: onTapAccessory.map { tap in { tap(item) } },
                                     onSpeaker: onSpeaker.map { cb in { cb(item) } },
-                                    onNext: onNext.map { cb in { cb(item) } }
+                                    onNext: onNext.map { cb in { cb(item) } },
+                                    isTrainingSelected: selectedLessonIds.contains(item.id),
+                                    onTrainingToggle: nil
                                 )
                             }
                             .transition(.opacity)
@@ -1663,6 +1691,7 @@ public struct LSCoursePracticeDock: View {
     public let stats: LSCourseStats
     public let currentLessonTitle: String?
     public let completedLessons: [LSCompletedLessonOption]
+    public let weakLessonIds: Set<String>
     public let onSelectionChange: ((Set<String>?) -> Void)?
     public let onSpeaker: (() -> Void)?
     public let onGamePark: (() -> Void)?
@@ -1672,6 +1701,7 @@ public struct LSCoursePracticeDock: View {
         stats: LSCourseStats,
         currentLessonTitle: String? = nil,
         completedLessons: [LSCompletedLessonOption] = [],
+        weakLessonIds: Set<String> = [],
         selectedLessonIds: Set<String>? = nil,
         onSelectionChange: ((Set<String>?) -> Void)? = nil,
         onSpeaker: (() -> Void)? = nil,
@@ -1680,6 +1710,7 @@ public struct LSCoursePracticeDock: View {
         self.stats = stats
         self.currentLessonTitle = currentLessonTitle
         self.completedLessons = completedLessons
+        self.weakLessonIds = weakLessonIds
         self.onSelectionChange = onSelectionChange
         self.onSpeaker = onSpeaker
         self.onGamePark = onGamePark
@@ -1701,98 +1732,111 @@ public struct LSCoursePracticeDock: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let allSelected = !completedLessons.isEmpty && selectedScope.count == completedLessons.count
+        let hasSelection = !selectedScope.isEmpty
+
+        return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("ЗАКРЕПЛЕНИЕ")
                     .taikaSectionTitleStyle()
                 Spacer(minLength: 8)
-                if stats.gameSessions > 0 {
-                    Label("игра пройдена", systemImage: "checkmark.seal.fill")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
-                }
-                if let currentLessonTitle, !currentLessonTitle.isEmpty {
-                    Text(currentLessonTitle)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .lineLimit(1)
-                }
+                Text(hasSelection ? "\(selectedScope.count) выбрано" : "выбери материалы")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(hasSelection ? AnyShapeStyle(TaikaMasteryTokens.green) : AnyShapeStyle(PD.ColorToken.textSecondary))
             }
 
-            Menu {
+            HStack(spacing: 8) {
                 Button {
                     selectedLessonIds = nil
                     onSelectionChange?(nil)
                 } label: {
-                    Label("Все пройденные уроки", systemImage: selectedLessonIds == nil || selectedScope.count == completedLessons.count ? "checkmark" : "square")
-                }
-                ForEach(completedLessons) { option in
-                    Button {
-                        var updated = selectedScope
-                        if updated.contains(option.id) {
-                            updated.remove(option.id)
-                        } else {
-                            updated.insert(option.id)
-                        }
-                        let all = Set(completedLessons.map(\.id))
-                        selectedLessonIds = updated == all ? nil : updated
-                        onSelectionChange?(selectedLessonIds)
-                    } label: {
-                        Label(option.title, systemImage: selectedScope.contains(option.id) ? "checkmark" : "square")
+                    HStack(spacing: 5) {
+                        Image(systemName: allSelected ? "checkmark.circle.fill" : "circle")
+                        Text("Все")
                     }
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(allSelected ? AnyShapeStyle(Color.black) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(allSelected ? AnyShapeStyle(TaikaMasteryTokens.green) : AnyShapeStyle(PD.ColorToken.card.opacity(0.7))))
                 }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "checklist")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text(selectedTitle)
-                        .font(.system(size: 14, weight: .semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                    Spacer(minLength: 4)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .bold))
+                .buttonStyle(.plain)
+
+                Button {
+                    let weak = weakLessonIds.intersection(Set(completedLessons.map(\.id)))
+                    selectedLessonIds = weak.isEmpty ? nil : weak
+                    onSelectionChange?(selectedLessonIds)
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "waveform.path.ecg")
+                        Text("Ошибки")
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(weakLessonIds.isEmpty ? AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)) : AnyShapeStyle(TaikaMasteryTokens.green))
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(PD.ColorToken.card.opacity(0.72)))
                 }
-                .foregroundStyle(PD.ColorToken.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 10)
-                .overlay(alignment: .bottom) {
-                    Rectangle()
-                        .fill(PD.ColorToken.stroke.opacity(0.48))
-                        .frame(height: 1)
+                .buttonStyle(.plain)
+                .disabled(weakLessonIds.isEmpty)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(completedLessons) { option in
+                            let isSelected = selectedScope.contains(option.id)
+                            Button {
+                                var updated = selectedScope
+                                if isSelected { updated.remove(option.id) } else { updated.insert(option.id) }
+                                let all = Set(completedLessons.map(\.id))
+                                selectedLessonIds = updated == all ? nil : updated
+                                onSelectionChange?(selectedLessonIds)
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: isSelected ? "checkmark" : "circle")
+                                    Text(option.title)
+                                        .lineLimit(1)
+                                }
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(isSelected ? AnyShapeStyle(Color.black) : AnyShapeStyle(PD.ColorToken.text))
+                                .padding(.horizontal, 11)
+                                .padding(.vertical, 8)
+                                .background(Capsule().fill(isSelected ? AnyShapeStyle(TaikaMasteryTokens.green) : AnyShapeStyle(PD.ColorToken.card.opacity(0.72))))
+                                .overlay(Capsule().stroke(isSelected ? AnyShapeStyle(TaikaMasteryTokens.green) : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.5)), lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
             }
             .disabled(completedLessons.isEmpty)
-            .accessibilityLabel("Выбор уроков для закрепления")
+            .accessibilityLabel("Выбор нескольких уроков для закрепления")
 
-            if stats.gameCoveredCards > 0 || stats.reinforcementScore != nil {
-                HStack(spacing: 8) {
-                    Image(systemName: "waveform.path.ecg")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
-                    Text(stats.reinforcementScore.map { "Закреплено в игре · \(stats.gameCoveredCards) карточек · \($0)%" } ?? "Закреплено в игре · \(stats.gameCoveredCards) карточек")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 4)
+            HStack(spacing: 8) {
+                Image(systemName: stats.gameSessions > 0 ? "checkmark.seal.fill" : "waveform.path.ecg")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
+                Text(stats.reinforcementScore.map { "В игре · \(stats.gameCoveredCards) карточек · \($0)%" } ?? "Выбери уроки, чтобы собрать тренировку")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 4)
 
             VStack(spacing: 0) {
                 quickActionRow(
                     icon: "mic.fill",
                     title: "Закрепить в Спикере",
-                    detail: "Потренировать произношение выбранных уроков",
-                    isEnabled: onSpeaker != nil && !selectedScope.isEmpty,
+                    detail: hasSelection ? "Произношение выбранных уроков" : "Сначала выбери один или несколько уроков",
+                    isEnabled: onSpeaker != nil && hasSelection,
                     action: onSpeaker
                 )
                 quickActionRow(
                     icon: "gamecontroller.fill",
                     title: "Повторить в игре",
-                    detail: "Проверить, что уже удерживается в памяти",
-                    isEnabled: onGamePark != nil && !selectedScope.isEmpty,
+                    detail: hasSelection ? "Проверка памяти по этому же набору" : "Сначала выбери один или несколько уроков",
+                    isEnabled: onGamePark != nil && hasSelection,
                     action: onGamePark
                 )
             }

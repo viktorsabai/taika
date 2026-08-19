@@ -13,6 +13,8 @@ import AudioToolbox
 public struct HomeTaskView: View {
     public let courseId: String
     public let lessonId: String
+    /// Optional multi-lesson scope for course reinforcement training.
+    public let lessonIds: [String]?
     public let embedBackground: Bool
     public let onClose: (() -> Void)?
     public let onNextGame: (() -> Void)?
@@ -62,6 +64,7 @@ public struct HomeTaskView: View {
 
     public init(courseId: String,
                 lessonId: String,
+                lessonIds: [String]? = nil,
                 embedBackground: Bool = false,
                 store: HomeTaskManager? = nil,
                 onClose: (() -> Void)? = nil,
@@ -75,6 +78,7 @@ public struct HomeTaskView: View {
                 continueLearningTitle: String? = nil) {
         self.courseId = courseId
         self.lessonId = lessonId
+        self.lessonIds = lessonIds
         self.embedBackground = embedBackground
         self.onClose = onClose
         self.onNextGame = onNextGame
@@ -909,9 +913,12 @@ public struct HomeTaskView: View {
             } else if isLearnedParkContext {
                 triples = store.userTriplesForCourse(courseId: LearnedGameSource.pseudoCourseId, lessonIds: [])
             } else {
-                let lessonIds = catalogLessonsSortedForCourse(courseId).map { $0.lessonID }
-                if !lessonIds.isEmpty {
-                    triples = store.userTriplesForCourse(courseId: ccid, lessonIds: lessonIds)
+                let scopedLessonIds = lessonIds?.filter { !$0.isEmpty } ?? []
+                let lessonIdsToUse = scopedLessonIds.isEmpty
+                    ? catalogLessonsSortedForCourse(courseId).map { $0.lessonID }
+                    : scopedLessonIds
+                if !lessonIdsToUse.isEmpty {
+                    triples = store.userTriplesForCourse(courseId: ccid, lessonIds: lessonIdsToUse)
                 }
             }
         } else {

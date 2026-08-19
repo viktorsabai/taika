@@ -129,6 +129,33 @@ private extension LessonsView {
         return lessonsManager.headerCounts(for: cid, lessonsTotal: total)
     }
 
+    var isCompletedCourse: Bool {
+        let total = totalLessonsCount
+        guard total > 0 else { return false }
+        return headerProgress.completed >= total
+    }
+
+    private func toggleTrainingSelection(_ lessonId: String) {
+        let available = Set(completedLessonOptions.map(\.id))
+        guard available.contains(lessonId) else { return }
+        var updated = selectedReinforcementLessonIds ?? available
+        if updated.contains(lessonId) {
+            updated.remove(lessonId)
+        } else {
+            updated.insert(lessonId)
+        }
+        updateReinforcementSelection(updated)
+    }
+
+    private var weakCompletedLessonIds: Set<String> {
+        guard let cid = currentCourse?.courseID,
+              let metrics = ReinforcementStore.shared.metrics(courseId: cid) else { return [] }
+        return Set(completedLessonOptions.compactMap { option in
+            guard let score = metrics.byLesson[option.id]?.lastScore, score < 70 else { return nil }
+            return option.id
+        })
+    }
+
     var completedLessonOptions: [LSCompletedLessonOption] {
         lessonsSorted.compactMap { lesson in
             guard statusForLesson(lesson) == .completed else { return nil }
@@ -468,18 +495,20 @@ public struct LessonsView: View {
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
 
                 if courseContentMode == .lessons {
-                    LSSectionTitle("ТАЙКА FM")
-                        .padding(.horizontal, Theme.Layout.pageHorizontal)
-                        .padding(.top, Theme.Layout.sectionTop)
+                    if !isCompletedCourse {
+                        LSSectionTitle("ТАЙКА FM")
+                            .padding(.horizontal, Theme.Layout.pageHorizontal)
+                            .padding(.top, Theme.Layout.sectionTop)
 
-                    TaikaFMRow(
-                        scope: .lessons,
-                        mode: .typing,
-                        showBubble: false,
-                        repeats: false
-                    )
-                    .padding(.horizontal, Theme.Layout.pageHorizontal)
-                    .padding(.top, Theme.Layout.sectionTitleToContent)
+                        TaikaFMRow(
+                            scope: .lessons,
+                            mode: .typing,
+                            showBubble: false,
+                            repeats: false
+                        )
+                        .padding(.horizontal, Theme.Layout.pageHorizontal)
+                        .padding(.top, Theme.Layout.sectionTitleToContent)
+                    }
 
                     lessonsReelsSection
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
@@ -502,8 +531,9 @@ public struct LessonsView: View {
                                 reinforcementScore: currentCourse.flatMap { ReinforcementStore.shared.overallScore(courseId: $0.courseID) }
                             ),
                             currentLessonTitle: currentLesson.flatMap { lessonsManager.lessonTitle(for: $0.lessonID) },
-                            completedLessons: completedLessonOptions,
-                            selectedLessonIds: selectedReinforcementLessonIds,
+                                completedLessons: completedLessonOptions,
+                                weakLessonIds: weakCompletedLessonIds,
+                                selectedLessonIds: selectedReinforcementLessonIds,
                             onSelectionChange: { ids in
                                 updateReinforcementSelection(ids)
                             },
@@ -519,6 +549,9 @@ public struct LessonsView: View {
                             onGamePark: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : {
                                 // The current Games route is course-scoped; preserve the selected scope for the next game launcher pass.
                                 selectedGameLessonId = effectiveReinforcementLessonIds.count == 1 ? effectiveReinforcementLessonIds.first : nil
+                                if let cid = currentCourse?.courseID {
+                                    GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: effectiveReinforcementLessonIds)
+                                }
                                 lessonsHeaderStore.onReinforce?()
                             }
                         )
@@ -713,6 +746,9 @@ let withTasks = base
                     guard currentCourse?.courseID != nil else { return }
                     selectedGameLessonId = nil
                     selectedGameType = .match
+                    if let cid = currentCourse?.courseID {
+                        GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: effectiveReinforcementLessonIds)
+                    }
                     frozenSnapshot = captureWindowSnapshot()
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
                         showGameOverlay = true
@@ -887,7 +923,7 @@ extension LessonsView {
         let count = totalLessonsCount
         let baseSlots = !slots.isEmpty ? slots : Array(repeating: 0.0, count: count)
         let slotsResolved: [Double] = baseSlots.isEmpty ? [0.0] : baseSlots
-        let courseIsCompleted = !slotsResolved.isEmpty && slotsResolved.allSatisfy { $0 >= 0.999 }
+        let courseIsCompleted = isCompletedCourse
         let subtitleResolved = headerSubtitleResolved.isEmpty ? headerSubtitle : headerSubtitleResolved
         return VStack(spacing: 10) {
             LSLessonHeader(
@@ -920,11 +956,63 @@ extension LessonsView {
                         if !nav.path.isEmpty { nav.path.removeLast() }
                     }
                 },
-                completionSummary: courseGameSummary,
+                completionSummary: courseIsCompleted ? completedCourseSummary : courseGameSummary,
                 isCompletedCourse: courseIsCompleted,
                 bottomAccessory: AnyView(courseMaterialsPicker)
             )
         }
+    }
+
+    private var completedCourseSummary: AnyView? {
+        guard let cid = currentCourse?.courseID else { return nil }
+        let metrics = ReinforcementStore.shared.metrics(courseId: cid)
+        let sessions = metrics?.byMode.values.reduce(0) { $0 + $1.sessions } ?? 0
+        let covered = ReinforcementStore.shared.coveredCardCount(courseId: cid)
+        let totalCards = lessonsSorted.reduce(0) { total, lesson in
+            total + StepData.shared.items(for: lesson.lessonID).count
+        }
+        let score = ReinforcementStore.shared.overallScore(courseId: cid)
+        let matchedPercent = totalCards > 0 ? min(100, Int((Double(covered) / Double(totalCards) * 100).rounded())) : nil
+        let weakCount = lessonsSorted.reduce(0) { count, lesson in
+            let lessonScore = metrics?.byLesson[lesson.lessonID]?.lastScore ?? 100
+            return count + (lessonScore < 70 ? 1 : 0)
+        }
+        let recommendation = weakCount > 0
+            ? "Начни с \(weakCount) урок\(weakCount == 1 ? "а" : "ов"), где есть ошибки"
+            : "Поддержи результат короткой тренировкой"
+
+        return AnyView(
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
+                    Text("КУРС ПРОЙДЕН")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
+                    Spacer(minLength: 4)
+                    if let score {
+                        Text("\(score)%")
+                            .font(Theme.Fonts.metric(13))
+                            .monospacedDigit()
+                            .foregroundStyle(.white.opacity(0.9))
+                    }
+                }
+                Text(recommendation)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.84))
+                    .lineLimit(1)
+                HStack(spacing: 10) {
+                    Text("\(covered) карточек")
+                    if let matchedPercent { Text("· \(matchedPercent)%") }
+                    Text("· \(sessions) игр")
+                }
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.58))
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 5)
+        )
     }
 
     private var courseGameSummary: AnyView? {
@@ -1009,14 +1097,48 @@ extension LessonsView {
                 .textCase(.uppercase)
                 .kerning(0.5)
             Spacer(minLength: 8)
-            AppInlineFilterPicker(
-                titles: [LSCourseContentMode.lessons.title, LSCourseContentMode.lifehacks.title],
-                selectedIndex: courseContentMode.rawValue
-            ) { index in
-                guard let next = LSCourseContentMode(rawValue: index), next != courseContentMode else { return }
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
-                    courseContentMode = next
+            if isCompletedCourse {
+                Menu {
+                    ForEach(Array([LSCourseContentMode.lessons.title, LSCourseContentMode.lifehacks.title].enumerated()), id: \.offset) { index, title in
+                        Button {
+                            guard let next = LSCourseContentMode(rawValue: index), next != courseContentMode else { return }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                                courseContentMode = next
+                            }
+                        } label: {
+                            if index == courseContentMode.rawValue {
+                                Label(title, systemImage: "checkmark")
+                            } else {
+                                Text(title)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(courseContentMode.title)
+                            .font(.system(size: 13, weight: .semibold))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
+                    .padding(.horizontal, 12)
+                    .frame(height: 32)
+                    .background(Capsule(style: .continuous).fill(PD.ColorToken.card))
+                    .overlay(Capsule(style: .continuous).stroke(TaikaMasteryTokens.green.opacity(0.72), lineWidth: 1))
+                }
+                .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+                .accessibilityLabel("Раздел материалов курса")
+            } else {
+                AppInlineFilterPicker(
+                    titles: [LSCourseContentMode.lessons.title, LSCourseContentMode.lifehacks.title],
+                    selectedIndex: courseContentMode.rawValue
+                ) { index in
+                    guard let next = LSCourseContentMode(rawValue: index), next != courseContentMode else { return }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                        courseContentMode = next
+                    }
                 }
             }
         }
@@ -1165,10 +1287,15 @@ extension LessonsView {
         LSLessonReels(
             "УРОКИ",
             items: lessonItems(),
+            selectedLessonIds: isCompletedCourse ? Set(effectiveReinforcementLessonIds) : [],
             onTap: { item in
                 let arr = lessonsSorted
                 if item.index >= 0 && item.index < arr.count {
                     let lid = arr[item.index].lessonID
+                    if isCompletedCourse {
+                        toggleTrainingSelection(lid)
+                        return
+                    }
                     guard openLessonIfAllowed(lid) else { return }
                     LSLessonActivity.mark(lid)
                     if let cid = currentCourse?.courseID {
@@ -1185,7 +1312,7 @@ extension LessonsView {
                     }
                 }
             },
-            onTapAccessory: isTheoryBonusCourse ? nil : { item in
+            onTapAccessory: isTheoryBonusCourse || isCompletedCourse ? nil : { item in
                 let arr = lessonsSorted
                 guard item.index >= 0 && item.index < arr.count else { return }
 
@@ -1229,7 +1356,7 @@ extension LessonsView {
                     UINotificationFeedbackGenerator().notificationOccurred(.warning)
                 }
             },
-            onSpeaker: isTheoryBonusCourse ? nil : { item in
+            onSpeaker: isTheoryBonusCourse || isCompletedCourse ? nil : { item in
                 guard let cid = currentCourse?.courseID else { return }
                 UserSession.shared.markActive(courseId: cid, lessonId: item.id, stepIndex: 0)
                 NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)

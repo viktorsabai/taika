@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 /// Persistent per-course reinforcement metrics (games practice).
 /// MVP goal: let Course card back-face show a meaningful "reinforcement score"
@@ -188,3 +189,24 @@ public final class ReinforcementStore: ObservableObject {
     }
 }
 
+
+
+/// One-shot course lesson scope used when a completed-course selection launches Game Park.
+@MainActor
+public final class GameRequestedCourseScope: ObservableObject {
+    public static let shared = GameRequestedCourseScope()
+    @Published public private(set) var courseId: String?
+    @Published public private(set) var lessonIds: [String]?
+
+    private init() {}
+
+    public func set(courseId: String, lessonIds: [String]) {
+        self.courseId = courseId
+        self.lessonIds = lessonIds
+    }
+
+    public func clear() {
+        courseId = nil
+        lessonIds = nil
+    }
+}
