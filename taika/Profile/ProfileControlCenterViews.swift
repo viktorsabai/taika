@@ -333,7 +333,8 @@ private struct ProfileMotionOrb: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(AngularGradient(colors: [Color.white.opacity(0.08), Color.purple.opacity(0.26), Color.pink.opacity(0.18), Color.white.opacity(0.08)], center: .center))
+                .fill(ThemeManager.shared.currentAccentFill)
+                .opacity(0.26)
                 .frame(width: 112, height: 112)
                 .blur(radius: 2)
                 .scaleEffect(reduceMotion ? 1 : 0.94 + phase * 0.08)
@@ -342,7 +343,7 @@ private struct ProfileMotionOrb: View {
                 .frame(width: 128, height: 128)
                 .rotationEffect(.degrees(reduceMotion ? 0 : Double(phase) * 360))
             Circle()
-                .stroke(Color.purple.opacity(0.22), lineWidth: 1)
+                .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.28), lineWidth: 1)
                 .frame(width: 156, height: 156)
                 .rotationEffect(.degrees(reduceMotion ? 0 : -Double(phase) * 240))
         }
@@ -447,14 +448,15 @@ struct ProfileGlassBackdrop<Content: View>: View {
         ZStack {
             PD.ColorToken.background.ignoresSafeArea()
             Circle()
-                .fill(Color.purple.opacity(0.22))
+                .fill(ThemeManager.shared.currentAccentFill)
+                .opacity(0.22)
                 .frame(width: 280, height: 280)
                 .blur(radius: 110)
                 .opacity(0.18)
                 .offset(x: 140, y: -300)
                 .scaleEffect(reduceMotion ? 1 : 0.94 + phase * 0.06)
             Circle()
-                .fill(Color.pink.opacity(0.16))
+                .fill(ThemeManager.shared.currentAccentTintColor.opacity(0.16))
                 .frame(width: 230, height: 230)
                 .blur(radius: 100)
                 .opacity(0.14)
@@ -523,16 +525,10 @@ private struct ProfileValueCarouselCard: View {
     let item: ProfileValueItem
 
     private var accentTreatment: CardDS.AccentTreatment {
-        switch item.id {
-        case "courses":
-            return .taikaValues(primary: ThemeManager.shared.currentAccentTintColor, secondary: Color.purple)
-        case "speaker":
-            return .taikaValues(primary: Color.pink, secondary: Color.indigo)
-        case "games":
-            return .taikaValues(primary: Color.pink.opacity(0.9), secondary: Color.orange.opacity(0.72))
-        default:
-            return .taikaValues(primary: Color.purple, secondary: ThemeManager.shared.currentAccentTintColor)
-        }
+        .taikaValues(
+            fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+            glow: ThemeManager.shared.currentAccentTintColor
+        )
     }
 
     var body: some View {
@@ -612,7 +608,11 @@ struct ProfileValuesView: View {
         HStack(spacing: 6) {
             ForEach(values.indices, id: \.self) { index in
                 Capsule()
-                    .fill(index == centeredValueIndex ? theme.currentAccentFill : PD.ColorToken.textSecondary.opacity(0.28))
+                    .fill(
+                        index == centeredValueIndex
+                        ? AnyShapeStyle(theme.currentAccentFill)
+                        : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.28))
+                    )
                     .frame(width: index == centeredValueIndex ? 18 : 5, height: 5)
             }
         }
@@ -806,7 +806,7 @@ private struct ProfileFocusScene: View {
                     .rotationEffect(.degrees(reduceMotion ? 0 : Double(phase) * 360))
                     .position(x: proxy.size.width * 0.76, y: proxy.size.height * 0.34)
                 Circle()
-                    .stroke(Color.pink.opacity(0.30), lineWidth: 1)
+                    .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.30), lineWidth: 1)
                     .frame(width: 196, height: 196)
                     .rotationEffect(.degrees(reduceMotion ? 0 : -Double(phase) * 210))
                     .position(x: proxy.size.width * 0.76, y: proxy.size.height * 0.34)
@@ -816,7 +816,7 @@ private struct ProfileFocusScene: View {
                     .rotationEffect(.degrees(-18))
                     .position(x: proxy.size.width * 0.58, y: proxy.size.height * 0.58)
                 Capsule()
-                    .fill(Color.pink.opacity(0.20))
+                    .fill(ThemeManager.shared.currentAccentTintColor.opacity(0.20))
                     .frame(width: proxy.size.width * 0.42, height: 1)
                     .rotationEffect(.degrees(24))
                     .position(x: proxy.size.width * 0.45, y: proxy.size.height * 0.30)
@@ -843,7 +843,7 @@ private struct ProfileRhythmRing: View {
                 .stroke(accent, style: StrokeStyle(lineWidth: 14, lineCap: .round))
                 .frame(width: 172, height: 172)
                 .rotationEffect(.degrees(-90))
-                .shadow(color: Color.pink.opacity(0.34), radius: 12)
+                .shadow(color: ThemeManager.shared.currentAccentTintColor.opacity(0.34), radius: 12)
                 .rotation3DEffect(.degrees(reduceMotion ? 0 : Double(phase) * 2), axis: (x: 0, y: 1, z: 0))
             VStack(spacing: 2) {
                 Text("\(percent)%")
@@ -865,7 +865,8 @@ private struct ProfileEmptyRhythmHero: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(Color.purple.opacity(0.18))
+                .fill(ThemeManager.shared.currentAccentFill)
+                .opacity(0.18)
                 .frame(width: 132, height: 132)
                 .blur(radius: 18)
                 .scaleEffect(reduceMotion ? 1 : 0.96 + phase * 0.06)
@@ -873,13 +874,13 @@ private struct ProfileEmptyRhythmHero: View {
                 .stroke(Color.white.opacity(0.24), lineWidth: 1)
                 .frame(width: 132, height: 132)
             Circle()
-                .stroke(Color.purple.opacity(0.25), lineWidth: 1)
+                .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.25), lineWidth: 1)
                 .frame(width: 166, height: 166)
                 .rotationEffect(.degrees(reduceMotion ? 0 : Double(phase) * 160))
             ProfileWaveLine(reduceMotion: reduceMotion, phase: phase)
-                .stroke(Color.pink.opacity(0.82), style: StrokeStyle(lineWidth: 2.3, lineCap: .round, lineJoin: .round))
+                .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.82), style: StrokeStyle(lineWidth: 2.3, lineCap: .round, lineJoin: .round))
                 .frame(width: 220, height: 52)
-                .shadow(color: Color.pink.opacity(0.30), radius: 8)
+                .shadow(color: ThemeManager.shared.currentAccentTintColor.opacity(0.30), radius: 8)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 220)

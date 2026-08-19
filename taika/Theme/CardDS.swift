@@ -598,7 +598,7 @@ public enum CardDS {
     /// Existing course cards remain unchanged with `.none`.
     public enum AccentTreatment {
         case none
-        case taikaValues(primary: Color, secondary: Color)
+        case taikaValues(fill: AnyShapeStyle, glow: Color)
     }
 
     public struct Metrics {
@@ -2763,20 +2763,15 @@ public struct CourseLessonCard: View {
         switch accentTreatment {
         case .none:
             EmptyView()
-        case let .taikaValues(primary, secondary):
+        case let .taikaValues(fill, glow):
             ZStack {
                 RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [primary.opacity(0.24), secondary.opacity(0.12), Color.clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(fill)
+                    .opacity(0.24)
                 Circle()
                     .fill(
                         RadialGradient(
-                            colors: [secondary.opacity(0.30), primary.opacity(0.10), Color.clear],
+                            colors: [glow.opacity(0.30), glow.opacity(0.08), Color.clear],
                             center: .center,
                             startRadius: 3,
                             endRadius: 112
@@ -2786,14 +2781,7 @@ public struct CourseLessonCard: View {
                     .blur(radius: 14)
                     .offset(x: 82, y: -58)
                 RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [primary.opacity(0.52), secondary.opacity(0.18), Color.clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1.05
-                    )
+                    .stroke(fill.opacity(0.52), lineWidth: 1.05)
             }
             .allowsHitTesting(false)
         }
