@@ -511,117 +511,52 @@ struct ProfileGlassRow: View {
     }
 }
 
-private struct ProfileValueItem: Identifiable {
-    let id: String
-    let title: String
-    let detail: String
-    let systemImage: String
-}
-
-private struct ProfileDepthValueCard: View {
-    @EnvironmentObject private var theme: ThemeManager
-    let item: ProfileValueItem
-    let index: Int
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: item.systemImage)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(theme.currentAccentFill)
-                    .frame(width: 44, height: 44)
-                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(item.title)
-                        .font(PD.FontToken.title(20, weight: .bold))
-                        .foregroundStyle(PD.ColorToken.text)
-                    Text("0\(index + 1)  ·  Taika system")
-                        .font(PD.FontToken.caption(11, weight: .semibold))
-                        .foregroundStyle(theme.currentAccentFill)
-                        .tracking(0.8)
-                }
-                Spacer(minLength: 0)
-            }
-            Text(item.detail)
-                .font(PD.FontToken.body(15, weight: .regular))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(theme.currentAccentFill)
-                    .frame(width: 6, height: 6)
-                Text("часть твоего личного маршрута")
-                    .font(PD.FontToken.caption(12, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.82))
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, minHeight: 176, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(PD.ColorToken.card.opacity(index == 0 ? 0.54 : 0.38))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(PD.ColorToken.stroke.opacity(index == 0 ? 0.72 : 0.46), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(index == 0 ? 0.22 : 0.10), radius: 18, y: 8)
-        .scaleEffect(index == 0 ? 1 : 0.96)
-        .opacity(index == 0 ? 1 : 0.88)
-        .zIndex(Double(10 - index))
-    }
-}
-
 struct ProfileValuesView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var theme: ThemeManager
 
-    private let values: [ProfileValueItem] = [
-        ProfileValueItem(id: "courses", title: "Сценарные курсы", detail: "Нужные фразы для жизни в Таиланде — в правильном контексте, а не случайный набор слов.", systemImage: "book.closed"),
-        ProfileValueItem(id: "speaker", title: "Speaker", detail: "Переводит твою мысль и помогает спокойно тренировать произношение, тон и голос.", systemImage: "waveform"),
-        ProfileValueItem(id: "games", title: "Игровая практика", detail: "Закрепляет фразы короткими действиями, чтобы знание переходило в реакцию.", systemImage: "gamecontroller"),
-        ProfileValueItem(id: "rhythm", title: "Личный ритм", detail: "Собирает твою практику и подсказывает следующий полезный шаг без рейтингов и давления.", systemImage: "circle.dotted.and.circle")
+    private let values: [(String, String, String)] = [
+        ("Сценарные курсы", "Нужные фразы для жизни в Таиланде — от аренды до разговора с полицией.", "book.closed"),
+        ("Speaker", "Переводит твою мысль и помогает спокойно тренировать произношение.", "waveform"),
+        ("Игровая практика", "Закрепляет слова и фразы короткими действиями, а не тестами ради тестов.", "gamecontroller"),
+        ("Личный ритм", "Собирает твой прогресс и подсказывает следующий полезный шаг.", "circle.dotted.and.circle")
     ]
 
     var body: some View {
         NavigationStack {
             ProfileGlassBackdrop {
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        VStack(spacing: 8) {
-                            ProfileMotionOrb(phase: 0.35, reduceMotion: reduceMotion, scale: 0.34)
-                                .frame(width: 62, height: 48)
-                                .opacity(0.74)
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        VStack(spacing: 10) {
+                            ProfileMotionOrb(phase: 0.35, reduceMotion: true)
+                                .frame(height: 120)
                             Text("Taika — твой личный Kun Kru")
-                                .font(PD.FontToken.title(25, weight: .bold))
+                                .font(PD.FontToken.title(26, weight: .bold))
                                 .foregroundStyle(PD.ColorToken.text)
                                 .multilineTextAlignment(.center)
-                            Text("Платформа, которая помогает говорить, понимать и действовать увереннее в Таиланде.")
+                            Text("Не просто переводчик. Платформа, которая помогает говорить, понимать и действовать увереннее в Таиланде.")
                                 .font(PD.FontToken.caption(14))
                                 .foregroundStyle(PD.ColorToken.textSecondary)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.top, 12)
+                        .padding(.vertical, 10)
 
-                        VStack(spacing: -28) {
-                            ForEach(Array(values.enumerated()), id: \.element.id) { index, item in
-                                ProfileDepthValueCard(item: item, index: index)
-                                    .environmentObject(theme)
-                            }
+                        ForEach(Array(values.enumerated()), id: \.offset) { _, value in
+                            ProfileGlassRow(title: value.0, subtitle: value.1, systemImage: value.2, trailing: "checkmark") {}
+                                .environmentObject(theme)
                         }
-                        .padding(.horizontal, 4)
-                        .padding(.top, 8)
-                        .padding(.bottom, 26)
 
                         Text("Смысл · контекст · тон · голос")
                             .font(PD.FontToken.caption(12, weight: .semibold))
                             .foregroundStyle(theme.currentAccentFill)
-                            .padding(.bottom, 16)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 4)
                     }
                     .padding(.horizontal, PD.Spacing.screen)
+                    .padding(.top, 18)
+                    .padding(.bottom, 34)
                 }
             }
             .navigationTitle("Как устроена Taika")
@@ -1099,10 +1034,6 @@ private struct ProfileTaikaPlusCard: View {
                             .foregroundStyle(PD.ColorToken.textSecondary)
                             .lineLimit(1)
                     }
-                    ProfileMotionOrb(phase: 0.4, reduceMotion: true, scale: 0.42)
-                        .frame(width: 64, height: 50)
-                        .opacity(0.72)
-                        .allowsHitTesting(false)
                 }
                 HStack(spacing: 0) {
                     profileCapability("book.closed", "Курсы", pro.isPro)

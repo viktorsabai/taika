@@ -194,7 +194,8 @@ struct ProfileView: View {
                     .id(viewReloadToken)
                     .padding(.horizontal, PD.Spacing.screen)
                     .padding(.top, 12)
-                    .padding(.bottom, 36)
+                    // Keep the last Profile rows above the persistent bottom tab bar.
+                    .padding(.bottom, 140)
                 }
             }
             .padding(.top, Theme.Layout.rootHeaderClearance)
