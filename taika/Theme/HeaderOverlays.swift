@@ -91,20 +91,49 @@ struct OverlayEtalonBackground: View {
     }
 }
 
-/// Карточка оверлея: жидкое чёрное стекло + единый хедер (заголовок + закрытие).
+/// Shared informational overlay frame. The material/header geometry is unified;
+/// the role only describes the content density, never a separate visual system.
+enum OverlayEtalonCardRole {
+    case message
+    case choice
+    case quota
+    case workbench
+}
+
 struct OverlayEtalonCard<Content: View>: View {
     let title: String
     let onDismiss: () -> Void
+    let role: OverlayEtalonCardRole
     /// Game Park uses the surrounding canvas as its placement context; legacy
     /// overlays keep the root-header clearance for compatibility.
     var usesContextPlacement: Bool = false
     @ViewBuilder let content: () -> Content
 
+    init(
+        title: String,
+        onDismiss: @escaping () -> Void,
+        role: OverlayEtalonCardRole = .message,
+        usesContextPlacement: Bool = false,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.title = title
+        self.onDismiss = onDismiss
+        self.role = role
+        self.usesContextPlacement = usesContextPlacement
+        self.content = content
+    }
+
+    private var titleSize: CGFloat {
+        switch role {
+        case .message, .choice, .quota, .workbench: return 18
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
                 Text(title)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: titleSize, weight: .semibold, design: .rounded))
                     .foregroundStyle(CD.ColorToken.text)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -125,9 +154,16 @@ struct OverlayEtalonCard<Content: View>: View {
             content()
         }
         .background {
-            Theme.Surfaces.blackGlass(
-                RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous)
-            )
+            RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous)
+                .fill(Color.black.opacity(TaikaOverlayTokens.Material.cardOpacity))
+                .background {
+                    RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous)
+                        .fill(.ultraThinMaterial.opacity(0.46))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous)
+                        .strokeBorder(Color.white.opacity(TaikaOverlayTokens.Material.strokeOpacity), lineWidth: 1)
+                }
         }
         .clipShape(RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous))
         .frame(maxWidth: 420)
@@ -174,10 +210,23 @@ struct OverlayEtalonSecondaryButton: View {
 private struct UnifiedOverlayChrome<Content: View>: View {
     let title: String
     let onDismiss: () -> Void
+    let role: OverlayEtalonCardRole
     @ViewBuilder let content: () -> Content
 
+    init(
+        title: String,
+        onDismiss: @escaping () -> Void,
+        role: OverlayEtalonCardRole = .message,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.title = title
+        self.onDismiss = onDismiss
+        self.role = role
+        self.content = content
+    }
+
     var body: some View {
-        OverlayEtalonCard(title: title, onDismiss: onDismiss, content: content)
+        OverlayEtalonCard(title: title, onDismiss: onDismiss, role: role, content: content)
     }
 }
 
@@ -313,7 +362,7 @@ struct CourseSearchAndFiltersOverlayView: View {
     var body: some View {
         ZStack {
             OverlayEtalonBackground(onDismiss: onDismiss)
-            UnifiedOverlayChrome(title: "Поиск и фильтры", onDismiss: onDismiss) {
+            UnifiedOverlayChrome(title: "Поиск и фильтры", onDismiss: onDismiss, role: .workbench) {
                 TaikaRootVerticalScroll {
                     VStack(alignment: .leading, spacing: 20) {
                         Button {
@@ -470,7 +519,7 @@ struct SpeakerAttemptsOverlayView: View {
     var body: some View {
         ZStack {
             OverlayEtalonBackground(onDismiss: onDismiss)
-            UnifiedOverlayChrome(title: "Попытки сегодня", onDismiss: onDismiss) {
+            UnifiedOverlayChrome(title: "Попытки сегодня", onDismiss: onDismiss, role: .quota) {
                 VStack(alignment: .leading, spacing: 18) {
                     Text(modeTitle)
                         .font(.system(size: 13, weight: .semibold))
@@ -1073,6 +1122,7 @@ struct GameParkOverlayView: View {
 
                 OverlayEtalonCard(
                     title: "Игровой парк",
+                    role: .choice,
                     onDismiss: onDismiss,
                     usesContextPlacement: true
                 ) {
