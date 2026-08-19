@@ -295,26 +295,13 @@ struct MainView: View {
         return name.isEmpty ? "Продолжить" : "Продолжить \(name)"
     }
 
-    /// Одна строка: «Разминка · 13ч 39м» (+ секунды ближе к концу).
-    private func warmupPillTitle(now: Date = Date()) -> String {
-        let label = MDDailyRefreshCountdown.label(now: now)
-        if label == "скоро" { return "Разминка · скоро" }
-        return "Разминка · \(label)"
-    }
-
+    /// Daily free entry point: stable visual surface with a value-led invitation.
     private var warmupRow: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            MDMainOutlinePillCTA(
-                title: warmupPillTitle(now: context.date),
-                icon: "bolt.fill",
-                progressFill: MDDailyRefreshCountdown.remainingFraction(now: context.date)
-            ) {
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                    showDailyPicksSheet = true
-                }
+        MDDailyWarmupPillCTA {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                showDailyPicksSheet = true
             }
         }
-        .accessibilityLabel("Разминка, таймер до обновления")
     }
 
     private var dictionaryMainButton: some View {

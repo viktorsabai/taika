@@ -1964,6 +1964,80 @@ public struct MDMainOutlinePillCTA: View {
     }
 }
 
+/// Daily warmup entry point: stable glass surface with a restrained lightning pulse.
+/// The copy rotates by value, not by countdown, so the action never feels like a temporary timer.
+public struct MDDailyWarmupPillCTA: View {
+    public let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let messages = [
+        "случайная подборка на сегодня",
+        "пара фраз — разогреть речь",
+        "бесплатная практика каждый день"
+    ]
+
+    public init(action: @escaping () -> Void) {
+        self.action = action
+    }
+
+    public var body: some View {
+        let accent = ThemeManager.shared.currentAccentFill
+
+        TimelineView(.periodic(from: .now, by: reduceMotion ? 60 : 0.12)) { context in
+            let elapsed = context.date.timeIntervalSinceReferenceDate
+            let messageIndex = Int(elapsed / 4.5) % messages.count
+            let pulse = reduceMotion ? 0.0 : max(0, sin(elapsed * 2.8))
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                action()
+            } label: {
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle()
+                            .fill(accent.opacity(0.12 + pulse * 0.16))
+                            .frame(width: 28, height: 28)
+                            .blur(radius: pulse > 0.05 ? 1.5 : 0)
+
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(accent)
+                            .scaleEffect(1.0 + pulse * 0.18)
+                            .opacity(0.76 + pulse * 0.24)
+                    }
+                    .frame(width: 28, height: 28)
+
+                    Text("Разминка · \(messages[messageIndex])")
+                        .font(.system(size: 15, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                        .contentTransition(.opacity)
+
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .opacity(0.72)
+                }
+                .foregroundStyle(accent)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 13)
+                .padding(.horizontal, 16)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(PD.ColorToken.chip.opacity(0.54))
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(accent.opacity(0.78), lineWidth: 1.2)
+                        )
+                )
+            }
+            .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+            .accessibilityLabel("Разминка, ежедневная подборка фраз")
+            .accessibilityHint("Открыть бесплатную практику на сегодня")
+        }
+    }
+}
+
 /// Одно простое действие-строка (например «Разминка»): иконка, заголовок + опциональный бейдж, мета, шеврон.
 public struct MDSingleActionCard: View {
     public var icon: String
