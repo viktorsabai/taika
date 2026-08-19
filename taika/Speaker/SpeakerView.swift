@@ -334,12 +334,8 @@ struct SpeakerView: View {
             if isRecordingFromBreakdown, case .feedback = newPhase {
                 isRecordingFromBreakdown = false
             }
-            // Тренировка «Своя речь»: сразу разбор, без промежуточной полупустой карточки.
-            if case .feedback = newPhase,
-               speaker.speakerUIMode == .conversation,
-               speaker.conversationExpectedThai != nil {
-                openConversationBreakdownIfNeeded(force: true)
-            }
+            // Score-first gate: после записи показываем feedback score.
+            // Полный разбор открывается только по явному действию пользователя.
         }
         .onChange(of: speaker.conversationHeardThaiASR) { _, newVal in
             if newVal != nil {

@@ -832,7 +832,7 @@ public struct SpeakerDSRoot: View {
                     conversationWidgetIdleCenter
                         .padding(.horizontal, padH)
                     Spacer(minLength: 8)
-                } else if !history.isEmpty {
+                } else if !history.isEmpty && !focused {
                     conversationHistoryFeed(history)
                         .padding(.horizontal, padH)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1011,7 +1011,7 @@ public struct SpeakerDSRoot: View {
                     mode: mode,
                     accent: accentTint
                 )
-                .frame(width: 210, height: 210)
+                .frame(width: 176, height: 176)
 
                 if isBusy {
                     ZStack {
@@ -1036,7 +1036,7 @@ public struct SpeakerDSRoot: View {
                     .accessibilityLabel(isRec ? "Стоп" : "Микрофон")
                 }
             }
-            .frame(height: 214)
+            .frame(height: 180)
 
             if isBusy {
                 ConversationLiveProcessTicks()
@@ -1207,43 +1207,42 @@ public struct SpeakerDSRoot: View {
     // MARK: History feed
 
     @ViewBuilder private func conversationHistoryFeed(_ history: [SpeakerConversationHistoryItem]) -> some View {
-        let micReserve: CGFloat = 108
-        List {
-            ForEach(history) { item in
-                conversationHistoryRow(item)
-                    .listRowInsets(EdgeInsets(top: 7, leading: 0, bottom: 7, trailing: 0))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            conversationEngine.removeConversationHistoryItem(id: item.id)
-                        } label: {
-                            Label("Удалить", systemImage: "trash")
-                        }
-                    }
-                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        let inDict = !item.thai.isEmpty
-                            && favoriteManager.hasSmartSpeakerDictionaryEntry(thai: item.thai)
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            conversationHistoryToggleDictionary(item)
-                        } label: {
-                            Label(inDict ? "В словаре" : "В словарь", systemImage: inDict ? "bookmark.fill" : "plus.circle.fill")
-                        }
-                        .tint(ThemeManager.shared.currentAccentTintColor)
-                    }
+        let visibleHistory = Array(history.prefix(6))
+        let cardWidth = min(UIScreen.main.bounds.width - 56, 334)
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("ПОСЛЕДНИЕ ФРАЗЫ")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(0.8)
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
+                Spacer(minLength: 8)
+                Text("свайпни")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.5))
             }
-            Color.clear
-                .frame(height: micReserve)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .accessibilityHidden(true)
+            .padding(.horizontal, 4)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 12) {
+                    ForEach(visibleHistory) { item in
+                        conversationHistoryRow(item)
+                            .frame(width: cardWidth, alignment: .leading)
+                            .onTapGesture {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                conversationEngine.activateConversationHistoryItem(item)
+                                external?.onConversationRepeatAndCheck()
+                            }
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityLabel("Открыть фразу: \(item.russian.isEmpty ? item.thai : item.russian)")
+                    }
+                }
+                .padding(.horizontal, 4)
+                .padding(.bottom, 4)
+            }
+            .frame(maxWidth: .infinity)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     @ViewBuilder private func conversationHistoryRow(_ item: SpeakerConversationHistoryItem) -> some View {
