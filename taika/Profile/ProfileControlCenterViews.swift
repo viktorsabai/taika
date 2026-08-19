@@ -1060,84 +1060,114 @@ private struct ProfileTaikaPlusCard: View {
     let onTap: () -> Void
     let onRestore: () -> Void
 
+    private var statusTitle: String {
+        pro.isPro ? "ДОСТУП ОТКРЫТ" : "ДОСТУП ЗАКРЫТ"
+    }
+
+    private var statusColor: Color {
+        pro.isPro ? Color.green : theme.currentAccentFill
+    }
+
+    private var statusSubtitle: String {
+        pro.isPro ? pro.subscriptionStatusSubtitle : "7 дней бесплатно · курсы и Speaker"
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 7) {
                     HStack(spacing: 8) {
-                        Text(pro.isPro ? "Taika+ активен" : "Taika+ пока закрыт")
-                            .font(PD.FontToken.title(20, weight: .bold))
-                            .foregroundStyle(PD.ColorToken.text)
                         Image(systemName: "crown.fill")
                             .foregroundStyle(theme.currentAccentFill)
+                        Text(pro.isPro ? "Taika+ активен" : "Открыть Taika+")
+                            .font(PD.FontToken.title(21, weight: .bold))
+                            .foregroundStyle(PD.ColorToken.text)
                     }
-                    Text(pro.isPro ? "Курсы, Speaker и игры открыты" : "Курсы, Speaker и игры в одном маршруте")
-                        .font(PD.FontToken.caption(13))
+                    Text(statusSubtitle)
+                        .font(PD.FontToken.caption(13, weight: .medium))
                         .foregroundStyle(PD.ColorToken.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 7) {
-                        Image(systemName: "calendar")
-                            .font(.caption)
-                        Text(pro.subscriptionStatusSubtitle)
-                            .font(PD.FontToken.caption(12, weight: .medium))
-                    }
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.88))
+                        .lineLimit(2)
                 }
-                Spacer(minLength: 0)
-                ProfileMotionOrb(phase: 0.4, reduceMotion: true, scale: 0.25)
-                    .frame(width: 56, height: 56)
-                    .opacity(0.72)
-                    .allowsHitTesting(false)
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 7) {
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 9, height: 9)
+                        .shadow(color: statusColor.opacity(0.7), radius: 7)
+                    Text(statusTitle)
+                        .font(PD.FontToken.caption(10, weight: .bold))
+                        .foregroundStyle(statusColor)
+                        .tracking(0.7)
+                }
             }
 
             Button(action: onTap) {
                 HStack(spacing: 8) {
-                    Image(systemName: pro.isPro ? "crown.fill" : "sparkles")
+                    Image(systemName: pro.isPro ? "slider.horizontal.3" : "sparkles")
                     Text(pro.isPro ? "Управление подпиской" : "Открыть Taika+")
                         .font(PD.FontToken.body(16, weight: .bold))
                 }
-                .foregroundStyle(Color.black.opacity(0.86))
+                .foregroundStyle(Color.black.opacity(0.88))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 13)
+                .padding(.vertical, 12)
                 .background(theme.currentAccentFill, in: Capsule())
             }
             .buttonStyle(.plain)
 
-            Button(action: onRestore) {
-                Text(restoreInFlight ? "Восстановление…" : "Восстановить покупку")
-                    .font(PD.FontToken.caption(13, weight: .semibold))
-                    .foregroundStyle(theme.currentAccentFill)
-                    .frame(maxWidth: .infinity)
+            HStack {
+                Button(action: onRestore) {
+                    Text(restoreInFlight ? "Восстановление…" : "Восстановить покупку")
+                        .font(PD.FontToken.caption(12, weight: .semibold))
+                        .foregroundStyle(theme.currentAccentFill)
+                }
+                .buttonStyle(.plain)
+                .disabled(restoreInFlight)
+                Spacer()
+                Text(pro.isPro ? "Все функции доступны" : "Есть подписка? Восстанови её")
+                    .font(PD.FontToken.caption(11))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
+                    .lineLimit(1)
             }
-            .buttonStyle(.plain)
-            .disabled(restoreInFlight)
 
             HStack(spacing: 0) {
                 profileCapability("book.closed", "Курсы", pro.isPro)
-                Divider().frame(height: 34).overlay(PD.ColorToken.stroke.opacity(0.4))
+                Divider().frame(height: 30).overlay(PD.ColorToken.stroke.opacity(0.35))
                 profileCapability("waveform", "Speaker", pro.isPro)
-                Divider().frame(height: 34).overlay(PD.ColorToken.stroke.opacity(0.4))
+                Divider().frame(height: 30).overlay(PD.ColorToken.stroke.opacity(0.35))
                 profileCapability("gamecontroller", "Игры", pro.isPro)
             }
-            .padding(.vertical, 10)
-            .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.vertical, 9)
+            .background(Color.black.opacity(0.12), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
         }
         .padding(16)
-        .background(PD.ColorToken.card.opacity(0.46), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.66), lineWidth: 1))
+        .background(
+            LinearGradient(
+                colors: [
+                    theme.currentAccentTintColor.opacity(pro.isPro ? 0.22 : 0.13),
+                    PD.ColorToken.card.opacity(0.56),
+                    Color.black.opacity(0.16)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(statusColor.opacity(pro.isPro ? 0.48 : 0.28), lineWidth: 1))
+        .shadow(color: statusColor.opacity(pro.isPro ? 0.16 : 0.08), radius: 18, y: 8)
     }
 
     private func profileCapability(_ image: String, _ title: String, _ available: Bool) -> some View {
         let capabilityStyle: AnyShapeStyle = available
             ? AnyShapeStyle(theme.currentAccentFill)
-            : AnyShapeStyle(PD.ColorToken.textSecondary)
-        return VStack(spacing: 4) {
+            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.72))
+        return VStack(spacing: 3) {
             Image(systemName: image)
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(capabilityStyle)
             Text(title)
-                .font(PD.FontToken.caption(11))
+                .font(PD.FontToken.caption(11, weight: .medium))
                 .foregroundStyle(PD.ColorToken.textSecondary)
-            Text(available ? "доступны" : "Taika+")
+            Text(available ? "открыто" : "закрыто")
                 .font(PD.FontToken.caption(10, weight: .semibold))
                 .foregroundStyle(capabilityStyle)
         }
