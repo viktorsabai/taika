@@ -937,9 +937,9 @@ public struct AppStatusChip: View {
         case .completed:
             let learnedGreen = Color(red: 0.25, green: 0.78, blue: 0.48)
             return StatusColors(
-                fill: AnyShapeStyle(learnedGreen.opacity(0.86)),
-                stroke: AnyShapeStyle(learnedGreen.opacity(0.58)),
-                text: AnyShapeStyle(Color.white.opacity(0.96))
+                fill: AnyShapeStyle(Color.black.opacity(0.34)),
+                stroke: AnyShapeStyle(learnedGreen.opacity(0.72)),
+                text: AnyShapeStyle(learnedGreen.opacity(0.96))
             )
         }
     }
@@ -971,11 +971,17 @@ public struct AppStatusChip: View {
 
     public var body: some View {
         let c = colors(for: kind)
-        Text(labelText)
-            .font(.system(size: scale == .xs ? 11 : 12, weight: .semibold))
-            .foregroundStyle(c.text)
-            .padding(.horizontal, hPad)
-            .frame(height: height)
+        HStack(spacing: kind == .completed ? 4 : 0) {
+            if kind == .completed {
+                Image(systemName: "checkmark")
+                    .font(.system(size: scale == .xs ? 9 : 10, weight: .bold))
+            }
+            Text(labelText)
+        }
+        .font(.system(size: scale == .xs ? 11 : 12, weight: .semibold))
+        .foregroundStyle(c.text)
+        .padding(.horizontal, hPad)
+        .frame(height: height)
             .background(Capsule(style: .continuous).fill(c.fill))
             .overlay(Capsule(style: .continuous).strokeBorder(c.stroke, lineWidth: 1))
     }
