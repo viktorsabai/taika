@@ -1964,8 +1964,8 @@ public struct MDMainOutlinePillCTA: View {
     }
 }
 
-/// Daily warmup entry point: stable glass surface with a restrained lightning pulse.
-/// The copy rotates by value, not by countdown, so the action never feels like a temporary timer.
+/// Daily warmup entry point: one centered copy slot with icon-only lightning motion.
+/// The slot alternates between the action name and one short value explanation, never both at once.
 public struct MDDailyWarmupPillCTA: View {
     public let action: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1985,38 +1985,37 @@ public struct MDDailyWarmupPillCTA: View {
 
         TimelineView(.periodic(from: .now, by: reduceMotion ? 60 : 0.12)) { context in
             let elapsed = context.date.timeIntervalSinceReferenceDate
-            let messageIndex = Int(elapsed / 4.5) % messages.count
+            let messageIndex = Int(elapsed / 4.5) % (messages.count + 1)
             let pulse = reduceMotion ? 0.0 : max(0, sin(elapsed * 2.8))
+            let copy = messageIndex == 0 ? "Разминка" : messages[messageIndex - 1]
 
             Button {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 action()
             } label: {
                 HStack(spacing: 10) {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(accent)
+                        .scaleEffect(1.0 + pulse * 0.18)
+                        .opacity(0.82 + pulse * 0.18)
+                        .frame(width: 28, height: 28)
+
                     ZStack {
-                        Circle()
-                            .fill(accent.opacity(0.12 + pulse * 0.16))
-                            .frame(width: 28, height: 28)
-                            .blur(radius: pulse > 0.05 ? 1.5 : 0)
-
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(accent)
-                            .scaleEffect(1.0 + pulse * 0.18)
-                            .opacity(0.76 + pulse * 0.24)
+                        Text(copy)
+                            .font(.system(size: 15, weight: .semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.78)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .contentTransition(.opacity)
                     }
-                    .frame(width: 28, height: 28)
+                    .frame(maxWidth: .infinity, minHeight: 20, maxHeight: 20)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: messageIndex)
 
-                    Text("Разминка · \(messages[messageIndex])")
-                        .font(.system(size: 15, weight: .semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
-                        .contentTransition(.opacity)
-
-                    Spacer(minLength: 4)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .bold))
                         .opacity(0.72)
+                        .frame(width: 28, height: 20, alignment: .center)
                 }
                 .foregroundStyle(accent)
                 .frame(maxWidth: .infinity, alignment: .leading)
