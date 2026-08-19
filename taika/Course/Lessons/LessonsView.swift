@@ -509,8 +509,9 @@ public struct LessonsView: View {
                             onSpeaker: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : {
                                 guard let cid = currentCourse?.courseID else { return }
                                 let ids = effectiveReinforcementLessonIds
+                                guard let firstID = ids.first else { return }
                                 SpeakerRequestedCourseId.shared.set(cid, lessonIds: ids)
-                                UserSession.shared.markActive(courseId: cid, lessonId: ids.first, stepIndex: 0)
+                                UserSession.shared.markActive(courseId: cid, lessonId: firstID, stepIndex: 0)
                                 NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
                                 nav.requestTab(2)
                             },
@@ -703,8 +704,8 @@ let withTasks = base
                 onSpeaker: {
                     guard let cid = currentCourse?.courseID else { return }
                     let ids = effectiveReinforcementLessonIds
-                    guard !ids.isEmpty else { return }
-                    UserSession.shared.markActive(courseId: cid, lessonId: ids.first, stepIndex: 0)
+                    guard let firstID = ids.first else { return }
+                    UserSession.shared.markActive(courseId: cid, lessonId: firstID, stepIndex: 0)
                     NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
                     SpeakerRequestedCourseId.shared.set(cid, lessonIds: ids)
                     nav.requestTab(2)
@@ -797,7 +798,7 @@ let withTasks = base
 
         let withChrome = withTasks
             .navigationBarBackButtonHidden(true)
-            .toolbar(.hidden, for: .navigationBar)
+            .toolbar(Visibility.hidden, for: ToolbarPlacement.navigationBar)
             .onAppear {
                 GameHeaderStore.shared.config = nil
                 // Resume the course context instead of resetting the carousel to lesson one.
