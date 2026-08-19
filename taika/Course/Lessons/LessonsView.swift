@@ -472,9 +472,7 @@ public struct LessonsView: View {
                             category: "",
                             etaMinutes: remainingCourseMinutes > 0 ? remainingCourseMinutes : nil,
                             onCTA: {
-                                if let first = lessonsSorted.first {
-                                    selectedLessonId = first.lessonID
-                                }
+                                selectedLessonId = smartResumeLessonId
                             },
                             onReset: {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()

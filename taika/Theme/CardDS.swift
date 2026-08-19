@@ -2628,6 +2628,8 @@ public struct CourseLessonCard: View {
         case courseGradeSheet
         /// Lesson card: short actionable reminders (no duplicate course metrics).
         case lessonReminders(lines: [String])
+        /// Completed lesson: compact progress summary with one primary reinforcement action.
+        case lessonCompletion
     }
 
     // MARK: - Optional flip (course -> "what to do next" back face)
@@ -3092,6 +3094,38 @@ public struct CourseLessonCard: View {
         @ViewBuilder
         func backPlanBelowTitle() -> some View {
             switch backFaceKind {
+            case .lessonCompletion:
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                        Text("урок выучен")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(Color.white.opacity(0.96))
+                    }
+
+                    Text("100% пройдено. Теперь преврати знание в живую привычку.")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.72))
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if backPrimaryActionTitle != nil || backSecondaryActionTitle != nil {
+                        VStack(spacing: 8) {
+                            if let title = backPrimaryActionTitle, let action = onBackPrimaryAction {
+                                Button(title, action: action)
+                                    .buttonStyle(CardBackActionButtonStyle(isPrimary: true))
+                            }
+                            if let title = backSecondaryActionTitle, let action = onBackSecondaryAction {
+                                Button(title, action: action)
+                                    .buttonStyle(CardBackActionButtonStyle(isPrimary: false))
+                            }
+                        }
+                        .padding(.top, 2)
+                    }
+                }
+
             case .lessonReminders(let lines):
                 VStack(alignment: .leading, spacing: 6) {
                     Text("напоминание")
@@ -3192,10 +3226,13 @@ public struct CourseLessonCard: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, 2)
                 } else if let f = progressFraction {
-                    let showPlanHint = flipEnabled && !isFlipped && (f >= 0.999)
+                    let isLearned = f >= 0.999
+                    let showPlanHint = flipEnabled && !isFlipped && isLearned
                     CourseInlineProgressView(
                         fraction: f,
-                        secondaryText: showPlanHint ? "закрепление доступно" : nil
+                        secondaryText: isLearned
+                            ? "выучено · закрепление доступно"
+                            : (showPlanHint ? "закрепление доступно" : nil)
                     )
                 }
             }

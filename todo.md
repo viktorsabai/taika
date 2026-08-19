@@ -759,3 +759,21 @@
 - [x] Keep lesson-carousel card dimensions and depth treatment.
 - [x] Remove oversized empty area while preserving readable hack text and actions.
 - [x] Preserve play, favorite, course scope and existing navigation callbacks.
+
+
+# LessonsView discovery shuffle and retention state
+
+- [ ] Define a non-repeating deterministic shuffle for lesson/hack section switches.
+- [ ] Keep current in-progress lesson and explicit user selection stable across shuffle.
+- [ ] Replace overloaded completed back face with a compact progress summary.
+- [ ] Use one primary retention CTA and keep secondary utilities visually subordinate.
+- [ ] Preserve course scope, favorites, reinforcement and next-lesson navigation.
+
+
+# Simplified completion card and learned progress treatment
+
+- [x] Replace overloaded completed back face with compact progress summary and primary CTA.
+- [x] Add techno/glass completion treatment and explicit learned/completed indicator.
+- [x] Keep current in-progress or next lesson focused after return/progress changes.
+- [x] Preserve favorites, reinforcement, next lesson, Speaker and course scope.
+- [x] Static-check and prepare one clean testable commit.

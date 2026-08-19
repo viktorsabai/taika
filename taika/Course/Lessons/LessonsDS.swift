@@ -1377,18 +1377,6 @@ public struct LSLessonCardV: View {
         // Build duration text (same format, reused by CardDS)
         let durationText = "≈ \(item.durationMinutes) мин"
 
-        let reminderLines: [String] = {
-            guard item.status == .completed else { return [] }
-            var lines: [String] = []
-            lines.append("Открой консоль снизу: мини-игры и микрофон для этого урока.")
-            if let s = item.subtitle, !s.isEmpty { lines.append(s) }
-            if !item.tags.isEmpty {
-                lines.append(item.tags.prefix(3).joined(separator: " · "))
-            }
-            lines.append("Короткие повторы лучше, чем редкие «забеги».")
-            return Array(lines.prefix(4))
-        }()
-
         return CourseLessonCard(
             title: item.title,
             subtitle: item.subtitle,
@@ -1398,6 +1386,12 @@ public struct LSLessonCardV: View {
             isPro: item.isPro,
             tags: [],
             sectionChrome: .none,
+            accentTreatment: item.status == .completed
+                ? .taikaValues(
+                    fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                    glow: ThemeManager.shared.currentAccentTintColor
+                )
+                : .none,
             primaryCTA: primaryCTA,
             scale: .s,
             showFavorite: true,
@@ -1407,9 +1401,9 @@ public struct LSLessonCardV: View {
                 onTap(item)
             },
             isConsoleEnabled: item.status == .completed,
-            completionFraction: item.progress,
+            completionFraction: item.status == .completed ? 1.0 : item.progress,
             flipEnabled: item.status == .completed,
-            backFaceKind: item.status == .completed ? .lessonReminders(lines: reminderLines) : .courseGradeSheet,
+            backFaceKind: item.status == .completed ? .lessonCompletion : .courseGradeSheet,
             backPrimaryActionTitle: item.status == .completed ? "Закрепить сейчас" : nil,
             onBackPrimaryAction: item.status == .completed ? onConsole : nil,
             backSecondaryActionTitle: item.status == .completed ? "Следующий урок" : nil,
