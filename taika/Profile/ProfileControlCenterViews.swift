@@ -39,8 +39,16 @@ struct ProfileStatisticsView: View {
             .navigationTitle("Твой ритм")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") { dismiss() }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(PD.ColorToken.text)
+                            .frame(width: 42, height: 42)
+                            .background(.ultraThinMaterial, in: Circle())
+                            .overlay(Circle().stroke(PD.ColorToken.stroke.opacity(0.55), lineWidth: 1))
+                    }
+                    .accessibilityLabel("Назад")
                 }
             }
         }
@@ -53,189 +61,184 @@ struct ProfileStatisticsView: View {
         }
     }
 
-    private var focusTitle: String {
-        if let score = profile.dashboardSpeakingScore, score >= 80 {
-            return "Голос становится увереннее"
-        }
-        if profile.dashboardStreakDays >= 3 {
-            return "Ты создал свой ритм"
-        }
-        return "Ты уже начал двигаться"
-    }
-
-    private var focusSubtitle: String {
-        if let score = profile.dashboardSpeakingScore, score >= 80 {
-            return "Speaker показывает: ты всё чаще говоришь без лишнего напряжения."
-        }
-        if profile.dashboardStreakDays >= 3 {
-            return "Несколько возвращений подряд — так язык превращается в привычку."
-        }
-        return "Каждый закреплённый шаг делает следующую фразу немного легче."
+    private var rhythmPercent: Int {
+        guard !profile.activityWeekDays.isEmpty else { return 0 }
+        let total = profile.activityWeekDays.reduce(0.0) { $0 + $1.intensity01 }
+        return min(100, max(0, Int((total / Double(profile.activityWeekDays.count) * 100).rounded())))
     }
 
     private var activeContent: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            ZStack(alignment: .bottomLeading) {
-                ProfileFocusScene(phase: orbPhase, reduceMotion: reduceMotion, accent: AnyShapeStyle(theme.currentAccentFill))
-                    .frame(height: 238)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("ФОКУС НЕДЕЛИ")
-                        .font(PD.FontToken.caption(11, weight: .semibold))
-                        .foregroundStyle(theme.currentAccentFill)
-                        .tracking(1.4)
-                    Text(focusTitle)
-                        .font(PD.FontToken.title(28, weight: .bold))
-                        .foregroundStyle(PD.ColorToken.text)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(focusSubtitle)
-                        .font(PD.FontToken.caption(14))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 16) {
+            rhythmHero
+            rhythmMetrics
+            activitySection
+            continueSection
+            Button {
+                nav.requestTab(1)
+                dismiss()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkles")
+                    Text("Продолжить практику")
+                    Spacer()
                 }
-                .padding(20)
+                .font(PD.FontToken.body(16, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.background)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 15)
+                .background(theme.currentAccentFill, in: Capsule())
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(PD.ColorToken.card.opacity(0.46), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.68), lineWidth: 1))
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Что изменилось")
-                    .font(PD.FontToken.caption(11, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                    .tracking(1.2)
-                Text(explanationText)
-                    .font(PD.FontToken.body(17, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.text)
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 18) {
-                    coachingMetric(value: "\(profile.dashboardLearnedCount)", label: "закреплено")
-                    coachingMetric(value: "\(profile.dashboardStreakDays)", label: "дней в ритме")
-                    coachingMetric(value: profile.dashboardSpeakingScore.map(String.init) ?? "—", label: "оценка голоса")
-                }
-                .padding(.top, 8)
-            }
-            .padding(18)
-            .background(PD.ColorToken.card.opacity(0.30), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.48), lineWidth: 1))
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Следующий импульс")
-                    .font(PD.FontToken.caption(11, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                    .tracking(1.2)
-                Text("Закрепи сегодняшний шаг одной короткой практикой.")
-                    .font(PD.FontToken.body(17, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.text)
-                Button {
-                    nav.requestTab(1)
-                    dismiss()
-                } label: {
-                    HStack {
-                        Text("Продолжить курс")
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                    }
-                    .font(PD.FontToken.body(16, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.background)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 14)
-                    .background(theme.currentAccentFill, in: Capsule())
-                }
-                .buttonStyle(.plain)
-                Button {
-                    nav.requestTab(2)
-                    dismiss()
-                } label: {
-                    Text("Или потренировать фразу в Speaker")
-                        .font(PD.FontToken.caption(13, weight: .semibold))
-                        .foregroundStyle(theme.currentAccentFill)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(18)
-            .background(PD.ColorToken.card.opacity(0.34), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.52), lineWidth: 1))
+            .buttonStyle(.plain)
         }
     }
 
-    private var explanationText: String {
-        let steps = profile.dashboardLearnedCount
-        let days = profile.dashboardStreakDays
-        if steps > 0 && days > 0 {
-            return "У тебя уже \(steps) устойчивых шагов и \(days) \(dayWord) возвращения к практике. Taika видит не идеальность, а реальное движение."
+    private var rhythmHero: some View {
+        ZStack(alignment: .leading) {
+            ProfileRhythmRing(percent: rhythmPercent, phase: orbPhase, reduceMotion: reduceMotion, accent: AnyShapeStyle(theme.currentAccentFill))
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.trailing, 14)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Ты уже\nв ритме")
+                    .font(PD.FontToken.title(31, weight: .bold))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Последние 7 дней")
+                    .font(PD.FontToken.caption(15))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+            .padding(.horizontal, 22)
         }
-        if steps > 0 {
-            return "Ты закрепил \(steps) шагов. Сейчас важнее не ускоряться, а спокойно вернуться к ним ещё раз."
+        .frame(height: 238)
+        .background(PD.ColorToken.card.opacity(0.46), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.68), lineWidth: 1))
+    }
+
+    private var rhythmMetrics: some View {
+        VStack(spacing: 0) {
+            rhythmMetricRow(title: "Шаги", subtitle: "Закреплённые учебные шаги", value: "\(profile.dashboardLearnedCount)", image: "book.closed")
+            Divider().overlay(PD.ColorToken.stroke.opacity(0.45))
+            rhythmMetricRow(title: "Дни практики", subtitle: "Возвращения за последние 7 дней", value: "\(profile.dashboardStreakDays)", image: "clock")
+            Divider().overlay(PD.ColorToken.stroke.opacity(0.45))
+            rhythmMetricRow(title: "Голос", subtitle: "Средняя оценка Speaker", value: profile.dashboardSpeakingScore.map(String.init) ?? "—", image: "waveform")
         }
-        return "Ты начал собирать основу. Следующая короткая практика поможет превратить её в привычку."
+        .padding(.horizontal, 16)
+        .background(PD.ColorToken.card.opacity(0.34), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.54), lineWidth: 1))
+    }
+
+    private func rhythmMetricRow(title: String, subtitle: String, value: String, image: String) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: image)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(theme.currentAccentFill)
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(PD.FontToken.body(16, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                Text(subtitle)
+                    .font(PD.FontToken.caption(12))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+            Spacer()
+            Text(value)
+                .font(PD.FontToken.title(22, weight: .bold))
+                .foregroundStyle(theme.currentAccentFill)
+        }
+        .padding(.vertical, 14)
+    }
+
+    private var continueSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Что продолжить")
+                .font(PD.FontToken.caption(13, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .textCase(.uppercase)
+            Button {
+                nav.requestTab(1)
+                dismiss()
+            } label: {
+                profileAction(title: "Продолжить курс", subtitle: "Вернуться к следующему уроку", systemImage: "play")
+            }
+            .buttonStyle(.plain)
+            Button {
+                nav.requestTab(2)
+                dismiss()
+            } label: {
+                profileAction(title: "Повторить в Speaker", subtitle: "Фразы, которые ждут повторения", systemImage: "waveform")
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     private var emptyContent: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            ZStack(alignment: .bottomLeading) {
-                ProfileFocusScene(phase: orbPhase, reduceMotion: reduceMotion, accent: AnyShapeStyle(theme.currentAccentFill))
-                    .frame(height: 238)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("ТВОЙ ЛИЧНЫЙ РИТМ")
-                        .font(PD.FontToken.caption(11, weight: .semibold))
-                        .foregroundStyle(theme.currentAccentFill)
-                        .tracking(1.3)
-                    Text("Здесь появится история твоего голоса и слов")
-                        .font(PD.FontToken.title(25, weight: .bold))
-                        .foregroundStyle(PD.ColorToken.text)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("Taika будет показывать не рейтинг, а понятные изменения: что закрепилось и какой следующий шаг поможет именно тебе.")
-                        .font(PD.FontToken.caption(14))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(20)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(PD.ColorToken.card.opacity(0.46), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.68), lineWidth: 1))
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Первый шаг")
-                    .font(PD.FontToken.caption(11, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                    .tracking(1.2)
-                Text("Начни с короткого урока — и мы покажем, как твой ритм собирается постепенно.")
-                    .font(PD.FontToken.body(17, weight: .semibold))
+        VStack(spacing: 20) {
+            ProfileEmptyRhythmHero(reduceMotion: reduceMotion, phase: orbPhase)
+            VStack(spacing: 8) {
+                Text("Здесь появится\nтвой прогресс")
+                    .font(PD.FontToken.title(29, weight: .bold))
                     .foregroundStyle(PD.ColorToken.text)
+                    .multilineTextAlignment(.center)
+                Text("Начни с первого урока — Taika будет бережно собирать историю твоей практики.")
+                    .font(PD.FontToken.body(16))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                Button {
-                    nav.requestTab(1)
-                    dismiss()
-                } label: {
-                    HStack {
-                        Text("Начать первый урок")
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                    }
-                    .font(PD.FontToken.body(16, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.background)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 14)
-                    .background(theme.currentAccentFill, in: Capsule())
-                }
-                .buttonStyle(.plain)
-                Button {
-                    nav.requestTab(2)
-                    dismiss()
-                } label: {
-                    Text("Или начать с Speaker")
-                        .font(PD.FontToken.caption(13, weight: .semibold))
-                        .foregroundStyle(theme.currentAccentFill)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.plain)
             }
-            .padding(18)
+            .padding(.horizontal, 20)
+            VStack(spacing: 0) {
+                emptyMetric(title: "Уроки", image: "book.closed")
+                emptyMetric(title: "Минуты", image: "clock")
+                emptyMetric(title: "Слова", image: "textformat")
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
             .background(PD.ColorToken.card.opacity(0.34), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.52), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.54), lineWidth: 1))
+            Button {
+                nav.requestTab(1)
+                dismiss()
+            } label: {
+                HStack {
+                    Image(systemName: "sparkles")
+                    Text("Начать первый урок")
+                    Spacer()
+                }
+                .font(PD.FontToken.body(16, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.background)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 15)
+                .background(theme.currentAccentFill, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            Button {
+                nav.requestTab(2)
+                dismiss()
+            } label: {
+                Text("Открыть Speaker")
+                    .font(PD.FontToken.body(15, weight: .semibold))
+                    .foregroundStyle(theme.currentAccentFill)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
         }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func emptyMetric(title: String, image: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: image)
+                .foregroundStyle(theme.currentAccentFill)
+                .frame(width: 26)
+            Text(title)
+                .font(PD.FontToken.caption(13))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            Spacer()
+            Text("—")
+                .font(PD.FontToken.body(17, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.text)
+        }
+        .padding(.vertical, 10)
     }
 
     private var activityDaysForDisplay: [PDActivityDay] {
@@ -243,13 +246,7 @@ struct ProfileStatisticsView: View {
     }
 
     private var activitySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Активность")
-                .font(PD.FontToken.caption(13, weight: .semibold))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-                .textCase(.uppercase)
-            activityBars
-        }
+        activityBars
     }
 
     private var activityBars: some View {
@@ -740,5 +737,90 @@ private struct ProfileFocusScene: View {
             }
         }
         .allowsHitTesting(false)
+    }
+}
+
+
+private struct ProfileRhythmRing: View {
+    let percent: Int
+    let phase: CGFloat
+    let reduceMotion: Bool
+    let accent: AnyShapeStyle
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.07), lineWidth: 14)
+                .frame(width: 172, height: 172)
+            Circle()
+                .trim(from: 0, to: CGFloat(percent) / 100)
+                .stroke(accent, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                .frame(width: 172, height: 172)
+                .rotationEffect(.degrees(-90))
+                .shadow(color: Color.pink.opacity(0.34), radius: 12)
+                .rotation3DEffect(.degrees(reduceMotion ? 0 : Double(phase) * 2), axis: (x: 0, y: 1, z: 0))
+            VStack(spacing: 2) {
+                Text("\(percent)%")
+                    .font(PD.FontToken.title(35, weight: .bold))
+                    .foregroundStyle(accent)
+                Text("ритма")
+                    .font(PD.FontToken.caption(13))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+        }
+        .frame(width: 196, height: 196)
+    }
+}
+
+private struct ProfileEmptyRhythmHero: View {
+    let reduceMotion: Bool
+    let phase: CGFloat
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.purple.opacity(0.18))
+                .frame(width: 132, height: 132)
+                .blur(radius: 18)
+                .scaleEffect(reduceMotion ? 1 : 0.96 + phase * 0.06)
+            Circle()
+                .stroke(Color.white.opacity(0.24), lineWidth: 1)
+                .frame(width: 132, height: 132)
+            Circle()
+                .stroke(Color.purple.opacity(0.25), lineWidth: 1)
+                .frame(width: 166, height: 166)
+                .rotationEffect(.degrees(reduceMotion ? 0 : Double(phase) * 160))
+            ProfileWaveLine(reduceMotion: reduceMotion, phase: phase)
+                .stroke(Color.pink.opacity(0.82), style: StrokeStyle(lineWidth: 2.3, lineCap: .round, lineJoin: .round))
+                .frame(width: 220, height: 52)
+                .shadow(color: Color.pink.opacity(0.30), radius: 8)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 220)
+    }
+}
+
+private struct ProfileWaveLine: Shape {
+    let reduceMotion: Bool
+    let phase: CGFloat
+
+    var animatableData: CGFloat {
+        get { reduceMotion ? 0 : phase }
+        set { }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let midY = rect.midY
+        let step = rect.width / 32
+        path.move(to: CGPoint(x: 0, y: midY))
+        for index in 0...32 {
+            let x = CGFloat(index) * step
+            let envelope = sin(Double(index) / 32 * Double.pi)
+            let wave = sin(Double(index) * 0.86 + Double(phase) * 2.4)
+            let y = midY + CGFloat(wave) * 16 * CGFloat(envelope)
+            path.addLine(to: CGPoint(x: x, y: y))
+        }
+        return path
     }
 }
