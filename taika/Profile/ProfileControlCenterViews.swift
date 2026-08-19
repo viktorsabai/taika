@@ -571,56 +571,66 @@ struct ProfileValuesView: View {
         ProfileValueItem(id: "rhythm", title: "Личный ритм", detail: "Taika собирает твою практику и подсказывает следующий полезный шаг без рейтингов и давления.", systemImage: "circle.dotted.and.circle", eyebrow: "04  ·  YOUR ROUTE")
     ]
 
+    private var valuesIntro: some View {
+        VStack(spacing: 8) {
+            ProfileMotionOrb(phase: 0.35, reduceMotion: reduceMotion, scale: 0.36)
+                .frame(height: 74)
+                .opacity(0.78)
+            Text("Taika — твой личный Kun Kru")
+                .font(PD.FontToken.title(25, weight: .bold))
+                .foregroundStyle(PD.ColorToken.text)
+                .multilineTextAlignment(.center)
+            Text("Платформа, которая помогает говорить, понимать и действовать увереннее в Таиланде.")
+                .font(PD.FontToken.caption(14))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 10)
+    }
+
+    private var valuesCarousel: some View {
+        CDLessonCarousel(
+            data: values,
+            cardWidth: CDLessonCarouselCanonical.cardWidth,
+            cardHeight: CDLessonCarouselCanonical.courseLessonCardHeight,
+            spacing: CDLessonCarouselCanonical.spacing,
+            initialIndex: 0,
+            onTapScrollToCenter: true,
+            loop: false,
+            onCenterIndexChange: { index in
+                centeredValueIndex = index
+            }
+        ) { item in
+            ProfileValueCarouselCard(item: item)
+        }
+        .frame(height: CDLessonCarouselCanonical.courseLessonCardHeight + 12)
+    }
+
+    private var valuesProgress: some View {
+        HStack(spacing: 6) {
+            ForEach(values.indices, id: \.self) { index in
+                Capsule()
+                    .fill(index == centeredValueIndex ? theme.currentAccentFill : PD.ColorToken.textSecondary.opacity(0.28))
+                    .frame(width: index == centeredValueIndex ? 18 : 5, height: 5)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: centeredValueIndex)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Карточка \(centeredValueIndex + 1) из \(values.count)")
+        .padding(.top, 2)
+        .padding(.bottom, 4)
+    }
+
     var body: some View {
         NavigationStack {
             ProfileGlassBackdrop {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 14) {
-                        VStack(spacing: 8) {
-                            ProfileMotionOrb(phase: 0.35, reduceMotion: reduceMotion, scale: 0.36)
-                                .frame(height: 74)
-                                .opacity(0.78)
-                            Text("Taika — твой личный Kun Kru")
-                                .font(PD.FontToken.title(25, weight: .bold))
-                                .foregroundStyle(PD.ColorToken.text)
-                                .multilineTextAlignment(.center)
-                            Text("Платформа, которая помогает говорить, понимать и действовать увереннее в Таиланде.")
-                                .font(PD.FontToken.caption(14))
-                                .foregroundStyle(PD.ColorToken.textSecondary)
-                                .multilineTextAlignment(.center)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 10)
-
-                        CDLessonCarousel(
-                            data: values,
-                            cardWidth: CDLessonCarouselCanonical.cardWidth,
-                            cardHeight: CDLessonCarouselCanonical.courseLessonCardHeight,
-                            spacing: CDLessonCarouselCanonical.spacing,
-                            initialIndex: 0,
-                            onTapScrollToCenter: true,
-                            loop: false,
-                            onCenterIndexChange: { index in
-                                centeredValueIndex = index
-                            }
-                        ) { item in
-                            ProfileValueCarouselCard(item: item)
-                        }
-                        .frame(height: CDLessonCarouselCanonical.courseLessonCardHeight + 12)
-
-                        HStack(spacing: 6) {
-                            ForEach(values.indices, id: \.self) { index in
-                                Capsule()
-                                    .fill(index == centeredValueIndex ? theme.currentAccentFill : PD.ColorToken.textSecondary.opacity(0.28))
-                                    .frame(width: index == centeredValueIndex ? 18 : 5, height: 5)
-                            }
-                        }
-                        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: centeredValueIndex)
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("Карточка \(centeredValueIndex + 1) из \(values.count)")
-                        .padding(.top, 2)
-                        .padding(.bottom, 4)
+                        valuesIntro
+                        valuesCarousel
+                        valuesProgress
                     }
                     .padding(.horizontal, PD.Spacing.screen)
                     .padding(.top, 12)
