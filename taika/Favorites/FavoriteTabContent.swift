@@ -291,19 +291,17 @@ private struct FavInsetGroup<Content: View>: View {
         VStack(spacing: 0) {
             content
         }
-        .background(
-            ZStack {
-                Theme.Surfaces.card(shape)
-                LinearGradient(
-                    colors: [
-                        ThemeManager.shared.currentAccentFill.opacity(0.12),
-                        Color.clear
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .clipShape(shape)
-            }
+        .background(Theme.Surfaces.card(shape))
+        .overlay(
+            LinearGradient(
+                colors: [
+                    ThemeManager.shared.currentAccentFill.opacity(0.12),
+                    Color.clear
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .clipShape(shape)
         )
         .clipShape(shape)
         .padding(.horizontal, CD.Spacing.screen)
