@@ -299,6 +299,29 @@ private extension LessonsView {
 
 }
 
+private enum LSCourseContentMode: Int {
+    case lessons
+    case lifehacks
+
+    var title: String {
+        switch self {
+        case .lessons: return "Уроки"
+        case .lifehacks: return "Лайфхаки"
+        }
+    }
+}
+
+/// A lifehack projected from the current course's own lesson data.
+/// The lesson/course ids and canonical order are retained so favorites remain scoped and reversible.
+private struct LSCourseLifehack: Identifiable {
+    let id: String
+    let dto: FDHackDTO
+    let step: SDStepItem
+    let courseId: String
+    let lessonId: String
+    let order: Int
+}
+
 public struct LessonsView: View {
     // Keep user on the Courses tab while viewing lessons
     @Environment(\.dismiss) private var dismiss
@@ -313,6 +336,7 @@ public struct LessonsView: View {
     @State private var showGameOverlay: Bool = false
     @State private var selectedGameLessonId: String? = nil
     @State private var selectedLessonId: String? = nil
+    @State private var courseContentMode: LSCourseContentMode = .lessons
     @State private var headerChipResolved: String? = nil
     @State private var headerSubtitleResolved: String = ""
     @State private var itemsVersion = UUID()
@@ -381,55 +405,61 @@ public struct LessonsView: View {
         TaikaRootVerticalScroll {
             VStack(spacing: Theme.Layout.sectionGap) {
                 headerSection
-                    .id(itemsVersion) // force re-render when progress changes
-                    .padding(.horizontal, Theme.Layout.pageHorizontal)
-
-                LSSectionTitle("ТАЙКА FM")
-                    .padding(.horizontal, Theme.Layout.pageHorizontal)
-                    .padding(.top, Theme.Layout.sectionTop)
-
-                TaikaFMRow(
-                    scope: .lessons,
-                    mode: .typing,
-                    showBubble: false,
-                    repeats: false
-                )
-                .padding(.horizontal, Theme.Layout.pageHorizontal)
-                .padding(.top, Theme.Layout.sectionTitleToContent)
-
-                lessonsReelsSection
                     .id(itemsVersion)
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
 
-                if !isTheoryBonusCourse {
-                    lessonsTotalsSectionHeader
+                if courseContentMode == .lessons {
+                    LSSectionTitle("ТАЙКА FM")
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
                         .padding(.top, Theme.Layout.sectionTop)
 
-                    LSCourseOverview(
-                        stats: LSCourseStats(
-                            completedLessons: headerProgress.completed,
-                            totalLessons: headerProgress.total,
-                            learnedWords: courseOverviewStats.learnedWords,
-                            favorites: courseOverviewStats.favorites,
-                            streakDays: 0,
-                            timeMinutes: courseOverviewStats.spentMinutes
-                        ),
-                        category: "",
-                        etaMinutes: remainingCourseMinutes > 0 ? remainingCourseMinutes : nil,
-                        onCTA: {
-                            if let first = lessonsSorted.first {
-                                selectedLessonId = first.lessonID
-                            }
-                        },
-                        onReset: {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            presentCourseResetOverlay()
-                        },
-                        onSpeaker: nil,
-                        onReinforce: nil
+                    TaikaFMRow(
+                        scope: .lessons,
+                        mode: .typing,
+                        showBubble: false,
+                        repeats: false
                     )
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    .padding(.top, Theme.Layout.sectionTitleToContent)
+
+                    lessonsReelsSection
+                        .id(itemsVersion)
+                        .padding(.horizontal, Theme.Layout.pageHorizontal)
+
+                    if !isTheoryBonusCourse {
+                        lessonsTotalsSectionHeader
+                            .padding(.horizontal, Theme.Layout.pageHorizontal)
+                            .padding(.top, Theme.Layout.sectionTop)
+
+                        LSCourseOverview(
+                            stats: LSCourseStats(
+                                completedLessons: headerProgress.completed,
+                                totalLessons: headerProgress.total,
+                                learnedWords: courseOverviewStats.learnedWords,
+                                favorites: courseOverviewStats.favorites,
+                                streakDays: 0,
+                                timeMinutes: courseOverviewStats.spentMinutes
+                            ),
+                            category: "",
+                            etaMinutes: remainingCourseMinutes > 0 ? remainingCourseMinutes : nil,
+                            onCTA: {
+                                if let first = lessonsSorted.first {
+                                    selectedLessonId = first.lessonID
+                                }
+                            },
+                            onReset: {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                presentCourseResetOverlay()
+                            },
+                            onSpeaker: nil,
+                            onReinforce: nil
+                        )
+                        .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    }
+                } else {
+                    courseLifehacksReels
+                        .id(itemsVersion)
+                        .padding(.horizontal, Theme.Layout.pageHorizontal)
                 }
 
                 if currentCourse == nil {
@@ -788,12 +818,13 @@ extension LessonsView {
         let baseSlots = !slots.isEmpty ? slots : Array(repeating: 0.0, count: count)
         let slotsResolved: [Double] = baseSlots.isEmpty ? [0.0] : baseSlots
         let subtitleResolved = headerSubtitleResolved.isEmpty ? headerSubtitle : headerSubtitleResolved
-        return LSLessonHeader(
-            title: headerTitle,
-            subtitle: subtitleResolved,
-            progressSlots: slotsResolved,
-            selectedIndex: activeLessonIndex,
-            onTapSlot: { idx in
+        return VStack(spacing: 10) {
+            LSLessonHeader(
+                title: headerTitle,
+                subtitle: subtitleResolved,
+                progressSlots: slotsResolved,
+                selectedIndex: activeLessonIndex,
+                onTapSlot: { idx in
                 let arr = lessonsSorted
                 if idx >= 0 && idx < arr.count {
                     let lid = arr[idx].lessonID
@@ -813,12 +844,35 @@ extension LessonsView {
                     }
                 }
             },
-            onBack: {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                    if !nav.path.isEmpty { nav.path.removeLast() }
+                onBack: {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                        if !nav.path.isEmpty { nav.path.removeLast() }
+                    }
+                }
+            )
+
+            HStack(spacing: 10) {
+                Text("Материалы курса")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .textCase(.uppercase)
+                    .kerning(0.5)
+                Spacer(minLength: 8)
+                AppInlineFilterPicker(
+                    titles: [LSCourseContentMode.lessons.title, LSCourseContentMode.lifehacks.title],
+                    selectedIndex: courseContentMode.rawValue
+                ) { index in
+                    guard let next = LSCourseContentMode(rawValue: index), next != courseContentMode else { return }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                        courseContentMode = next
+                    }
                 }
             }
-        )
+            .padding(.horizontal, 4)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Материалы курса")
+        }
     }
 
     private var contentReelsSection: some View {
@@ -831,6 +885,125 @@ extension LessonsView {
                 title: "ТАЙКА FM",
                 messages: fmMessages
             )
+        }
+    }
+
+    private var courseLifehacks: [LSCourseLifehack] {
+        guard let cid = currentCourse?.courseID else { return [] }
+
+        return lessonsSorted.flatMap { lesson in
+            StepData.shared.items(for: lesson.lessonID).compactMap { raw in
+                guard raw.kind == .tip || raw.kind == .dialog else { return nil }
+                let face = StepData.shared.face(for: raw)
+                let text = face.titleRU.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { return nil }
+
+                let step = SDStepItem(
+                    kind: .tip,
+                    titleRU: text,
+                    subtitleTH: face.subtitleTH,
+                    phonetic: face.phonetic,
+                    canonicalOrder: raw.order
+                )
+                let stableId = "\(cid)|\(lesson.lessonID)|\(raw.order)"
+                let dto = FDHackDTO(
+                    sourceId: FavoriteManager.shared.idForHack(
+                        courseId: cid,
+                        lessonId: lesson.lessonID,
+                        index: raw.order
+                    ),
+                    title: "Лайфхак",
+                    meta: text,
+                    lessonTitle: lesson.title,
+                    addedAt: Date(timeIntervalSince1970: 0)
+                )
+                return LSCourseLifehack(
+                    id: stableId,
+                    dto: dto,
+                    step: step,
+                    courseId: cid,
+                    lessonId: lesson.lessonID,
+                    order: raw.order
+                )
+            }
+        }
+    }
+
+    private var courseLifehacksReels: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                LSSectionTitle("ЛАЙФХАКИ")
+                Spacer(minLength: 8)
+                Text("\(courseLifehacks.count)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+
+            if courseLifehacks.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Image(systemName: "lightbulb.slash")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    Text("В этом курсе пока нет лайфхаков")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(PD.ColorToken.text)
+                    Text("Они появятся здесь, когда будут добавлены в материалы курса.")
+                        .font(.system(size: 13, weight: .regular, design: .rounded))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(18)
+                .background(Theme.Surfaces.card(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)))
+            } else {
+                CDLessonCarousel(
+                    data: courseLifehacks,
+                    cardWidth: CardDS.Metrics.stepLifehackWidth,
+                    cardHeight: CardDS.Metrics.stepLifehackHeight,
+                    spacing: CardDS.Metrics.carouselSpacing,
+                    initialIndex: 0,
+                    onTapScrollToCenter: true,
+                    loop: false
+                ) { hack in
+                    FDMiniHackCard(
+                        item: hack.dto,
+                        onOpen: {
+                            nav.go(.lesson(
+                                courseId: hack.courseId,
+                                lessonId: hack.lessonId,
+                                presentation: .canonical
+                            ))
+                        },
+                        readOnly: true,
+                        layoutWidth: CardDS.Metrics.stepLifehackWidth,
+                        layoutHeight: CardDS.Metrics.stepLifehackHeight,
+                        lessonSummarySquare: true,
+                        showTopTrailingKindChip: false,
+                        summaryPlayAndFavorite: true,
+                        onPlayInLesson: {
+                            nav.go(.lesson(
+                                courseId: hack.courseId,
+                                lessonId: hack.lessonId,
+                                presentation: .canonical
+                            ))
+                        },
+                        onToggleFavorite: {
+                            FavoriteManager.shared.toggle(
+                                step: hack.step,
+                                courseId: hack.courseId,
+                                lessonId: hack.lessonId,
+                                order: hack.order
+                            )
+                        },
+                        isFavorite: FavoriteManager.shared.containsHack(
+                            courseId: hack.courseId,
+                            lessonId: hack.lessonId,
+                            index: hack.order
+                        ),
+                        isEditing: .constant(false)
+                    )
+                }
+                .frame(height: CardDS.Metrics.stepLifehackHeight + 30)
+            }
         }
     }
 
