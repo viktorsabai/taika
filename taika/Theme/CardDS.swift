@@ -2809,6 +2809,31 @@ public struct CourseLessonCard: View {
     private var courseProShadowY: CGFloat { showsProWash ? 5 : 0 }
 
     @ViewBuilder
+    private func learnedFrontMetrics() -> some View {
+        let pronunciationText = pronunciationPercent.map { "произн. \($0)%" } ?? "произн. —"
+        let reinforcementText = reinforcementScore.map { "закрепл. \($0)%" }
+            ?? (reinforcementSessions > 0 ? "закрепл. \(reinforcementSessions) игр" : "закрепл. —")
+
+        if (completionFraction ?? 0) >= 0.999 {
+            HStack(spacing: 6) {
+                Text("МАСТЕРСТВО")
+                    .font(.system(size: 9, weight: .bold))
+                    .kerning(0.7)
+                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                Spacer(minLength: 0)
+                Text(pronunciationText)
+                Text(reinforcementText)
+            }
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(Color.white.opacity(0.68))
+            .lineLimit(1)
+            .minimumScaleFactor(0.78)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 5)
+        }
+    }
+
+    @ViewBuilder
     private var accentTreatmentOverlay: some View {
         switch accentTreatment {
         case .none:
@@ -3249,11 +3274,12 @@ public struct CourseLessonCard: View {
                     let isLearned = f >= 0.999
                     let showPlanHint = flipEnabled && !isFlipped && isLearned
                     CourseInlineProgressView(
-                        fraction: f,
-                        secondaryText: isLearned
-                            ? "выучено · закрепление доступно"
-                            : (showPlanHint ? "закрепление доступно" : nil)
-                    )
+                         fraction: f,
+                         secondaryText: isLearned
+                             ? "выучено · закрепление доступно"
+                             : (showPlanHint ? "закрепление доступно" : nil)
+                     )
+                    learnedFrontMetrics()
                 }
             }
         )

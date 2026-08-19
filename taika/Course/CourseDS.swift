@@ -1226,6 +1226,12 @@ public struct CDReelCourseCard: View {
             isPro: isPro,
             tags: [],
             sectionChrome: .none,
+            accentTreatment: status == .done
+                ? .taikaValues(
+                    fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                    glow: ThemeManager.shared.currentAccentTintColor
+                )
+                : .none,
             primaryCTA: {
                 let raw = (cta ?? "").lowercased()
                 if raw.contains("нач") { return .start }
@@ -1642,6 +1648,12 @@ public struct CDBaseSection: View {
                     showProCrown: item.showProCrown,
                     tags: [],
                     sectionChrome: .none,
+                    accentTreatment: item.status == .done
+                        ? .taikaValues(
+                            fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                            glow: ThemeManager.shared.currentAccentTintColor
+                        )
+                        : .none,
                     primaryCTA: {
                         let t = item.cta.lowercased()
                         if t.contains("нач") { return .start }
@@ -1738,6 +1750,12 @@ public struct CDAllCoursesSection<Trailing: View>: View {
                     showProCrown: item.showProCrown,
                     tags: [],
                     sectionChrome: .none,
+                    accentTreatment: item.status == .done
+                        ? .taikaValues(
+                            fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                            glow: ThemeManager.shared.currentAccentTintColor
+                        )
+                        : .none,
                     primaryCTA: {
                         let t = item.cta.lowercased()
                         if t.contains("нач") { return .start }
