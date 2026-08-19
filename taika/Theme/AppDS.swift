@@ -1297,27 +1297,29 @@ public struct AppCardIconButton: View {
                 value: lockShake
             )
             .animation(.spring(response: 0.32, dampingFraction: 0.72), value: isOn)
-            .frame(minWidth: minTapSize, minHeight: minTapSize)
-            .padding(glossyBlackSurface ? 7 : 0)
+            .frame(
+                width: glossyBlackSurface ? 34 : minTapSize,
+                height: glossyBlackSurface ? 34 : minTapSize
+            )
             .background {
                 if glossyBlackSurface {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
                         .fill(Color.black.opacity(0.72))
                         .overlay(
                             LinearGradient(
-                                colors: [Color.white.opacity(0.10), Color.clear, Color.black.opacity(0.16)],
+                                colors: [Color.white.opacity(0.08), Color.clear, Color.black.opacity(0.14)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                .stroke(Color.white.opacity(0.14), lineWidth: 0.8)
                         )
-                        .shadow(color: Color.black.opacity(0.24), radius: 8, y: 4)
                 }
             }
+            .frame(minWidth: minTapSize, minHeight: minTapSize)
             .contentShape(Rectangle())
     }
 

@@ -1137,3 +1137,10 @@
 - [ ] Show completed course/game state and matched versus remaining cards in the upper course card.
 - [ ] Add a clear personalized work-on-errors action without requiring a blind replay.
 - [ ] Preserve a fallback message for legacy matches that cannot be mapped to source cards.
+
+# Compact course actions and perceived performance
+
+- [ ] Replace large square glossy Game/Speaker controls on course cards with compact inline dark-glass icon actions.
+- [ ] Preserve green icon semantics and native press feedback without oversized containers.
+- [ ] Inspect heavy card overlays/animations and remove unnecessary full-card invalidation.
+- [ ] Run static validation and push one corrective commit.
