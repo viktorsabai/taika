@@ -1279,3 +1279,11 @@
 - [ ] Найти все `onBackSelectGameMode` assignments/calls и проверить их argument shape.
 - [ ] Исправить только closure invocation, сохранив retention flow.
 - [ ] Выполнить `git diff --check` и push только после проверки всех callsites.
+
+# CourseView readability visual correction
+
+- [ ] Сделать completed status badge светлым, контрастным и achievement-like.
+- [ ] Осветлить зелёный mastery treatment, чтобы он не поглощал текст и иконки.
+- [ ] Пересобрать back-face metrics с крупными светлыми monospaced values.
+- [ ] Сделать retention CTA визуально главным и явно объяснить действие.
+- [ ] Проверить contrast, CTA и static diff перед push.

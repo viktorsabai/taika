@@ -2577,7 +2577,7 @@ private struct CardBackActionButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(isMastery ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(Color.black.opacity(isPrimary ? 0.78 : 0.62)))
+                    .fill(isMastery ? AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient) : AnyShapeStyle(Color.black.opacity(isPrimary ? 0.78 : 0.62)))
                     .overlay(
                         LinearGradient(
                             colors: isMastery ? [Color.white.opacity(0.20), Color.clear, Color.black.opacity(0.12)] : [Color.white.opacity(isPrimary ? 0.10 : 0.06), Color.clear, Color.black.opacity(0.16)],
@@ -3032,8 +3032,8 @@ public struct CourseLessonCard: View {
                                         .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 7)
-                                        .background(Capsule(style: .continuous).fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient)))
-                                        .overlay(Capsule(style: .continuous).stroke(TaikaMasteryTokens.greenGlow.opacity(0.82), lineWidth: 1))
+                                        .background(Capsule(style: .continuous).fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient)))
+                                        .overlay(Capsule(style: .continuous).stroke(Color.white.opacity(0.72), lineWidth: 1))
                                     } else {
                                         AppStatusChip(kind: statusKind, title: statusChipTitle)
                                     }
@@ -3195,27 +3195,30 @@ public struct CourseLessonCard: View {
         }
 
         func gradeRow(title: String, value: String?) -> some View {
-            HStack(spacing: 10) {
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.92))
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(title.uppercased())
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.68))
+                    .kerning(0.35)
                     .lineLimit(1)
 
                 Spacer(minLength: 0)
 
                 if let value, !value.isEmpty {
                     Text(value)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(
-                            value == "ещё нет"
-                            ? AnyShapeStyle(Color.white.opacity(0.52))
-                            : AnyShapeStyle(Color.white.opacity(0.92))
-                        )
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundStyle(value == "ещё нет" ? AnyShapeStyle(Color.white.opacity(0.52)) : AnyShapeStyle(Color.white.opacity(0.98)))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.72)
                 }
             }
-            .padding(.vertical, 7)
-            .padding(.horizontal, 4)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 5)
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.10))
+                    .frame(height: 1)
+            }
         }
 
         @ViewBuilder
@@ -3288,11 +3291,17 @@ public struct CourseLessonCard: View {
 
             case .courseGradeSheet:
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Зачёт по курсу")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.96))
+                    HStack(spacing: 7) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
+                        Text("ЗАЧЁТ ПО КУРСУ")
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .kerning(0.4)
+                            .foregroundStyle(Color.white.opacity(0.98))
+                    }
 
-                    Text("Что уже закреплено и что полезно повторить дальше.")
+                    Text("Результат уже есть. Закрепи его, чтобы навык не ушёл из памяти.")
                         .font(.system(size: 11, weight: .regular))
                         .foregroundStyle(Color.white.opacity(0.62))
                         .lineSpacing(1)

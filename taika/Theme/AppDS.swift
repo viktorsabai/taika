@@ -25,6 +25,17 @@ public enum TaikaMasteryTokens {
     )
 
     public static let greenGlow = Color(red: 0.26, green: 0.84, blue: 0.48)
+
+    /// Light badge gradient for high-contrast achievement labels.
+    public static let greenBadgeGradient = LinearGradient(
+        colors: [
+            Color(red: 0.45, green: 0.96, blue: 0.62),
+            Color(red: 0.22, green: 0.78, blue: 0.42),
+            Color(red: 0.12, green: 0.52, blue: 0.28)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
 }
 
 // MARK: - Unified App Header Style
