@@ -991,8 +991,8 @@ extension LessonsView {
                 .background(Theme.Surfaces.card(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)))
             } else {
                 GeometryReader { geo in
-                    let cardWidth: CGFloat = CardDS.Metrics.stepLifehackWidth
-                    let cardHeight: CGFloat = CardDS.Metrics.stepLifehackHeight
+                    let cardWidth: CGFloat = CDLessonCarouselCanonical.cardWidth
+                    let cardHeight: CGFloat = CDLessonCarouselCanonical.courseLessonCardHeight
                     let spacing: CGFloat = CardDS.Metrics.carouselSpacing
                     let sideInset: CGFloat = PD.Spacing.screen
 
@@ -1009,42 +1009,25 @@ extension LessonsView {
                                     let opacity: Double = 0.76 + (1 - t) * 0.24
                                     let yOffset: CGFloat = t * 10
 
-                                    FDMiniHackCard(
-                                        item: hack.dto,
-                                        onOpen: {
-                                            nav.go(.lesson(
-                                                courseId: hack.courseId,
-                                                lessonId: hack.lessonId,
-                                                presentation: .canonical
-                                            ))
-                                        },
-                                        readOnly: true,
-                                        layoutWidth: cardWidth,
-                                        layoutHeight: cardHeight,
-                                        lessonSummarySquare: true,
-                                        showTopTrailingKindChip: false,
-                                        summaryPlayAndFavorite: true,
-                                        onPlayInLesson: {
-                                            nav.go(.lesson(
-                                                courseId: hack.courseId,
-                                                lessonId: hack.lessonId,
-                                                presentation: .canonical
-                                            ))
-                                        },
-                                        onToggleFavorite: {
+                                    StepLifehackCardVisual(
+                                        item: hack.step,
+                                        label: "лайфхак",
+                                        size: CGSize(width: cardWidth, height: cardHeight),
+                                        sectionChrome: .seps,
+                                        chromeStyle: .cards,
+                                        isFavorite: FavoriteManager.shared.containsHack(
+                                            courseId: hack.courseId,
+                                            lessonId: hack.lessonId,
+                                            index: hack.order
+                                        ),
+                                        onFavorite: {
                                             FavoriteManager.shared.toggle(
                                                 step: hack.step,
                                                 courseId: hack.courseId,
                                                 lessonId: hack.lessonId,
                                                 order: hack.order
                                             )
-                                        },
-                                        isFavorite: FavoriteManager.shared.containsHack(
-                                            courseId: hack.courseId,
-                                            lessonId: hack.lessonId,
-                                            index: hack.order
-                                        ),
-                                        isEditing: .constant(false)
+                                        }
                                     )
                                     .scaleEffect(scale)
                                     .opacity(opacity)
@@ -1058,7 +1041,7 @@ extension LessonsView {
                         .frame(height: cardHeight + 36)
                     }
                 }
-                .frame(height: CardDS.Metrics.stepLifehackHeight + 36)
+                .frame(height: CDLessonCarouselCanonical.courseLessonCardHeight + 36)
             }
         }
     }

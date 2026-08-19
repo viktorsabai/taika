@@ -751,3 +751,11 @@
 - [x] Correct the completed-card call and scan for the same ordering issue elsewhere.
 - [x] Run strict static checks and verify no unresolved new labels remain.
 - [x] Create and push a corrective commit before sending a new test command.
+
+
+# Lifehacks carousel visual parity
+
+- [x] Match LessonsView lifehack card interior to the current StepView lifehack design.
+- [x] Keep lesson-carousel card dimensions and depth treatment.
+- [x] Remove oversized empty area while preserving readable hack text and actions.
+- [x] Preserve play, favorite, course scope and existing navigation callbacks.
