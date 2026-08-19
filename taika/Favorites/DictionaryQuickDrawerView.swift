@@ -252,12 +252,9 @@ struct DictionaryQuickDrawerView: View {
     }
 
     private var actionButtonsRow: some View {
-        VStack(spacing: 10) {
+        HStack(spacing: 8) {
             Button { trainInSpeaker(selected: effectiveSelection) } label: {
-                footerActionLabel(
-                    icon: "person.wave.2.fill",
-                    title: trainButtonTitle
-                )
+                footerActionLabel(icon: "person.wave.2.fill", title: trainButtonTitle)
             }
             .buttonStyle(.plain)
             .disabled(isSelectionMode && selectedIds.isEmpty)
@@ -265,16 +262,13 @@ struct DictionaryQuickDrawerView: View {
             Button {
                 withAnimation { gamePickerExpanded = true }
             } label: {
-                footerActionLabel(
-                    icon: "gamecontroller.fill",
-                    title: reinforceButtonTitle
-                )
+                footerActionLabel(icon: "gamecontroller.fill", title: reinforceButtonTitle)
             }
             .buttonStyle(.plain)
             .disabled(isSelectionMode && selectedIds.isEmpty)
         }
         .padding(.horizontal, Theme.Layout.pageHorizontal)
-        .padding(.vertical, 14)
+        .padding(.vertical, 10)
     }
 
     private var gamePickerSection: some View {

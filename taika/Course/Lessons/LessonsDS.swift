@@ -1593,29 +1593,56 @@ private struct LSCourseETATimer: View {
 }
 
 // MARK: - Course Practice Dock
-// Compact continuation surface for the course: progress first, practice actions second.
+public struct LSCompletedLessonOption: Identifiable, Hashable {
+    public let id: String
+    public let title: String
+
+    public init(id: String, title: String) {
+        self.id = id
+        self.title = title
+    }
+}
+
+/// Compact practice surface: completed scope first, Dictionary-style actions second.
 public struct LSCoursePracticeDock: View {
     public let stats: LSCourseStats
     public let currentLessonTitle: String?
+    public let completedLessons: [LSCompletedLessonOption]
+    public let onSelectLesson: ((String?) -> Void)?
     public let onSpeaker: (() -> Void)?
     public let onGamePark: (() -> Void)?
+    @State private var selectedLessonId: String?
 
     public init(
         stats: LSCourseStats,
         currentLessonTitle: String? = nil,
+        completedLessons: [LSCompletedLessonOption] = [],
+        selectedLessonId: String? = nil,
+        onSelectLesson: ((String?) -> Void)? = nil,
         onSpeaker: (() -> Void)? = nil,
         onGamePark: (() -> Void)? = nil
     ) {
         self.stats = stats
         self.currentLessonTitle = currentLessonTitle
+        self.completedLessons = completedLessons
+        self.onSelectLesson = onSelectLesson
         self.onSpeaker = onSpeaker
         self.onGamePark = onGamePark
+        self._selectedLessonId = State(initialValue: selectedLessonId)
+    }
+
+    private var selectedTitle: String {
+        guard let selectedLessonId,
+              let option = completedLessons.first(where: { $0.id == selectedLessonId }) else {
+            return "Все пройденные уроки · \(completedLessons.count)"
+        }
+        return option.title
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("ПРАКТИКА")
+                Text("ЗАКРЕПЛЕНИЕ")
                     .taikaSectionTitleStyle()
                 Spacer(minLength: 8)
                 if let currentLessonTitle, !currentLessonTitle.isEmpty {
@@ -1626,45 +1653,69 @@ public struct LSCoursePracticeDock: View {
                 }
             }
 
-            // DictionarySoftActionLabel already owns its native glass surface.
-            // Do not wrap rows in another card: that creates the visible double frame.
-            VStack(spacing: 8) {
-                quickActionRow(
-                    icon: "mic.fill",
-                    title: "Спикер курса",
-                    isEnabled: onSpeaker != nil,
-                    action: onSpeaker
+            Menu {
+                Button {
+                    selectedLessonId = nil
+                    onSelectLesson?(nil)
+                } label: {
+                    Label("Все пройденные уроки", systemImage: selectedLessonId == nil ? "checkmark" : "square")
+                }
+                ForEach(completedLessons) { option in
+                    Button {
+                        selectedLessonId = option.id
+                        onSelectLesson?(option.id)
+                    } label: {
+                        Label(option.title, systemImage: selectedLessonId == option.id ? "checkmark" : "square")
+                    }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "checklist")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(selectedTitle)
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .foregroundStyle(PD.ColorToken.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(PD.ColorToken.chip.opacity(0.72))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(PD.ColorToken.stroke.opacity(0.52), lineWidth: 1)
+                        )
                 )
-                quickActionRow(
-                    icon: "gamecontroller.fill",
-                    title: "Игровой парк",
-                    isEnabled: onGamePark != nil && stats.completedLessons > 0,
-                    action: onGamePark
-                )
+            }
+            .disabled(completedLessons.isEmpty)
+            .accessibilityLabel("Выбор уроков для закрепления")
+
+            HStack(spacing: 8) {
+                quickActionRow(icon: "mic.fill", title: "Спикер", isEnabled: onSpeaker != nil, action: onSpeaker)
+                quickActionRow(icon: "gamecontroller.fill", title: "Игры", isEnabled: onGamePark != nil && stats.completedLessons > 0, action: onGamePark)
             }
         }
         .padding(.top, 2)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Быстрые действия курса")
+        .accessibilityLabel("Закрепление пройденных уроков")
     }
 
     @ViewBuilder
-    private func quickActionRow(
-        icon: String,
-        title: String,
-        isEnabled: Bool,
-        action: (() -> Void)?
-    ) -> some View {
+    private func quickActionRow(icon: String, title: String, isEnabled: Bool, action: (() -> Void)?) -> some View {
         if isEnabled, let action {
             Button(action: action) {
                 DictionarySoftActionLabel(icon: icon, title: title)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text(title))
         } else {
             DictionarySoftActionLabel(icon: "lock.fill", title: title)
                 .opacity(0.48)
-                .accessibilityLabel(Text("Недоступно: \(title)"))
         }
     }
 }

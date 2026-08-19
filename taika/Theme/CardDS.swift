@@ -2817,7 +2817,7 @@ public struct CourseLessonCard: View {
             ZStack {
                 RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
                     .fill(fill)
-                    .opacity(0.24)
+                    .opacity(0.28)
                 Circle()
                     .fill(
                         RadialGradient(
@@ -3124,7 +3124,7 @@ public struct CourseLessonCard: View {
                         Image(systemName: "checkmark.seal.fill")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                        Text("урок выучен")
+                        Text(reinforcementScore != nil && pronunciationPercent != nil ? "зачёт получен" : "урок выучен")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(Color.white.opacity(0.96))
                     }
@@ -3137,7 +3137,10 @@ public struct CourseLessonCard: View {
 
                     gradeRow(title: "Пройдено", value: "100%")
                     gradeRow(title: "Произношение", value: pronunciationPercent.map { "\($0)%" } ?? "ещё нет")
-                    gradeRow(title: "Закрепление", value: reinforcementSessions > 0 ? "\(reinforcementSessions) игр" : "доступно")
+                    gradeRow(
+                        title: "Закрепление",
+                        value: reinforcementScore.map { "\($0)%" } ?? (reinforcementSessions > 0 ? "\(reinforcementSessions) игр" : "доступно")
+                    )
                 }
 
             case .lessonReminders(let lines):

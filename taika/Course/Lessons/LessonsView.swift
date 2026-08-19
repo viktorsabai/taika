@@ -129,6 +129,18 @@ private extension LessonsView {
         return lessonsManager.headerCounts(for: cid, lessonsTotal: total)
     }
 
+    var completedLessonOptions: [LSCompletedLessonOption] {
+        lessonsSorted.compactMap { lesson in
+            guard statusForLesson(lesson) == .completed else { return nil }
+            let title = lessonsManager.lessonTitle(for: lesson.lessonID)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return LSCompletedLessonOption(
+                id: lesson.lessonID,
+                title: title.isEmpty ? "Урок \(lesson.order + 1)" : title
+            )
+        }
+    }
+
     /// Теория-only бонус (`course_b_0`): без игр/спикера в хедере и на карточках.
     var isTheoryBonusCourse: Bool {
         guard let cid = currentCourse?.courseID else { return false }
@@ -470,8 +482,14 @@ public struct LessonsView: View {
                                 timeMinutes: courseOverviewStats.spentMinutes
                             ),
                             currentLessonTitle: currentLesson.flatMap { lessonsManager.lessonTitle(for: $0.lessonID) },
-                            onSpeaker: isTheoryBonusCourse ? nil : { lessonsHeaderStore.onSpeaker?() },
-                            onGamePark: isTheoryBonusCourse ? nil : { lessonsHeaderStore.onReinforce?() }
+                            completedLessons: completedLessonOptions,
+                            selectedLessonId: completedLessonOptions.contains(where: { $0.id == selectedLessonId }) ? selectedLessonId : nil,
+                            onSelectLesson: { lessonId in
+                                selectedLessonId = lessonId
+                                selectedGameLessonId = lessonId
+                            },
+                            onSpeaker: isTheoryBonusCourse || completedLessonOptions.isEmpty ? nil : { lessonsHeaderStore.onSpeaker?() },
+                            onGamePark: isTheoryBonusCourse || completedLessonOptions.isEmpty ? nil : { lessonsHeaderStore.onReinforce?() }
                         )
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
                     }
