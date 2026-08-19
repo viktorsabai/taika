@@ -48,9 +48,11 @@ enum TaikaBuildChannel {
 
 struct ProfileView: View {
     @ObservedObject private var pro = ProManager.shared
+    @ObservedObject private var profile = ProfileManager.shared
     @ObservedObject private var auth = AuthService.shared
     @EnvironmentObject private var theme: ThemeManager
     @EnvironmentObject private var overlay: OverlayPresenter
+    @EnvironmentObject private var nav: NavigationIntent
 
     @State private var showResetAllConfirm = false
     @State private var viewReloadToken = UUID()
@@ -58,6 +60,9 @@ struct ProfileView: View {
     @State private var showOnboarding = false
     @State private var showMoreSheet = false
     @State private var showProSheet = false
+    @State private var showStatistics = false
+    @State private var showSupport = false
+    @State private var showLegal = false
     @State private var authInProgress = false
     @State private var authErrorMessage: String?
     @State private var storeRestoreMessage: String?
@@ -238,6 +243,14 @@ struct ProfileView: View {
 
                     Section {
                         profileLinkRow(
+                            title: "Твой ритм",
+                            subtitle: "Прогресс, активность и следующий шаг",
+                            systemImage: "waveform.path.ecg"
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showStatistics = true
+                        }
+                        profileLinkRow(
                             title: "Как устроена Taika",
                             subtitle: "Не переводчик · уроки · игры · Спикер",
                             systemImage: "sparkles"
@@ -246,8 +259,16 @@ struct ProfileView: View {
                             showOnboarding = true
                         }
                         profileLinkRow(
+                            title: "Поддержка и обратная связь",
+                            subtitle: "Помощь, вопросы и сообщения о проблемах",
+                            systemImage: "questionmark.bubble"
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showSupport = true
+                        }
+                        profileLinkRow(
                             title: "Ещё",
-                            subtitle: "Поддержка, сайт, сброс, версия",
+                            subtitle: "Сайт, правовые документы, сброс и версия",
                             systemImage: "ellipsis.circle"
                         ) {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -294,11 +315,25 @@ struct ProfileView: View {
             )
             .environmentObject(theme)
         }
+        .sheet(isPresented: $showStatistics) {
+            ProfileStatisticsView()
+                .environmentObject(theme)
+                .environmentObject(nav)
+        }
+        .sheet(isPresented: $showSupport) {
+            ProfileSupportView()
+                .environmentObject(theme)
+        }
+        .sheet(isPresented: $showLegal) {
+            ProfileLegalView()
+                .environmentObject(theme)
+        }
         .sheet(isPresented: $showMoreSheet) {
             ProfileMoreSheet(
                 appVersionLabel: appVersionLabel,
                 showResetAllConfirm: $showResetAllConfirm,
-                showDebugSheet: $showDebugSheet
+                showDebugSheet: $showDebugSheet,
+                showLegal: $showLegal
             )
             .environmentObject(theme)
         }
@@ -478,6 +513,7 @@ private struct ProfileMoreSheet: View {
     let appVersionLabel: String
     @Binding var showResetAllConfirm: Bool
     @Binding var showDebugSheet: Bool
+    @Binding var showLegal: Bool
 
     private var listRowInsets: EdgeInsets {
         EdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20)
@@ -511,9 +547,6 @@ private struct ProfileMoreSheet: View {
                 }
 
                 Section {
-                    moreLink("Поддержка", systemImage: "questionmark.circle") {
-                        openURL("https://t.me/taika_support")
-                    }
                     moreLink("Сайт taikaa.online", systemImage: "globe") {
                         openURL("https://taikaa.online")
                     }
@@ -521,18 +554,18 @@ private struct ProfileMoreSheet: View {
                         openURL("https://www.instagram.com/taika.app")
                     }
                 } header: {
-                    Text("Связь")
+                    Text("Ссылки")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(PD.ColorToken.textSecondary)
                         .textCase(.uppercase)
                 }
 
                 Section {
-                    moreLink("Политика конфиденциальности", systemImage: "hand.raised") {
-                        UIApplication.shared.open(TaikaProConfig.Legal.privacyPolicy)
-                    }
-                    moreLink("Условия использования", systemImage: "doc.text") {
-                        UIApplication.shared.open(TaikaProConfig.Legal.termsOfUse)
+                    moreLink("Правовые документы", systemImage: "doc.on.doc") {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                            showLegal = true
+                        }
                     }
                     HStack {
                         Label("Версия", systemImage: "info.circle")
