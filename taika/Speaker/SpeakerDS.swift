@@ -4865,11 +4865,25 @@ public struct SpeakerDSRoot: View {
         return cid == "__dictionary__" || cid == "__favorites__"
     }
 
+    private var isLessonScopedCourseContext: Bool {
+        guard let courseId = external?.courseContextCourseId,
+              courseId != "__dictionary__",
+              courseId != "__favorites__" else { return false }
+        return external?.learnedLessonFilter?.isEmpty == false
+    }
+
     private var trainingModePickerTitle: String {
         switch external?.courseContextCourseId {
         case "__dictionary__": return "Мой словарь"
         case "__favorites__": return "Избранное"
-        default: return "Закрепление курсов"
+        default:
+            if isLessonScopedCourseContext,
+               let lessonId = external?.learnedLessonFilter,
+               let title = external?.lessonTitleForLessonId?(lessonId),
+               !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return title
+            }
+            return "Закрепление курсов"
         }
     }
 
@@ -4959,6 +4973,7 @@ public struct SpeakerDSRoot: View {
 
             if speakerUIMode == .training,
                !isSpecialTrainingContext,
+               !isLessonScopedCourseContext,
                !allSpeakerItems.isEmpty,
                let lessonIds = external?.learnedLessonIds,
                lessonIds.count > 1,
