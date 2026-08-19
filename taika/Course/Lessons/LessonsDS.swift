@@ -157,6 +157,10 @@ public struct LSLessonHeader: View {
     public var bottomAccessory: AnyView? = nil
     /// Кнопка «назад в курсы» на карточке (вместо дырки в углу).
     public var onBack: (() -> Void)? = nil
+    /// Optional educational summary rendered inside the same course hero card.
+    public var completionSummary: AnyView? = nil
+    /// Completed courses use jungle-green progress slots.
+    public var isCompletedCourse: Bool = false
 
     public init(
         title: String,
@@ -172,6 +176,8 @@ public struct LSLessonHeader: View {
         selectedIndex: Int? = nil,
         onTapSlot: ((Int) -> Void)? = nil,
         onBack: (() -> Void)? = nil,
+        completionSummary: AnyView? = nil,
+        isCompletedCourse: Bool = false,
         bottomAccessory: AnyView? = nil
     ) {
         self.title = title
@@ -187,6 +193,8 @@ public struct LSLessonHeader: View {
         self.selectedIndex = selectedIndex
         self.onTapSlot = onTapSlot
         self.onBack = onBack
+        self.completionSummary = completionSummary
+        self.isCompletedCourse = isCompletedCourse
         self.bottomAccessory = bottomAccessory
     }
 
@@ -410,14 +418,29 @@ public struct LSLessonHeader: View {
             // Progress row
             Group {
                 if let slots = progressSlots, !slots.isEmpty {
-                    LSProgressSlotsStrip(slots: slots, selectedIndex: selectedIndex, onTapSlot: onTapSlot)
-                        .frame(maxWidth: .infinity, alignment: .center)
+                    LSProgressSlotsStrip(
+                        slots: slots,
+                        selectedIndex: selectedIndex,
+                        onTapSlot: onTapSlot,
+                        isCompletedCourse: isCompletedCourse
+                    )
+                    .frame(maxWidth: .infinity, alignment: .center)
                 } else if let done = progressCompleted, let ttl = totalLessons, ttl > 0 {
-                    LSProgressStrip(done: done, total: ttl, progressSlots: progressSlots)
-                        .frame(maxWidth: .infinity, alignment: .center)
+                    LSProgressStrip(
+                        done: done,
+                        total: ttl,
+                        progressSlots: progressSlots,
+                        isCompletedCourse: isCompletedCourse
+                    )
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             .padding(.top, 8)
+
+            if let completionSummary {
+                completionSummary
+                    .padding(.top, 12)
+            }
 
             if let bottomAccessory {
                 bottomAccessory
@@ -447,11 +470,13 @@ public struct LSProgressStrip: View {
     let total: Int
     // if caller already has detailed slot fractions – forward them; otherwise we compute from done/total
     var progressSlots: [Double]?
+    var isCompletedCourse: Bool = false
 
-    public init(done: Int, total: Int, progressSlots: [Double]? = nil) {
+    public init(done: Int, total: Int, progressSlots: [Double]? = nil, isCompletedCourse: Bool = false) {
         self.done = max(0, done)
         self.total = max(1, total)
         self.progressSlots = progressSlots
+        self.isCompletedCourse = isCompletedCourse
     }
 
     private func makeSlots() -> [Double] {
@@ -472,7 +497,12 @@ public struct LSProgressStrip: View {
     }
 
     public var body: some View {
-        LSProgressSlotsStrip(slots: makeSlots(), selectedIndex: nil, onTapSlot: nil)
+        LSProgressSlotsStrip(
+            slots: makeSlots(),
+            selectedIndex: nil,
+            onTapSlot: nil,
+            isCompletedCourse: isCompletedCourse
+        )
     }
 }
 
@@ -481,15 +511,20 @@ public struct LSProgressSlotsStrip: View {
     let slots: [Double]
     let selectedIndex: Int?
     let onTapSlot: ((Int) -> Void)?
+    let isCompletedCourse: Bool
 
-    public init(slots: [Double], selectedIndex: Int? = nil, onTapSlot: ((Int) -> Void)? = nil) {
+    public init(slots: [Double], selectedIndex: Int? = nil, onTapSlot: ((Int) -> Void)? = nil, isCompletedCourse: Bool = false) {
         self.slots = slots
         self.selectedIndex = selectedIndex
         self.onTapSlot = onTapSlot
+        self.isCompletedCourse = isCompletedCourse
     }
 
     private var accentFill: AnyShapeStyle {
-        AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+        if isCompletedCourse {
+            return AnyShapeStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+        }
+        return AnyShapeStyle(ThemeManager.shared.currentAccentFill)
     }
 
 // New MiniSlot implementation for per-slot rendering

@@ -887,12 +887,15 @@ extension LessonsView {
         let count = totalLessonsCount
         let baseSlots = !slots.isEmpty ? slots : Array(repeating: 0.0, count: count)
         let slotsResolved: [Double] = baseSlots.isEmpty ? [0.0] : baseSlots
+        let courseIsCompleted = !slotsResolved.isEmpty && slotsResolved.allSatisfy { $0 >= 0.999 }
         let subtitleResolved = headerSubtitleResolved.isEmpty ? headerSubtitle : headerSubtitleResolved
         return VStack(spacing: 10) {
             LSLessonHeader(
                 title: headerTitle,
                 subtitle: subtitleResolved,
                 progressSlots: slotsResolved,
+                isCompletedCourse: courseIsCompleted,
+                completionSummary: courseGameSummary,
                 selectedIndex: activeLessonIndex,
                 onTapSlot: { idx in
                 let arr = lessonsSorted
@@ -922,6 +925,87 @@ extension LessonsView {
                 bottomAccessory: AnyView(courseMaterialsPicker)
             )
         }
+    }
+
+    private var courseGameSummary: AnyView? {
+        guard let cid = currentCourse?.courseID else { return nil }
+        let metrics = ReinforcementStore.shared.metrics(courseId: cid)
+        let sessions = metrics?.byMode.values.reduce(0) { $0 + $1.sessions } ?? 0
+        guard sessions > 0 else { return nil }
+
+        let covered = ReinforcementStore.shared.coveredCardCount(courseId: cid)
+        let totalCards = lessonsSorted.reduce(0) { total, lesson in
+            total + StepData.shared.items(for: lesson.lessonID).count
+        }
+        let score = ReinforcementStore.shared.overallScore(courseId: cid)
+        let matchedPercent = totalCards > 0 ? min(100, Int((Double(covered) / Double(totalCards) * 100).rounded())) : nil
+        let legacyRecord = covered == 0
+
+        let action: () -> Void = {
+            selectedGameLessonId = nil
+            selectedGameType = .match
+            frozenSnapshot = captureWindowSnapshot()
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                showGameOverlay = true
+                showGameModePicker = true
+            }
+        }
+
+        return AnyView(
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: legacyRecord ? "arrow.triangle.2.circlepath" : "checkmark.seal.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+                    Text(legacyRecord ? "Игра пройдена — связываем с курсом" : "Зачёт по игре")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.94))
+                    Spacer(minLength: 4)
+                    if let score {
+                        Text("\(score)%")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+                    }
+                }
+
+                Text(
+                    legacyRecord
+                    ? "Старый результат не содержит привязки к карточкам уроков. Пройди игру из этого курса один раз — после этого Тайка покажет совпадения и соберёт практику над ошибками."
+                    : "В игре найдено \(covered) карточек курса\(totalCards > 0 ? " из \(totalCards)" : ""). Тайка может продолжить работу с тем, что ещё не закреплено."
+                )
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.68))
+                .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    if let matchedPercent {
+                        Text("совпало \(matchedPercent)%")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+                    }
+                    if !legacyRecord {
+                        Text("\(sessions) \(sessions == 1 ? "игра" : "игр")")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+                    Spacer(minLength: 4)
+                    Button(action: action) {
+                        Text(legacyRecord ? "Синхронизировать" : "Закрепить дальше")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 7)
+                            .background(Capsule().fill(Color.black.opacity(0.72)))
+                            .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Capsule())
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.black.opacity(0.22)))
+        )
     }
 
     private var courseMaterialsPicker: some View {

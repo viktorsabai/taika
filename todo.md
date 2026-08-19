@@ -1129,3 +1129,11 @@
 - [ ] Verify all Speaker/Game/favorite/flip hit targets are aligned and tappable.
 - [ ] Identify expensive body recomputations, unstable arrays and broad animations in CourseView/LessonsView.
 - [ ] Run static validation and push one corrective commit.
+
+# LessonsView course summary integration audit
+
+- [ ] Inspect persisted ReinforcementStore records and verify whether the prior match contains source-card keys.
+- [ ] Trace actual LessonsView header card data path and why game score/coverage is absent.
+- [ ] Show completed course/game state and matched versus remaining cards in the upper course card.
+- [ ] Add a clear personalized work-on-errors action without requiring a blind replay.
+- [ ] Preserve a fallback message for legacy matches that cannot be mapped to source cards.
