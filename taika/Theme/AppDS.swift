@@ -1318,7 +1318,7 @@ public struct AppCardIconButton: View {
 
     private var iconInkStyle: AnyShapeStyle {
         if glossyBlackSurface, isEnabled {
-            return AnyShapeStyle(CDLearnedCardTokens.fill)
+            return AnyShapeStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
         }
         if isAccent {
             return AnyShapeStyle(ThemeManager.shared.currentAccentFill)

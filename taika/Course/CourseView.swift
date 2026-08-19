@@ -322,6 +322,7 @@ struct CourseView: View {
                 total + max(0, mode.sessions)
             } ?? 0
             let reinforcementScore = ReinforcementStore.shared.overallScore(courseId: c.id)
+            let reinforcementCoveredCards = ReinforcementStore.shared.coveredCardCount(courseId: c.id)
             let sanitizedDescription = c.description
                 .replacingOccurrences(of: "[[", with: "")
                 .replacingOccurrences(of: "]]", with: "")
@@ -348,6 +349,7 @@ struct CourseView: View {
                 pronunciationPercent: pro.isPro ? (pronunciationAdvancedPercent ?? pronunciationPercent) : pronunciationPercent,
                 reinforcementScore: reinforcementScore,
                 reinforcementSessions: reinforcementSessions,
+                reinforcementCoveredCards: reinforcementCoveredCards,
                 isProUser: pro.isPro,
                 flipEnabled: courseCompleted && !isTheoryBonus,
                 onBackSelectGameMode: (courseCompleted && !isTheoryBonus) ? { gameType in

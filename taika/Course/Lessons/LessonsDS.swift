@@ -1543,14 +1543,30 @@ public struct LSCourseStats: Hashable {
     public let favorites: Int
     public let streakDays: Int
     public let timeMinutes: Int
+    public let gameCoveredCards: Int
+    public let gameSessions: Int
+    public let reinforcementScore: Int?
 
-    public init(completedLessons: Int, totalLessons: Int, learnedWords: Int, favorites: Int, streakDays: Int, timeMinutes: Int) {
+    public init(
+        completedLessons: Int,
+        totalLessons: Int,
+        learnedWords: Int,
+        favorites: Int,
+        streakDays: Int,
+        timeMinutes: Int,
+        gameCoveredCards: Int = 0,
+        gameSessions: Int = 0,
+        reinforcementScore: Int? = nil
+    ) {
         self.completedLessons = max(0, completedLessons)
         self.totalLessons = max(1, totalLessons)
         self.learnedWords = max(0, learnedWords)
         self.favorites = max(0, favorites)
         self.streakDays = max(0, streakDays)
         self.timeMinutes = max(0, timeMinutes)
+        self.gameCoveredCards = max(0, gameCoveredCards)
+        self.gameSessions = max(0, gameSessions)
+        self.reinforcementScore = reinforcementScore.map { max(0, min(100, $0)) }
     }
 }
 
@@ -1651,6 +1667,11 @@ public struct LSCoursePracticeDock: View {
                 Text("ЗАКРЕПЛЕНИЕ")
                     .taikaSectionTitleStyle()
                 Spacer(minLength: 8)
+                if stats.gameSessions > 0 {
+                    Label("игра пройдена", systemImage: "checkmark.seal.fill")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+                }
                 if let currentLessonTitle, !currentLessonTitle.isEmpty {
                     Text(currentLessonTitle)
                         .font(.system(size: 11, weight: .semibold))
@@ -1708,6 +1729,21 @@ public struct LSCoursePracticeDock: View {
             }
             .disabled(completedLessons.isEmpty)
             .accessibilityLabel("Выбор уроков для закрепления")
+
+            if stats.gameCoveredCards > 0 || stats.reinforcementScore != nil {
+                HStack(spacing: 8) {
+                    Image(systemName: "waveform.path.ecg")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+                    Text(stats.reinforcementScore.map { "Закреплено в игре · \(stats.gameCoveredCards) карточек · \($0)%" } ?? "Закреплено в игре · \(stats.gameCoveredCards) карточек")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 4)
+            }
 
             HStack(spacing: 8) {
                 quickActionRow(icon: "mic.fill", title: "Спикер", isEnabled: onSpeaker != nil && !selectedScope.isEmpty, action: onSpeaker)

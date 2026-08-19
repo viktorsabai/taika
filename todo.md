@@ -1078,3 +1078,21 @@
 - [ ] Use the same black glossy treatment for card flip actions.
 - [ ] Add native press feedback without introducing new decorative borders or pink glow.
 - [ ] Keep pink only where it remains a non-semantic brand accent outside completed/action states.
+
+# Epic: Course–Game Mastery Sync
+
+## Scope
+
+- [x] Define one source-card identity contract: courseId, lessonId, card/step index, game session id, result type and score.
+- [x] Audit every Game Park mode that can be launched from a course or lesson.
+- [x] Persist matched source cards at game completion; never mark unrelated cards or the entire course by inference.
+- [x] Separate material completion from reinforcement/pronunciation mastery.
+- [x] Extend unified mastery aggregation for lesson and course summaries.
+- [x] Recalculate course and lesson status immediately after returning from Game Park.
+- [x] Add course-header green completion status and reinforcement summary.
+- [x] Add lesson-level source/status treatment for cards encountered in Game Park.
+- [x] Add useful CTA for weak cards that preserves course/lesson context.
+- [x] Update completed-card back face with game coverage, average pronunciation and remaining work.
+- [x] Keep pink out of completed semantic states and use black glossy action controls.
+- [ ] Validate partial game, full game, mixed lesson selection, repeat sessions and empty states.
+- [ ] Run static validation, inspect diff, create one consolidated commit and push current branch.

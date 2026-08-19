@@ -20,10 +20,36 @@ public final class ReinforcementStore: ObservableObject {
         }
     }
 
+    public struct LessonMetrics: Codable, Equatable {
+        public var sessions: Int
+        public var coveredCardKeys: Set<String>
+        public var lastScore: Int?
+
+        public init(sessions: Int = 0, coveredCardKeys: Set<String> = [], lastScore: Int? = nil) {
+            self.sessions = sessions
+            self.coveredCardKeys = coveredCardKeys
+            self.lastScore = lastScore
+        }
+    }
+
     public struct CourseMetrics: Codable, Equatable {
         public var byMode: [String: ModeMetrics]   // gameType rawValue -> metrics
-        public init(byMode: [String: ModeMetrics] = [:]) {
+        public var byLesson: [String: LessonMetrics]
+
+        public init(byMode: [String: ModeMetrics] = [:], byLesson: [String: LessonMetrics] = [:]) {
             self.byMode = byMode
+            self.byLesson = byLesson
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case byMode
+            case byLesson
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            byMode = try container.decodeIfPresent([String: ModeMetrics].self, forKey: .byMode) ?? [:]
+            byLesson = try container.decodeIfPresent([String: LessonMetrics].self, forKey: .byLesson) ?? [:]
         }
     }
 
@@ -34,7 +60,13 @@ public final class ReinforcementStore: ObservableObject {
 
     // MARK: - Public API
 
-    public func recordSession(courseId: String, gameType: String, score: Int? = nil, playedAt: Date = Date()) {
+    public func recordSession(
+        courseId: String,
+        gameType: String,
+        score: Int? = nil,
+        sourceCardKeys: [String] = [],
+        playedAt: Date = Date()
+    ) {
         let cid = canonicalizeCourseId(courseId)
         let mode = gameType
 
@@ -57,6 +89,22 @@ public final class ReinforcementStore: ObservableObject {
         }
 
         cm.byMode[mode] = mm
+
+        let normalizedKeys = Set(sourceCardKeys.compactMap { normalizeSourceCardKey($0) })
+        if !normalizedKeys.isEmpty {
+            let grouped = Dictionary(grouping: normalizedKeys) { key in
+                key.split(separator: "|", maxSplits: 1).first.map(String.init) ?? ""
+            }
+            for (rawLessonId, keys) in grouped where !rawLessonId.isEmpty {
+                let lid = canonicalizeLessonId(rawLessonId)
+                var lesson = cm.byLesson[lid] ?? LessonMetrics()
+                lesson.sessions += 1
+                lesson.coveredCardKeys.formUnion(keys)
+                lesson.lastScore = score.map { max(0, min(100, $0)) }
+                cm.byLesson[lid] = lesson
+            }
+        }
+
         courses[cid] = cm
         save()
         objectWillChange.send()
@@ -68,6 +116,23 @@ public final class ReinforcementStore: ObservableObject {
 
     /// Convenience: an overall reinforcement score for a course (0...100).
     /// Uses available mode averages; if none exist, returns nil.
+    public func coveredCardCount(courseId: String) -> Int {
+        metrics(courseId: courseId)?.byLesson.values.reduce(0) { $0 + $1.coveredCardKeys.count } ?? 0
+    }
+
+    public func coveredCardCount(courseId: String, lessonId: String) -> Int {
+        let lid = canonicalizeLessonId(lessonId)
+        return metrics(courseId: courseId)?.byLesson[lid]?.coveredCardKeys.count ?? 0
+    }
+
+    public func gameSessions(courseId: String, lessonId: String? = nil) -> Int {
+        guard let cm = metrics(courseId: courseId) else { return 0 }
+        if let lessonId {
+            return cm.byLesson[canonicalizeLessonId(lessonId)]?.sessions ?? 0
+        }
+        return cm.byLesson.values.reduce(0) { $0 + $1.sessions }
+    }
+
     public func overallScore(courseId: String, modes: [String] = ["match", "recall", "audioRecall"]) -> Int? {
         guard let cm = metrics(courseId: courseId) else { return nil }
         let scores = modes.compactMap { cm.byMode[$0]?.averageScore }
@@ -94,6 +159,23 @@ public final class ReinforcementStore: ObservableObject {
         } catch {
             courses = [:]
         }
+    }
+
+    private func normalizeSourceCardKey(_ raw: String) -> String? {
+        let parts = raw.split(separator: "|", maxSplits: 1).map(String.init)
+        guard parts.count == 2 else { return nil }
+        let lesson = canonicalizeLessonId(parts[0])
+        let card = parts[1].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !lesson.isEmpty, !card.isEmpty else { return nil }
+        return "\(lesson)|\(card)"
+    }
+
+    private func canonicalizeLessonId(_ raw: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        s = s.replacingOccurrences(of: " ", with: "-")
+        s = s.replacingOccurrences(of: "_", with: "-")
+        while s.contains("--") { s = s.replacingOccurrences(of: "--", with: "-") }
+        return s
     }
 
     private func canonicalizeCourseId(_ raw: String) -> String {

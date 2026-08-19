@@ -1431,6 +1431,7 @@ public struct CDCourseItem: Identifiable {
     /// Optional real reinforcement score and session count for the course grade sheet.
     public var reinforcementScore: Int? = nil
     public var reinforcementSessions: Int = 0
+    public var reinforcementCoveredCards: Int = 0
     /// Current user's PRO status (used for back-face gating copy).
     public var isProUser: Bool = false
 
@@ -1467,6 +1468,7 @@ public struct CDCourseItem: Identifiable {
         pronunciationPercent: Int? = nil,
         reinforcementScore: Int? = nil,
         reinforcementSessions: Int = 0,
+        reinforcementCoveredCards: Int = 0,
         isProUser: Bool = false,
         flipEnabled: Bool = false,
         onBackSelectGameMode: ((String) -> Void)? = nil,
@@ -1496,6 +1498,7 @@ public struct CDCourseItem: Identifiable {
         self.pronunciationPercent = pronunciationPercent
         self.reinforcementScore = reinforcementScore
         self.reinforcementSessions = max(0, reinforcementSessions)
+        self.reinforcementCoveredCards = max(0, reinforcementCoveredCards)
         self.isProUser = isProUser
         self.flipEnabled = flipEnabled
         self.onBackSelectGameMode = onBackSelectGameMode
@@ -1685,6 +1688,7 @@ public struct CDBaseSection: View {
                     pronunciationPercent: item.pronunciationPercent,
                     reinforcementScore: item.reinforcementScore,
                     reinforcementSessions: item.reinforcementSessions,
+                    reinforcementCoveredCards: item.reinforcementCoveredCards,
                     flipEnabled: item.flipEnabled,
                     courseKey: item.key,
                     isProUser: item.isProUser,
@@ -1781,6 +1785,7 @@ public struct CDAllCoursesSection<Trailing: View>: View {
                     pronunciationPercent: item.pronunciationPercent,
                     reinforcementScore: item.reinforcementScore,
                     reinforcementSessions: item.reinforcementSessions,
+                    reinforcementCoveredCards: item.reinforcementCoveredCards,
                     flipEnabled: item.flipEnabled,
                     courseKey: item.key,
                     isProUser: item.isProUser,

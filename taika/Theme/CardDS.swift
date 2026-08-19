@@ -2734,6 +2734,8 @@ public struct CourseLessonCard: View {
     public let reinforcementScore: Int?
     /// Number of real reinforcement sessions represented by reinforcementScore.
     public let reinforcementSessions: Int
+    /// Number of source cards encountered in Game Park for this course.
+    public let reinforcementCoveredCards: Int
 
     // MARK: - Optional flip (course grade sheet vs lesson reminders)
     public enum BackFaceKind: Equatable {
@@ -2814,6 +2816,7 @@ public struct CourseLessonCard: View {
         pronunciationPercent: Int? = nil,
         reinforcementScore: Int? = nil,
         reinforcementSessions: Int = 0,
+        reinforcementCoveredCards: Int = 0,
         flipEnabled: Bool = false,
         backFaceKind: BackFaceKind = .courseGradeSheet,
         courseKey: String? = nil,
@@ -2860,6 +2863,7 @@ public struct CourseLessonCard: View {
         self.pronunciationPercent = pronunciationPercent
         self.reinforcementScore = reinforcementScore
         self.reinforcementSessions = max(0, reinforcementSessions)
+        self.reinforcementCoveredCards = max(0, reinforcementCoveredCards)
         self.flipEnabled = flipEnabled
         self.backFaceKind = backFaceKind
         self.courseKey = courseKey
@@ -3292,6 +3296,9 @@ public struct CourseLessonCard: View {
                     }()
 
                     gradeRow(title: "Закрепление", value: reinforcementValue)
+                    if reinforcementCoveredCards > 0 {
+                        gradeRow(title: "Карточки в игре", value: "\(reinforcementCoveredCards)")
+                    }
 
                     gradeRow(
                         title: "Произношение",

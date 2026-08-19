@@ -248,12 +248,15 @@ public final class HomeTaskManager: ObservableObject {
         public let ru: String
         public let th: String
         public let ph: String
+        /// Курс-источник карточки для global Game Park.
+        public let courseId: String?
         /// Урок-источник карточки (для чипа на карточке в recall при игре по всему курсу).
         public let lessonId: String?
-        public init(ru: String, th: String, ph: String, lessonId: String? = nil) {
+        public init(ru: String, th: String, ph: String, courseId: String? = nil, lessonId: String? = nil) {
             self.ru = ru
             self.th = th
             self.ph = ph
+            self.courseId = courseId
             self.lessonId = lessonId
         }
     }
@@ -503,7 +506,7 @@ public final class HomeTaskManager: ObservableObject {
                 guard matched, let ru = it.ru else { continue }
                 let th = it.thai ?? ""
                 let ph = it.phonetic ?? ""
-                out.append(.init(ru: ru, th: th, ph: ph, lessonId: lessonId))
+                out.append(.init(ru: ru, th: th, ph: ph, courseId: courseId, lessonId: lessonId))
             default:
                 continue
             }
@@ -1042,7 +1045,7 @@ public final class HomeTaskManager: ObservableObject {
             guard !ru.isEmpty else { continue }
             let ph = phRaw.isEmpty ? ru : phRaw
             if seen.insert(ru.lowercased()).inserted {
-                result.append(.init(ru: ru, th: th, ph: ph, lessonId: t.lessonId))
+                result.append(.init(ru: ru, th: th, ph: ph, courseId: t.courseId, lessonId: t.lessonId))
             }
         }
         return result
@@ -1072,7 +1075,7 @@ public final class HomeTaskManager: ObservableObject {
             guard !ru.isEmpty else { continue }
             let ph = phRaw.isEmpty ? ru : phRaw
             if seen.insert(ru.lowercased()).inserted {
-                result.append(.init(ru: ru, th: th, ph: ph, lessonId: t.lessonId))
+                result.append(.init(ru: ru, th: th, ph: ph, courseId: t.courseId, lessonId: t.lessonId))
             }
         }
 
@@ -1095,7 +1098,7 @@ public final class HomeTaskManager: ObservableObject {
             guard !ru.isEmpty else { continue }
             let ph = phRaw.isEmpty ? ru : phRaw
             if seen.insert(ru.lowercased()).inserted {
-                result.append(.init(ru: ru, th: th, ph: ph, lessonId: t.lessonId))
+                result.append(.init(ru: ru, th: th, ph: ph, courseId: t.courseId, lessonId: t.lessonId))
             }
         }
         return result

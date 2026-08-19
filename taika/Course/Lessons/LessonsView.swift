@@ -498,7 +498,10 @@ public struct LessonsView: View {
                                 learnedWords: courseOverviewStats.learnedWords,
                                 favorites: courseOverviewStats.favorites,
                                 streakDays: 0,
-                                timeMinutes: courseOverviewStats.spentMinutes
+                                timeMinutes: courseOverviewStats.spentMinutes,
+                                gameCoveredCards: currentCourse.map { ReinforcementStore.shared.coveredCardCount(courseId: $0.courseID) } ?? 0,
+                                gameSessions: currentCourse.map { ReinforcementStore.shared.gameSessions(courseId: $0.courseID) } ?? 0,
+                                reinforcementScore: currentCourse.flatMap { ReinforcementStore.shared.overallScore(courseId: $0.courseID) }
                             ),
                             currentLessonTitle: currentLesson.flatMap { lessonsManager.lessonTitle(for: $0.lessonID) },
                             completedLessons: completedLessonOptions,
@@ -793,6 +796,10 @@ let withTasks = base
 
     }
 
+    .onReceive(NotificationCenter.default.publisher(for: .init("TaikaReinforcementDidUpdate"))) { _ in
+        itemsVersion = UUID()
+        scheduleHeaderRefresh()
+    }
 
 // Navigation / chrome
 

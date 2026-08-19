@@ -159,17 +159,9 @@ public struct HomeTaskView: View {
         }
         .onChange(of: showSummary) { _, isShowing in
             if isShowing {
-                if !didRecordReinforcementSession, !isGlobalParkContext {
+                if !didRecordReinforcementSession {
                     didRecordReinforcementSession = true
-                    let total = max(1, totalPairsCount)
-                    let attempts = max(1, tries)
-                    let accuracy = Double(total) / Double(attempts)
-                    let percent = max(0, min(100, Int((accuracy * 100).rounded())))
-                    ReinforcementStore.shared.recordSession(
-                        courseId: courseId,
-                        gameType: "match",
-                        score: percent
-                    )
+                    recordMatchedGameMastery()
                 }
                 lastGameTimeSeconds = gameElapsedSeconds
                 let key = Self.matchBestTimeKey(courseId: courseId, lessonId: lessonId)
@@ -841,6 +833,38 @@ public struct HomeTaskView: View {
 
     private var isGlobalParkContext: Bool {
         isFavoritesContext || isDictionaryContext || isLearnedParkContext
+    }
+
+    /// Persist the exact source cards encountered in this completed match session.
+    /// Global Game Park is grouped back into real courses instead of writing to the pseudo-course.
+    private func recordMatchedGameMastery() {
+        guard !isFavoritesContext, !isDictionaryContext else { return }
+        let total = max(1, totalPairsCount)
+        let attempts = max(1, tries)
+        let accuracy = Double(total) / Double(attempts)
+        let percent = max(0, min(100, Int((accuracy * 100).rounded())))
+        let matched = allTriples.filter { matchedPairIds.contains("\($0.ru)|\($0.ph)") }
+        guard !matched.isEmpty else { return }
+
+        let grouped = Dictionary(grouping: matched) { triple in
+            let sourceCourse = triple.courseId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return sourceCourse.isEmpty ? courseId : sourceCourse
+        }
+        for (sourceCourseId, triples) in grouped {
+            guard !LearnedGameSource.isPseudoCourseId(sourceCourseId) else { continue }
+            let sourceKeys = triples.compactMap { triple -> String? in
+                guard let lesson = triple.lessonId?.trimmingCharacters(in: .whitespacesAndNewlines), !lesson.isEmpty else { return nil }
+                let phrase = triple.ru.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                guard !phrase.isEmpty else { return nil }
+                return "\(lesson)|\(phrase)"
+            }
+            ReinforcementStore.shared.recordSession(
+                courseId: sourceCourseId,
+                gameType: "match",
+                score: percent,
+                sourceCardKeys: sourceKeys
+            )
+        }
     }
 
     /// Lessons catalog for course-level mode (lessonId == "").
