@@ -6723,6 +6723,8 @@ private struct ConversationVoiceOrb: View {
     let meter: Double
     let mode: Mode
     let accent: Color
+    @State private var breathing = false
+    @State private var rotation: Double = 0
 
     private var level: CGFloat {
         CGFloat(max(0, min(1, meter)))
@@ -6735,35 +6737,68 @@ private struct ConversationVoiceOrb: View {
             return false
         }()
         ZStack {
-            RadialGradient(
-                colors: [
-                    brand.opacity(0.16 + Double(level) * 0.10),
-                    brand.opacity(0.045),
-                    Color.clear
-                ],
-                center: .center,
-                startRadius: 10,
-                endRadius: 128
-            )
-            .blur(radius: 24)
-            .scaleEffect(1.05 + level * 0.10)
-
-            ConversationAmbientRings(
-                color: brand,
-                intensity: isProcessing ? 0.55 : 1.0
-            )
-            .frame(width: 210, height: 210)
-            .allowsHitTesting(false)
+            // Same soft breathing field as onboarding, scaled to the Speaker stage.
+            Circle()
+                .fill(brand.opacity(isProcessing ? 0.20 : 0.28))
+                .blur(radius: 28)
+                .scaleEffect(breathing ? 1.16 + level * 0.08 : 0.92)
 
             Circle()
-                .fill(Color.black.opacity(0.28))
-                .frame(width: 112, height: 112)
+                .fill(brand.opacity(0.12))
+                .frame(width: 188, height: 188)
+                .blur(radius: 2)
                 .overlay {
                     Circle()
-                        .stroke(brand.opacity(0.28), lineWidth: 1)
+                        .stroke(brand.opacity(0.34), lineWidth: 1)
                 }
+
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.white.opacity(0.14),
+                            accent.opacity(0.10),
+                            Color.black.opacity(0.78)
+                        ],
+                        center: UnitPoint(x: 0.35, y: 0.28),
+                        startRadius: 4,
+                        endRadius: 96
+                    )
+                )
+                .frame(width: 156, height: 156)
+                .overlay {
+                    Circle()
+                        .stroke(brand, lineWidth: isProcessing ? 1.3 : 1.8)
+                        .opacity(0.86)
+                }
+                .shadow(color: accent.opacity(isProcessing ? 0.34 : 0.48), radius: 24)
+
+            Circle()
+                .fill(RadialGradient(colors: [.white.opacity(0.14), .clear], center: .center, startRadius: 2, endRadius: 54))
+                .frame(width: 108, height: 108)
+                .blur(radius: 8)
+
+            // Onboarding arc language, intentionally calm and slow.
+            ForEach(0..<4, id: \.self) { index in
+                Circle()
+                    .trim(from: 0.06 + CGFloat(index) * 0.17, to: 0.27 + CGFloat(index) * 0.17)
+                    .stroke(
+                        brand.opacity((0.55 - Double(index) * 0.08) * (isProcessing ? 0.72 : 1.0)),
+                        style: StrokeStyle(lineWidth: index == 0 ? 1.8 : 1.0, lineCap: .round)
+                    )
+                    .frame(width: 172 + CGFloat(index) * 14, height: 172 + CGFloat(index) * 14)
+                    .rotationEffect(.degrees(rotation + Double(index) * 92))
+            }
         }
         .frame(width: 210, height: 210)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 3.8).repeatForever(autoreverses: true)) {
+                breathing = true
+            }
+            withAnimation(.linear(duration: isProcessing ? 16 : 22).repeatForever(autoreverses: false)) {
+                rotation = 360
+            }
+        }
         .accessibilityHidden(true)
     }
 }

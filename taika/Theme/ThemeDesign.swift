@@ -35,9 +35,9 @@ public enum Theme {
         public static let bottomInsetMin: CGFloat = 16
         /// Reserved space below the floating glass header. The header contains the wordmark,
         /// controls and page-title row; root content must begin below the full visual chrome.
-        public static let rootHeaderClearance: CGFloat = 112
+        public static let rootHeaderClearance: CGFloat = 88
         /// Two-row game header with timer/progress controls.
-        public static let rootHeaderClearanceGame: CGFloat = 128
+        public static let rootHeaderClearanceGame: CGFloat = 104
         /// reserved height for the floating tab bar (capsule + bottom float)
         public static let bottomToolbarHeight: CGFloat = 68
 
