@@ -317,6 +317,11 @@ struct CourseView: View {
             let canonCourseId = ProgressManager.shared.canonicalize(c.id)
             let pronunciationPercent: Int? = pronunciation.heard[canonCourseId]
             let pronunciationAdvancedPercent: Int? = pro.isPro ? pronunciation.advanced[canonCourseId] : nil
+            let reinforcementMetrics = ReinforcementStore.shared.metrics(courseId: c.id)
+            let reinforcementSessions = reinforcementMetrics?.byMode.values.reduce(0) { total, mode in
+                total + max(0, mode.sessions)
+            } ?? 0
+            let reinforcementScore = ReinforcementStore.shared.overallScore(courseId: c.id)
             let sanitizedDescription = c.description
                 .replacingOccurrences(of: "[[", with: "")
                 .replacingOccurrences(of: "]]", with: "")
@@ -341,6 +346,8 @@ struct CourseView: View {
                 progress: courseProgress,
                 statusStarsFraction: nil,
                 pronunciationPercent: pro.isPro ? (pronunciationAdvancedPercent ?? pronunciationPercent) : pronunciationPercent,
+                reinforcementScore: reinforcementScore,
+                reinforcementSessions: reinforcementSessions,
                 isProUser: pro.isPro,
                 flipEnabled: courseCompleted && !isTheoryBonus,
                 onBackSelectGameMode: (courseCompleted && !isTheoryBonus) ? { gameType in

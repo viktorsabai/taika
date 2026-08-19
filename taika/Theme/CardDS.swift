@@ -2618,9 +2618,13 @@ public struct CourseLessonCard: View {
     /// When provided, we render up to `maxStars` filled stars using the given 0...1 fraction.
     public let statusStarsFraction: Double?
 
-    /// Optional averaged pronunciation score for this course (0...100).
-    /// Rendered on the back face plan (instead of stars).
+    /// Optional averaged pronunciation score for this course/lesson (0...100).
+    /// Rendered on the back face mastery summary.
     public let pronunciationPercent: Int?
+    /// Optional real reinforcement score (0...100), derived from game sessions.
+    public let reinforcementScore: Int?
+    /// Number of real reinforcement sessions represented by reinforcementScore.
+    public let reinforcementSessions: Int
 
     // MARK: - Optional flip (course grade sheet vs lesson reminders)
     public enum BackFaceKind: Equatable {
@@ -2699,6 +2703,8 @@ public struct CourseLessonCard: View {
         completionFraction: Double? = nil,
         statusStarsFraction: Double? = nil,
         pronunciationPercent: Int? = nil,
+        reinforcementScore: Int? = nil,
+        reinforcementSessions: Int = 0,
         flipEnabled: Bool = false,
         backFaceKind: BackFaceKind = .courseGradeSheet,
         courseKey: String? = nil,
@@ -2743,6 +2749,8 @@ public struct CourseLessonCard: View {
         self.completionFraction = completionFraction
         self.statusStarsFraction = statusStarsFraction
         self.pronunciationPercent = pronunciationPercent
+        self.reinforcementScore = reinforcementScore
+        self.reinforcementSessions = max(0, reinforcementSessions)
         self.flipEnabled = flipEnabled
         self.backFaceKind = backFaceKind
         self.courseKey = courseKey
@@ -2824,6 +2832,22 @@ public struct CourseLessonCard: View {
                     .offset(x: 82, y: -58)
                 RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
                     .stroke(fill.opacity(0.52), lineWidth: 1.05)
+
+                // Premium Taika-techno motif: two quiet waveform bands inside the existing
+                // accent layer. They add depth without introducing a second card chrome.
+                VStack(spacing: 18) {
+                    Capsule(style: .continuous)
+                        .stroke(glow.opacity(0.20), lineWidth: 1.2)
+                        .frame(width: 230, height: 44)
+                        .rotationEffect(.degrees(-12))
+                    Capsule(style: .continuous)
+                        .stroke(fill.opacity(0.16), lineWidth: 1.0)
+                        .frame(width: 190, height: 36)
+                        .rotationEffect(.degrees(-12))
+                }
+                .blur(radius: 0.25)
+                .offset(x: 76, y: 72)
+                .allowsHitTesting(false)
             }
             .allowsHitTesting(false)
         }
@@ -3095,7 +3119,7 @@ public struct CourseLessonCard: View {
         func backPlanBelowTitle() -> some View {
             switch backFaceKind {
             case .lessonCompletion:
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.seal.fill")
                             .font(.system(size: 18, weight: .semibold))
@@ -3105,13 +3129,15 @@ public struct CourseLessonCard: View {
                             .foregroundStyle(Color.white.opacity(0.96))
                     }
 
-                    Text("100% пройдено")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.78))
+                    Text("Зачёт по уроку")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.70))
+                        .textCase(.uppercase)
+                        .kerning(0.7)
 
-                    Text("закрепление доступно")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                    gradeRow(title: "Пройдено", value: "100%")
+                    gradeRow(title: "Произношение", value: pronunciationPercent.map { "\($0)%" } ?? "ещё нет")
+                    gradeRow(title: "Закрепление", value: reinforcementSessions > 0 ? "\(reinforcementSessions) игр" : "доступно")
                 }
 
             case .lessonReminders(let lines):
@@ -3166,12 +3192,14 @@ public struct CourseLessonCard: View {
                         .lineSpacing(1)
                         .lineLimit(3)
 
-                    gradeRow(
-                        title: "Закрепление",
-                        value: courseKey
-                            .flatMap { ReinforcementStore.shared.overallScore(courseId: $0) }
-                            .map { "\($0)%" } ?? "ещё нет"
-                    )
+                    let reinforcementValue: String = {
+                        if let score = reinforcementScore {
+                            return reinforcementSessions > 0 ? "\(score)% · \(reinforcementSessions) игр" : "\(score)%"
+                        }
+                        return reinforcementSessions > 0 ? "\(reinforcementSessions) игр" : "ещё нет"
+                    }()
+
+                    gradeRow(title: "Закрепление", value: reinforcementValue)
 
                     gradeRow(
                         title: "Произношение",

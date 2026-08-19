@@ -1416,6 +1416,9 @@ public struct CDCourseItem: Identifiable {
 
     /// Optional averaged pronunciation score for this course (0...100).
     public var pronunciationPercent: Int? = nil
+    /// Optional real reinforcement score and session count for the course grade sheet.
+    public var reinforcementScore: Int? = nil
+    public var reinforcementSessions: Int = 0
     /// Current user's PRO status (used for back-face gating copy).
     public var isProUser: Bool = false
 
@@ -1450,6 +1453,8 @@ public struct CDCourseItem: Identifiable {
         progress: Double,
         statusStarsFraction: Double? = nil,
         pronunciationPercent: Int? = nil,
+        reinforcementScore: Int? = nil,
+        reinforcementSessions: Int = 0,
         isProUser: Bool = false,
         flipEnabled: Bool = false,
         onBackSelectGameMode: ((String) -> Void)? = nil,
@@ -1477,6 +1482,8 @@ public struct CDCourseItem: Identifiable {
         self.progress = progress
         self.statusStarsFraction = statusStarsFraction
         self.pronunciationPercent = pronunciationPercent
+        self.reinforcementScore = reinforcementScore
+        self.reinforcementSessions = max(0, reinforcementSessions)
         self.isProUser = isProUser
         self.flipEnabled = flipEnabled
         self.onBackSelectGameMode = onBackSelectGameMode
@@ -1658,6 +1665,8 @@ public struct CDBaseSection: View {
                     completionFraction: item.progress,
                     statusStarsFraction: item.statusStarsFraction,
                     pronunciationPercent: item.pronunciationPercent,
+                    reinforcementScore: item.reinforcementScore,
+                    reinforcementSessions: item.reinforcementSessions,
                     flipEnabled: item.flipEnabled,
                     courseKey: item.key,
                     isProUser: item.isProUser,
@@ -1746,6 +1755,8 @@ public struct CDAllCoursesSection<Trailing: View>: View {
                     completionFraction: item.progress,
                     statusStarsFraction: item.statusStarsFraction,
                     pronunciationPercent: item.pronunciationPercent,
+                    reinforcementScore: item.reinforcementScore,
+                    reinforcementSessions: item.reinforcementSessions,
                     flipEnabled: item.flipEnabled,
                     courseKey: item.key,
                     isProUser: item.isProUser,

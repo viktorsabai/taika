@@ -1238,6 +1238,16 @@ public struct LSLessonCardV: View {
         ], startPoint: .leading, endPoint: .trailing)
     }
 
+    /// Real average of stored speaker confidence for this lesson. Nil means no assessment yet.
+    private var lessonPronunciationPercent: Int? {
+        let scores = SpeakerAttemptsStore.loadAll().values
+            .filter { $0.lessonId == item.id && $0.heardConfidence > 0 }
+            .map(\.heardConfidence)
+        guard !scores.isEmpty else { return nil }
+        let average = Double(scores.reduce(0, +)) / Double(scores.count)
+        return max(0, min(100, Int(average.rounded())))
+    }
+
 
     @ViewBuilder
     private var heartBadge: some View {
@@ -1402,6 +1412,7 @@ public struct LSLessonCardV: View {
             },
             isConsoleEnabled: item.status == .completed,
             completionFraction: item.status == .completed ? 1.0 : item.progress,
+            pronunciationPercent: lessonPronunciationPercent,
             flipEnabled: item.status == .completed,
             backFaceKind: item.status == .completed ? .lessonCompletion : .courseGradeSheet,
             backPrimaryActionTitle: nil,
@@ -1615,6 +1626,8 @@ public struct LSCoursePracticeDock: View {
                 }
             }
 
+            // DictionarySoftActionLabel already owns its native glass surface.
+            // Do not wrap rows in another card: that creates the visible double frame.
             VStack(spacing: 8) {
                 quickActionRow(
                     icon: "mic.fill",
@@ -1629,15 +1642,6 @@ public struct LSCoursePracticeDock: View {
                     action: onGamePark
                 )
             }
-            .padding(8)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(CD.ColorToken.card.opacity(0.92))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(PD.ColorToken.stroke.opacity(0.58), lineWidth: 1)
-            )
         }
         .padding(.top, 2)
         .accessibilityElement(children: .contain)
