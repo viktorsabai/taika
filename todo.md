@@ -813,3 +813,249 @@
 - [x] Keep Speaker/Game Park callbacks, gates and current lesson context intact.
 - [x] Remove duplicate progress/statistics/action copy from the lower area.
 - [x] Validate Swift references and ship one consolidated commit.
+
+
+# Lesson grade summary and single action surface regression
+
+- [ ] Remove the outer-plus-inner double frame from the quick action panel.
+- [ ] Restore real lesson mastery statistics without recreating the old dashboard.
+- [ ] Surface pronunciation average and reinforcement effectiveness only when real data exists.
+- [ ] Add a compact «Зачёт по уроку» summary with clear hierarchy.
+- [ ] Keep course progress in hero and quick actions in one native panel.
+
+
+# Unified course and lesson mastery presentation
+
+- [ ] Audit CourseView course-grade values against real lesson-level speaker and reinforcement data.
+- [ ] Define one honest mastery contract for fully completed courses and lessons.
+- [ ] Keep missing metrics explicit instead of inventing scores.
+- [ ] Add a restrained glossy Taika-techno treatment to completed cards without hurting readability.
+- [ ] Reuse the same mastery semantics and visual language in CourseView and LessonsView.
+
+
+# Consolidated mastery flow implementation
+
+- [ ] Wire real pronunciation and reinforcement metrics for course and lesson grade states.
+- [ ] Add honest empty states and next-best actions for missing mastery data.
+- [ ] Update CourseView course grade and LessonsView lesson grade consistently.
+- [ ] Add premium Taika-techno waveform/halo treatment to completed surfaces.
+- [ ] Remove duplicate quick-action chrome and ship one consolidated test commit.
+
+
+# Instant Translation learning loop
+
+- [ ] Audit instant translation states and existing Speaker navigation/data contracts.
+- [ ] Define voice-reactive sphere behavior for listening, processing, result and ready-next.
+- [ ] Add parallel Save to Dictionary and Train Now actions.
+- [ ] Keep phrase context after save and support continuous next-phrase capture.
+- [ ] Validate translation, dictionary persistence and training handoff.
+
+
+# Instant Translation loop implementation
+
+- [ ] Connect smoothed voice feedback to the recording sphere.
+- [ ] Separate listening and processing visual states.
+- [ ] Add Train Now beside Save to Dictionary on result state.
+- [ ] Keep result visible after save and show saved status.
+- [ ] Add next-phrase capture without resetting the Speaker flow.
+- [ ] Validate dictionary persistence and training handoff before handoff.
+
+
+# Home daily warmup retention entry point
+
+- [x] Audit current warmup button time-based fill and motion hooks.
+- [x] Keep warmup visually stable regardless of time remaining.
+- [x] Add restrained lightning pulse to the warmup icon.
+- [x] Add rotating value-oriented copy inside the button.
+- [x] Preserve daily availability state, accessibility and reduced-motion behavior.
+
+
+# Favorites compact practice actions
+
+- [ ] Audit Favorites Speaker/Games actions against DictionarySoftActionLabel.
+- [ ] Replace large competing CTA buttons with a compact secondary action rail.
+- [ ] Keep saved materials and My Dictionary as the visual priority.
+- [ ] Preserve card/list mode, filters, Speaker and Games navigation.
+- [ ] Validate accessibility and prepare a focused test commit.
+
+
+# LessonsView learned cards and selected practice scope
+
+- [ ] Give fully completed lessons a premium learned-state treatment with clear achievement signal.
+- [ ] Add a compact expandable chip for selecting completed lessons to practice.
+- [ ] Keep unfinished lessons out of the selection list.
+- [ ] Route selected completed lessons to Speaker and Game Park using existing contracts.
+- [ ] Preserve course scope, favorites, card/list modes and navigation.
+
+
+# Consolidated CourseView LessonsView Favorites UX pass
+
+- [ ] Audit shared mastery, completion and action contracts across all three screens.
+- [ ] Unify real course/lesson mastery semantics and honest empty states.
+- [ ] Add premium learned cards and completed-only practice selection in LessonsView.
+- [ ] Align CourseView grade card with the same mastery language and visual treatment.
+- [ ] Reduce Favorites Speaker/Games controls to compact Dictionary-style actions.
+- [ ] Validate cross-screen callbacks, accessibility and argument order before one consolidated commit.
+
+
+# Warmup single-slot micro-UX correction
+
+- [x] Keep warmup title and explanatory copy in one centered slot, never simultaneously.
+- [x] Animate the copy transition from the center with stable button geometry.
+- [x] Remove lightning glow/container and retain icon-only motion.
+- [x] Check clipping, spacing and reduced-motion behavior.
+- [ ] Create and push a corrective commit with one test command.
+
+
+# Lessons completed selection handoff correction
+
+- [ ] Preserve current focused lesson separately from selected reinforcement lessons.
+- [ ] Allow selecting multiple completed lessons without changing the visible lesson card.
+- [ ] Route the selected lesson set only after explicit Speaker or Games action.
+- [ ] Keep uncompleted lessons out of the selection queue.
+- [ ] Remove the remaining divider/line and strengthen learned-card visual treatment.
+- [ ] Run static wiring checks and create one corrective commit.
+
+
+# Speaker voice flow correction
+
+- [ ] Separate instant translation from explicit pronunciation training states.
+- [ ] Make the compact voice-reactive sphere the only visual hero during listening and processing.
+- [ ] Prevent background translation/training cards from showing through active recording and analysis states.
+- [ ] Restore score-first gate before syllable/rhythm breakdown.
+- [ ] Replace unbounded training ribbon with a capped phrase-history carousel and deterministic tap-to-resume behavior.
+- [ ] Validate state transitions and push one Speaker corrective commit.
+
+
+# Favorites compiler diagnostic retry
+
+- [ ] Replace FavInsetGroup body with explicit compiler-safe typed surface and overlay helpers.
+- [ ] Re-run static checks and push a follow-up fix for FavoriteTabContent.swift:289.
+
+
+# Favorites compiler diagnostic retry 2
+
+- [ ] Remove ambiguous expression at FavoriteTabContent.swift:294 with explicit non-opaque helper composition.
+- [ ] Run static checks and push the final compiler fix.
+
+
+# LessonsView compiler fixes
+
+- [ ] Fix optional String arguments at LessonsView lines 513 and 707.
+- [ ] Restore explicit navigation bar visibility modifier at LessonsView line 800.
+- [ ] Run static checks and push LessonsView build-fix commit.
+
+
+# CourseView learned card visual correction
+
+- [ ] Replace completed course mauve tint with jungle-green glass treatment.
+- [ ] Remove or heavily suppress visible residual techno-line strokes on completed course cards.
+- [ ] Preserve mastery metrics, card actions and carousel geometry.
+- [ ] Run static checks and push corrective CourseView/CardDS commit.
+
+
+# Speaker phrase chip rail correction
+
+- [ ] Replace large history cards in the main Speaker surface with compact Main-style phrase chips.
+- [ ] Keep the sphere as the only central hero during idle, recording and translation states.
+- [ ] Preserve capped history and tap-to-resume behavior through the chips.
+- [ ] Run static checks and push a Speaker UI corrective commit.
+
+
+# Favorites mockup proof
+
+- [ ] Create faithful list-mode mockup with unified action rail and adaptive filter logic.
+- [ ] Create faithful grid-mode mockup with the same header hierarchy.
+- [ ] Deliver both mockup images for approval before coding.
+
+
+# Favorites canvas mockups
+
+- [ ] Initialize a two-page Favorites mockup canvas: List mode and Grid mode.
+- [ ] Create both pages with exact current Taika labels and proposed control hierarchy.
+- [ ] Present the canvas directly in the UI.
+
+
+# Consolidated visual fix: Favorites, CourseView, LessonsView
+
+- [ ] Align Favorites header controls, action rail, filters and content to one strict spacing grid.
+- [ ] Apply one jungle-green learned surface to completed CourseView and LessonsView cards.
+- [ ] Remove mauve dust and decorative line artifacts from both completed-card paths.
+- [ ] Preserve mastery metrics, carousel geometry and existing actions.
+- [ ] Run static checks and push one consolidated visual commit.
+
+
+# Speaker canonical Main sphere
+
+- [ ] Reuse the exact Main speaker sphere component and visual scale in Speaker.
+- [ ] Map idle, listening and processing states to the canonical sphere states.
+- [ ] Keep phrase chips secondary and preserve tap-to-resume behavior.
+- [ ] Run static checks and push one canonical-hero commit.
+
+
+# Speaker reactive sphere
+
+- [ ] Pass the live recording meter into the shared MDVoiceSphere.
+- [ ] Keep Main idle sphere visually unchanged while Speaker listening reacts to meter.
+- [ ] Animate rings/core/wave intensity from live voice level with reduced-motion fallback.
+- [ ] Verify listening, idle and processing states and push one corrective commit.
+
+
+# Organic learned card treatment
+
+- [ ] Remove solid green completed-card wash that lowers text contrast.
+- [ ] Add restrained vine-like organic wave paths and localized glow inside completed cards.
+- [ ] Animate the organic treatment slowly, with reduced-motion fallback.
+- [ ] Keep mastery metrics, icons, card dimensions and actions unchanged.
+- [ ] Push one organic learned visual commit after static validation.
+
+
+# Speaker idle hero fix
+
+- [ ] Render canonical MDVoiceSphere immediately in idle/empty Speaker state.
+- [ ] Keep phrase chips secondary and preserve Instant Translation CTA.
+- [ ] Verify idle, listening, processing and result branches.
+- [ ] Push one idle Speaker corrective commit.
+
+
+# Learned-state clarity refinement
+
+- [ ] Tint completed progress rail green without changing in-progress rails.
+- [ ] Add explicit completed status/check language and green mastery accent.
+- [ ] Strengthen organic wave layers and localized depth while keeping text area clean.
+- [ ] Verify completed/in-progress contrast and push one refinement commit.
+
+
+# Favorites simplified action hierarchy
+
+- [ ] Remove category filter rail from Favorites.
+- [ ] Move Speaker and Games below saved materials in one row.
+- [ ] Match Dictionary dark action style exactly in list and grid modes.
+- [ ] Validate existing filter/data interactions are not broken and push one commit.
+
+
+# Completed card hierarchy refinement
+
+- [ ] Remove mastery metrics rail from completed card face.
+- [ ] Keep pronunciation/reinforcement metrics available on the completed back face.
+- [ ] Make completed status dark glossy with explicit green check/accent.
+- [ ] Keep green progress signal and soften pink to atmospheric/global-only role.
+- [ ] Validate face/back contrast and push one refinement commit.
+
+
+# Instant Speaker structured training continuation
+
+- [ ] Preserve RU/Thai/transliteration context after translation.
+- [ ] Replace generic standalone score overlay with in-card training result state.
+- [ ] Restore explicit score-first then tone/syllable breakdown sequence.
+- [ ] Keep Repeat, Save, Train/Next actions inside the same Instant Speaker context.
+- [ ] Verify classic breakdown data is reused without a second unrelated pipeline.
+
+
+# Speaker clean-start state
+
+- [ ] Hide phrase chips in initial idle before first translation result.
+- [ ] Keep canonical techno-AI sphere as the only central hero.
+- [ ] Add concise ready-to-listen copy without a second competing card.
+- [ ] Restore chips only after a conversation result exists.
+- [ ] Validate idle-to-recording-to-result transitions and push one cleanup commit.

@@ -827,15 +827,15 @@ public struct SpeakerDSRoot: View {
 
         ZStack {
             VStack(spacing: 0) {
-                if history.isEmpty, !focused {
+                if !focused, conversationHasResult, !history.isEmpty {
+                    conversationHistoryFeed(history)
+                        .padding(.horizontal, padH)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if !focused {
                     Spacer(minLength: 8)
                     conversationWidgetIdleCenter
                         .padding(.horizontal, padH)
                     Spacer(minLength: 8)
-                } else if !history.isEmpty && !focused {
-                    conversationHistoryFeed(history)
-                        .padding(.horizontal, padH)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     Spacer(minLength: 0)
                 }
@@ -1521,12 +1521,12 @@ public struct SpeakerDSRoot: View {
                 action: { external?.onMicTap() }
             )
             .frame(height: 200)
-            Text("Скажи или напиши")
+            Text("Готова слушать")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.text)
                 .multilineTextAlignment(.center)
 
-            Text("Микрофон — голосом, клавиатура — текстом. Тайка переведёт и даст потренировать.")
+            Text("Скажи фразу — Тайка услышит, переведёт и поможет потренировать произношение.")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.85))
                 .multilineTextAlignment(.center)
