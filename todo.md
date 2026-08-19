@@ -1249,3 +1249,11 @@
 - [ ] Пересобрать back face как retention grade sheet: результат, ценность закрепления, конкретная рекомендация и компактные CTA.
 - [ ] Проверить, что flip стартует с front face и state-dependent navigation не ломается.
 - [ ] Выполнить static validation, commit и push в `2026-01-21-k7hb-d2004`.
+
+# LessonsView compiler validation follow-up
+
+- [ ] Сверить полную фактическую сигнатуру `LSLessonReels` с production callsite.
+- [ ] Проверить все `LSLessonReels` вызовы, включая trailing-closure overload и preview callsites.
+- [ ] Проверить связанные `CourseLessonCard`/`HomeTaskView` initializer argument orders.
+- [ ] Запустить доступный комплексный static parse/diff validation и не push при найденных ошибках.
+- [ ] Запушить только после подтверждения полного порядка аргументов.

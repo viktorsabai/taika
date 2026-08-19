@@ -1355,7 +1355,6 @@ extension LessonsView {
                     UINotificationFeedbackGenerator().notificationOccurred(.warning)
                 }
             },
-            selectedLessonIds: isCompletedCourse ? Set(effectiveReinforcementLessonIds) : [],
             onSpeaker: isTheoryBonusCourse || isCompletedCourse ? nil : { item in
                 guard let cid = currentCourse?.courseID else { return }
                 UserSession.shared.markActive(courseId: cid, lessonId: item.id, stepIndex: 0)
@@ -1380,7 +1379,8 @@ extension LessonsView {
                     presentation: .canonical
                 ))
             },
-            selectedIndex: activeLessonIndex
+            selectedIndex: activeLessonIndex,
+            selectedLessonIds: isCompletedCourse ? Set(effectiveReinforcementLessonIds) : []
         )
     }
 }
