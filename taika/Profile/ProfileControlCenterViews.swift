@@ -939,9 +939,27 @@ private struct ProfileAccountCard: View {
     let onAppleID: () -> Void
     let onSignOut: () -> Void
 
+    private var accountSubtitle: String {
+        isLoggedIn ? (displayName ?? "Вход с Apple ID") : "Вход с Apple ID"
+    }
+
+    private var accountAction: () -> Void {
+        isLoggedIn ? onSignOut : onAppleID
+    }
+
+    private var statusStyle: AnyShapeStyle {
+        isLoggedIn
+            ? AnyShapeStyle(Color.green.opacity(0.95))
+            : AnyShapeStyle(theme.currentAccentFill)
+    }
+
+    private var statusFill: Color {
+        isLoggedIn ? Color.green.opacity(0.16) : theme.currentAccentTintColor.opacity(0.16)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Button(action: isLoggedIn ? onSignOut : onAppleID) {
+            Button(action: accountAction) {
                 HStack(spacing: 14) {
                     Image(systemName: "apple.logo")
                         .font(.title3.weight(.semibold))
@@ -949,10 +967,10 @@ private struct ProfileAccountCard: View {
                         .frame(width: 42, height: 42)
                         .background(Color.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(isLoggedIn ? "Аккаунт" : "Аккаунт")
+                        Text("Аккаунт")
                             .font(PD.FontToken.body(17, weight: .semibold))
                             .foregroundStyle(PD.ColorToken.text)
-                        Text(isLoggedIn ? (displayName ?? "Вход с Apple ID") : "Вход с Apple ID")
+                        Text(accountSubtitle)
                             .font(PD.FontToken.caption(13))
                             .foregroundStyle(PD.ColorToken.textSecondary)
                     }
@@ -962,10 +980,10 @@ private struct ProfileAccountCard: View {
                     } else {
                         Text(isLoggedIn ? "Активен" : "Войти")
                             .font(PD.FontToken.caption(12, weight: .semibold))
-                            .foregroundStyle(isLoggedIn ? Color.green.opacity(0.95) : theme.currentAccentFill)
+                            .foregroundStyle(statusStyle)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 7)
-                            .background((isLoggedIn ? Color.green : theme.currentAccentTintColor).opacity(0.16), in: Capsule())
+                            .background(statusFill, in: Capsule())
                         Image(systemName: "chevron.right")
                             .foregroundStyle(PD.ColorToken.textSecondary)
                     }
@@ -1028,15 +1046,18 @@ private struct ProfileTaikaPlusCard: View {
     }
 
     private func profileCapability(_ image: String, _ title: String, _ available: Bool) -> some View {
+        let capabilityStyle: AnyShapeStyle = available
+            ? AnyShapeStyle(theme.currentAccentFill)
+            : AnyShapeStyle(PD.ColorToken.textSecondary)
         VStack(spacing: 4) {
             Image(systemName: image)
-                .foregroundStyle(available ? theme.currentAccentFill : PD.ColorToken.textSecondary)
+                .foregroundStyle(capabilityStyle)
             Text(title)
                 .font(PD.FontToken.caption(11))
                 .foregroundStyle(PD.ColorToken.textSecondary)
             Text(available ? "доступны" : "Taika+")
                 .font(PD.FontToken.caption(10, weight: .semibold))
-                .foregroundStyle(available ? theme.currentAccentFill : PD.ColorToken.textSecondary)
+                .foregroundStyle(capabilityStyle)
         }
         .frame(maxWidth: .infinity)
     }
