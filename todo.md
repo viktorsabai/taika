@@ -1101,3 +1101,10 @@
 
 - [ ] Replace inaccessible CDLearnedCardTokens reference in AppDS.swift with an accessible jungle-green token.
 - [ ] Run diff/static validation and push corrective commit to 2026-01-21-k7hb-d2004.
+
+# CardDS corrective compile fix
+
+- [ ] Replace all CardDS references to inaccessible CDLearnedCardTokens with accessible mastery token.
+- [ ] Resolve TaikaWordmarkLockup Color versus LinearGradient/AnyShapeStyle mismatch.
+- [ ] Reorder glossyBlackSurface argument before onLockedTap at CardDS callsites.
+- [ ] Run static validation and push corrective commit to 2026-01-21-k7hb-d2004.
