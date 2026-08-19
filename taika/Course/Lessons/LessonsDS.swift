@@ -380,6 +380,29 @@ public struct LSLessonHeader: View {
         .compositingGroup()
     }
 
+    @ViewBuilder
+    private var progressRow: some View {
+        if let slots = progressSlots, !slots.isEmpty {
+            LSProgressSlotsStrip(
+                slots: slots,
+                selectedIndex: selectedIndex,
+                onTapSlot: onTapSlot,
+                isCompletedCourse: isCompletedCourse
+            )
+            .frame(maxWidth: .infinity, alignment: .center)
+        } else if let done = progressCompleted, let ttl = totalLessons, ttl > 0 {
+            LSProgressStrip(
+                done: done,
+                total: ttl,
+                progressSlots: progressSlots,
+                isCompletedCourse: isCompletedCourse
+            )
+            .frame(maxWidth: .infinity, alignment: .center)
+        } else {
+            EmptyView()
+        }
+    }
+
     public var body: some View {
         // unified vertical metrics
         let sideInsetH: CGFloat = Theme.Layout.sectionInner
@@ -416,26 +439,8 @@ public struct LSLessonHeader: View {
             Spacer(minLength: subtitleProgressSpacing).frame(height: subtitleProgressSpacing)
 
             // Progress row
-            Group {
-                if let slots = progressSlots, !slots.isEmpty {
-                    LSProgressSlotsStrip(
-                        slots: slots,
-                        selectedIndex: selectedIndex,
-                        onTapSlot: onTapSlot,
-                        isCompletedCourse: isCompletedCourse
-                    )
-                    .frame(maxWidth: .infinity, alignment: .center)
-                } else if let done = progressCompleted, let ttl = totalLessons, ttl > 0 {
-                    LSProgressStrip(
-                        done: done,
-                        total: ttl,
-                        progressSlots: progressSlots,
-                        isCompletedCourse: isCompletedCourse
-                    )
-                    .frame(maxWidth: .infinity, alignment: .center)
-                }
-            }
-            .padding(.top, 8)
+            progressRow
+                .padding(.top, 8)
 
             if let completionSummary {
                 completionSummary
@@ -454,7 +459,7 @@ public struct LSLessonHeader: View {
             VStack(spacing: 0) {
                 Spacer(minLength: edgeInsetTop)
                 content
-                    .padding(.horizontal, sideInsetH)
+                    .padding(.horizontal, CGFloat(sideInsetH))
                 Spacer(minLength: edgeInsetBottom)
             }
         }

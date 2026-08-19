@@ -1168,3 +1168,9 @@
 
 - [ ] Move onTapSlot before isCompletedCourse at the current LSLessonHeader callsite.
 - [ ] Run diff check and push corrective commit.
+
+# LessonsDS progress compile fix
+
+- [ ] Make progress slot Group/ViewBuilder concrete around line 419.
+- [ ] Make horizontal alignment/context explicit around line 457.
+- [ ] Run diff check and push corrective commit.
