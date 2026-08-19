@@ -1678,26 +1678,76 @@ public struct SpeakerDSRoot: View {
         if case .feedback(let score, let hint) = phase {
             let scoreToShow = external?.displayScore ?? score
             let hintText = (hint ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            VStack(spacing: 10) {
-                SpeakerCountingScore(
-                    value: scoreToShow,
-                    font: .taikaStat(72),
-                    color: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
-                    suffix: "%"
-                )
-                Text(scoreToShow >= 80 ? "почти идеально" : "есть неточности")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
+            let russian = (external?.heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let thai = (external?.conversationExpectedThai ?? external?.heardThai ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let translit = (external?.conversationExpectedTranslitForFeedback ?? external?.heardTranslit ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("ТРЕНИРОВКА ФРАЗЫ")
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(0.7)
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
+                        Text("Результат произношения")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.text)
+                    }
+                    Spacer(minLength: 0)
+                    SpeakerCountingScore(
+                        value: scoreToShow,
+                        font: .taikaStat(42),
+                        color: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                        suffix: "%"
+                    )
+                }
+
+                if !russian.isEmpty || !thai.isEmpty || !translit.isEmpty {
+                    Divider().overlay(Color.white.opacity(0.08))
+                    conversationWidgetPhoneticStack(
+                        russian: russian.isEmpty ? nil : russian,
+                        phonetic: translit,
+                        thai: thai
+                    )
+                }
+
                 if !hintText.isEmpty {
                     Text(hintText)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
-                        .multilineTextAlignment(.center)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.92))
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    external?.onRequestBreakdown?()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "waveform.path.ecg")
+                        Text("Разбор тонов и слогов")
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .bold))
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .padding(.horizontal, 14)
+                    .frame(maxWidth: .infinity, minHeight: 42)
+                    .background(Capsule(style: .continuous).fill(PD.ColorToken.chip.opacity(0.92)))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Открыть разбор тонов и слогов")
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 4)
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.Surfaces.blackGlass(shape))
         }
     }
 
