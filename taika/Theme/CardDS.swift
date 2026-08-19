@@ -2366,12 +2366,18 @@ public struct TaikaFMSection: View {
 struct CourseInlineProgressView: View {
     let fraction: Double
     let secondaryText: String?
+    let progressColor: Color
 
     @State private var animatedFraction: Double = 0
 
-    init(fraction: Double, secondaryText: String? = nil) {
+    init(
+        fraction: Double,
+        secondaryText: String? = nil,
+        progressColor: Color = ThemeManager.shared.currentAccentTintColor
+    ) {
         self.fraction = fraction
         self.secondaryText = secondaryText
+        self.progressColor = progressColor
     }
 
     var body: some View {
@@ -2385,7 +2391,7 @@ struct CourseInlineProgressView: View {
                     .frame(width: w, height: barH)
                     .overlay(
                         RoundedRectangle(cornerRadius: barH / 2, style: .continuous)
-                            .fill(ThemeManager.shared.currentAccentFill)
+                            .fill(progressColor)
                             .frame(
                                 width: max(0, w * CGFloat(animatedFraction)),
                                 height: barH
@@ -2397,14 +2403,14 @@ struct CourseInlineProgressView: View {
 
             Text("\(Int((animatedFraction * 100).rounded()))% пройдено")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
+                .foregroundStyle(animatedFraction >= 0.999 ? progressColor.opacity(0.92) : CD.ColorToken.textSecondary.opacity(0.9))
                 .contentTransition(.numericText())
                 .animation(.easeOut(duration: 0.45), value: animatedFraction)
 
             if let secondaryText, !secondaryText.isEmpty {
                 Text(secondaryText)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.72))
+                    .foregroundStyle(animatedFraction >= 0.999 ? progressColor.opacity(0.84) : CD.ColorToken.textSecondary.opacity(0.72))
                     .lineLimit(1)
             }
         }
@@ -2631,21 +2637,35 @@ fileprivate struct CDOrganicLearnedTreatment: View {
                 .blur(radius: 18)
                 .offset(x: 70, y: -70)
 
-            ForEach(Array([0.2, 1.35, 2.5].enumerated()), id: \.offset) { index, seed in
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [glow.opacity(0.09), Color.clear],
+                        center: .center,
+                        startRadius: 4,
+                        endRadius: 118
+                    )
+                )
+                .frame(width: 180, height: 130)
+                .blur(radius: 22)
+                .offset(x: -74, y: 78)
+
+            ForEach(Array([0.2, 1.35, 2.5, 3.7, 4.9].enumerated()), id: \.offset) { index, seed in
                 CDOrganicWaveShape(
                     phase: reduceMotion ? 0 : phase,
                     seed: seed
                 )
                 .stroke(
-                    glow.opacity(index == 1 ? 0.30 : 0.18),
+                    glow.opacity(index == 2 ? 0.36 : 0.16),
                     style: StrokeStyle(
-                        lineWidth: index == 1 ? 1.35 : 0.9,
+                        lineWidth: index == 2 ? 1.45 : 0.82,
                         lineCap: .round,
                         lineJoin: .round
                     )
                 )
-                .blur(radius: index == 1 ? 0.15 : 0.45)
-                .scaleEffect(1 + CGFloat(index - 1) * 0.035)
+                .blur(radius: index == 2 ? 0.12 : 0.5)
+                .scaleEffect(1 + CGFloat(index - 2) * 0.028)
+                .offset(x: index.isMultiple(of: 2) ? -10 : 10, y: CGFloat(index - 2) * 6)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
@@ -3330,7 +3350,10 @@ public struct CourseLessonCard: View {
                          fraction: f,
                          secondaryText: isLearned
                              ? "выучено · закрепление доступно"
-                             : (showPlanHint ? "закрепление доступно" : nil)
+                             : (showPlanHint ? "закрепление доступно" : nil),
+                         progressColor: isLearned
+                             ? Color(red: 0.25, green: 0.78, blue: 0.48)
+                             : ThemeManager.shared.currentAccentTintColor
                      )
                     learnedFrontMetrics()
                 }

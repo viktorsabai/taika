@@ -935,10 +935,11 @@ public struct AppStatusChip: View {
                 text: AnyShapeStyle(ThemeManager.shared.currentAccentFill)
             )
         case .completed:
+            let learnedGreen = Color(red: 0.25, green: 0.78, blue: 0.48)
             return StatusColors(
-                fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
-                stroke: AnyShapeStyle(Theme.Strokes.strokeSubtle.opacity(1.4)),
-                text: AnyShapeStyle(Color.black.opacity(0.85))
+                fill: AnyShapeStyle(learnedGreen.opacity(0.86)),
+                stroke: AnyShapeStyle(learnedGreen.opacity(0.58)),
+                text: AnyShapeStyle(Color.white.opacity(0.96))
             )
         }
     }
