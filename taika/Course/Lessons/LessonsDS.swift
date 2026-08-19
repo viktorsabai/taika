@@ -1404,10 +1404,10 @@ public struct LSLessonCardV: View {
             completionFraction: item.status == .completed ? 1.0 : item.progress,
             flipEnabled: item.status == .completed,
             backFaceKind: item.status == .completed ? .lessonCompletion : .courseGradeSheet,
-            backPrimaryActionTitle: item.status == .completed ? "Закрепить сейчас" : nil,
-            onBackPrimaryAction: item.status == .completed ? onConsole : nil,
-            backSecondaryActionTitle: item.status == .completed ? "Следующий урок" : nil,
-            onBackSecondaryAction: item.status == .completed ? onNext : nil,
+            backPrimaryActionTitle: nil,
+            onBackPrimaryAction: nil,
+            backSecondaryActionTitle: nil,
+            onBackSecondaryAction: nil,
             favoriteCount: favoriteCount,
             onFavoriteTap: onFavorite,
             onConsoleTap: { onConsole?() },
@@ -1586,148 +1586,82 @@ private struct LSCourseETATimer: View {
 public struct LSCoursePracticeDock: View {
     public let stats: LSCourseStats
     public let currentLessonTitle: String?
-    public let etaMinutes: Int?
     public let onSpeaker: (() -> Void)?
     public let onGamePark: (() -> Void)?
-    public let onReset: (() -> Void)?
-
-    private var progress: Double {
-        guard stats.totalLessons > 0 else { return 0 }
-        return min(1, max(0, Double(stats.completedLessons) / Double(stats.totalLessons)))
-    }
 
     public init(
         stats: LSCourseStats,
         currentLessonTitle: String? = nil,
-        etaMinutes: Int? = nil,
         onSpeaker: (() -> Void)? = nil,
-        onGamePark: (() -> Void)? = nil,
-        onReset: (() -> Void)? = nil
+        onGamePark: (() -> Void)? = nil
     ) {
         self.stats = stats
         self.currentLessonTitle = currentLessonTitle
-        self.etaMinutes = etaMinutes
         self.onSpeaker = onSpeaker
         self.onGamePark = onGamePark
-        self.onReset = onReset
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("ТВОЙ СЛЕДУЮЩИЙ ШАГ")
-                        .taikaSectionTitleStyle()
-                    Text("\(stats.completedLessons) из \(stats.totalLessons) уроков пройдено")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.text)
-                }
+                Text("ПРАКТИКА")
+                    .taikaSectionTitleStyle()
                 Spacer(minLength: 8)
-                if let etaMinutes, etaMinutes > 0 {
-                    Text("ещё ≈ \(etaMinutes) мин")
+                if let currentLessonTitle, !currentLessonTitle.isEmpty {
+                    Text(currentLessonTitle)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(1)
                 }
             }
 
-            AppProgressBar(value: CGFloat(progress), height: 6)
-                .animation(.spring(response: 0.42, dampingFraction: 0.86), value: progress)
-
-            HStack(spacing: 10) {
-                practiceCard(
-                    title: "Спикер курса",
-                    subtitle: currentLessonTitle.map { "\($0) · голосовая практика" } ?? "Тренируй фразы голосом",
+            VStack(spacing: 8) {
+                quickActionRow(
                     icon: "mic.fill",
+                    title: "Спикер курса",
                     isEnabled: onSpeaker != nil,
                     action: onSpeaker
                 )
-                practiceCard(
-                    title: "Игровой парк",
-                    subtitle: stats.completedLessons > 0 ? "Закрепить пройденное" : "Сначала пройди урок",
+                quickActionRow(
                     icon: "gamecontroller.fill",
+                    title: "Игровой парк",
                     isEnabled: onGamePark != nil && stats.completedLessons > 0,
                     action: onGamePark
                 )
             }
-
-            HStack(spacing: 8) {
-                Text("\(stats.learnedWords) слов · \(stats.timeMinutes) мин практики · \(stats.favorites) в избранном")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-                Spacer(minLength: 4)
-                if let onReset {
-                    Button("сбросить", action: onReset)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .buttonStyle(.plain)
-                }
-            }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(CD.ColorToken.card.opacity(0.92))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(PD.ColorToken.stroke.opacity(0.58), lineWidth: 1)
+            )
         }
         .padding(.top, 2)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(stats.completedLessons) из \(stats.totalLessons) уроков пройдено")
+        .accessibilityLabel("Быстрые действия курса")
     }
 
     @ViewBuilder
-    private func practiceCard(
-        title: String,
-        subtitle: String,
+    private func quickActionRow(
         icon: String,
+        title: String,
         isEnabled: Bool,
         action: (() -> Void)?
     ) -> some View {
-        Button(action: { action?() }) {
-            HStack(alignment: .center, spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            isEnabled
-                                ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                                : AnyShapeStyle(Color.white.opacity(0.10))
-                        )
-                        .frame(width: 34, height: 34)
-                    Image(systemName: icon)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(isEnabled ? Color.black.opacity(0.82) : PD.ColorToken.textSecondary)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(isEnabled ? PD.ColorToken.text : PD.ColorToken.textSecondary)
-                        .lineLimit(1)
-                    Text(subtitle)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer(minLength: 2)
-                Image(systemName: isEnabled ? "chevron.right" : "lock.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(
-                        isEnabled
-                            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                            : AnyShapeStyle(PD.ColorToken.textSecondary)
-                    )
+        if isEnabled, let action {
+            Button(action: action) {
+                DictionarySoftActionLabel(icon: icon, title: title)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 11)
-            .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                    .fill(isEnabled ? PD.ColorToken.card : PD.ColorToken.card.opacity(0.55))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                    .stroke(isEnabled ? Theme.Strokes.strokeSubtle : Theme.Strokes.strokeSubtle.opacity(0.55), lineWidth: Theme.Strokes.strokeLineWidth)
-            )
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(title))
+        } else {
+            DictionarySoftActionLabel(icon: "lock.fill", title: title)
+                .opacity(0.48)
+                .accessibilityLabel(Text("Недоступно: \(title)"))
         }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-        .accessibilityLabel(Text(title))
-        .accessibilityValue(Text(subtitle))
     }
 }
 

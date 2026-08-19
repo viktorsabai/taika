@@ -3105,25 +3105,13 @@ public struct CourseLessonCard: View {
                             .foregroundStyle(Color.white.opacity(0.96))
                     }
 
-                    Text("100% пройдено. Теперь преврати знание в живую привычку.")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.72))
-                        .lineSpacing(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Text("100% пройдено")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.78))
 
-                    if backPrimaryActionTitle != nil || backSecondaryActionTitle != nil {
-                        VStack(spacing: 8) {
-                            if let title = backPrimaryActionTitle, let action = onBackPrimaryAction {
-                                Button(title, action: action)
-                                    .buttonStyle(CardBackActionButtonStyle(isPrimary: true))
-                            }
-                            if let title = backSecondaryActionTitle, let action = onBackSecondaryAction {
-                                Button(title, action: action)
-                                    .buttonStyle(CardBackActionButtonStyle(isPrimary: false))
-                            }
-                        }
-                        .padding(.top, 2)
-                    }
+                    Text("закрепление доступно")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
                 }
 
             case .lessonReminders(let lines):

@@ -470,13 +470,8 @@ public struct LessonsView: View {
                                 timeMinutes: courseOverviewStats.spentMinutes
                             ),
                             currentLessonTitle: currentLesson.flatMap { lessonsManager.lessonTitle(for: $0.lessonID) },
-                            etaMinutes: remainingCourseMinutes > 0 ? remainingCourseMinutes : nil,
                             onSpeaker: isTheoryBonusCourse ? nil : { lessonsHeaderStore.onSpeaker?() },
-                            onGamePark: isTheoryBonusCourse ? nil : { lessonsHeaderStore.onReinforce?() },
-                            onReset: {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                presentCourseResetOverlay()
-                            }
+                            onGamePark: isTheoryBonusCourse ? nil : { lessonsHeaderStore.onReinforce?() }
                         )
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
                     }

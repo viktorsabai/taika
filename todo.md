@@ -795,3 +795,21 @@
 - [x] Preserve existing navigation, access gates and current lesson context.
 - [x] Keep detailed metrics as a secondary compact line.
 - [x] Validate dock states and push one testable commit.
+
+
+# LessonsView product revision: native quick actions
+
+- [ ] Separate completed-card result from quick action navigation.
+- [ ] Reuse Dictionary-style native action panel treatment for Speaker and Game Park.
+- [ ] Remove next-lesson CTA and motivational/dashboard copy from completed card.
+- [ ] Keep only explicit learned status and concise progress signal on the card.
+- [ ] Define final UX contract before coding the revision.
+
+
+# Approved LessonsView role separation implementation
+
+- [x] Make completed-card back face proof-of-learning only, with no next-lesson CTA.
+- [x] Replace lower Course Practice Dock dashboard with one Dictionary-style native quick-actions panel.
+- [x] Keep Speaker/Game Park callbacks, gates and current lesson context intact.
+- [x] Remove duplicate progress/statistics/action copy from the lower area.
+- [x] Validate Swift references and ship one consolidated commit.
