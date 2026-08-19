@@ -33,11 +33,11 @@ public enum Theme {
         // MARK: - global bottom insets (avoid magic numbers in views)
         /// minimum bottom padding for scroll content
         public static let bottomInsetMin: CGFloat = 16
-        /// top gutter under floating glass header (scroll content; header is overlay).
-        /// Однострочный хедер ≈ 56pt + небольшой зазор до заголовка страницы.
-        public static let rootHeaderClearance: CGFloat = 60
-        /// Двухстрочный игровой хедер (таймер + название урока).
-        public static let rootHeaderClearanceGame: CGFloat = 78
+        /// Reserved space below the floating glass header. The header contains the wordmark,
+        /// controls and page-title row; root content must begin below the full visual chrome.
+        public static let rootHeaderClearance: CGFloat = 112
+        /// Two-row game header with timer/progress controls.
+        public static let rootHeaderClearanceGame: CGFloat = 128
         /// reserved height for the floating tab bar (capsule + bottom float)
         public static let bottomToolbarHeight: CGFloat = 68
 

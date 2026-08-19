@@ -1076,33 +1076,31 @@ struct GameParkOverlayView: View {
                     onDismiss: onDismiss,
                     usesContextPlacement: true
                 ) {
-                    TaikaRootVerticalScroll {
-                        VStack(alignment: .leading, spacing: 18) {
-                            Text(sourceSubtitle)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(CD.ColorToken.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 18) {
+                        Text(sourceSubtitle)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(CD.ColorToken.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                            if hasCards {
-                                VStack(alignment: .leading, spacing: 10) {
-                                    Text("Выбери тренировку")
-                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(CD.ColorToken.textSecondary)
-                                        .textCase(.uppercase)
-                                        .tracking(0.8)
-                                    ForEach(GameModeType.modesLessonAndPark, id: \.self) { mode in
-                                        gameModeCard(mode)
-                                    }
+                        if hasCards {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Выбери тренировку")
+                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(CD.ColorToken.textSecondary)
+                                    .textCase(.uppercase)
+                                    .tracking(0.8)
+                                ForEach(GameModeType.modesLessonAndPark, id: \.self) { mode in
+                                    gameModeCard(mode)
                                 }
-                            } else {
-                                emptyState
                             }
+                        } else {
+                            emptyState
                         }
-                        .padding(.horizontal, CD.Spacing.screen)
-                        .padding(.top, 2)
-                        .padding(.bottom, 24)
                     }
-                    .frame(maxHeight: 600)
+                    .padding(.horizontal, CD.Spacing.screen)
+                    .padding(.top, 2)
+                    .padding(.bottom, 24)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer(minLength: 0)
