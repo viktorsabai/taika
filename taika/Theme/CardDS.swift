@@ -3343,7 +3343,7 @@ public struct CourseLessonCard: View {
                         .padding(.top, 4)
                     } else if let action = onBackSelectGameMode {
                         Button {
-                            action()
+                            action("match")
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: "waveform.path.ecg")

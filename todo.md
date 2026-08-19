@@ -1257,3 +1257,25 @@
 - [ ] Проверить связанные `CourseLessonCard`/`HomeTaskView` initializer argument orders.
 - [ ] Запустить доступный комплексный static parse/diff validation и не push при найденных ошибках.
 - [ ] Запушить только после подтверждения полного порядка аргументов.
+
+# Persistent Xcode LSLessonReels error investigation
+
+- [ ] Проверить локальный HEAD, remote HEAD и отсутствие незапушенных изменений.
+- [ ] Найти все `LSLessonReels` declarations, extensions, overloads и duplicate source files.
+- [ ] Сравнить Xcode-reported line 1314 с актуальным target-visible source и git blob.
+- [ ] Исправить первопричину, а не только переставить аргументы в одном callsite.
+- [ ] Выполнить комплексную static validation и сообщить точный branch/commit.
+
+# Target-visible LSLessonReels source mismatch
+
+- [ ] Проверить все `LessonsView.swift` в workspace/project и возможные symlink/generated copies.
+- [ ] Проверить `taika.xcodeproj/project.pbxproj` и file references для LessonsView/LessonsDS.
+- [ ] Сравнить declaration order, callsite order и фактический target source path.
+- [ ] Не считать fix завершённым до подтверждения единственного компилируемого source.
+
+# CardDS retention CTA compiler follow-up
+
+- [ ] Сверить тип `onBackSelectGameMode` в `CourseLessonCard` и ошибочный вызов на строке 3346.
+- [ ] Найти все `onBackSelectGameMode` assignments/calls и проверить их argument shape.
+- [ ] Исправить только closure invocation, сохранив retention flow.
+- [ ] Выполнить `git diff --check` и push только после проверки всех callsites.
