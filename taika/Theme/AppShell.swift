@@ -247,7 +247,10 @@ struct AppShell: View {
             nav.popToRoot()
         }
         .overlay(alignment: .top) {
-            if welcomeSeen && onboardingDone && !showBootSplash && firstEntryPhase == .none && overlay.overlay != .dictionaryQuickDrawer {
+            if welcomeSeen && onboardingDone && !showBootSplash && firstEntryPhase == .none
+                && overlay.overlay != .dictionaryQuickDrawer
+                && overlay.overlay != .gamePark
+                && overlay.overlay != .gameParkFromFavorites {
                 ZStack(alignment: .top) {
                     // The transition layer is behind the header content and extends
                     // into the canvas without becoming an opaque page strip.

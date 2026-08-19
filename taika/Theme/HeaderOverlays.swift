@@ -125,7 +125,7 @@ struct OverlayEtalonCard<Content: View>: View {
             content()
         }
         .background {
-            Theme.Surfaces.contextGlass(
+            Theme.Surfaces.blackGlass(
                 RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous)
             )
         }
@@ -1068,48 +1068,46 @@ struct GameParkOverlayView: View {
         ZStack {
             OverlayEtalonBackground(onDismiss: onDismiss)
 
-            TaikaRootVerticalScroll {
-                VStack(alignment: .leading, spacing: 18) {
-                    HStack(alignment: .center, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Игровой парк")
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .foregroundStyle(CD.ColorToken.text)
+            VStack {
+                Spacer(minLength: 0)
+
+                OverlayEtalonCard(
+                    title: "Игровой парк",
+                    onDismiss: onDismiss,
+                    usesContextPlacement: true
+                ) {
+                    TaikaRootVerticalScroll {
+                        VStack(alignment: .leading, spacing: 18) {
                             Text(sourceSubtitle)
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(CD.ColorToken.textSecondary)
-                        }
-                        Spacer(minLength: 0)
-                        Button(action: onDismiss) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(CD.ColorToken.textSecondary)
-                                .frame(width: 36, height: 36)
-                                .background(Circle().fill(Color.white.opacity(0.08)))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Закрыть игровой парк")
-                    }
+                                .fixedSize(horizontal: false, vertical: true)
 
-                    if hasCards {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Выбери тренировку")
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(CD.ColorToken.textSecondary)
-                                .textCase(.uppercase)
-                                .tracking(0.8)
-                            ForEach(GameModeType.modesLessonAndPark, id: \.self) { mode in
-                                gameModeCard(mode)
+                            if hasCards {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text("Выбери тренировку")
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(CD.ColorToken.textSecondary)
+                                        .textCase(.uppercase)
+                                        .tracking(0.8)
+                                    ForEach(GameModeType.modesLessonAndPark, id: \.self) { mode in
+                                        gameModeCard(mode)
+                                    }
+                                }
+                            } else {
+                                emptyState
                             }
                         }
-                    } else {
-                        emptyState
+                        .padding(.horizontal, CD.Spacing.screen)
+                        .padding(.top, 2)
+                        .padding(.bottom, 24)
                     }
+                    .frame(maxHeight: 600)
                 }
-                .padding(.horizontal, CD.Spacing.screen)
-                .padding(.top, max(Theme.Layout.rootHeaderClearance - 8, 56))
-                .padding(.bottom, 120)
+
+                Spacer(minLength: 0)
             }
+            .padding(.vertical, 24)
 
             if let lockedMode {
                 VStack {
