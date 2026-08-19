@@ -2567,6 +2567,8 @@ public struct CourseLessonCard: View {
     // CTA
     public let primaryCTA: AppCTAType
     public let scale: AppCTAScale
+    /// Informational cards can reuse the canonical course surface without implying a launch action.
+    public let showsPrimaryAction: Bool
 
     // Actions
     public let onPrimaryTap: (() -> Void)?
@@ -2645,6 +2647,7 @@ public struct CourseLessonCard: View {
         chromeStyle: CardDS.ChromeStyle = .cards,
         primaryCTA: AppCTAType = .start,
         scale: AppCTAScale = .s,
+        showsPrimaryAction: Bool = true,
         showFavorite: Bool = true,
         showConsole: Bool = true,
         onPrimaryTap: (() -> Void)? = nil,
@@ -2683,6 +2686,7 @@ public struct CourseLessonCard: View {
         self.chromeStyle = chromeStyle
         self.primaryCTA = primaryCTA
         self.scale = scale
+        self.showsPrimaryAction = showsPrimaryAction
         self.showFavorite = showFavorite
         self.showConsole = showConsole
         self.onPrimaryTap = onPrimaryTap
@@ -2875,7 +2879,7 @@ public struct CourseLessonCard: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.96)))
                 .accessibilityLabel(lockedActionHint)
                 .accessibilityHint("Закрыть")
-            } else {
+            } else if showsPrimaryAction {
                 // Порядок: Play → лайки → консоль → Спикер
                 HStack(spacing: 20) {
                     AppCardIconButton(

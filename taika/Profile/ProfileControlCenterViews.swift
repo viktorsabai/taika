@@ -535,6 +535,7 @@ private struct ProfileValueCarouselCard: View {
             chromeStyle: .cards,
             primaryCTA: .next,
             scale: .xs,
+            showsPrimaryAction: false,
             showFavorite: false,
             showConsole: false,
             onPrimaryTap: nil,
@@ -547,6 +548,7 @@ struct ProfileValuesView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var theme: ThemeManager
+    @State private var centeredValueIndex: Int = 0
 
     private let values: [ProfileValueItem] = [
         ProfileValueItem(id: "courses", title: "Сценарные курсы", detail: "Нужные фразы для жизни в Таиланде — в правильном контексте, а не случайный набор слов.", systemImage: "book.closed", eyebrow: "01  ·  TAika system"),
@@ -584,18 +586,27 @@ struct ProfileValuesView: View {
                             spacing: CDLessonCarouselCanonical.spacing,
                             initialIndex: 0,
                             onTapScrollToCenter: true,
-                            loop: false
+                            loop: false,
+                            onCenterIndexChange: { index in
+                                centeredValueIndex = index
+                            }
                         ) { item in
                             ProfileValueCarouselCard(item: item)
                         }
                         .frame(height: CDLessonCarouselCanonical.courseLessonCardHeight + 12)
 
-                        Text("Свайпни карточки, чтобы увидеть весь маршрут Taika")
-                            .font(PD.FontToken.caption(12, weight: .semibold))
-                            .foregroundStyle(theme.currentAccentFill)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 4)
+                        HStack(spacing: 6) {
+                            ForEach(values.indices, id: \.self) { index in
+                                Capsule()
+                                    .fill(index == centeredValueIndex ? theme.currentAccentFill : PD.ColorToken.textSecondary.opacity(0.28))
+                                    .frame(width: index == centeredValueIndex ? 18 : 5, height: 5)
+                            }
+                        }
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: centeredValueIndex)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Карточка \(centeredValueIndex + 1) из \(values.count)")
+                        .padding(.top, 2)
+                        .padding(.bottom, 4)
                     }
                     .padding(.horizontal, PD.Spacing.screen)
                     .padding(.top, 12)
