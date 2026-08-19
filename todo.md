@@ -1240,3 +1240,12 @@
 - [ ] Синхронизировать per-lesson covered cards, sessions и scores из ReinforcementStore.
 - [ ] Сохранить текущий lesson focus при возврате из тренировки и не стартовать на первой карточке без причины.
 - [ ] Проверить все связанные Swift callsites и подготовить один consolidated commit в `2026-01-21-k7hb-d2004`.
+
+# CourseView — completed achievement and retention correction
+
+- [ ] Сделать completed course front-face визуально очевидным достижением, а не только статусным чипом.
+- [ ] Развести green affordances по состояниям: незавершённые карточки не должны получать completed green status/arrow treatment.
+- [ ] Создать premium jungle-green gradient treatment по аналогии с pink gradient, но без розового completion accent.
+- [ ] Пересобрать back face как retention grade sheet: результат, ценность закрепления, конкретная рекомендация и компактные CTA.
+- [ ] Проверить, что flip стартует с front face и state-dependent navigation не ломается.
+- [ ] Выполнить static validation, commit и push в `2026-01-21-k7hb-d2004`.

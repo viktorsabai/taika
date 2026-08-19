@@ -11,6 +11,20 @@ import UIKit
 /// Shared semantic color for completed/mastery surfaces; accessible across design-system files.
 public enum TaikaMasteryTokens {
     public static let green = Color(red: 0.20, green: 0.72, blue: 0.38)
+
+    /// Premium mastery gradient: deep jungle base with a living mint highlight.
+    /// Use only for completed/learned states; neutral and in-progress cards keep their own accent.
+    public static let greenGradient = LinearGradient(
+        colors: [
+            Color(red: 0.06, green: 0.19, blue: 0.12),
+            Color(red: 0.10, green: 0.40, blue: 0.23),
+            Color(red: 0.30, green: 0.82, blue: 0.48)
+        ],
+        startPoint: .bottomLeading,
+        endPoint: .topTrailing
+    )
+
+    public static let greenGlow = Color(red: 0.26, green: 0.84, blue: 0.48)
 }
 
 // MARK: - Unified App Header Style

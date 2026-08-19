@@ -2564,6 +2564,7 @@ private struct CourseProAnimatedCrown: View {
 // MARK: - Ready wrapper for Course/Lesson cards (uses AppDS atoms)
 private struct CardBackActionButtonStyle: ButtonStyle {
     let isPrimary: Bool
+    var isMastery: Bool = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -2576,10 +2577,10 @@ private struct CardBackActionButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(AnyShapeStyle(Color.black.opacity(isPrimary ? 0.78 : 0.62)))
+                    .fill(isMastery ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(Color.black.opacity(isPrimary ? 0.78 : 0.62)))
                     .overlay(
                         LinearGradient(
-                            colors: [Color.white.opacity(isPrimary ? 0.10 : 0.06), Color.clear, Color.black.opacity(0.16)],
+                            colors: isMastery ? [Color.white.opacity(0.20), Color.clear, Color.black.opacity(0.12)] : [Color.white.opacity(isPrimary ? 0.10 : 0.06), Color.clear, Color.black.opacity(0.16)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -2928,8 +2929,8 @@ public struct CourseLessonCard: View {
     private var effectiveAccentTreatment: CardDS.AccentTreatment {
         if case .none = accentTreatment, statusKind == .completed {
             return .taikaValues(
-                fill: AnyShapeStyle(Color(red: 0.08, green: 0.30, blue: 0.18)),
-                glow: Color(red: 0.20, green: 0.72, blue: 0.38)
+                fill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
+                glow: TaikaMasteryTokens.greenGlow
             )
         }
         return accentTreatment
@@ -3019,11 +3020,26 @@ public struct CourseLessonCard: View {
                                     }
                                 }
                             } label: {
-                                HStack(spacing: 5) {
-                                    AppStatusChip(kind: statusKind, title: statusChipTitle)
+                                HStack(spacing: 6) {
+                                    if statusKind == .completed {
+                                        HStack(spacing: 5) {
+                                            Image(systemName: "checkmark.seal.fill")
+                                                .font(.system(size: 13, weight: .bold))
+                                            Text("КУРС ПРОЙДЕН")
+                                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                                .kerning(0.35)
+                                        }
+                                        .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 7)
+                                        .background(Capsule(style: .continuous).fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient)))
+                                        .overlay(Capsule(style: .continuous).stroke(TaikaMasteryTokens.greenGlow.opacity(0.82), lineWidth: 1))
+                                    } else {
+                                        AppStatusChip(kind: statusKind, title: statusChipTitle)
+                                    }
                                     Image(systemName: isFlipped ? "chevron.up" : "chevron.right")
                                         .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
+                                        .foregroundStyle(statusKind == .completed ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(ThemeManager.shared.currentAccentTintColor.opacity(0.78)))
                                 }
                             }
                             .buttonStyle(.plain)
@@ -3074,7 +3090,7 @@ public struct CourseLessonCard: View {
                 HStack(spacing: 20) {
                     AppCardIconButton(
                         kind: .play,
-                        forceMasteryGreen: !showProCrown,
+                        forceMasteryGreen: statusKind == .completed,
                         onTap: { onPrimaryTap?() }
                     )
                     .contentShape(Rectangle())
@@ -3098,7 +3114,7 @@ public struct CourseLessonCard: View {
                         AppCardIconButton(
                             kind: .console,
                             isEnabled: consoleIsEnabled,
-                            forceMasteryGreen: true,
+                            forceMasteryGreen: statusKind == .completed,
                             onLockedTap: {
                                 showLockedActionHint("Игры откроются после первого урока")
                             },
@@ -3109,7 +3125,7 @@ public struct CourseLessonCard: View {
                         AppCardIconButton(
                             kind: .speaker,
                             isEnabled: consoleIsEnabled,
-                            forceMasteryGreen: consoleIsEnabled,
+                            forceMasteryGreen: statusKind == .completed && consoleIsEnabled,
                             onLockedTap: {
                                 showLockedActionHint("Спикер курса откроется после первого урока")
                             },
@@ -3299,6 +3315,18 @@ public struct CourseLessonCard: View {
                         value: pronunciationPercent.map { "\($0)%" } ?? "ещё нет"
                     )
 
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(reinforcementScore == nil ? "Результат уже есть — теперь его важно удержать" : "Закрепление превращает пройденный курс в устойчивый навык")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.84))
+                            .lineLimit(2)
+                        Text("Выбери сложные уроки и потренируй их в Спикере или игре")
+                            .font(.system(size: 10, weight: .regular))
+                            .foregroundStyle(Color.white.opacity(0.58))
+                            .lineLimit(2)
+                    }
+                    .padding(.top, 4)
+
                     if let title = backPrimaryActionTitle, let action = onBackPrimaryAction {
                         Button {
                             action()
@@ -3309,12 +3337,28 @@ public struct CourseLessonCard: View {
                                 Image(systemName: "arrow.up.right")
                                     .font(.system(size: 11, weight: .semibold))
                             }
-                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
+                            .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
                         }
-                        .buttonStyle(.plain)
-                        .padding(.top, 6)
-                        .accessibilityLabel(title)
+                        .buttonStyle(CardBackActionButtonStyle(isPrimary: true, isMastery: true))
+                        .padding(.top, 4)
+                    } else if let action = onBackSelectGameMode {
+                        Button {
+                            action()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "waveform.path.ecg")
+                                Text("Закрепить сейчас")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Spacer(minLength: 0)
+                                Image(systemName: "arrow.up.right")
+                                    .font(.system(size: 11, weight: .semibold))
+                            }
+                            .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
+                        }
+                        .buttonStyle(CardBackActionButtonStyle(isPrimary: true, isMastery: true))
+                        .padding(.top, 4)
                     }
+
                 }
             }
         }
