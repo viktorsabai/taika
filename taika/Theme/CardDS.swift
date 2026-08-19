@@ -2553,6 +2553,33 @@ private struct CourseProAnimatedCrown: View {
 }
 
 // MARK: - Ready wrapper for Course/Lesson cards (uses AppDS atoms)
+private struct CardBackActionButtonStyle: ButtonStyle {
+    let isPrimary: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .foregroundStyle(isPrimary ? Color.black.opacity(0.9) : Color.white.opacity(0.86))
+            .lineLimit(1)
+            .minimumScaleFactor(0.78)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(isPrimary
+                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                        : AnyShapeStyle(Color.white.opacity(0.08)))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .stroke(Color.white.opacity(isPrimary ? 0.12 : 0.10), lineWidth: 1)
+            )
+            .opacity(configuration.isPressed ? 0.72 : 1)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+    }
+}
+
 public struct CourseLessonCard: View {
     // Content
     public let title: String
@@ -2615,6 +2642,11 @@ public struct CourseLessonCard: View {
     /// Available only when `flipEnabled == true`.
     /// Parameter is `gameType` (raw value from `GameModeType`).
     public let onBackSelectGameMode: ((String) -> Void)?
+    /// Optional post-lesson actions shown on the completed card back face.
+    public let backPrimaryActionTitle: String?
+    public let onBackPrimaryAction: (() -> Void)?
+    public let backSecondaryActionTitle: String?
+    public let onBackSecondaryAction: (() -> Void)?
 
     // Controls whether we show inline progress on the card face
     public let showsInlineProgress: Bool
@@ -2670,6 +2702,10 @@ public struct CourseLessonCard: View {
         courseKey: String? = nil,
         isProUser: Bool = false,
         onBackSelectGameMode: ((String) -> Void)? = nil,
+        backPrimaryActionTitle: String? = nil,
+        onBackPrimaryAction: (() -> Void)? = nil,
+        backSecondaryActionTitle: String? = nil,
+        onBackSecondaryAction: (() -> Void)? = nil,
         favoriteCount: Int? = nil,
         onFavoriteTap: (() -> Void)? = nil,
         onConsoleTap: (() -> Void)? = nil,
@@ -2710,6 +2746,10 @@ public struct CourseLessonCard: View {
         self.courseKey = courseKey
         self.isProUser = isProUser
         self.onBackSelectGameMode = onBackSelectGameMode
+        self.backPrimaryActionTitle = backPrimaryActionTitle
+        self.onBackPrimaryAction = onBackPrimaryAction
+        self.backSecondaryActionTitle = backSecondaryActionTitle
+        self.onBackSecondaryAction = onBackSecondaryAction
         self.favoriteCount = favoriteCount
         self.onFavoriteTap = onFavoriteTap
         self.onConsoleTap = onConsoleTap
@@ -3075,6 +3115,20 @@ public struct CourseLessonCard: View {
                                 .foregroundStyle(Color.white.opacity(0.88))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
+                    }
+
+                    if backPrimaryActionTitle != nil || backSecondaryActionTitle != nil {
+                        HStack(spacing: 8) {
+                            if let title = backPrimaryActionTitle, let action = onBackPrimaryAction {
+                                Button(title, action: action)
+                                    .buttonStyle(CardBackActionButtonStyle(isPrimary: true))
+                            }
+                            if let title = backSecondaryActionTitle, let action = onBackSecondaryAction {
+                                Button(title, action: action)
+                                    .buttonStyle(CardBackActionButtonStyle(isPrimary: false))
+                            }
+                        }
+                        .padding(.top, 6)
                     }
                 }
 

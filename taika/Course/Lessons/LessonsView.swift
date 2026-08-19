@@ -89,9 +89,38 @@ private extension LessonsView {
 
     var activeLessonIndex: Int {
         let ids = lessonsSorted.map { $0.lessonID }
-        // Deep-link / явный lessonId — иначе всегда первый урок (без restore «последнего»).
+        // Explicit deep-link wins over any resume heuristic.
         if let initial = lessonId, let i = ids.firstIndex(of: initial) { return i }
-        return 0
+        if let selected = selectedLessonId, let i = ids.firstIndex(of: selected) { return i }
+        return smartResumeLessonIndex
+    }
+
+    /// Resume the course where learning actually stopped, not at the first card.
+    /// Priority: in-progress → next locked/unstarted → last completed.
+    var smartResumeLessonIndex: Int {
+        guard !lessonsSorted.isEmpty else { return 0 }
+        if let index = lessonsSorted.firstIndex(where: { statusForLesson($0) == .inProgress }) {
+            return index
+        }
+        if let index = lessonsSorted.firstIndex(where: { statusForLesson($0) == .locked }) {
+            return index
+        }
+        return lessonsSorted.count - 1
+    }
+
+    var smartResumeLessonId: String? {
+        guard lessonsSorted.indices.contains(smartResumeLessonIndex) else { return nil }
+        return lessonsSorted[smartResumeLessonIndex].lessonID
+    }
+
+    func reconcileResumeSelectionAfterProgressChange() {
+        guard lessonId == nil else { return }
+        guard let selectedLessonId,
+              let selected = lessonsSorted.first(where: { $0.lessonID == selectedLessonId }) else { return }
+        guard statusForLesson(selected) == .completed else { return }
+        withAnimation(.easeInOut(duration: 0.22)) {
+            self.selectedLessonId = smartResumeLessonId
+        }
     }
 
     var headerProgress: (completed: Int, total: Int) {
@@ -669,6 +698,7 @@ let withTasks = base
 
     .onReceive(lessonsManager.$progress) { _ in
 
+        reconcileResumeSelectionAfterProgressChange()
         scheduleHeaderRefresh()
 
     }
@@ -736,8 +766,10 @@ let withTasks = base
             .toolbar(.hidden, for: .navigationBar)
             .onAppear {
                 GameHeaderStore.shared.config = nil
-                // Карусель уроков всегда с первого; selection только для CTA/навигации.
-                selectedLessonId = nil
+                // Resume the course context instead of resetting the carousel to lesson one.
+                if selectedLessonId == nil {
+                    selectedLessonId = lessonId ?? smartResumeLessonId
+                }
                 if isTheoryBonusCourse {
                     lessonsHeaderStore.setActions(onSpeaker: nil, onReinforce: nil)
                 } else {
@@ -1105,6 +1137,23 @@ extension LessonsView {
                 NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
                 SpeakerRequestedCourseId.shared.set(cid, lessonId: item.id)
                 nav.requestTab(2)
+            },
+            onNext: { item in
+                let arr = lessonsSorted
+                let nextIndex = item.index + 1
+                guard arr.indices.contains(nextIndex) else { return }
+                let nextLesson = arr[nextIndex]
+                guard openLessonIfAllowed(nextLesson.lessonID) else { return }
+                selectedLessonId = nextLesson.lessonID
+                if let cid = currentCourse?.courseID {
+                    UserSession.shared.markActive(courseId: cid, lessonId: nextLesson.lessonID, stepIndex: 0)
+                    CarouselScrollPersistence.setLessonReelIndex(courseId: cid, index: nextIndex)
+                }
+                nav.go(.lesson(
+                    courseId: currentCourse?.courseID ?? "",
+                    lessonId: nextLesson.lessonID,
+                    presentation: .canonical
+                ))
             },
             selectedIndex: activeLessonIndex
         )

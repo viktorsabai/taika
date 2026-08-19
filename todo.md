@@ -725,3 +725,21 @@
 - [x] Replace the new hack card presentation with the existing StepView-style lifehack card treatment.
 - [x] Preserve course scope, favorites, play action and lesson return navigation.
 - [x] Remove duplicate standalone material/hacks section chrome.
+
+
+# Post-lesson completion and smart resume pipeline
+
+- [ ] Audit completed lesson card flip and existing post-lesson navigation actions.
+- [ ] Define a concise reinforcement summary with next-action priority.
+- [ ] Focus LessonsView on current in-progress lesson, otherwise next unstarted lesson.
+- [ ] Update completed lesson card UI without changing lesson data architecture.
+- [ ] Preserve favorites, games, speaker and course pinning actions.
+
+
+# Unified post-lesson pipeline implementation
+
+- [x] Implement smart resume focus for current in-progress or next lesson.
+- [x] Preserve explicit deep-link and lesson context when returning from StepView.
+- [x] Add completed-card flip summary with clear next-action hierarchy.
+- [x] Reuse existing games, Speaker, favorites and lesson navigation actions.
+- [x] Static-check and package all pipeline changes in one commit for branch testing.

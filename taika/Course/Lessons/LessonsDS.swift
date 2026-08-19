@@ -1208,6 +1208,7 @@ public struct LSLessonCardV: View {
     let favoriteCount: Int
     let onConsole: (() -> Void)?
     let onSpeaker: (() -> Void)?
+    let onNext: (() -> Void)?
     @AppStorage("LSLessonActivity.lastActiveLessonId") private var lastActiveLessonId: String = ""
 
     public init(item: LS.Item,
@@ -1216,7 +1217,8 @@ public struct LSLessonCardV: View {
                 onFavorite: (() -> Void)? = nil,
                 favoriteCount: Int = 0,
                 onConsole: (() -> Void)? = nil,
-                onSpeaker: (() -> Void)? = nil) {
+                onSpeaker: (() -> Void)? = nil,
+                onNext: (() -> Void)? = nil) {
         self.item = item
         self.role = role
         self.onTap = onTap
@@ -1224,6 +1226,7 @@ public struct LSLessonCardV: View {
         self.favoriteCount = favoriteCount
         self.onConsole = onConsole
         self.onSpeaker = onSpeaker
+        self.onNext = onNext
     }
 
     // MARK: - Extracted subviews to help the type-checker
@@ -1411,6 +1414,10 @@ public struct LSLessonCardV: View {
             onFavoriteTap: onFavorite,
             onConsoleTap: { onConsole?() },
             onSpeakerTap: onSpeaker,
+            backPrimaryActionTitle: item.status == .completed ? "Закрепить сейчас" : nil,
+            onBackPrimaryAction: item.status == .completed ? onConsole : nil,
+            backSecondaryActionTitle: item.status == .completed ? "Следующий урок" : nil,
+            onBackSecondaryAction: item.status == .completed ? onNext : nil,
             showsInlineProgress: true
         )
     }
@@ -1430,6 +1437,7 @@ public struct LSLessonReels: View {
     let onTapAccessory: ((LS.Item) -> Void)?
     let onFavorite: ((LS.Item) -> Void)?
     let onSpeaker: ((LS.Item) -> Void)?
+    let onNext: ((LS.Item) -> Void)?
 
     @State private var currentIndex: Int = 0
     @State private var isCollapsed: Bool
@@ -1444,6 +1452,7 @@ public struct LSLessonReels: View {
                 onTapAccessory: ((LS.Item) -> Void)? = nil,
                 onFavorite: ((LS.Item) -> Void)? = nil,
                 onSpeaker: ((LS.Item) -> Void)? = nil,
+                onNext: ((LS.Item) -> Void)? = nil,
                 selectedIndex: Int? = nil) {
         self.title = title
         self.items = items
@@ -1456,6 +1465,7 @@ public struct LSLessonReels: View {
         self.onTapAccessory = onTapAccessory
         self.onFavorite = onFavorite
         self.onSpeaker = onSpeaker
+        self.onNext = onNext
         self.selectedIndex = selectedIndex
     }
 
@@ -1506,7 +1516,8 @@ public struct LSLessonReels: View {
                                     onFavorite: onFavorite.map { cb in { cb(item) } },
                                     favoriteCount: item.favoriteCount,
                                     onConsole: onTapAccessory.map { tap in { tap(item) } },
-                                    onSpeaker: onSpeaker.map { cb in { cb(item) } }
+                                    onSpeaker: onSpeaker.map { cb in { cb(item) } },
+                                    onNext: onNext.map { cb in { cb(item) } }
                                 )
                             }
                             .transition(.opacity)
