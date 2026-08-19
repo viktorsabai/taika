@@ -1184,3 +1184,10 @@
 
 - [ ] Replace stale liveStage reference in conversationWidgetStateKey after idle host unification.
 - [ ] Run diff check and push corrective commit.
+
+# Lessons numeric typography audit
+
+- [ ] Audit large numbers and percentages in LessonsView and LessonsDS.
+- [ ] Replace remaining decorative/rounded metric fonts with shared technical metric style.
+- [ ] Keep labels and educational copy readable; do not change hierarchy unrelated to metrics.
+- [ ] Run static validation and push one typography corrective commit.

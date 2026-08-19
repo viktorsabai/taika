@@ -1629,7 +1629,7 @@ private struct LSCourseETATimer: View {
             Image(systemName: "timer")
                 .font(.system(size: 12, weight: .semibold))
             Text(mmss)
-                .font(.taikaStat(13))
+                .font(Theme.Fonts.metric(13))
                 .monospacedDigit()
         }
         .foregroundStyle(accent)
@@ -1879,7 +1879,7 @@ public struct LSCourseOverview: View {
             }
             .padding(.bottom, 18)
 
-            // Как «Твой ритм» на Course: крупные цифры Skifer, без рамок и hairline.
+            // Course metrics: technical numeric face, без рамок и hairline.
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 TaikaStatMetric(
                     valueText: "\(displayLessonsDone)/\(stats.totalLessons)",
