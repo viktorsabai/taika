@@ -1287,7 +1287,6 @@ extension LessonsView {
         LSLessonReels(
             "УРОКИ",
             items: lessonItems(),
-            selectedLessonIds: isCompletedCourse ? Set(effectiveReinforcementLessonIds) : [],
             onTap: { item in
                 let arr = lessonsSorted
                 if item.index >= 0 && item.index < arr.count {
@@ -1312,6 +1311,7 @@ extension LessonsView {
                     }
                 }
             },
+            selectedLessonIds: isCompletedCourse ? Set(effectiveReinforcementLessonIds) : [],
             onTapAccessory: isTheoryBonusCourse || isCompletedCourse ? nil : { item in
                 let arr = lessonsSorted
                 guard item.index >= 0 && item.index < arr.count else { return }
