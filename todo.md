@@ -1158,3 +1158,8 @@
 - [ ] Use a restrained technological numeric face with tabular/monospaced digits and controlled tracking.
 - [ ] Preserve readability and hierarchy while removing decorative editorial number styling.
 - [ ] Run static validation and push one typography commit.
+
+# Lessons header initializer compile fix
+
+- [ ] Move selectedIndex before isCompletedCourse at LessonsView LSLessonHeader callsite.
+- [ ] Run diff check and push corrective commit.

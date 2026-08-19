@@ -894,9 +894,9 @@ extension LessonsView {
                 title: headerTitle,
                 subtitle: subtitleResolved,
                 progressSlots: slotsResolved,
+                selectedIndex: activeLessonIndex,
                 isCompletedCourse: courseIsCompleted,
                 completionSummary: courseGameSummary,
-                selectedIndex: activeLessonIndex,
                 onTapSlot: { idx in
                 let arr = lessonsSorted
                 if idx >= 0 && idx < arr.count {
