@@ -3083,6 +3083,7 @@ public struct CourseLessonCard: View {
                         forceAccent: !showProCrown,
                         onTap: { onPrimaryTap?() }
                     )
+                    .contentShape(Rectangle())
                     .opacity(showProCrown ? 0.72 : 1)
                     .accessibilityLabel(showProCrown ? "Открыть с Taika+" : "Открыть курс")
                     if showFavorite {
@@ -3395,6 +3396,7 @@ public struct CourseLessonCard: View {
         }
         .animation(.spring(response: 0.34, dampingFraction: 0.86), value: lockedActionHint)
         .frame(width: resolvedSize.width, height: resolvedSize.height)
+        .id(courseKey ?? title)
         .compositingGroup()
         // Pro: только мягкий wash внутри clip — без accent-stroke (обрезал карточку справа).
         .overlay { accentTreatmentOverlay }
@@ -3408,6 +3410,7 @@ public struct CourseLessonCard: View {
         // Prevent state leak between reused carousel cells.
         .onChange(of: flipEnabled) { _ in isFlipped = false }
         .onChange(of: title) { _ in isFlipped = false }
+        .onChange(of: courseKey) { _ in isFlipped = false }
     }
 }
 

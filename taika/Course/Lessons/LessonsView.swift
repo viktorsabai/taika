@@ -465,7 +465,6 @@ public struct LessonsView: View {
         TaikaRootVerticalScroll {
             VStack(spacing: Theme.Layout.sectionGap) {
                 headerSection
-                    .id(itemsVersion)
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
 
                 if courseContentMode == .lessons {
@@ -483,7 +482,6 @@ public struct LessonsView: View {
                     .padding(.top, Theme.Layout.sectionTitleToContent)
 
                     lessonsReelsSection
-                        .id(itemsVersion)
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
 
                     if !isTheoryBonusCourse {
@@ -528,7 +526,6 @@ public struct LessonsView: View {
                     }
                 } else {
                     courseLifehacksReels
-                        .id(itemsVersion)
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
                 }
 
@@ -544,7 +541,6 @@ public struct LessonsView: View {
             .padding(.bottom, Theme.Layout.pageBottomSafeGap)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-        .id(progressReloadToken)
     }
 
     public var body: some View {

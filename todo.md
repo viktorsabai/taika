@@ -1121,3 +1121,11 @@
 - [ ] Keep one reduced onboarding-style MDVoiceSphere centered across idle/recording/processing.
 - [ ] Drive sphere motion from recordingMeter without moving the hero vertically.
 - [ ] Validate idle-to-recording-to-result layout continuity and push one commit.
+
+# Course/Lessons performance and completion state
+
+- [ ] Find why completed course/lesson cards render flipped on first appearance.
+- [ ] Keep completed cards green on the front; show course grade sheet only after explicit flip/tap.
+- [ ] Verify all Speaker/Game/favorite/flip hit targets are aligned and tappable.
+- [ ] Identify expensive body recomputations, unstable arrays and broad animations in CourseView/LessonsView.
+- [ ] Run static validation and push one corrective commit.
