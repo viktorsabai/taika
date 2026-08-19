@@ -1054,7 +1054,6 @@ struct FDFavCardsTabList: View {
     @AppStorage("taika.fav.cards.viewMode") private var viewModeRaw: String = FavCardsViewMode.list.rawValue
     @State private var collapsedCourseIds: Set<String> = []
     @State private var focusedCourseId: String? = nil
-    @State private var selectedCategory: String? = nil
     @State private var draggingCourseId: String? = nil
     @State private var draggingCardId: String? = nil
     /// Bump to refresh after reorder persist.
@@ -1067,24 +1066,7 @@ struct FDFavCardsTabList: View {
         )
     }
 
-    private var categoryTitles: [String] {
-        var seen = Set<String>()
-        var ordered: [String] = []
-        for card in cards {
-            let key = favCardCategoryKey(card)
-            if seen.insert(key).inserted {
-                ordered.append(key)
-            }
-        }
-        return ordered.sorted {
-            $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
-        }
-    }
-
-    private var categoryFilteredCards: [FDCardDTO] {
-        guard let selectedCategory else { return cards }
-        return cards.filter { favCardCategoryKey($0) == selectedCategory }
-    }
+    private var categoryFilteredCards: [FDCardDTO] { cards }
 
     /// Курсы с учётом пользовательского порядка.
     private var filteredGroups: [FDFavCourseGroup<FDCardDTO>] {
@@ -1129,13 +1111,8 @@ struct FDFavCardsTabList: View {
 
     private var cardsFilledContent: some View {
         LazyVStack(alignment: .leading, spacing: 16) {
-            FavCardsChromeBar(
-                categoryTitles: categoryTitles,
-                selectedCategory: $selectedCategory
-            )
-
             if categoryFilteredCards.isEmpty {
-                Text("В этой категории пока пусто")
+                Text("Здесь пока пусто")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(PD.ColorToken.textSecondary)
                     .frame(maxWidth: .infinity)
@@ -1148,12 +1125,7 @@ struct FDFavCardsTabList: View {
         }
         .padding(.top, 6)
         .animation(.spring(response: 0.34, dampingFraction: 0.88), value: viewModeRaw)
-        .animation(.spring(response: 0.34, dampingFraction: 0.88), value: selectedCategory)
         .animation(.spring(response: 0.34, dampingFraction: 0.88), value: orderEpoch)
-        .onChange(of: selectedCategory) { _ in
-            collapsedCourseIds.removeAll()
-            focusedCourseId = nil
-        }
     }
 
     private var cardsListContent: some View {

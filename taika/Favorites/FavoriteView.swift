@@ -147,13 +147,6 @@ struct FavoriteView: View {
             VStack(spacing: 0) {
                 favoritesScreenHeader()
 
-                if showsBottomTrainingBar {
-                    favoritesTopActionRow()
-                        .padding(.horizontal, CD.Spacing.screen)
-                        .padding(.top, 8)
-                        .padding(.bottom, 8)
-                }
-
                 if let empty = currentEmptySpec {
                     favEmptyState(
                         systemImage: empty.systemImage,
@@ -166,9 +159,19 @@ struct FavoriteView: View {
                     .padding(.bottom, bottomContentInset)
                 } else {
                     TaikaRootVerticalScroll {
-                        favoritesTabContent()
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                            .padding(.bottom, bottomContentInset)
+                        VStack(spacing: 0) {
+                            favoritesTabContent()
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                            if showsBottomTrainingBar {
+                                favoritesTopActionRow()
+                                    .padding(.horizontal, CD.Spacing.screen)
+                                    .padding(.top, 18)
+                                    .padding(.bottom, bottomContentInset)
+                            } else {
+                                Spacer(minLength: bottomContentInset)
+                            }
+                        }
                     }
                     .environment(\.taikaRootHeaderClearance, 0)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
