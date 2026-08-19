@@ -204,8 +204,8 @@ public struct GameModePickerDS: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(
                     isLocked
-                        ? Theme.Strokes.strokeSubtle.opacity(0.62)
-                        : ThemeManager.shared.currentAccentFill.opacity(0.20),
+                        ? AnyShapeStyle(Theme.Strokes.strokeSubtle.opacity(0.62))
+                        : AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.20)),
                     lineWidth: Theme.Strokes.strokeLineWidth
                 )
         )
