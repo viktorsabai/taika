@@ -152,6 +152,9 @@ public struct LSLessonHeader: View {
     let bottomReserve: CGFloat?
     public var selectedIndex: Int? = nil
     public var onTapSlot: ((Int) -> Void)? = nil
+    /// Optional content rendered inside the existing course hero card below progress.
+    /// Used for contextual controls such as the Lessons/Lifehacks picker.
+    public var bottomAccessory: AnyView? = nil
     /// Кнопка «назад в курсы» на карточке (вместо дырки в углу).
     public var onBack: (() -> Void)? = nil
 
@@ -168,7 +171,8 @@ public struct LSLessonHeader: View {
         bottomReserve: CGFloat? = nil,
         selectedIndex: Int? = nil,
         onTapSlot: ((Int) -> Void)? = nil,
-        onBack: (() -> Void)? = nil
+        onBack: (() -> Void)? = nil,
+        bottomAccessory: AnyView? = nil
     ) {
         self.title = title
         self.subtitle = subtitle
@@ -183,6 +187,7 @@ public struct LSLessonHeader: View {
         self.selectedIndex = selectedIndex
         self.onTapSlot = onTapSlot
         self.onBack = onBack
+        self.bottomAccessory = bottomAccessory
     }
 
     // Use lessonsCount if provided, else fallback to progressTotal for compatibility
@@ -413,6 +418,11 @@ public struct LSLessonHeader: View {
                 }
             }
             .padding(.top, 8)
+
+            if let bottomAccessory {
+                bottomAccessory
+                    .padding(.top, 14)
+            }
         }
 
         // Card with perfectly balanced vertical padding (same top & bottom)

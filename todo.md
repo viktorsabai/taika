@@ -700,3 +700,28 @@
 - [ ] Show only completed lessons in the selection UI.
 - [ ] Prevent unavailable/uncompleted selection from falling back to the initial Speaker state.
 - [ ] Validate navigation and push the fix to the test branch.
+
+
+# Xcode CodeSign failure diagnosis
+
+- [ ] Capture the full red CodeSign error from Xcode Report navigator.
+- [ ] Separate signing/provisioning failure from Swift compile diagnostics.
+- [ ] Inspect current valuesProgress code and latest branch diff for compiler issues.
+- [ ] Provide exact remediation and rebuild steps.
+
+
+# Xcode missing Swift Package products
+
+- [ ] Inspect Package.swift/project.pbxproj package references and target product dependencies.
+- [ ] Confirm RevenueCat and Firebase package resolution state.
+- [ ] Restore package resolution and target linking without changing app architecture.
+- [ ] Rebuild and verify CodeSign is only evaluated after dependencies resolve.
+
+
+# LessonsView course hero picker refinement
+
+- [x] Move the Lessons/Lifehacks picker into the existing course hero card.
+- [x] Keep the picker as the only control that swaps the main course content carousel.
+- [x] Replace the new hack card presentation with the existing StepView-style lifehack card treatment.
+- [x] Preserve course scope, favorites, play action and lesson return navigation.
+- [x] Remove duplicate standalone material/hacks section chrome.

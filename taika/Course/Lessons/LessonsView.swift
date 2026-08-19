@@ -848,31 +848,34 @@ extension LessonsView {
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
                         if !nav.path.isEmpty { nav.path.removeLast() }
                     }
-                }
+                },
+                bottomAccessory: AnyView(courseMaterialsPicker)
             )
+        }
+    }
 
-            HStack(spacing: 10) {
-                Text("Материалы курса")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                    .textCase(.uppercase)
-                    .kerning(0.5)
-                Spacer(minLength: 8)
-                AppInlineFilterPicker(
-                    titles: [LSCourseContentMode.lessons.title, LSCourseContentMode.lifehacks.title],
-                    selectedIndex: courseContentMode.rawValue
-                ) { index in
-                    guard let next = LSCourseContentMode(rawValue: index), next != courseContentMode else { return }
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
-                        courseContentMode = next
-                    }
+    private var courseMaterialsPicker: some View {
+        HStack(spacing: 10) {
+            Text("Материалы курса")
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .textCase(.uppercase)
+                .kerning(0.5)
+            Spacer(minLength: 8)
+            AppInlineFilterPicker(
+                titles: [LSCourseContentMode.lessons.title, LSCourseContentMode.lifehacks.title],
+                selectedIndex: courseContentMode.rawValue
+            ) { index in
+                guard let next = LSCourseContentMode(rawValue: index), next != courseContentMode else { return }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                    courseContentMode = next
                 }
             }
-            .padding(.horizontal, 4)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Материалы курса")
         }
+        .padding(.horizontal, 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Материалы курса")
     }
 
     private var contentReelsSection: some View {
@@ -955,54 +958,75 @@ extension LessonsView {
                 .padding(18)
                 .background(Theme.Surfaces.card(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)))
             } else {
-                CDLessonCarousel(
-                    data: courseLifehacks,
-                    cardWidth: CardDS.Metrics.stepLifehackWidth,
-                    cardHeight: CardDS.Metrics.stepLifehackHeight,
-                    spacing: CardDS.Metrics.carouselSpacing,
-                    initialIndex: 0,
-                    onTapScrollToCenter: true,
-                    loop: false
-                ) { hack in
-                    FDMiniHackCard(
-                        item: hack.dto,
-                        onOpen: {
-                            nav.go(.lesson(
-                                courseId: hack.courseId,
-                                lessonId: hack.lessonId,
-                                presentation: .canonical
-                            ))
-                        },
-                        readOnly: true,
-                        layoutWidth: CardDS.Metrics.stepLifehackWidth,
-                        layoutHeight: CardDS.Metrics.stepLifehackHeight,
-                        lessonSummarySquare: true,
-                        showTopTrailingKindChip: false,
-                        summaryPlayAndFavorite: true,
-                        onPlayInLesson: {
-                            nav.go(.lesson(
-                                courseId: hack.courseId,
-                                lessonId: hack.lessonId,
-                                presentation: .canonical
-                            ))
-                        },
-                        onToggleFavorite: {
-                            FavoriteManager.shared.toggle(
-                                step: hack.step,
-                                courseId: hack.courseId,
-                                lessonId: hack.lessonId,
-                                order: hack.order
-                            )
-                        },
-                        isFavorite: FavoriteManager.shared.containsHack(
-                            courseId: hack.courseId,
-                            lessonId: hack.lessonId,
-                            index: hack.order
-                        ),
-                        isEditing: .constant(false)
-                    )
+                GeometryReader { geo in
+                    let cardWidth: CGFloat = CardDS.Metrics.stepLifehackWidth
+                    let cardHeight: CGFloat = CardDS.Metrics.stepLifehackHeight
+                    let spacing: CGFloat = CardDS.Metrics.carouselSpacing
+                    let sideInset: CGFloat = PD.Spacing.screen
+
+                    TaikaCarouselScroll {
+                        HStack(alignment: .top, spacing: spacing) {
+                            ForEach(courseLifehacks) { hack in
+                                GeometryReader { itemGeo in
+                                    let midX = itemGeo.frame(in: .global).midX
+                                    let containerMidX = geo.frame(in: .global).midX
+                                    let distance = abs(midX - containerMidX)
+                                    let maxDistance = cardWidth + spacing
+                                    let t = min(distance / maxDistance, 1)
+                                    let scale: CGFloat = 0.94 + (1 - t) * 0.08
+                                    let opacity: Double = 0.76 + (1 - t) * 0.24
+                                    let yOffset: CGFloat = t * 10
+
+                                    FDMiniHackCard(
+                                        item: hack.dto,
+                                        onOpen: {
+                                            nav.go(.lesson(
+                                                courseId: hack.courseId,
+                                                lessonId: hack.lessonId,
+                                                presentation: .canonical
+                                            ))
+                                        },
+                                        readOnly: true,
+                                        layoutWidth: cardWidth,
+                                        layoutHeight: cardHeight,
+                                        lessonSummarySquare: true,
+                                        showTopTrailingKindChip: false,
+                                        summaryPlayAndFavorite: true,
+                                        onPlayInLesson: {
+                                            nav.go(.lesson(
+                                                courseId: hack.courseId,
+                                                lessonId: hack.lessonId,
+                                                presentation: .canonical
+                                            ))
+                                        },
+                                        onToggleFavorite: {
+                                            FavoriteManager.shared.toggle(
+                                                step: hack.step,
+                                                courseId: hack.courseId,
+                                                lessonId: hack.lessonId,
+                                                order: hack.order
+                                            )
+                                        },
+                                        isFavorite: FavoriteManager.shared.containsHack(
+                                            courseId: hack.courseId,
+                                            lessonId: hack.lessonId,
+                                            index: hack.order
+                                        ),
+                                        isEditing: .constant(false)
+                                    )
+                                    .scaleEffect(scale)
+                                    .opacity(opacity)
+                                    .offset(y: yOffset)
+                                }
+                                .frame(width: cardWidth, height: cardHeight)
+                            }
+                        }
+                        .padding(.horizontal, sideInset)
+                        .padding(.vertical, 4)
+                        .frame(height: cardHeight + 36)
+                    }
                 }
-                .frame(height: CardDS.Metrics.stepLifehackHeight + 30)
+                .frame(height: CardDS.Metrics.stepLifehackHeight + 36)
             }
         }
     }
