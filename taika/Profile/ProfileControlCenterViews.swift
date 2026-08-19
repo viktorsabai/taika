@@ -522,6 +522,19 @@ private struct ProfileValueItem: Identifiable {
 private struct ProfileValueCarouselCard: View {
     let item: ProfileValueItem
 
+    private var accentTreatment: CardDS.AccentTreatment {
+        switch item.id {
+        case "courses":
+            return .taikaValues(primary: ThemeManager.shared.currentAccentTintColor, secondary: Color.purple)
+        case "speaker":
+            return .taikaValues(primary: Color.pink, secondary: Color.indigo)
+        case "games":
+            return .taikaValues(primary: Color.pink.opacity(0.9), secondary: Color.orange.opacity(0.72))
+        default:
+            return .taikaValues(primary: Color.purple, secondary: ThemeManager.shared.currentAccentTintColor)
+        }
+    }
+
     var body: some View {
         CourseLessonCard(
             title: item.title,
@@ -533,6 +546,7 @@ private struct ProfileValueCarouselCard: View {
             size: CGSize(width: CardDS.Metrics.courseWidth, height: CardDS.Metrics.courseHeight),
             sectionChrome: .none,
             chromeStyle: .cards,
+            accentTreatment: accentTreatment,
             primaryCTA: .next,
             scale: .xs,
             showsPrimaryAction: false,

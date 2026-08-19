@@ -594,6 +594,13 @@ public enum CardDS {
     public enum SectionChrome { case none, fold, lines, rail, zones, seps, sepsLR }
     public enum ChromeStyle { case brand, cards }
 
+    /// Optional restrained brand treatment for read-only informational cards.
+    /// Existing course cards remain unchanged with `.none`.
+    public enum AccentTreatment {
+        case none
+        case taikaValues(primary: Color, secondary: Color)
+    }
+
     public struct Metrics {
         public static let radius: CGFloat = 16
         /// Квадратные карточки шага: чуть крупнее радиус, чем у 280×360 — визуально ближе к «мягкой» карусели курса.
@@ -2563,6 +2570,7 @@ public struct CourseLessonCard: View {
     public let size: CGSize
     public let sectionChrome: CardDS.SectionChrome
     public let chromeStyle: CardDS.ChromeStyle
+    public let accentTreatment: CardDS.AccentTreatment
 
     // CTA
     public let primaryCTA: AppCTAType
@@ -2645,6 +2653,7 @@ public struct CourseLessonCard: View {
         size: CGSize = CGSize(width: CardDS.Metrics.courseWidth, height: CardDS.Metrics.courseHeight),
         sectionChrome: CardDS.SectionChrome = .seps,
         chromeStyle: CardDS.ChromeStyle = .cards,
+        accentTreatment: CardDS.AccentTreatment = .none,
         primaryCTA: AppCTAType = .start,
         scale: AppCTAScale = .s,
         showsPrimaryAction: Bool = true,
@@ -2684,6 +2693,7 @@ public struct CourseLessonCard: View {
         self.size = size
         self.sectionChrome = sectionChrome
         self.chromeStyle = chromeStyle
+        self.accentTreatment = accentTreatment
         self.primaryCTA = primaryCTA
         self.scale = scale
         self.showsPrimaryAction = showsPrimaryAction
@@ -2747,6 +2757,47 @@ public struct CourseLessonCard: View {
 
     private var courseProShadowRadius: CGFloat { showsProWash ? 12 : 0 }
     private var courseProShadowY: CGFloat { showsProWash ? 5 : 0 }
+
+    @ViewBuilder
+    private var accentTreatmentOverlay: some View {
+        switch accentTreatment {
+        case .none:
+            EmptyView()
+        case let .taikaValues(primary, secondary):
+            ZStack {
+                RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [primary.opacity(0.24), secondary.opacity(0.12), Color.clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [secondary.opacity(0.30), primary.opacity(0.10), Color.clear],
+                            center: .center,
+                            startRadius: 3,
+                            endRadius: 112
+                        )
+                    )
+                    .frame(width: 164, height: 164)
+                    .blur(radius: 14)
+                    .offset(x: 82, y: -58)
+                RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [primary.opacity(0.52), secondary.opacity(0.18), Color.clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.05
+                    )
+            }
+            .allowsHitTesting(false)
+        }
+    }
 
     public var body: some View {
         let resolvedSize: CGSize = stepCarouselCellSize ?? size
@@ -3149,6 +3200,7 @@ public struct CourseLessonCard: View {
         .frame(width: resolvedSize.width, height: resolvedSize.height)
         .compositingGroup()
         // Pro: только мягкий wash внутри clip — без accent-stroke (обрезал карточку справа).
+        .overlay { accentTreatmentOverlay }
         .overlay { courseProWashOverlay }
         .clipShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
         .shadow(color: courseProShadowColor, radius: courseProShadowRadius, y: courseProShadowY)
