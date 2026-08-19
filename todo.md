@@ -1144,3 +1144,10 @@
 - [ ] Preserve green icon semantics and native press feedback without oversized containers.
 - [ ] Inspect heavy card overlays/animations and remove unnecessary full-card invalidation.
 - [ ] Run static validation and push one corrective commit.
+
+# Speaker host layout corrective fix
+
+- [ ] Locate the parent layout that still renders the microphone at the top in idle.
+- [ ] Route idle, recording and processing through one centered live sphere composition.
+- [ ] Remove duplicate microphone/hero host rather than only resizing the sphere.
+- [ ] Validate no vertical jump and push a corrective commit.

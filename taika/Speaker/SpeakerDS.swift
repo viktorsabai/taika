@@ -823,7 +823,6 @@ public struct SpeakerDSRoot: View {
         let padH = ToolBar.contentHorizontalInset
         let history = conversationEngine.conversationHistory
         let focused = conversationNeedsFocusOverlay
-        let liveStage = focused && !phase.isFeedback && !conversationTextComposerExpanded
 
         ZStack {
             VStack(spacing: 0) {
@@ -832,10 +831,10 @@ public struct SpeakerDSRoot: View {
                         .padding(.horizontal, padH)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if !focused {
-                    Spacer(minLength: 8)
-                    conversationWidgetIdleCenter
+                    Spacer(minLength: 0)
+                    conversationLiveStage
                         .padding(.horizontal, padH)
-                    Spacer(minLength: 8)
+                    Spacer(minLength: 0)
                 } else {
                     Spacer(minLength: 0)
                 }
