@@ -520,48 +520,26 @@ private struct ProfileValueItem: Identifiable {
 }
 
 private struct ProfileValueCarouselCard: View {
-    @EnvironmentObject private var theme: ThemeManager
     let item: ProfileValueItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: item.systemImage)
-                    .font(.system(size: 21, weight: .semibold))
-                    .foregroundStyle(theme.currentAccentFill)
-                    .frame(width: 46, height: 46)
-                    .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.title)
-                        .font(PD.FontToken.title(21, weight: .bold))
-                        .foregroundStyle(PD.ColorToken.text)
-                        .lineLimit(2)
-                    Text(item.eyebrow)
-                        .font(PD.FontToken.caption(11, weight: .semibold))
-                        .foregroundStyle(theme.currentAccentFill)
-                        .tracking(0.9)
-                }
-                Spacer(minLength: 0)
-            }
-            Text(item.detail)
-                .font(PD.FontToken.body(15, weight: .regular))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-            HStack(spacing: 7) {
-                Capsule()
-                    .fill(theme.currentAccentFill)
-                    .frame(width: 28, height: 3)
-                Text("Taika · смысл и действие")
-                    .font(PD.FontToken.caption(11, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.84))
-            }
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, minHeight: 196, alignment: .leading)
-        .background(PD.ColorToken.card.opacity(0.46), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.68), lineWidth: 1))
-        .shadow(color: Color.black.opacity(0.22), radius: 16, y: 8)
+        CourseLessonCard(
+            title: item.title,
+            subtitle: item.detail,
+            courseCategory: item.eyebrow,
+            isPro: false,
+            tags: [],
+            brandText: "taikA",
+            size: CGSize(width: CardDS.Metrics.courseWidth, height: CardDS.Metrics.courseHeight),
+            sectionChrome: .none,
+            chromeStyle: .cards,
+            primaryCTA: .next,
+            scale: .xs,
+            showFavorite: false,
+            showConsole: false,
+            onPrimaryTap: nil,
+            showsInlineProgress: false
+        )
     }
 }
 
@@ -599,26 +577,25 @@ struct ProfileValuesView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.top, 10)
 
-                        MDTwoRowCourseCarousel(
-                            freeTitle: .init(title: "", showsTitle: false, topPadding: 0, bottomPadding: 0),
-                            proTitle: .init(title: "", showsTitle: false, topPadding: 0, bottomPadding: 0),
-                            free: values,
-                            pro: [],
-                            cardWidth: 304,
-                            cardSpacing: 12
+                        CDLessonCarousel(
+                            data: values,
+                            cardWidth: CDLessonCarouselCanonical.cardWidth,
+                            cardHeight: CDLessonCarouselCanonical.courseLessonCardHeight,
+                            spacing: CDLessonCarouselCanonical.spacing,
+                            initialIndex: 0,
+                            onTapScrollToCenter: true,
+                            loop: false
                         ) { item in
                             ProfileValueCarouselCard(item: item)
-                                .environmentObject(theme)
-                                .frame(height: 196)
                         }
-                        .frame(height: 220)
+                        .frame(height: CDLessonCarouselCanonical.courseLessonCardHeight + 12)
 
-                        Text("Свайпни, чтобы увидеть, как Taika помогает тебе в жизни")
+                        Text("Свайпни карточки, чтобы увидеть весь маршрут Taika")
                             .font(PD.FontToken.caption(12, weight: .semibold))
                             .foregroundStyle(theme.currentAccentFill)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 20)
-                            .padding(.bottom, 18)
+                            .padding(.bottom, 4)
                     }
                     .padding(.horizontal, PD.Spacing.screen)
                     .padding(.top, 12)
