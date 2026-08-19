@@ -1813,8 +1813,11 @@ public struct SpeakerDSRoot: View {
         .accessibilityLabel(accessibility)
     }
 
-    /// Слушать / тренировать / закрыть + одна CTA «в ленту».
+    /// Learning loop actions: train now, save to dictionary, then continue with another phrase.
     @ViewBuilder private var conversationResultActions: some View {
+        let thai = (external?.heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let isSaved = !thai.isEmpty && favoriteManager.hasSmartSpeakerDictionaryEntry(thai: thai)
+
         VStack(spacing: 12) {
             HStack(spacing: 28) {
                 Spacer(minLength: 0)
@@ -1824,14 +1827,6 @@ public struct SpeakerDSRoot: View {
                     accessibility: "Послушать"
                 ) {
                     external?.onPlayConversationTTS()
-                }
-                conversationChromeIconButton(
-                    systemName: "mic.fill",
-                    enabled: true,
-                    accessibility: "Тренировать"
-                ) {
-                    conversationEditFocused = false
-                    external?.onConfirmConversationDraft?(true, true)
                 }
                 conversationChromeIconButton(
                     systemName: "xmark",
@@ -1846,30 +1841,56 @@ public struct SpeakerDSRoot: View {
             }
             .padding(.vertical, 2)
 
-            Button {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                conversationEditFocused = false
-                external?.onConfirmConversationDraft?(true, false)
-                conversationEditRU = ""
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("Сохранить в словарь")
-                        .font(.system(size: 16, weight: .bold))
-                        .lineLimit(1)
+            HStack(spacing: 10) {
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    conversationEditFocused = false
+                    external?.onConfirmConversationDraft?(false, true)
+                } label: {
+                    Label("Тренировать", systemImage: "mic.fill")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
                 }
-                .foregroundColor(.black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .padding(.horizontal, 18)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(ThemeManager.shared.currentAccentFill)
-                )
+                .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+                .accessibilityLabel("Тренировать фразу")
+
+                Button {
+                    guard !isSaved else { return }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    conversationEditFocused = false
+                    external?.onConfirmConversationDraft?(true, false)
+                } label: {
+                    Label(isSaved ? "В словаре" : "В словарь", systemImage: isSaved ? "checkmark" : "bookmark.fill")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(isSaved ? PD.ColorToken.textSecondary : PD.ColorToken.text)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(isSaved ? PD.ColorToken.chip.opacity(0.72) : PD.ColorToken.chip.opacity(0.94))
+                                .overlay(Capsule(style: .continuous).stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+                        )
+                }
+                .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+                .disabled(isSaved)
+                .accessibilityLabel(isSaved ? "Фраза уже в словаре" : "Сохранить в словарь")
             }
-            .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
-            .accessibilityLabel("Сохранить в словарь")
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                conversationEditFocused = false
+                conversationEditRU = ""
+                external?.onConversationRepeat()
+            } label: {
+                Label("Сказать ещё одну фразу", systemImage: "plus")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Сказать ещё одну фразу")
         }
     }
 
@@ -6771,6 +6792,12 @@ private struct ConversationVoiceOrb: View {
                         .stroke(brand.opacity(0.34), lineWidth: 1)
                 }
 
+            // The live voice contour: level gently expands the listening core.
+            Circle()
+                .stroke(brand.opacity(0.28 + level * 0.42), lineWidth: 1.1 + level * 1.8)
+                .frame(width: 132 + level * 28, height: 132 + level * 28)
+                .blur(radius: level > 0.02 ? 0 : 0.5)
+
             Circle()
                 .fill(
                     RadialGradient(
@@ -6809,6 +6836,7 @@ private struct ConversationVoiceOrb: View {
                     .rotationEffect(.degrees(rotation + Double(index) * 92))
             }
         }
+        .scaleEffect(isProcessing ? 1.0 : 0.96 + level * 0.10)
         .frame(width: 210, height: 210)
         .onAppear {
             withAnimation(.easeInOut(duration: 3.8).repeatForever(autoreverses: true)) {

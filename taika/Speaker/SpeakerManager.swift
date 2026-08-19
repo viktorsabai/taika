@@ -1598,7 +1598,9 @@ public final class SpeakerManager: ObservableObject {
             }
             startConversationPronunciationCheck()
         } else {
-            clearConversationResult()
+            // Keep the translated phrase visible after saving. The user can train it
+            // immediately or explicitly tap “Сказать ещё” to begin a new phrase.
+            // This closes the learning loop instead of dropping into an empty state.
         }
     }
 
