@@ -4872,19 +4872,29 @@ public struct SpeakerDSRoot: View {
         return external?.learnedLessonFilter?.isEmpty == false
     }
 
-    private var trainingModePickerTitle: String {
-        switch external?.courseContextCourseId {
-        case "__dictionary__": return "Мой словарь"
-        case "__favorites__": return "Избранное"
-        default:
-            if isLessonScopedCourseContext,
-               let lessonId = external?.learnedLessonFilter,
-               let title = external?.lessonTitleForLessonId?(lessonId),
-               !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return title
-            }
-            return "Закрепление курсов"
+    private var trainingScopeLessonIds: [String] {
+        external?.learnedLessonIds ?? []
+    }
+
+    private var trainingScopePickerTitles: [String] {
+        let lessonTitles = trainingScopeLessonIds.map { id in
+            external?.lessonTitleForLessonId?(id) ?? id
         }
+        if lessonTitles.isEmpty {
+            return ["Закрепление курсов", "Скажи сам"]
+        }
+        return ["Все уроки"] + lessonTitles + ["Скажи сам"]
+    }
+
+    private var trainingScopeSelectedIndex: Int {
+        if speakerUIMode == .conversation {
+            return max(0, trainingScopePickerTitles.count - 1)
+        }
+        guard let selected = external?.learnedLessonFilter,
+              let lessonIndex = trainingScopeLessonIds.firstIndex(of: selected) else {
+            return 0
+        }
+        return lessonIndex + 1
     }
 
     private var dictionaryContextBadge: some View {
@@ -4961,25 +4971,27 @@ public struct SpeakerDSRoot: View {
                     .buttonStyle(.plain)
                 } else {
                     AppInlineFilterPicker(
-                        titles: [trainingModePickerTitle, "Скажи сам"],
-                        selectedIndex: speakerUIMode == .conversation ? 1 : 0
+                        titles: trainingScopePickerTitles,
+                        selectedIndex: trainingScopeSelectedIndex
                     ) { index in
-                        let mode: SpeakerManager.SpeakerUIMode = index == 1 ? .conversation : .training
-                        external?.onSpeakerUIModeChange(mode)
+                        let lastIndex = trainingScopePickerTitles.count - 1
+                        if index == lastIndex {
+                            external?.onSpeakerUIModeChange(.conversation)
+                            return
+                        }
+                        external?.onSpeakerUIModeChange(.training)
+                        if index == 0 {
+                            external?.onSelectLearnedLessonFilter?(nil)
+                        } else {
+                            let lessonIndex = index - 1
+                            guard trainingScopeLessonIds.indices.contains(lessonIndex) else { return }
+                            external?.onSelectLearnedLessonFilter?(trainingScopeLessonIds[lessonIndex])
+                        }
                     }
                 }
             }
             .padding(.horizontal, CD.Spacing.screen)
 
-            if speakerUIMode == .training,
-               !isSpecialTrainingContext,
-               !isLessonScopedCourseContext,
-               !allSpeakerItems.isEmpty,
-               let lessonIds = external?.learnedLessonIds,
-               lessonIds.count > 1,
-               external?.onSelectLearnedLessonFilter != nil {
-                learnedLessonChipsRow(lessonIds: lessonIds)
-            }
         }
         .padding(.top, rootHeaderClearance > 0 ? rootHeaderClearance : Theme.Layout.sectionTop)
         .padding(.bottom, 4)
