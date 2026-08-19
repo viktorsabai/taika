@@ -57,7 +57,7 @@ struct ProfileView: View {
     @State private var showResetAllConfirm = false
     @State private var viewReloadToken = UUID()
     @State private var showDebugSheet = false
-    @State private var showOnboarding = false
+    @State private var showValues = false
     @State private var showMoreSheet = false
     @State private var showProSheet = false
     @State private var showStatistics = false
@@ -273,7 +273,7 @@ struct ProfileView: View {
                             systemImage: "sparkles"
                         ) {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            showOnboarding = true
+                            showValues = true
                         }
                         profileLinkRow(
                             title: "Поддержка и обратная связь",
@@ -346,7 +346,7 @@ struct ProfileView: View {
                 .environmentObject(theme)
         }
         .sheet(isPresented: $showMoreSheet) {
-            ProfileMoreSheet(
+            ProfileMoreGlassSheet(
                 appVersionLabel: appVersionLabel,
                 showResetAllConfirm: $showResetAllConfirm,
                 showDebugSheet: $showDebugSheet,
@@ -358,12 +358,9 @@ struct ProfileView: View {
             ProfileDebugSheet()
                 .environmentObject(theme)
         }
-        .fullScreenCover(isPresented: $showOnboarding) {
-            TaikaEntryOnboardingView(
-                onFinished: { showOnboarding = false },
-                onSkipToStart: { showOnboarding = false }
-            )
-            .environmentObject(theme)
+        .fullScreenCover(isPresented: $showValues) {
+            ProfileValuesView()
+                .environmentObject(theme)
         }
         .onAppear {
             if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
@@ -436,79 +433,55 @@ private struct ProfileProSheet: View {
     let onOpenPaywall: () -> Void
     let onRestore: () -> Void
 
-    private var listRowInsets: EdgeInsets {
-        EdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20)
-    }
-
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "crown.fill")
-                                .foregroundStyle(theme.currentAccentFill)
-                            Text(pro.subscriptionStatusTitle)
-                                .font(.headline)
-                                .foregroundStyle(PD.ColorToken.text)
+            ProfileGlassBackdrop {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        ProfileDestinationIntro(
+                            eyebrow: "TAIKA+ ACCESS",
+                            title: pro.subscriptionStatusTitle,
+                            subtitle: pro.subscriptionStatusSubtitle
+                        )
+                        ProfileGlassRow(
+                            title: pro.isPro ? "Taika+ открыт" : "Открыть Taika+",
+                            subtitle: pro.isPro ? "Курсы, Speaker и игры доступны" : "7 дней бесплатно — разминка, курсы и Speaker",
+                            systemImage: "crown.fill",
+                            trailing: pro.isPro ? "checkmark" : "chevron.right"
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            if pro.isPro {
+                                if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                                    UIApplication.shared.open(url)
+                                }
+                            } else {
+                                onOpenPaywall()
+                            }
                         }
-                        Text(pro.subscriptionStatusSubtitle)
-                            .font(.subheadline)
+                        .environmentObject(theme)
+                        ProfileGlassRow(
+                            title: restoreInFlight ? "Восстановление…" : "Восстановить покупки",
+                            subtitle: pro.isPro ? "Проверить доступ на этом Apple ID" : "Если ты уже покупал Taika+",
+                            systemImage: "arrow.triangle.2.circlepath",
+                            trailing: restoreInFlight ? "hourglass" : "chevron.right"
+                        ) {
+                            guard !restoreInFlight else { return }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            onRestore()
+                        }
+                        .environmentObject(theme)
+                        .opacity(restoreInFlight ? 0.72 : 1)
+                        Text("Доступ и покупки синхронизируются через Apple ID. Если что-то не совпало, открой поддержку из профиля.")
+                            .font(PD.FontToken.caption(12))
                             .foregroundStyle(PD.ColorToken.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 4)
                     }
-                    .padding(.vertical, 4)
-                    .listRowInsets(listRowInsets)
-                    .listRowBackground(PD.ColorToken.card.opacity(0.35))
-                }
-
-                Section {
-                    if !pro.isPro {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            onOpenPaywall()
-                        } label: {
-                            Label("Открыть Taika+", systemImage: "crown.fill")
-                                .foregroundStyle(PD.ColorToken.text)
-                        }
-                        .listRowInsets(listRowInsets)
-                        .listRowBackground(PD.ColorToken.card.opacity(0.35))
-                    } else {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
-                                UIApplication.shared.open(url)
-                            }
-                        } label: {
-                            Label("Управление подпиской", systemImage: "creditcard")
-                                .foregroundStyle(PD.ColorToken.text)
-                        }
-                        .listRowInsets(listRowInsets)
-                        .listRowBackground(PD.ColorToken.card.opacity(0.35))
-                    }
-
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        onRestore()
-                    } label: {
-                        HStack {
-                            Label(
-                                restoreInFlight ? "Восстановление…" : "Восстановить покупки",
-                                systemImage: "arrow.triangle.2.circlepath"
-                            )
-                            .foregroundStyle(PD.ColorToken.text)
-                            Spacer()
-                            if restoreInFlight { ProgressView() }
-                        }
-                    }
-                    .disabled(restoreInFlight)
-                    .listRowInsets(listRowInsets)
-                    .listRowBackground(PD.ColorToken.card.opacity(0.35))
+                    .padding(.horizontal, PD.Spacing.screen)
+                    .padding(.top, 18)
+                    .padding(.bottom, 34)
                 }
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(PD.ColorToken.background)
             .navigationTitle("Taika+")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
