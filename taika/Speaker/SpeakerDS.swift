@@ -1000,7 +1000,8 @@ public struct SpeakerDSRoot: View {
             ZStack {
                 MDVoiceSphere(
                     symbol: isBusy ? "ellipsis" : (isRec ? "stop.fill" : "mic.fill"),
-                    accessibilityLabel: isBusy ? "Обработка" : (isRec ? "Стоп" : "Микрофон")
+                    accessibilityLabel: isBusy ? "Обработка" : (isRec ? "Стоп" : "Микрофон"),
+                    meter: isRec ? recordingMeter : 0
                 ) {
                     let canRecord = external?.conversationCanRecord ?? true
                     if !isRec && !canRecord {

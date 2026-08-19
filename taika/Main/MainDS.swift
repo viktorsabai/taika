@@ -1640,24 +1640,29 @@ public struct MDCyclingTypewriter: View {
 public struct MDVoiceSphere: View {
     public let symbol: String
     public let accessibilityLabel: String
+    public let meter: Double
     public let action: () -> Void
 
     @ObservedObject private var theme = ThemeManager.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pulseOut = false
 
     public init(
         symbol: String = "mic.fill",
         accessibilityLabel: String = "Открыть спикер и начать запись",
+        meter: Double = 0,
         action: @escaping () -> Void
     ) {
         self.symbol = symbol
         self.accessibilityLabel = accessibilityLabel
+        self.meter = meter
         self.action = action
     }
 
     public var body: some View {
         let accent = theme.currentAccentFill
         let tint = theme.currentAccentTintColor
+        let voiceLevel = reduceMotion ? 0 : min(max(meter, 0), 1)
 
         Button {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -1682,11 +1687,13 @@ public struct MDVoiceSphere: View {
                         .stroke(tint.opacity(pulseOut ? 0 : 0.55), lineWidth: 1.4)
                         .frame(width: 148, height: 148)
                         .scaleEffect(pulseOut ? 1.28 : 1.0)
+                        .scaleEffect(1 + voiceLevel * 0.12)
 
                     Circle()
                         .stroke(tint.opacity(pulseOut ? 0 : 0.28), lineWidth: 1)
                         .frame(width: 172, height: 172)
                         .scaleEffect(pulseOut ? 1.18 : 1.0)
+                        .scaleEffect(1 + voiceLevel * 0.16)
 
                     Circle()
                         .fill(
@@ -1698,16 +1705,20 @@ public struct MDVoiceSphere: View {
                             )
                         )
                         .frame(width: 190, height: 190)
+                        .scaleEffect(1 + voiceLevel * 0.08)
 
                     Circle()
                         .fill(accent)
                         .frame(width: 96, height: 96)
+                        .scaleEffect(1 + voiceLevel * 0.12)
                         .shadow(color: tint.opacity(0.65), radius: 24, y: 8)
 
                     Image(systemName: symbol)
                         .font(.system(size: 34, weight: .bold))
                         .foregroundStyle(Color.black)
+                        .scaleEffect(1 + voiceLevel * 0.08)
                 }
+                .animation(.easeOut(duration: 0.12), value: meter)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 200)
