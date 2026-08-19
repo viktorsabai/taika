@@ -1151,3 +1151,10 @@
 - [ ] Route idle, recording and processing through one centered live sphere composition.
 - [ ] Remove duplicate microphone/hero host rather than only resizing the sphere.
 - [ ] Validate no vertical jump and push a corrective commit.
+
+# Course metric typography
+
+- [ ] Audit all large numeric metrics in CourseView and shared course statistic components.
+- [ ] Use a restrained technological numeric face with tabular/monospaced digits and controlled tracking.
+- [ ] Preserve readability and hierarchy while removing decorative editorial number styling.
+- [ ] Run static validation and push one typography commit.

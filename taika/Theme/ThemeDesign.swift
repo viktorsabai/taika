@@ -119,8 +119,12 @@ public enum Theme {
     
     public enum Fonts {
         public static func appTitle(_ size: CGFloat) -> Font { .custom("ONMARK Trial", size: size) }
-        /// Крупные цифры скора / статистики курса и урока (MV-SKIFER).
+        /// Legacy score/statistics font kept for compatibility outside course metrics.
         public static func stat(_ size: CGFloat) -> Font { .custom("MVSKIFERRegular", size: size) }
+        /// Strict numeric face for product metrics: technical, tabular and non-decorative.
+        public static func metric(_ size: CGFloat) -> Font {
+            .system(size: size, weight: .medium, design: .monospaced)
+        }
         public static let heading: Font = .system(size: 22, weight: .semibold, design: .rounded)
         public static let body: Font    = .system(size: 16, weight: .regular, design: .rounded)
         public static let caption: Font = .system(size: 12, weight: .regular, design: .rounded)
@@ -932,7 +936,7 @@ struct TaikaEmptyStateIcon: View {
     }
 }
 
-/// Колонка статистики курса/урока: крупная цифра MV-SKIFER + подпись. Без рамок.
+/// Колонка статистики курса/урока: строгая технологичная цифра + подпись. Без рамок.
 public struct TaikaStatMetric: View {
     public var valueText: String
     public var label: String
@@ -960,7 +964,7 @@ public struct TaikaStatMetric: View {
     public var body: some View {
         VStack(spacing: 4) {
             Text(valueText)
-                .font(.taikaStat(valueSize))
+                .font(Theme.Fonts.metric(valueSize))
                 .foregroundStyle(
                     accent
                     ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
