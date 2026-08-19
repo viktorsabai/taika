@@ -1179,3 +1179,8 @@
 
 - [ ] Add backward-compatible isCompletedCourse parameter to the active LSProgressStrip initializer.
 - [ ] Run diff check and push corrective commit.
+
+# Speaker liveStage compile fix
+
+- [ ] Replace stale liveStage reference in conversationWidgetStateKey after idle host unification.
+- [ ] Run diff check and push corrective commit.

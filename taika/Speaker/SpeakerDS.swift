@@ -944,7 +944,6 @@ public struct SpeakerDSRoot: View {
         .animation(.spring(response: 0.36, dampingFraction: 0.88), value: conversationWidgetStateKey)
         .animation(.easeInOut(duration: 0.22), value: history.count)
         .animation(.easeInOut(duration: 0.22), value: focused)
-        .animation(.easeInOut(duration: 0.22), value: liveStage)
         .animation(.spring(response: 0.38, dampingFraction: 0.86), value: conversationTextComposerExpanded)
     }
 
