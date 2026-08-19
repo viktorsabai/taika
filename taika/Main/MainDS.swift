@@ -1635,14 +1635,99 @@ public struct MDCyclingTypewriter: View {
     }
 }
 
+/// Canonical Taika voice sphere shared by Main and Speaker.
+/// Keep this as the single source of truth for the hero geometry and pulse treatment.
+public struct MDVoiceSphere: View {
+    public let symbol: String
+    public let accessibilityLabel: String
+    public let action: () -> Void
+
+    @ObservedObject private var theme = ThemeManager.shared
+    @State private var pulseOut = false
+
+    public init(
+        symbol: String = "mic.fill",
+        accessibilityLabel: String = "Открыть спикер и начать запись",
+        action: @escaping () -> Void
+    ) {
+        self.symbol = symbol
+        self.accessibilityLabel = accessibilityLabel
+        self.action = action
+    }
+
+    public var body: some View {
+        let accent = theme.currentAccentFill
+        let tint = theme.currentAccentTintColor
+
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            action()
+        } label: {
+            ZStack {
+                Ellipse()
+                    .fill(
+                        RadialGradient(
+                            colors: [tint.opacity(0.35), tint.opacity(0.08), .clear],
+                            center: .center,
+                            startRadius: 10,
+                            endRadius: 150
+                        )
+                    )
+                    .frame(width: 280, height: 120)
+                    .blur(radius: 8)
+                    .opacity(0.9)
+
+                ZStack {
+                    Circle()
+                        .stroke(tint.opacity(pulseOut ? 0 : 0.55), lineWidth: 1.4)
+                        .frame(width: 148, height: 148)
+                        .scaleEffect(pulseOut ? 1.28 : 1.0)
+
+                    Circle()
+                        .stroke(tint.opacity(pulseOut ? 0 : 0.28), lineWidth: 1)
+                        .frame(width: 172, height: 172)
+                        .scaleEffect(pulseOut ? 1.18 : 1.0)
+
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [tint.opacity(0.55), tint.opacity(0.12), tint.opacity(0)],
+                                center: .center,
+                                startRadius: 2,
+                                endRadius: 90
+                            )
+                        )
+                        .frame(width: 190, height: 190)
+
+                    Circle()
+                        .fill(accent)
+                        .frame(width: 96, height: 96)
+                        .shadow(color: tint.opacity(0.65), radius: 24, y: 8)
+
+                    Image(systemName: symbol)
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(Color.black)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 200)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
+        .accessibilityLabel(accessibilityLabel)
+        .onAppear {
+            withAnimation(.easeOut(duration: 2.1).repeatForever(autoreverses: false)) {
+                pulseOut = true
+            }
+        }
+    }
+}
+
 /// Главный сценарий Main: живой typewriter-заголовок от Taika + микрофон как главный wow.
 public struct MDPromptHero: View {
     public var greeting: String
     public var tagline: String
     public var onOpenSpeaker: () -> Void
-
-    @ObservedObject private var theme = ThemeManager.shared
-    @State private var pulseOut = false
 
     public init(
         greeting: String,
@@ -1665,9 +1750,6 @@ public struct MDPromptHero: View {
     }
 
     public var body: some View {
-        let accent = theme.currentAccentFill
-        let tint = theme.currentAccentTintColor
-
         VStack(spacing: 18) {
             VStack(alignment: .leading, spacing: 8) {
                 MDCyclingTypewriter(
@@ -1681,66 +1763,11 @@ public struct MDPromptHero: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                onOpenSpeaker()
-            } label: {
-                ZStack {
-                    // Мягкая «волна» за микрофоном — вау-плоскость, без текста.
-                    Ellipse()
-                        .fill(
-                            RadialGradient(
-                                colors: [tint.opacity(0.35), tint.opacity(0.08), .clear],
-                                center: .center,
-                                startRadius: 10,
-                                endRadius: 150
-                            )
-                        )
-                        .frame(width: 280, height: 120)
-                        .blur(radius: 8)
-                        .opacity(0.9)
-
-                    ZStack {
-                        Circle()
-                            .stroke(tint.opacity(pulseOut ? 0 : 0.55), lineWidth: 1.4)
-                            .frame(width: 148, height: 148)
-                            .scaleEffect(pulseOut ? 1.28 : 1.0)
-
-                        Circle()
-                            .stroke(tint.opacity(pulseOut ? 0 : 0.28), lineWidth: 1)
-                            .frame(width: 172, height: 172)
-                            .scaleEffect(pulseOut ? 1.18 : 1.0)
-
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [tint.opacity(0.55), tint.opacity(0.12), tint.opacity(0)],
-                                    center: .center, startRadius: 2, endRadius: 90
-                                )
-                            )
-                            .frame(width: 190, height: 190)
-
-                        Circle()
-                            .fill(accent)
-                            .frame(width: 96, height: 96)
-                            .shadow(color: tint.opacity(0.65), radius: 24, y: 8)
-
-                        Image(systemName: "mic.fill")
-                            .font(.system(size: 34, weight: .bold))
-                            .foregroundStyle(Color.black)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 200)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
-            .accessibilityLabel("Открыть спикер и начать запись")
-            .onAppear {
-                withAnimation(.easeOut(duration: 2.1).repeatForever(autoreverses: false)) {
-                    pulseOut = true
-                }
-            }
+            MDVoiceSphere(
+                symbol: "mic.fill",
+                accessibilityLabel: "Открыть спикер и начать запись",
+                action: onOpenSpeaker
+            )
 
             MDExamplePhraseMarquee(onTapPhrase: onOpenSpeaker)
         }

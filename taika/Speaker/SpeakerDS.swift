@@ -987,16 +987,8 @@ public struct SpeakerDSRoot: View {
 
     /// Immersive live: орб + live-текст + mic в центре. Не серая «карточка статуса».
     @ViewBuilder private var conversationLiveStage: some View {
-        let accentFill = ThemeManager.shared.currentAccentFill
-        let accentTint = ThemeManager.shared.currentAccentTintColor
         let isRec = conversationIsRecording
         let isBusy = phase == .analyzing
-        let mode: ConversationVoiceOrb.Mode = {
-            if conversationIsPracticeFlow { return isRec ? .practice : .processing }
-            if isRec { return .listening }
-            return .processing
-        }()
-
         VStack(spacing: 18) {
             conversationLiveStatusChip
 
@@ -1006,37 +998,30 @@ public struct SpeakerDSRoot: View {
                 .padding(.horizontal, 8)
 
             ZStack {
-                ConversationVoiceOrb(
-                    meter: recordingMeter,
-                    mode: mode,
-                    accent: accentTint
-                )
-                .frame(width: 176, height: 176)
+                MDVoiceSphere(
+                    symbol: isBusy ? "ellipsis" : (isRec ? "stop.fill" : "mic.fill"),
+                    accessibilityLabel: isBusy ? "Обработка" : (isRec ? "Стоп" : "Микрофон")
+                ) {
+                    let canRecord = external?.conversationCanRecord ?? true
+                    if !isRec && !canRecord {
+                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    } else {
+                        UIImpactFeedbackGenerator(style: isRec ? .medium : .light).impactOccurred()
+                    }
+                    external?.onMicTap()
+                }
+                .disabled(isBusy)
 
                 if isBusy {
-                    ZStack {
-                        Circle()
-                            .fill(accentFill)
-                            .frame(width: 64, height: 64)
-                            .shadow(color: accentTint.opacity(0.45), radius: 16, y: 4)
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .tint(.black)
-                            .scaleEffect(0.9)
-                    }
-                    .allowsHitTesting(false)
-                    .accessibilityLabel("Обработка")
-                } else {
-                    conversationLiveMicButton(
-                        size: isRec ? 76 : 68,
-                        symbol: isRec ? "stop.fill" : "mic.fill",
-                        pulsing: false,
-                        recording: isRec
-                    )
-                    .accessibilityLabel(isRec ? "Стоп" : "Микрофон")
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.black)
+                        .scaleEffect(0.9)
+                        .allowsHitTesting(false)
+                        .accessibilityLabel("Обработка")
                 }
             }
-            .frame(height: 180)
+            .frame(height: 200)
 
             if isBusy {
                 ConversationLiveProcessTicks()
