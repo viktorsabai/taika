@@ -1049,7 +1049,7 @@ private struct ProfileTaikaPlusCard: View {
         let capabilityStyle: AnyShapeStyle = available
             ? AnyShapeStyle(theme.currentAccentFill)
             : AnyShapeStyle(PD.ColorToken.textSecondary)
-        VStack(spacing: 4) {
+        return VStack(spacing: 4) {
             Image(systemName: image)
                 .foregroundStyle(capabilityStyle)
             Text(title)
