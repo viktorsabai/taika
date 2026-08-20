@@ -239,8 +239,28 @@ private extension LessonsView {
     }
 
     @ViewBuilder
+    private var completedTaikaFMSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Layout.sectionTitleToContent) {
+            Text("ТАЙКА FM")
+                .taikaSectionTitleStyle()
+            TaikaFMRow(
+                scope: .lessons,
+                overrideMessages: [
+                    "Курс пройден. Теперь закрепляем то, что должно остаться в речи.",
+                    "Выбери ошибки — Taika соберёт короткую тренировку.",
+                    "Один подход сегодня сильнее, чем повторить всё завтра."
+                ],
+                mode: .typing,
+                showBubble: false,
+                repeats: false
+            )
+        }
+    }
+
+    @ViewBuilder
     private var completedTrainingDashboard: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 18) {
+            completedTaikaFMSection
             LSCompletedTrainingHero(
                 stats: reinforcementCourseStats,
                 selectedCount: effectiveReinforcementLessonIds.count,
@@ -621,7 +641,7 @@ public struct LessonsView: View {
         ZStack(alignment: .bottom) {
             if isCompletedCourse {
                 Rectangle()
-                    .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.08)))
+                    .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.14)))
                     .ignoresSafeArea()
             } else {
                 PD.ColorToken.background

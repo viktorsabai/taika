@@ -1308,3 +1308,13 @@
 - [ ] Сделать быстрые действия Speaker/Game Park частью главного training hero/dock, а не вторичным блоком.
 - [ ] Сохранить multi-select и одинаковый selected scope для обоих handoffs.
 - [ ] Выполнить static validation и consolidated push после полного dashboard pass.
+
+# Quiet Taika FM-first completed LessonsView refinement
+
+- [ ] Вернуть Taika FM context block в completed mode с новым retention-сообщением.
+- [ ] Упростить зелёный canvas: убрать ощущение сплошного bright UI-kit и оставить глубокий jungle surface.
+- [ ] Сжать hero: одна главная метрика, короткая рекомендация, вторичные stats без дублирования.
+- [ ] Перенести быстрые действия в строгий native action rail с одним зелёным акцентом на active state.
+- [ ] Сделать список уроков визуально нейтральным, с green только для selected/error indicators.
+- [ ] Синхронизировать global header и body green surface, не окрашивая toolbar.
+- [ ] Проверить density, contrast, selection handoff и static compile surface перед push.

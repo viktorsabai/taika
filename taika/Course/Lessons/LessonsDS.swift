@@ -1721,7 +1721,7 @@ public struct LSCompletedTrainingHero: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
@@ -1740,7 +1740,7 @@ public struct LSCompletedTrainingHero: View {
                         .kerning(0.8)
                         .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
                     Text("Закрепление навыка")
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.system(size: 19, weight: .semibold))
                         .foregroundStyle(PD.ColorToken.text)
                     Text(recommendation)
                         .font(.system(size: 12, weight: .medium))
@@ -1750,7 +1750,7 @@ public struct LSCompletedTrainingHero: View {
                 Spacer(minLength: 8)
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(scoreText + (stats.reinforcementScore == nil ? "" : "%"))
-                        .font(.system(size: 30, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 25, weight: .semibold, design: .monospaced))
                         .monospacedDigit()
                         .foregroundStyle(PD.ColorToken.text)
                     Text("эффективность")
@@ -1773,14 +1773,15 @@ public struct LSCompletedTrainingHero: View {
                 actionRow(icon: "gamecontroller.fill", title: "Повторить в игре", detail: "Проверка памяти по этому же набору", enabled: onGamePark != nil && selectedCount > 0, action: onGamePark)
             }
         }
-        .padding(18)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.30)))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(TaikaMasteryTokens.greenGlow.opacity(0.55), lineWidth: 1)
-                )
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.15)))
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(TaikaMasteryTokens.greenGlow.opacity(0.48))
+                        .frame(height: 1)
+                }
         )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Главный блок тренировки курса")
@@ -1803,7 +1804,7 @@ public struct LSCompletedTrainingHero: View {
         let content = HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
+                .foregroundStyle(enabled ? AnyShapeStyle(PD.ColorToken.text) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
                 .frame(width: 22, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -1856,8 +1857,8 @@ public struct LSCompletedLessonList: View {
                     let weak = weakIds.contains(item.id)
                     Button { onToggle(item.id) } label: {
                         HStack(spacing: 11) {
-                            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                                .font(.system(size: 19, weight: .semibold))
+                            Image(systemName: selected ? "checkmark" : "circle")
+                                .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(selected ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary))
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(item.title)
@@ -1869,9 +1870,9 @@ public struct LSCompletedLessonList: View {
                                     .foregroundStyle(weak ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary))
                             }
                             Spacer(minLength: 6)
-                            Image(systemName: weak ? "waveform.path.ecg" : "checkmark")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(weak ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                            Image(systemName: weak ? "waveform.path.ecg" : "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(weak ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.65)))
                         }
                         .contentShape(Rectangle())
                     }
