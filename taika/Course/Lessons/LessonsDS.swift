@@ -1613,8 +1613,12 @@ public struct LSReinforcementSkill: Identifiable, Hashable {
     public let score: Int?
     public let sessions: Int
     public let isSpeaker: Bool
+    /// Raw GameModeType value for a classified game row; nil for Speaker.
+    public let modeRawValue: String?
+    /// True when the row is a paid game and the current user is not PRO.
+    public let isProLocked: Bool
 
-    public init(id: String, title: String, subtitle: String, icon: String, score: Int? = nil, sessions: Int = 0, isSpeaker: Bool = false) {
+    public init(id: String, title: String, subtitle: String, icon: String, score: Int? = nil, sessions: Int = 0, isSpeaker: Bool = false, modeRawValue: String? = nil, isProLocked: Bool = false) {
         self.id = id
         self.title = title
         self.subtitle = subtitle
@@ -1622,6 +1626,8 @@ public struct LSReinforcementSkill: Identifiable, Hashable {
         self.score = score
         self.sessions = max(0, sessions)
         self.isSpeaker = isSpeaker
+        self.modeRawValue = modeRawValue
+        self.isProLocked = isProLocked
     }
 }
 
@@ -1756,6 +1762,8 @@ public struct LSCompletedTrainingHero: View {
     public let weakCount: Int
     public let onSpeaker: (() -> Void)?
     public let onGamePark: (() -> Void)?
+    public let onGameMode: ((String) -> Void)?
+    public let onProLocked: (() -> Void)?
 
     public init(
         stats: LSCourseStats,
@@ -1763,7 +1771,9 @@ public struct LSCompletedTrainingHero: View {
         totalLessons: Int,
         weakCount: Int,
         onSpeaker: (() -> Void)? = nil,
-        onGamePark: (() -> Void)? = nil
+        onGamePark: (() -> Void)? = nil,
+        onGameMode: ((String) -> Void)? = nil,
+        onProLocked: (() -> Void)? = nil
     ) {
         self.stats = stats
         self.selectedCount = selectedCount
@@ -1771,6 +1781,8 @@ public struct LSCompletedTrainingHero: View {
         self.weakCount = weakCount
         self.onSpeaker = onSpeaker
         self.onGamePark = onGamePark
+        self.onGameMode = onGameMode
+        self.onProLocked = onProLocked
     }
 
     private var scoreText: String { stats.reinforcementScore.map(String.init) ?? "—" }
@@ -1817,12 +1829,13 @@ public struct LSCompletedTrainingHero: View {
                 }
             }
 
-            HStack(spacing: 18) {
+            HStack(alignment: .top, spacing: 0) {
                 metric(value: "\(stats.gameCoveredCards)", label: "карточки")
                 metric(value: "\(stats.gameSessions)", label: "игровые сессии")
                 metric(value: "\(selectedCount)/\(totalLessons)", label: "выбрано")
             }
             .foregroundStyle(PD.ColorToken.text)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 0) {
                 Text("ПРЕДМЕТЫ ЗАЧЁТКИ")
@@ -1846,9 +1859,14 @@ public struct LSCompletedTrainingHero: View {
 
     @ViewBuilder
     private func skillRow(_ skill: LSReinforcementSkill) -> some View {
-        let action = skill.isSpeaker ? onSpeaker : onGamePark
+        let action: (() -> Void)? = {
+            if skill.isSpeaker { return onSpeaker }
+            if skill.isProLocked { return onProLocked }
+            if let mode = skill.modeRawValue { return { onGameMode?(mode) } }
+            return onGamePark
+        }()
         let enabled = action != nil && selectedCount > 0
-        let result = skill.score.map { "\($0)%" } ?? (skill.sessions > 0 ? "есть данные" : "нет результата")
+        let result = skill.isProLocked ? "Taika Pro" : (skill.score.map { "\($0)%" } ?? (skill.sessions > 0 ? "есть данные" : "нет результата"))
         let detail = skill.sessions > 0 ? "\(skill.sessions) сессии" : "первая тренировка впереди"
         let content = HStack(alignment: .center, spacing: 10) {
             Image(systemName: skill.icon)
@@ -1870,15 +1888,34 @@ public struct LSCompletedTrainingHero: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .trailing, spacing: 4) {
-                Text(result)
-                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                    .monospacedDigit()
-                    .foregroundStyle(skill.score == nil ? AnyShapeStyle(PD.ColorToken.textSecondary) : AnyShapeStyle(PD.ColorToken.text))
+                if skill.isProLocked {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
+                    Text(result)
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(1)
+                } else {
+                    Text(skill.score.map { "\($0)%" } ?? "—")
+                        .font(.system(size: 20, weight: .bold, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(skill.score == nil ? AnyShapeStyle(PD.ColorToken.textSecondary) : AnyShapeStyle(PD.ColorToken.text))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                    if skill.score == nil {
+                        Text(skill.sessions > 0 ? "есть данные" : "нет результата")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                    }
+                }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4)))
             }
-            .frame(width: 72, alignment: .trailing)
+            .frame(width: 92, alignment: .trailing)
         }
         .padding(.vertical, 12)
         .overlay(alignment: .bottom) { Rectangle().fill(PD.ColorToken.stroke.opacity(0.28)).frame(height: 1) }
@@ -1888,13 +1925,14 @@ public struct LSCompletedTrainingHero: View {
     private func metric(value: String, label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.system(size: 16, weight: .semibold, design: .monospaced))
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
                 .monospacedDigit()
             Text(label.uppercased())
                 .font(.system(size: 9, weight: .semibold, design: .monospaced))
                 .foregroundStyle(PD.ColorToken.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.trailing, 8)
     }
 
     @ViewBuilder

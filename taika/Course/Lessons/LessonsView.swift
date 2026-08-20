@@ -216,9 +216,9 @@ private extension LessonsView {
               let metrics = ReinforcementStore.shared.metrics(courseId: cid) else {
             return [
                 LSReinforcementSkill(id: "speaker", title: "Спикер", subtitle: "Произношение и тоны", icon: "mic.fill", isSpeaker: true),
-                LSReinforcementSkill(id: "match", title: "Память", subtitle: "Найди пару", icon: "gamecontroller.fill"),
-                LSReinforcementSkill(id: "recall", title: "Вспоминание", subtitle: "Вспомни перевод", icon: "sparkles"),
-                LSReinforcementSkill(id: "audioRecall", title: "На слух", subtitle: "Распознай фразу", icon: "waveform")
+                LSReinforcementSkill(id: "match", title: "Память", subtitle: "Найди пару", icon: "gamecontroller.fill", modeRawValue: GameModeType.match.rawValue),
+                LSReinforcementSkill(id: "recall", title: "Вспоминание", subtitle: "Вспомни перевод", icon: "sparkles", modeRawValue: GameModeType.recall.rawValue, isProLocked: !pro.isPro),
+                LSReinforcementSkill(id: "audioRecall", title: "На слух", subtitle: "Распознай фразу", icon: "waveform", modeRawValue: GameModeType.audioRecall.rawValue, isProLocked: !pro.isPro)
             ]
         }
         let definitions: [(String, String, String, String, Bool)] = [
@@ -236,7 +236,9 @@ private extension LessonsView {
                 icon: icon,
                 score: mode?.averageScore,
                 sessions: mode?.sessions ?? 0,
-                isSpeaker: isSpeaker
+                isSpeaker: isSpeaker,
+                modeRawValue: isSpeaker ? nil : id,
+                isProLocked: !isSpeaker && GameModeType(rawValue: id)?.isPro == true && !pro.isPro
             )
         }
     }
@@ -274,6 +276,29 @@ private extension LessonsView {
             GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: effectiveReinforcementLessonIds)
         }
         lessonsHeaderStore.onReinforce?()
+    }
+
+    /// Hero rows already classify the game mode, so tapping one must skip the picker.
+    private func launchClassifiedGame(modeRawValue: String) {
+        guard let mode = GameModeType(rawValue: modeRawValue),
+              let cid = currentCourse?.courseID,
+              !effectiveReinforcementLessonIds.isEmpty else { return }
+        guard !mode.isPro || pro.isPro else {
+            overlay.presentPro(reason: .games)
+            return
+        }
+        let ids = effectiveReinforcementLessonIds
+        GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: ids)
+        selectedGameLessonId = ids.count == 1 ? ids.first : nil
+        selectedGameType = mode
+        showGameModePicker = false
+        showGameOverlay = false
+        frozenSnapshot = nil
+        nav.go(.game(courseId: cid, lessonId: selectedGameLessonId, gameType: mode.rawValue))
+    }
+
+    private func showGamesProSheet() {
+        overlay.presentPro(reason: .games)
     }
 
     @ViewBuilder
@@ -325,7 +350,9 @@ private extension LessonsView {
                 totalLessons: completedLessonOptions.count,
                 weakCount: weakCompletedLessonIds.count,
                 onSpeaker: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { launchSpeakerTraining() },
-                onGamePark: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { launchGameTraining() }
+                onGamePark: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { launchGameTraining() },
+                onGameMode: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { mode in launchClassifiedGame(modeRawValue: mode) },
+                onProLocked: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { showGamesProSheet() }
             )
 
             LSCompletedLessonList(

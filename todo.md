@@ -1392,3 +1392,12 @@
 - [ ] Пересобрать back как короткую follow-up карточку: результат, следующая цель, CTA в Speaker/Game Park или LessonsView.
 - [ ] Устранить lineLimit/truncation в ключевых status, score и CTA текстах.
 - [ ] Проверить CourseView ↔ LessonsView navigation scope и выполнить static validation перед push.
+
+# LessonsView grade-sheet final refinement
+
+- [ ] Сделать три верхние метрики одной ровной строкой одинаковой ширины, как строка результатов выше.
+- [ ] Увеличить score/status справа в skill rows и зарезервировать широкую колонку, чтобы «нет результата» не переносилось по буквам.
+- [ ] Для доступной игровой skill row открывать уже определённый game mode напрямую, без повторного picker.
+- [ ] Для платной игры показывать crown/PRO affordance и открывать Taika Pro/paywall flow вместо запуска или picker.
+- [ ] Проверить, что существующий speaker routing и selected lesson scope не изменились.
+- [ ] Выполнить static validation на overflow, call-site types и navigation regressions.
