@@ -3329,16 +3329,16 @@ public struct CourseLessonCard: View {
             case .courseGradeSheet:
                 VStack(alignment: .leading, spacing: 9) {
                     Spacer(minLength: 16)
-                    Text("ЗАКРЕПИ ПРОЙДЕННЫЙ КУРС")
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.92))
-                        .kerning(0.45)
+                    Text("Закрепи пройденный курс")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.96))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.82)
 
                     Text(reinforcementScore == nil ? "Результат курса готов. Теперь удержи навык практикой." : "Курс пройден. Подними результат коротким повторением.")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundStyle(Color.white.opacity(0.62))
-                        .lineSpacing(1)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(Color.white.opacity(0.76))
+                        .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
 
                     HStack(spacing: 8) {
@@ -3348,10 +3348,9 @@ public struct CourseLessonCard: View {
                     }
                     .padding(.top, 2)
 
-                    Text("СЛЕДУЮЩИЙ ШАГ")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.48))
-                        .kerning(0.7)
+                    Text("Следующий шаг")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.64))
                         .padding(.top, 2)
 
                     Spacer(minLength: 10)
@@ -3366,7 +3365,7 @@ public struct CourseLessonCard: View {
                                 Image(systemName: "arrow.right")
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.90)))
+                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
                         }
                         .buttonStyle(CardBackActionButtonStyle(isPrimary: true, isMastery: true))
                     }
@@ -3382,7 +3381,7 @@ public struct CourseLessonCard: View {
                                 Image(systemName: "arrow.right")
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .foregroundStyle(AnyShapeStyle(Color.white.opacity(0.90)))
+                            .foregroundStyle(AnyShapeStyle(Color.white.opacity(0.94)))
                         }
                         .buttonStyle(CardBackActionButtonStyle(isPrimary: false, isMastery: false))
                     }

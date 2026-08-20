@@ -1479,3 +1479,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Добавить restrained appear animation для score/metrics с prefers-reduced-motion guard.
 - [ ] Вернуть стрелке в lesson row открытие самого урока.
 - [ ] Оставить отдельный явный selection control для сбора уроков в reinforcement.
+
+# Readable completed card back face
+
+- [ ] Убрать monospaced из пользовательских заголовков, пояснений, labels и CTA.
+- [ ] Оставить monospaced только для numeric score/metrics, где он помогает сканированию.
+- [ ] Увеличить secondary copy до минимум 13 pt и обеспечить lineLimit/lineSpacing без обрезки.
+- [ ] Сделать CTA outline-контрастными: зелёный текст/иконка на прозрачной поверхности, без чёрного текста на тёмном фоне.
+- [ ] Проверить back face на первом взгляде и push после diff validation.

@@ -1806,8 +1806,8 @@ public struct LSCompletedTrainingHero: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("ЗАЧЁТКА КУРСА")
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .kerning(0.8)
+                .font(.system(size: 12, weight: .bold))
+                .kerning(0.4)
                 .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
 
             VStack(alignment: .leading, spacing: 10) {
@@ -1820,7 +1820,7 @@ public struct LSCompletedTrainingHero: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.78)
                         Text("эффективность")
-                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(PD.ColorToken.textSecondary)
                     }
                     .frame(width: 88, alignment: .leading)
@@ -1829,7 +1829,8 @@ public struct LSCompletedTrainingHero: View {
                             .font(.system(size: 19, weight: .semibold))
                             .foregroundStyle(PD.ColorToken.text)
                         Text(recommendation)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 13, weight: .regular))
+                            .lineSpacing(2)
                             .foregroundStyle(PD.ColorToken.textSecondary)
                             .lineLimit(2)
                     }
@@ -1847,9 +1848,8 @@ public struct LSCompletedTrainingHero: View {
             .offset(y: didReveal ? 0 : 5)
 
             VStack(alignment: .leading, spacing: 0) {
-                Text("ПРЕДМЕТЫ ЗАЧЁТКИ")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .kerning(0.7)
+                Text("Предметы зачётки")
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(PD.ColorToken.textSecondary)
                     .padding(.bottom, 2)
                 ForEach(skillRows) { skill in
@@ -1902,11 +1902,11 @@ public struct LSCompletedTrainingHero: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(PD.ColorToken.text)
                 Text(skill.subtitle)
-                    .font(.system(size: 11, weight: .regular))
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(PD.ColorToken.textSecondary)
                     .lineLimit(1)
                 Text(detail)
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
                     .lineLimit(1)
             }
@@ -1917,7 +1917,7 @@ public struct LSCompletedTrainingHero: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(0.86)))
                     Text(result)
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(PD.ColorToken.textSecondary)
                         .lineLimit(1)
                 } else {
@@ -1929,7 +1929,7 @@ public struct LSCompletedTrainingHero: View {
                         .minimumScaleFactor(0.78)
                     if skill.score == nil {
                         Text(skill.sessions > 0 ? "есть данные" : "нет результата")
-                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(PD.ColorToken.textSecondary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.72)
@@ -1955,7 +1955,7 @@ public struct LSCompletedTrainingHero: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.78)
             Text(label.uppercased())
-                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
