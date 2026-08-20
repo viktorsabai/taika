@@ -1,3 +1,11 @@
+# Compile fix — LessonsDS Color vs AnyShapeStyle
+
+| Задача | Статус |
+|---|---|
+| Проверить тип `accentFill` и использования `diagnosticSignal` | Не начато |
+| Исправить несовместимость `Color`/`AnyShapeStyle` | Не начато |
+| Проверить diff и отправить compile fix | Не начато |
+
 # Error queue runtime — partial game completion и заметный UI
 
 | Задача | Статус |

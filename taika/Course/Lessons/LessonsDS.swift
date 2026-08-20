@@ -2114,7 +2114,7 @@ public struct LSCompletedLessonList: View {
                                         .lineLimit(1)
                                     Text(lessonStatus)
                                         .font(.system(size: 12, weight: .regular))
-                                        .foregroundStyle(weak ? AnyShapeStyle(diagnosticSignal.opacity(0.76)) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                                        .foregroundStyle(weak ? diagnosticSignal : AnyShapeStyle(PD.ColorToken.textSecondary))
                                         .lineLimit(1)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -2149,7 +2149,7 @@ public struct LSCompletedLessonList: View {
     }
 
     /// A quiet diagnostic marker; the course dashboard should not look like an incident tracker.
-    private var diagnosticSignal: Color {
+    private var diagnosticSignal: AnyShapeStyle {
         accentFill
     }
 
