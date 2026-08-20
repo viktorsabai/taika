@@ -1237,8 +1237,17 @@ extension LessonsView {
         let legacyRecord = covered == 0
 
         let action: () -> Void = {
+            if !isCompletedCourse,
+               let nextLessonId = smartResumeLessonId,
+               let courseId = currentCourse?.courseID {
+                selectedLessonId = nextLessonId
+                nav.go(.lesson(courseId: courseId, lessonId: nextLessonId, presentation: .canonical))
+                return
+            }
             selectedGameLessonId = nil
             selectedGameType = .match
+            pendingGameLessonIds = effectiveReinforcementLessonIds
+            GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: effectiveReinforcementLessonIds)
             frozenSnapshot = captureWindowSnapshot()
             withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
                 showGameOverlay = true
@@ -1249,14 +1258,14 @@ extension LessonsView {
         return AnyView(
             VStack(alignment: .leading, spacing: 7) {
                 HStack(spacing: 8) {
-                    Image(systemName: legacyRecord ? "arrow.triangle.2.circlepath" : "checkmark.seal.fill")
+                    Image(systemName: !isCompletedCourse ? "arrow.forward.circle" : (legacyRecord ? "arrow.triangle.2.circlepath" : "checkmark.seal.fill"))
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                    Text(legacyRecord ? "Тренировка курса" : "Курс готов к закреплению")
+                    Text(!isCompletedCourse ? "Курс в процессе" : (legacyRecord ? "Тренировка курса" : "Курс готов к закреплению"))
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white.opacity(0.92))
                     Spacer(minLength: 4)
-                    if let score {
+                    if isCompletedCourse, let score {
                         VStack(alignment: .trailing, spacing: 1) {
                             Text("\(score)%")
                                 .font(Theme.Fonts.metric(13))
@@ -1270,9 +1279,11 @@ extension LessonsView {
                 }
 
                 Text(
-                    legacyRecord
-                    ? "Старый результат ещё не связан с карточками этого курса."
-                    : "Закрепление: \(covered) карточек\(totalCards > 0 ? " из \(totalCards)" : "") · \(sessions) \(sessions == 1 ? "игра" : "игр")."
+                    !isCompletedCourse
+                    ? "Первый шаг сделан. Продолжай следующий урок — закрепление будет после завершения курса."
+                    : (legacyRecord
+                       ? "Старый результат ещё не связан с карточками этого курса."
+                       : "Закрепление: \(covered) карточек\(totalCards > 0 ? " из \(totalCards)" : "") · \(sessions) \(sessions == 1 ? "игра" : "игр").")
                 )
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.white.opacity(0.62))
@@ -1280,14 +1291,14 @@ extension LessonsView {
 
                 HStack(spacing: 10) {
                     if let matchedPercent {
-                        Text("совпало \(matchedPercent)%")
+                        Text(isCompletedCourse ? "совпало \(matchedPercent)%" : "первый подход · \(covered) карточек")
                             .font(Theme.Fonts.metric(11))
-                            .foregroundStyle(.white.opacity(0.78))
+                            .foregroundStyle(.white.opacity(0.62))
                     }
                     Spacer(minLength: 4)
                     Button(action: action) {
                         HStack(spacing: 5) {
-                            Text(legacyRecord ? "Связать игру" : "Закрепить дальше")
+                            Text(!isCompletedCourse ? "Продолжить урок" : (legacyRecord ? "Связать игру" : "Закрепить дальше"))
                                 .font(.system(size: 11, weight: .semibold))
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 10, weight: .bold))
