@@ -372,10 +372,12 @@ public struct LSLessonHeader: View {
                             .font(.system(size: 14, weight: .semibold))
                     }
                     .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    .frame(minWidth: 112, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .padding(.leading, 12)
-                .padding(.top, 12)
+                .padding(.leading, 8)
+                .padding(.top, 8)
             } else {
                 Circle()
                     .frame(width: 18, height: 18)
@@ -780,6 +782,8 @@ public struct LSBackToCoursesButton: View {
             .foregroundStyle(ThemeManager.shared.currentAccentFill)
         }
         .buttonStyle(.plain)
+        .frame(minWidth: 148, minHeight: 44, alignment: .leading)
+        .contentShape(Rectangle())
         .accessibilityIdentifier("backToCoursesButton")
     }
 }

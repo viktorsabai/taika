@@ -1604,3 +1604,10 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Оставить зелёный только на реально завершённых карточках уроков.
 - [x] Привести выбор уроков in-progress курса к списочному UX completed-сценария.
 - [x] Выполнить static validation и подготовить commit/push.
+
+# LessonsView back navigation UX
+
+- [x] Найти текущий back action и его visual/touch target.
+- [x] Сделать back affordance нативной с удобной областью нажатия.
+- [x] Проверить, что back не конфликтует с carousel/scroll gestures.
+- [x] Выполнить static validation и подготовить commit/push.
