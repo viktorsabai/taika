@@ -2694,28 +2694,27 @@ private struct CDCourseStatusPill: View {
     }
 
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .bold))
             Text(title)
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .kerning(0.32)
+                .font(.system(size: 13, weight: .bold))
                 .lineLimit(1)
             Image(systemName: trailingIcon)
                 .font(.system(size: 11, weight: .bold))
         }
-        .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.88)))
+        .foregroundStyle(Color.black.opacity(0.92))
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(
             Capsule(style: .continuous)
                 .fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
         )
-        .overlay(
-            Capsule(style: .continuous)
-                .stroke(Color.white.opacity(0.48), lineWidth: 1)
+        .shadow(
+            color: TaikaMasteryTokens.green.opacity(0.28),
+            radius: 8,
+            y: 2
         )
-        .shadow(color: TaikaMasteryTokens.green.opacity(0.20), radius: 7, y: 2)
     }
 }
 
@@ -3008,7 +3007,7 @@ public struct CourseLessonCard: View {
                         } label: {
                             CDCourseStatusPill(title: "ЗАКРЕПЛЕНИЕ", icon: "waveform.path.ecg", trailingIcon: "arrow.left")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
                         .accessibilityLabel("Вернуться к карточке курса")
                     }
                 }
@@ -3050,7 +3049,7 @@ public struct CourseLessonCard: View {
                                     AppStatusChip(kind: statusKind, title: statusChipTitle)
                                 }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
                             .accessibilityLabel("Открыть зачёт курса")
                         }
                     }

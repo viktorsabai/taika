@@ -1401,3 +1401,11 @@
 - [ ] Для платной игры показывать crown/PRO affordance и открывать Taika Pro/paywall flow вместо запуска или picker.
 - [ ] Проверить, что существующий speaker routing и selected lesson scope не изменились.
 - [ ] Выполнить static validation на overflow, call-site types и navigation regressions.
+
+# Exact Start-style completed status
+
+- [ ] Использовать canonical Start capsule как единственный источник геометрии status chip.
+- [ ] Убрать отдельный monospaced status style и отдельные размеры/padding у CDCourseStatusPill.
+- [ ] Сохранить только заменяемые content-параметры: icon, title и direction arrow.
+- [ ] Применить одинаковую capsule на лицевой стороне «КУРС ПРОЙДЕН» и на обороте «ЗАКРЕПЛЕНИЕ».
+- [ ] Проверить exact font, padding, fill, shadow и PressDownStyle against Start button.
