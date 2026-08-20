@@ -10,26 +10,30 @@ import UIKit
 
 /// Shared semantic color for completed/mastery surfaces; accessible across design-system files.
 public enum TaikaMasteryTokens {
-    /// Solid companion for places that cannot render a gradient; use the darker gradient stop.
+    /// Solid companion for non-gradient surfaces: the readable jungle mid-tone of the leaf palette.
     public static let green = Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0)
 
-    /// Exact completed/mastery accent: #36F5B0 → #19CFA0, left to right.
-    /// Use only for completed/learned states; neutral and in-progress cards keep their own accent.
+    /// Natural completed/mastery accent: pink leaf core → variegated lime → jungle green edge.
+    /// It is intentionally a continuation of Taika pink, not a flat status green.
     public static let greenGradient = LinearGradient(
         colors: [
-            Color(red: 0x36 / 255.0, green: 0xF5 / 255.0, blue: 0xB0 / 255.0),
-            Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0)
+            Color(red: 0xFF / 255.0, green: 0x8B / 255.0, blue: 0xCB / 255.0),
+            Color(red: 0xD4 / 255.0, green: 0xF2 / 255.0, blue: 0x63 / 255.0),
+            Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0),
+            Color(red: 0x0B / 255.0, green: 0x8F / 255.0, blue: 0x68 / 255.0)
         ],
         startPoint: .leading,
         endPoint: .trailing
     )
 
-    public static let greenGlow = Color(red: 0x36 / 255.0, green: 0xF5 / 255.0, blue: 0xB0 / 255.0)
+    /// Bright lime-pink highlight used for readable completed strokes and counters.
+    public static let greenGlow = Color(red: 0xD4 / 255.0, green: 0xF2 / 255.0, blue: 0x63 / 255.0)
 
-    /// Same exact mastery accent for compact status badges.
+    /// Same natural leaf family for compact status badges and completion chips.
     public static let greenBadgeGradient = LinearGradient(
         colors: [
-            Color(red: 0x36 / 255.0, green: 0xF5 / 255.0, blue: 0xB0 / 255.0),
+            Color(red: 0xFF / 255.0, green: 0xA6 / 255.0, blue: 0xD5 / 255.0),
+            Color(red: 0xD4 / 255.0, green: 0xF2 / 255.0, blue: 0x63 / 255.0),
             Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0)
         ],
         startPoint: .leading,

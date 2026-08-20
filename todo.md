@@ -1650,3 +1650,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Сделать системные metric numbers с единым reveal motion без layout jumps.
 - [x] Перепроектировать нижний diagnostics/lesson selection block с одним ясным CTA.
 - [x] Выполнить static validation и подготовить один финальный push.
+
+# Natural mastery gradient family
+
+- [x] Аудировать текущие pink/mastery tokens и все completed usages.
+- [x] Зафиксировать природную pink-core/lime/jungle gradient family по референсу.
+- [x] Синхронизировать chips, progress, grade sheet, lines и completed rows.
+- [x] Проверить контраст, локальность акцентов и отсутствие full-screen green overlay.
+- [x] Выполнить static validation и подготовить один финальный push.

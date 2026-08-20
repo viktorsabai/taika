@@ -377,7 +377,9 @@ private extension LessonsView {
                 onToggle: toggleTrainingSelection,
                 onOpen: openCompletedLesson,
                 onSelectAll: selectAllTrainingLessons,
-                onClearAll: clearAllTrainingLessons
+                onClearAll: clearAllTrainingLessons,
+                accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
+                accentColor: TaikaMasteryTokens.greenGlow
             )
         }
     }
