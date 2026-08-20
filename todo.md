@@ -1,3 +1,12 @@
+# Fix — completed lesson opens completion screen from list
+
+| Задача | Статус |
+|---|---|
+| Найти route открытия урока и persisted completion state | Не начато |
+| Разделить direct lesson open и resume/completion restoration | Не начато |
+| Проверить все lesson-opening calls и собрать compile-safe fix | Не начато |
+| Закоммитить и запушить исправление | Не начато |
+
 # Compile fix — remove stale statusText reference
 
 | Задача | Статус |

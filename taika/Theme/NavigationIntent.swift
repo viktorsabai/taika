@@ -32,6 +32,19 @@ public struct LessonRoutePresentation: Hashable {
         useInternalBackground: true
     )
 
+    /// Direct open from the LessonsView list. Explicit startIndex is intentional:
+    /// it must not resume the persisted last card or restore the completion overlay.
+    public static let directStart = LessonRoutePresentation(
+        startIndex: 0,
+        scope: .full,
+        showKinds: nil,
+        layoutCardsOnly: false,
+        allowLearning: true,
+        showBottomProgress: true,
+        showInternalHeader: false,
+        useInternalBackground: true
+    )
+
     /// Полноэкранный урок из списка «Показать всё» (push в общем стеке — как канонический урок, с `PD.ColorToken.background` в `StepView`).
     public static func favoritesAllList(startIndex: Int, hacksOnly: Bool) -> LessonRoutePresentation {
         LessonRoutePresentation(

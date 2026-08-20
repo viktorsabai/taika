@@ -1567,7 +1567,7 @@ extension LessonsView {
                         nav.go(.lesson(
                             courseId: currentCourse?.courseID ?? "",
                             lessonId: lid,
-                            presentation: .canonical
+                            presentation: .directStart
                         ))
                     }
                 }
@@ -1593,7 +1593,7 @@ extension LessonsView {
                 nav.go(.lesson(
                     courseId: currentCourse?.courseID ?? "",
                     lessonId: lid,
-                    presentation: .canonical
+                    presentation: .directStart
                 ))
             },
             onSpeaker: isTheoryBonusCourse ? nil : { item in
@@ -1613,7 +1613,7 @@ extension LessonsView {
                 nav.go(.lesson(
                     courseId: currentCourse?.courseID ?? "",
                     lessonId: nextLesson.lessonID,
-                    presentation: .canonical
+                    presentation: .directStart
                 ))
             },
             selectedIndex: activeLessonIndex,

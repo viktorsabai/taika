@@ -54,6 +54,9 @@ struct StepView: View {
     let lessonId: String?
     let lessonTitle: String?
     let startIndex: Int?
+    /// Direct lesson opens (for example from the lesson list arrow) must show the learning flow,
+    /// not immediately restore/present the completion overlay for an already learned lesson.
+    private let suppressInitialCompletionSummary: Bool
     let scope: InteractionScope
     let showKinds: [SDStepItem.Kind]?
     /// layout-only flag: when true, show ONLY the central cards (no FM, no progress)
@@ -88,6 +91,7 @@ struct StepView: View {
         self.lessonId = lessonId
         self.lessonTitle = lessonTitle
         self.startIndex = startIndex
+        self.suppressInitialCompletionSummary = startIndex != nil && scope == .full
         self.scope = scope
         self.showKinds = showKinds
         let overlayMode = (scope == .overlay)
@@ -1366,6 +1370,12 @@ struct StepView: View {
                 GameHeaderStore.shared.config = nil
                 isMounted = true
                 summaryOverlaySettled = !showLessonSummary
+                // A direct open from LessonsView starts in the normal learning flow even when
+                // every card was previously learned. If the user changes progress afterwards,
+                // the existing completion transition is allowed to work again.
+                if suppressInitialCompletionSummary {
+                    didShowSummaryOnce = true
+                }
                 // debug print removed
                 loadFromStepData()
                 if !isOverlay && !resolvedCourseId.isEmpty {
