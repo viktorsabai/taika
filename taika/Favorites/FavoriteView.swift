@@ -41,31 +41,6 @@ struct FavoriteView: View {
             .sorted { $0.addedAt > $1.addedAt }
     }
 
-    private var hacksList: [FDHackDTO] {
-        let explicit = manager.hacksDTO
-        let fromCards: [FDHackDTO] = manager.cardsDTO.compactMap { card in
-            let source = canonicalId(card)
-            let isHack = source.lowercased().hasPrefix("hack:") || card.meta.lowercased().hasPrefix("hack:")
-            guard isHack else { return nil }
-            let normalizedSource = source.hasPrefix("hack:") ? source : "hack:\(source)"
-            return FDHackDTO(
-                sourceId: normalizedSource,
-                title: card.title,
-                meta: card.meta,
-                lessonTitle: card.lessonTitle,
-                addedAt: card.addedAt
-            )
-        }
-        var seen = Set<String>()
-        return (explicit + fromCards)
-            .sorted { $0.addedAt > $1.addedAt }
-            .filter { seen.insert($0.sourceId).inserted }
-    }
-
-    private var coursesList: [FDCourseDTO] {
-        manager.coursesDTO.sorted { $0.addedAt > $1.addedAt }
-    }
-
     private var dictionaryList: [FDCardDTO] {
         manager.smartSpeakerDictionaryCardsDTO
     }
@@ -110,22 +85,6 @@ struct FavoriteView: View {
                 subtitle: "Скажи фразу в «Скажи сам» и нажми «Добавить».",
                 actionTitle: "скажи сам",
                 action: openOwnSpeech
-            )
-        case .hacks where hacksList.isEmpty:
-            return FavEmptySpec(
-                systemImage: "lightbulb",
-                title: "Подсказки, которые жалко потерять",
-                subtitle: "Сохраняй лайфхаки в уроках — они появятся здесь.",
-                actionTitle: "к урокам",
-                action: openCoursesBase
-            )
-        case .courses where coursesList.isEmpty:
-            return FavEmptySpec(
-                systemImage: "graduationcap",
-                title: "Курсы, к которым хочешь вернуться",
-                subtitle: "Добавь курс в избранное — он будет ждать здесь.",
-                actionTitle: "к курсам",
-                action: openCoursesBase
             )
         default:
             return nil
@@ -180,14 +139,14 @@ struct FavoriteView: View {
             .padding(.top, Theme.Layout.rootHeaderClearance)
         }
         .onAppear {
-            if favFilter.selectedTab == .dictionary || favFilter.selectedTab == .courses {
+            if favFilter.selectedTab == .hacks || favFilter.selectedTab == .courses {
                 favFilter.selectedTab = .cards
             }
             selectedTab = favFilter.selectedTab
             StepData.shared.preload()
         }
         .onChange(of: selectedTab) { _, newValue in
-            let normalized: FavoriteScreenTab = (newValue == .dictionary || newValue == .courses) ? .cards : newValue
+            let normalized: FavoriteScreenTab = (newValue == .hacks || newValue == .courses) ? .cards : newValue
             if selectedTab != normalized {
                 selectedTab = normalized
                 return
@@ -197,7 +156,7 @@ struct FavoriteView: View {
             }
         }
         .onChange(of: favFilter.selectedTab) { _, newValue in
-            let normalized: FavoriteScreenTab = (newValue == .dictionary || newValue == .courses) ? .cards : newValue
+            let normalized: FavoriteScreenTab = (newValue == .hacks || newValue == .courses) ? .cards : newValue
             if selectedTab != normalized {
                 selectedTab = normalized
             }
@@ -210,13 +169,14 @@ struct FavoriteView: View {
     private func favoritesScreenHeader() -> some View {
         TaikaScreenPageTitle(title: "Избранное") {
             HStack(spacing: 8) {
-                if showsViewModeToggle {
-                    FDFavViewModeToggle(viewMode: activeViewMode)
-                }
                 FDFavoriteTabBar(
                     selection: $selectedTab,
                     dictionaryCount: dictionaryList.count
                 )
+                Spacer(minLength: 4)
+                if showsViewModeToggle {
+                    FDFavViewModeToggle(viewMode: activeViewMode)
+                }
             }
         }
         .padding(.top, 4)
@@ -321,19 +281,8 @@ struct FavoriteView: View {
                 },
                 onTrainInSpeaker: nil
             )
-        case .hacks:
-            FDFavHacksTabGrid(
-                hacks: hacksList,
-                isEditing: $isEditing,
-                onUnfavorite: { manager.remove(id: $0.sourceId) },
-                onOpen: openHack
-            )
-        case .courses:
-            FDFavCoursesTabGrid(
-                courses: coursesList,
-                onOpen: openCourse,
-                onUnfavorite: { manager.remove(id: "course:\($0.courseId)") }
-            )
+        case .hacks, .courses:
+            EmptyView()
         }
     }
 

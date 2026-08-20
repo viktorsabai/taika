@@ -22,7 +22,7 @@ public enum FavoriteScreenTab: String, CaseIterable, Identifiable {
 
     public var title: String {
         switch self {
-        case .cards: return "Карточки"
+        case .cards: return "Избранное"
         case .dictionary: return "Словарь"
         case .hacks: return "Лайфхаки"
         case .courses: return "Курсы"
@@ -31,15 +31,13 @@ public enum FavoriteScreenTab: String, CaseIterable, Identifiable {
 
     public var taikaFMScope: TaikaFMScope { .fav }
 
-    /// Курс больше не является отдельным избранным объектом: курсы с favorite cards живут во вкладке Courses → Избранное.
-    /// В Favorites остаются только сохранённые карточки и лайфхаки.
-    public static var mvpTabs: [FavoriteScreenTab] { [.cards, .hacks] }
+    /// Favorites содержит только две пользовательские коллекции: учебный фокус и личный словарь.
+    /// Лайфхаки остаются внутри курса, а курсы живут во вкладке Courses → Избранное.
+    public static var mvpTabs: [FavoriteScreenTab] { [.cards, .dictionary] }
 
     public init(fdk: FDK) {
         switch fdk {
-        case .all, .cards: self = .cards
-        case .hacks: self = .hacks
-        case .courses: self = .courses
+        case .all, .cards, .hacks, .courses: self = .cards
         }
     }
 }
@@ -61,7 +59,7 @@ public struct FDFavoriteTabBar: View {
     public var body: some View {
         AppInlineFilterPicker(
             titles: titles,
-            selectedIndex: tabs.firstIndex(of: selection) ?? 0
+            selectedIndex:             tabs.firstIndex(of: selection) ?? 0
         ) { index in
             guard tabs.indices.contains(index), selection != tabs[index] else { return }
             withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {

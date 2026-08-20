@@ -1,3 +1,13 @@
+# Favorites — final cards and dictionary redesign
+
+| Задача | Статус |
+|---|---|
+| Оставить в Favorites только сохранённые карточки | Сделано |
+| Убрать лайфхаки из Favorites navigation и source arrays | Сделано |
+| Развести Favorites как очередь повторения и Dictionary как архив/поиск | Сделано |
+| Выбрать представление карточек и native переключение режимов | Сделано |
+| Проверить empty states, actions и push финального Favorites flow | В работе |
+
 # Speaker — pronunciation result and breakdown polish
 
 | Задача | Статус |

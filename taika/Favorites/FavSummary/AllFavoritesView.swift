@@ -35,30 +35,11 @@ struct AllFavoritesView: View {
             .sorted { $0.addedAt > $1.addedAt }
     }
 
-    private var allHacks: [FDHackDTO] {
-        let explicit = manager.hacksDTO
-        let fromCards: [FDHackDTO] = manager.cardsDTO.compactMap { card in
-            let source = canonicalId(card)
-            let isHack = source.lowercased().hasPrefix("hack:") || card.meta.lowercased().hasPrefix("hack:")
-            guard isHack else { return nil }
-            let normalizedSource = source.hasPrefix("hack:") ? source : "hack:\(source)"
-            return FDHackDTO(
-                sourceId: normalizedSource,
-                title: card.title,
-                meta: card.meta,
-                lessonTitle: card.lessonTitle,
-                addedAt: card.addedAt
-            )
-        }
-        var seen = Set<String>()
-        return (explicit + fromCards)
-            .sorted { $0.addedAt > $1.addedAt }
-            .filter { seen.insert($0.sourceId).inserted }
-    }
+    /// Legacy overlay no longer renders lifehacks; they stay inside their course.
+    private var allHacks: [FDHackDTO] { [] }
 
-    private var allCourses: [FDCourseDTO] {
-        manager.coursesDTO.sorted { $0.addedAt > $1.addedAt }
-    }
+    /// Course favorites have their own Course catalog filter, not a Favorites row.
+    private var allCourses: [FDCourseDTO] { [] }
 
     private var filteredCardsAll: [FDCardDTO] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
