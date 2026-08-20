@@ -1220,16 +1220,22 @@ extension LessonsView {
                         .foregroundStyle(.white.opacity(0.92))
                     Spacer(minLength: 4)
                     if let score {
-                        Text("\(score)%")
-                            .font(Theme.Fonts.metric(13))
-                            .foregroundStyle(.white.opacity(0.92))
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text("\(score)%")
+                                .font(Theme.Fonts.metric(13))
+                                .monospacedDigit()
+                            Text("результат игры")
+                                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(.white.opacity(0.58))
+                        }
+                        .foregroundStyle(.white.opacity(0.92))
                     }
                 }
 
                 Text(
                     legacyRecord
                     ? "Старый результат ещё не связан с карточками этого курса."
-                    : "В игре: \(covered) карточек\(totalCards > 0 ? " из \(totalCards)" : "") · \(sessions) \(sessions == 1 ? "игра" : "игр")."
+                    : "Закрепление: \(covered) карточек\(totalCards > 0 ? " из \(totalCards)" : "") · \(sessions) \(sessions == 1 ? "игра" : "игр")."
                 )
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.white.opacity(0.62))

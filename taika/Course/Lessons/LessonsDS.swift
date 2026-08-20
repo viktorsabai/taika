@@ -1200,6 +1200,7 @@ public struct LSLessonRow: View {
             },
             completionFraction: (item.status == .completed ? 1.0 : nil),
             statusStarsFraction: starsFraction,
+            backFaceKind: item.status == .completed ? .lessonCompletion : .lessonReminders(lines: []),
             favoriteCount: item.favoriteCount
         )
     }

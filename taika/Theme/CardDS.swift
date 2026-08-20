@@ -3044,13 +3044,18 @@ public struct CourseLessonCard: View {
                                 }
                             } label: {
                                 if statusKind == .completed {
-                                    CDCourseStatusPill(title: "КУРС ПРОЙДЕН", icon: "checkmark.seal.fill", trailingIcon: isFlipped ? "arrow.left" : "arrow.right")
+                                    switch backFaceKind {
+                                    case .courseGradeSheet:
+                                        CDCourseStatusPill(title: "КУРС ПРОЙДЕН", icon: "checkmark.seal.fill", trailingIcon: isFlipped ? "arrow.left" : "arrow.right")
+                                    case .lessonCompletion, .lessonReminders:
+                                        AppStatusChip(kind: .completed, title: "УРОК ПРОЙДЕН")
+                                    }
                                 } else {
                                     AppStatusChip(kind: statusKind, title: statusChipTitle)
                                 }
                             }
                             .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
-                            .accessibilityLabel("Открыть зачёт курса")
+                            .accessibilityLabel(backFaceKind == .courseGradeSheet ? "Открыть зачёт курса" : "Открыть завершённый урок")
                         }
                     }
                 }

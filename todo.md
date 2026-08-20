@@ -1418,3 +1418,35 @@
 - [ ] Free match должен запускаться direct; paid modes должны показывать crown и «Открыть Taika Pro».
 - [ ] Не показывать повторный общий picker после выбора режима в dock.
 - [ ] Проверить закрытие dock, gameType и lesson scope на всех трех режимах.
+
+# BUG: in-progress LessonsView mixes lesson completion with course completion
+
+## Observed state
+
+When a user completes only the first lesson of a seven-lesson course and plays one reinforcement game, LessonsView remains structurally in the in-progress course flow, but the individual lesson card renders the course-level green status chip `КУРС ПРОЙДЕН`. The header also exposes a bare `100%` reinforcement result, which is visually read as course completion. The result is a false state: the course is not completed, only one lesson has been completed and one game session exists.
+
+## Analytics review / root cause
+
+`LessonsView.isCompletedCourse` is correctly intended to derive from `headerProgress.completed >= totalLessonsCount`, and `LessonsManager.headerCounts` is lesson-progress based. However, the lesson carousel passes each completed lesson through the shared `CourseLessonCard`, where the generic `.completed` branch uses the course-level status title and completed-course visual grammar. Separately, `courseGameSummary` exposes `ReinforcementStore.overallScore` as a bare percentage, without labeling it as a game/reinforcement score. Reinforcement metrics therefore leak course-level completion language into an in-progress course state.
+
+## Required fix
+
+Keep three independent state axes: course completion, lesson completion, and reinforcement progress. A completed lesson inside an incomplete course must remain a lesson card with a lesson-specific green completion treatment and must never receive the course badge, course flip/back grade sheet, or course-level CTA. The in-progress header must show lesson progress such as `1/7 уроков`; any reinforcement percentage must be explicitly labeled `результат игры` or `эффективность закрепления` and must not be presented as a course completion percentage.
+
+## Acceptance criteria
+
+- [ ] Scenario: complete lesson 1 of 7, play one game, return to LessonsView. The page remains in the in-progress LessonsView branch.
+- [ ] The lesson 1 card remains a lesson entity; it may use green wave completion styling, but its status copy is `УРОК ПРОЙДЕН`, not `КУРС ПРОЙДЕН`.
+- [ ] Lessons 2–7 retain normal locked/in-progress lesson-card styling and do not inherit course-card visuals.
+- [ ] No course flip/back grade sheet or completed-course reinforcement dashboard appears until all seven lessons are completed.
+- [ ] The top summary distinguishes lesson completion (`1/7`) from reinforcement metrics (`1 игра`, covered cards, or reinforcement score).
+- [ ] A fully completed course still uses the existing completed-course dashboard and course-level status pill unchanged.
+- [ ] Add/verify a regression test or deterministic debug scenario for `1/7 + 1 game` and `7/7 + 1 game` states.
+
+# Implement BUG fix: lesson card vs course card state
+
+- [ ] Передать explicit `isCourseCompleted`/course context в lesson-card renderer.
+- [ ] При неполном курсе показывать lesson-specific completed state без `КУРС ПРОЙДЕН`, course flip и course grade sheet.
+- [ ] Сохранить completed-course card behavior только для полного курса.
+- [ ] Явно подписать reinforcement score в in-progress summary.
+- [ ] Проверить сценарии `1/7 + game` и `7/7 + game` статически и через diff.
