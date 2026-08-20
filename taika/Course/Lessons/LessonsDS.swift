@@ -1732,6 +1732,10 @@ public struct LSCompletedLessonOption: Identifiable, Hashable {
     }
 }
 
+private enum LSGradeSheetTokens {
+    static let error = Color(red: 0.92, green: 0.28, blue: 0.32)
+}
+
 private struct LSCompletedJungleWaves: View {
     var body: some View {
         GeometryReader { proxy in
@@ -1861,13 +1865,47 @@ public struct LSCompletedTrainingHero: View {
             .offset(y: didReveal ? 0 : 5)
 
             VStack(alignment: .leading, spacing: 0) {
-                Text("Предметы зачётки")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
+                Rectangle()
+                    .fill(PD.ColorToken.stroke.opacity(0.55))
+                    .frame(height: 1)
+                    .padding(.top, 4)
+                    .padding(.bottom, 12)
+
+                Text("ПРЕДМЕТЫ ЗАЧЁТКИ")
+                    .font(.system(size: 12, weight: .bold))
+                    .kerning(0.4)
+                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
                     .padding(.bottom, 2)
                 ForEach(skillRows) { skill in
                     skillRow(skill)
                 }
+
+                Rectangle()
+                    .fill(PD.ColorToken.stroke.opacity(0.55))
+                    .frame(height: 1)
+                    .padding(.top, 14)
+                    .padding(.bottom, 11)
+
+                Text("СЛЕДУЮЩИЙ ШАГ")
+                    .font(.system(size: 12, weight: .bold))
+                    .kerning(0.4)
+                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
+                    .padding(.bottom, 2)
+
+                actionRow(
+                    icon: "person.wave.2.fill",
+                    title: "Продолжить в Спикере",
+                    detail: selectedCount > 0 ? "Произношение выбранных уроков" : "Выбери уроки ниже",
+                    enabled: onSpeaker != nil && selectedCount > 0,
+                    action: onSpeaker
+                )
+                actionRow(
+                    icon: "gamecontroller.fill",
+                    title: "Продолжить в Играх",
+                    detail: selectedCount > 0 ? "Память и закрепление выбранных уроков" : "Выбери уроки ниже",
+                    enabled: onGamePark != nil && selectedCount > 0,
+                    action: onGamePark
+                )
             }
         }
         .padding(14)
@@ -2047,7 +2085,7 @@ public struct LSCompletedLessonList: View {
     private var completedBody: some View {
         let visibleItems = showingErrorsOnly ? items.filter { weakIds.contains($0.id) } : items
         let selectedFill = AnyShapeStyle(PD.ColorToken.text.opacity(0.92))
-        let errorFill = AnyShapeStyle(ThemeManager.shared.currentAccentTintColor.opacity(0.82))
+        let errorFill = AnyShapeStyle(LSGradeSheetTokens.error)
         let hasErrors = !weakIds.isEmpty
         let selectedCount = selectedIds.intersection(Set(visibleItems.map(\.id))).count
 
@@ -2152,10 +2190,10 @@ public struct LSCompletedLessonList: View {
                                             .padding(.vertical, 4)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                                    .fill(ThemeManager.shared.currentAccentTintColor.opacity(0.10))
+                                                        .fill(LSGradeSheetTokens.error.opacity(0.11))
                                                     .overlay(
                                                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                                            .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.28), lineWidth: 1)
+                                                            .stroke(LSGradeSheetTokens.error.opacity(0.42), lineWidth: 1)
                                                     )
                                             )
                                         } else {

@@ -1,3 +1,12 @@
+# LessonsView — completed grade sheet final polish
+
+| Задача | Статус |
+|---|---|
+| Добавить явные native CTA для Speaker и Game Park | Сделано |
+| Разделить score metrics и skills визуальными секциями | Сделано |
+| Заменить malina error accent на строгий error token | Сделано |
+| Проверить completed flow, locked actions и push fix | В работе |
+
 # Favorites — contextual header switch redesign
 
 | Задача | Статус |
