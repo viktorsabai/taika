@@ -1,3 +1,12 @@
+# Follow-up — numeric and neutral navigation color correction
+
+| Задача | Статус |
+|---|---|
+| Перевести main score и subject scores на canonical gradient | Сделано |
+| Сделать `Уроки / Лайфхаки` нейтральным control | Сделано |
+| Применить special Taika metric font к course statistics | Сделано |
+| Проверить, что flat pink остаётся только там, где предусмотрено identity | Сделано |
+
 # Follow-up — canonical gradient color correction
 
 | Задача | Статус |

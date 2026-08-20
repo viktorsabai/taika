@@ -1392,20 +1392,16 @@ extension LessonsView {
                         Image(systemName: "chevron.down")
                             .font(.system(size: 10, weight: .bold))
                     }
-                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
                     .padding(.horizontal, 12)
                     .frame(height: 32)
                     .background(
                         Capsule(style: .continuous)
                             .fill(PD.ColorToken.card)
-                            .overlay(
-                                Capsule(style: .continuous)
-                                    .fill(TaikaMasteryTokens.greenGradient.opacity(0.12))
-                            )
                     )
                     .overlay(
                         Capsule(style: .continuous)
-                            .stroke(TaikaMasteryTokens.greenGradient, lineWidth: 1)
+                            .stroke(PD.ColorToken.stroke.opacity(0.72), lineWidth: 1)
                     )
                 }
                 .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
@@ -1414,7 +1410,7 @@ extension LessonsView {
                 AppInlineFilterPicker(
                     titles: [LSCourseContentMode.lessons.title, LSCourseContentMode.lifehacks.title],
                     selectedIndex: courseContentMode.rawValue,
-                    selectionAccent: AnyShapeStyle(TaikaMasteryTokens.greenGradient)
+                    selectionAccent: AnyShapeStyle(PD.ColorToken.textSecondary)
                 ) { index in
                     guard let next = LSCourseContentMode(rawValue: index), next != courseContentMode else { return }
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()

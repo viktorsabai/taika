@@ -1824,14 +1824,14 @@ public struct LSCompletedTrainingHero: View {
             Text("ЗАЧЁТКА КУРСА")
                 .font(.system(size: 12, weight: .bold))
                 .kerning(0.4)
-                .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 14) {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(stats.reinforcementScore == nil ? "—" : "\(displayedScore)%")
                             .font(Theme.Fonts.metric(48))
-                            .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
                             .monospacedDigit()
                             .lineLimit(1)
                             .minimumScaleFactor(0.68)
@@ -1933,7 +1933,7 @@ public struct LSCompletedTrainingHero: View {
                 } else {
                     Text(skill.score.map { "\($0)%" } ?? "—")
                         .font(Theme.Fonts.metric(21))
-                        .foregroundStyle(skill.score == nil ? AnyShapeStyle(PD.ColorToken.textSecondary) : AnyShapeStyle(PD.ColorToken.text))
+                        .foregroundStyle(skill.score == nil ? AnyShapeStyle(PD.ColorToken.textSecondary) : AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
                         .lineLimit(1)
                         .minimumScaleFactor(0.78)
                         .contentTransition(.numericText())
@@ -1955,7 +1955,8 @@ public struct LSCompletedTrainingHero: View {
     private func metric(value: String, label: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(value)
-                .font(Theme.Fonts.metric(23))
+                .font(Theme.Fonts.metric(27))
+                .monospacedDigit()
                 .foregroundStyle(PD.ColorToken.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.78)
