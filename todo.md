@@ -1569,3 +1569,10 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Зафиксировать одну геометрию сферы/микрофона между idle, listening и processing.
 - [x] Проверить CTA transitions, processing и result handoff.
 - [x] Выполнить static validation и запушить Speaker flow fix.
+
+# Speaker build and background fixes
+
+- [x] Исправить foregroundStyle LinearGradient/Color mismatch в SpeakerDS.swift:1061 через AnyShapeStyle.
+- [x] Вернуть Speaker глобальный graphite background token как на Main.
+- [x] Выполнить static validation (git diff --check и source audit).
+- [ ] Выполнить device/Xcode build gate check на macOS simulator.

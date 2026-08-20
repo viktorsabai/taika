@@ -1036,6 +1036,9 @@ public struct SpeakerDSRoot: View {
 
     @ViewBuilder private var conversationLiveStatusChip: some View {
         let isRec = conversationIsRecording
+        let labelStyle: AnyShapeStyle = isRec
+            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.86))
         let label: String = {
             if conversationIsPracticeFlow {
                 if isRec { return "говори по-тайски" }
@@ -1055,10 +1058,10 @@ public struct SpeakerDSRoot: View {
                     .shadow(color: Color.red.opacity(0.65), radius: 4)
                     .accessibilityHidden(true)
             }
-                Text(label.uppercased())
-                    .font(.system(size: 11, weight: .bold))
-                    .tracking(1.4)
-                    .foregroundStyle(isRec ? ThemeManager.shared.currentAccentFill : PD.ColorToken.textSecondary.opacity(0.86))
+            Text(label.uppercased())
+                .font(.system(size: 11, weight: .bold))
+                .tracking(1.4)
+                .foregroundStyle(labelStyle)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -2337,7 +2340,11 @@ public struct SpeakerDSRoot: View {
 
     public var body: some View {
         ZStack {
+            PD.ColorToken.background
+                .ignoresSafeArea()
+
             TaikaContinuousCanvasBackground()
+                .opacity(0.18)
 
             VStack(spacing: 0) {
                 topChrome
