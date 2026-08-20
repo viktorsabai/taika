@@ -124,9 +124,15 @@ public final class ReinforcementStore: ObservableObject {
                 var lesson = cm.byLesson[lid] ?? LessonMetrics()
                 lesson.sessions += 1
                 lesson.coveredCardKeys.formUnion(keys)
-                lesson.failedCardKeys.formUnion(normalizedFailedKeys.filter { $0.hasPrefix("\(rawLessonId)|") })
+                let sessionFailedKeys = normalizedFailedKeys.filter { $0.hasPrefix("\(rawLessonId)|") }
+                lesson.failedCardKeys.formUnion(sessionFailedKeys)
                 lesson.failedCardKeys.subtract(normalizedClearedKeys.filter { $0.hasPrefix("\(rawLessonId)|") })
-                lesson.lastScore = score.map { max(0, min(100, $0)) }
+                let sessionScore: Int? = {
+                    guard !keys.isEmpty else { return score }
+                    let cleanCount = max(0, keys.count - sessionFailedKeys.count)
+                    return Int((Double(cleanCount) / Double(keys.count) * 100).rounded())
+                }()
+                lesson.lastScore = sessionScore.map { max(0, min(100, $0)) }
                 cm.byLesson[lid] = lesson
             }
         } else {

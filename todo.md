@@ -1,3 +1,13 @@
+# Lesson-level reinforcement aggregation — результат игры по урокам
+
+| Задача | Статус |
+|---|---|
+| Сохранять source course/lesson для каждой карточки во всех reinforcement games | Не начато |
+| Пересчитывать score, attempts и errors отдельно по каждому уроку | Не начато |
+| Не показывать course-level 100% как замену lesson-level diagnostics | Не начато |
+| Подключить lesson metrics к строкам зачётки и error focus | Не начато |
+| Проверить mixed-lesson Audio/Recall flow и legacy metrics | Не начато |
+
 # Games 2–3 — единый каноничный completion overlay
 
 | Задача | Статус |

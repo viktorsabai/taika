@@ -1,6 +1,6 @@
 import SwiftUI
 
-private typealias AudioRecallRound = (item: StepItem, targetRU: String, choices: [String])
+private typealias AudioRecallRound = (item: StepItem, targetRU: String, choices: [String], lessonId: String?)
 
 private enum AudioRecallModel {
 
@@ -13,15 +13,16 @@ private enum AudioRecallModel {
 
     /// Эталон + 4–6 вариантов: правильный полный `ru` и до 5 других целых фраз из **того же пула** (все переданные карточки).
     /// Вызыватель передаёт уже отфильтрованный список (например, только выученные в уроке — как в играх 1–2).
-    static func buildRounds(from items: [StepItem], shuffleOrder: Bool) -> [AudioRecallRound] {
-        let learn = items.filter { StepData.isValidForProgress($0) }
-        var pairs: [(id: Int, item: StepItem, ru: String)] = []
+    static func buildRounds(from items: [(item: StepItem, lessonId: String?)], shuffleOrder: Bool) -> [AudioRecallRound] {
+        let learn = items.filter { StepData.isValidForProgress($0.item) }
+        var pairs: [(id: Int, item: StepItem, ru: String, lessonId: String?)] = []
         pairs.reserveCapacity(learn.count)
         var idCounter = 0
-        for it in learn {
+        for source in items {
+            let it = source.item
             let ru = normalizePhrase(it.ru)
             guard !ru.isEmpty else { continue }
-            pairs.append((id: idCounter, item: it, ru: ru))
+            pairs.append((id: idCounter, item: it, ru: ru, lessonId: source.lessonId))
             idCounter += 1
         }
         guard !pairs.isEmpty else { return [] }
@@ -47,7 +48,7 @@ private enum AudioRecallModel {
                 choices = [target] + Array(wrong.prefix(5))
             }
             choices.shuffle()
-            out.append((item, target, choices))
+            out.append((item, target, choices, pair.lessonId))
         }
         return out
     }
@@ -229,18 +230,22 @@ struct AudioRecallGameView: View {
                 didRecordReinforcementSession = true
                 let total = max(1, rounds.count)
                 let percent = max(0, min(100, Int((Double(score) / Double(total) * 100).rounded())))
+                let sourceCardKeys = rounds.compactMap { round -> String? in
+                    guard let lid = round.lessonId?.trimmingCharacters(in: .whitespacesAndNewlines), !lid.isEmpty else { return nil }
+                    return "\(lid)|\(round.targetRU)"
+                }
+                let failedKeys = sourceCardKeys.filter { key in
+                    guard let phrase = key.split(separator: "|", maxSplits: 1).last else { return false }
+                    return failedTargetRUs.contains(String(phrase).lowercased())
+                }
+                let clearedKeys = sourceCardKeys.filter { key in !failedKeys.contains(key) }
                 ReinforcementStore.shared.recordSession(
                     courseId: courseId,
                     gameType: "audioRecall",
                     score: percent,
-                    failedCardKeys: errorCardKeys?.filter { key in
-                        guard let phrase = key.split(separator: "|", maxSplits: 1).last else { return false }
-                        return failedTargetRUs.contains(String(phrase).lowercased())
-                    } ?? [],
-                    clearedCardKeys: errorCardKeys?.filter { key in
-                        guard let phrase = key.split(separator: "|", maxSplits: 1).last else { return false }
-                        return !failedTargetRUs.contains(String(phrase).lowercased())
-                    } ?? [],
+                    sourceCardKeys: sourceCardKeys,
+                    failedCardKeys: failedKeys,
+                    clearedCardKeys: clearedKeys,
                     lessonIds: reinforcementLessonIds ?? (lessonId.isEmpty ? [] : [lessonId])
                 )
             }
@@ -703,7 +708,7 @@ struct AudioRecallGameView: View {
         didRecordReinforcementSession = false
 
         let trimmedLessonId = lessonId.trimmingCharacters(in: .whitespacesAndNewlines)
-        var raw: [StepItem] = []
+        var raw: [(item: StepItem, lessonId: String?)] = []
 
         if trimmedLessonId.isEmpty, isFavoritesContext {
             // Игровой парк из «Избранного»: тот же пул, что у матча и викторины (`HomeTaskView.buildRound` / `recallTriples`).
@@ -715,12 +720,12 @@ struct AudioRecallGameView: View {
                 let ru = t.ru.trimmingCharacters(in: .whitespacesAndNewlines)
                 let ph = t.ph.trimmingCharacters(in: .whitespacesAndNewlines)
                 let th = t.th.trimmingCharacters(in: .whitespacesAndNewlines)
-                return StepItem(
+                return (item: StepItem(
                     favoritesAudioRecallOrder: idx,
                     ru: ru,
                     thai: th.isEmpty ? nil : th,
                     phonetic: ph
-                )
+                ), lessonId: nil)
             }
         } else if trimmedLessonId.isEmpty, isLearnedParkContext {
             let triples = LearnedGameSource.triples().filter {
@@ -731,12 +736,12 @@ struct AudioRecallGameView: View {
                 let ru = t.ru.trimmingCharacters(in: .whitespacesAndNewlines)
                 let ph = t.ph.trimmingCharacters(in: .whitespacesAndNewlines)
                 let th = t.th.trimmingCharacters(in: .whitespacesAndNewlines)
-                return StepItem(
+                return (item: StepItem(
                     favoritesAudioRecallOrder: idx,
                     ru: ru,
                     thai: th.isEmpty ? nil : th,
                     phonetic: ph
-                )
+                ), lessonId: nil)
             }
         } else if trimmedLessonId.isEmpty {
             // Course-mode: собираем learned-steps по всем урокам курса.
@@ -757,9 +762,9 @@ struct AudioRecallGameView: View {
                 raw.append(contentsOf: steps.filter {
                     guard learnedIdx.contains($0.order) else { return false }
                     guard let errorCardKeys else { return true }
-                    let key = Self.normalizedCardKey("\(lid)|\($0.ru ?? "")")
+                    let key = Self.normalizedCardKey("\(lid)|\($0.ru ?? \"\")")
                     return errorCardKeys.map(Self.normalizedCardKey).contains(key)
-                })
+                }.map { (item: $0, lessonId: lid) })
             }
         } else {
             // Lesson-mode: собираем learned-steps только из заданного урока.
@@ -768,16 +773,16 @@ struct AudioRecallGameView: View {
             raw = steps.filter {
                 guard learnedIdx.contains($0.order) else { return false }
                 guard let errorCardKeys else { return true }
-                let key = Self.normalizedCardKey("\(trimmedLessonId)|\($0.ru ?? "")")
+                let key = Self.normalizedCardKey("\(trimmedLessonId)|\($0.ru ?? \"\")")
                 return errorCardKeys.map(Self.normalizedCardKey).contains(key)
-            }
+            }.map { (item: $0, lessonId: trimmedLessonId) }
         }
 
         // Unify reinforcement pool with match/recall: dedupe by RU (case-insensitive).
         // HomeTaskManager.userTriples(...) already dedupes by ru.lowercased().
         var seenRU = Set<String>()
-        raw = raw.filter { item in
-            let ru = AudioRecallModel.normalizePhrase(item.ru).lowercased()
+        raw = raw.filter { source in
+            let ru = AudioRecallModel.normalizePhrase(source.item.ru).lowercased()
             guard !ru.isEmpty else { return false }
             guard seenRU.insert(ru).inserted else { return false }
             return true
