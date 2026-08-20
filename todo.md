@@ -1,3 +1,13 @@
+# Favorites — contextual header switch redesign
+
+| Задача | Статус |
+|---|---|
+| Убрать обрезанный dropdown `Избра... / Слова...` | Сделано |
+| Связать title экрана с активной коллекцией | Сделано |
+| Сделать contextual switch heart ↔ bookmark рядом с list/grid | Сделано |
+| Переработать Speaker/Игры в native practice action area | Сделано |
+| Проверить toolbar icon, actions и push final header fix | В работе |
+
 # App-wide portrait-only orientation
 
 | Задача | Статус |

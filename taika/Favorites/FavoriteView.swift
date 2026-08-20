@@ -123,7 +123,7 @@ struct FavoriteView: View {
                                 .frame(maxWidth: .infinity, alignment: .topLeading)
 
                             if showsBottomTrainingBar {
-                                favoritesTopActionRow()
+                                favoritesPracticeSection()
                                     .padding(.horizontal, CD.Spacing.screen)
                                     .padding(.top, 18)
                                     .padding(.bottom, bottomContentInset)
@@ -166,76 +166,84 @@ struct FavoriteView: View {
         }
     }
 
+    private var collectionTitle: String {
+        selectedTab == .dictionary ? "Словарь" : "Избранное"
+    }
+
     private func favoritesScreenHeader() -> some View {
-        TaikaScreenPageTitle(title: "Избранное") {
-            HStack(spacing: 8) {
-                FDFavoriteTabBar(
-                    selection: $selectedTab,
-                    dictionaryCount: dictionaryList.count
-                )
-                Spacer(minLength: 4)
-                if showsViewModeToggle {
-                    FDFavViewModeToggle(viewMode: activeViewMode)
-                }
+        TaikaScreenPageTitle(title: collectionTitle) {
+            if showsViewModeToggle {
+                FDFavViewModeToggle(viewMode: activeViewMode)
             }
         }
         .padding(.top, 4)
     }
 
-    /// Dictionary-style action rail: both actions share one quiet glass treatment.
-    private func favoritesTopActionRow() -> some View {
-        HStack(spacing: 8) {
-            favoritesQuickAction(
+    /// Native practice rows: one hierarchy, one clear next action per row.
+    private func favoritesPracticeSection() -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(selectedTab == .dictionary ? "ПРАКТИКА СЛОВАРЯ" : "ПРАКТИКА ИЗБРАННОГО")
+                .taikaSectionTitleStyle()
+                .padding(.bottom, 4)
+
+            favoritesPracticeRow(
                 icon: "person.wave.2.fill",
                 title: "Спикер",
-                accessibilityLabel: "Тренировать избранное в спикере"
+                detail: selectedTab == .dictionary ? "Произношение карточек словаря" : "Произношение сохранённых карточек",
+                accessibilityLabel: selectedTab == .dictionary ? "Тренировать словарь в спикере" : "Тренировать избранное в спикере"
             ) {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 trainCurrentTabInSpeaker()
             }
 
-            favoritesQuickAction(
+            favoritesPracticeRow(
                 icon: "gamecontroller.fill",
                 title: "Игры",
-                accessibilityLabel: "Открыть игры для избранного"
+                detail: selectedTab == .dictionary ? "Память и закрепление словаря" : "Память и закрепление избранного",
+                accessibilityLabel: selectedTab == .dictionary ? "Открыть игры для словаря" : "Открыть игры для избранного"
             ) {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 overlay.present(.gameParkFromFavorites)
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 42)
     }
 
-    private func favoritesQuickAction(
+    private func favoritesPracticeRow(
         icon: String,
         title: String,
+        detail: String,
         accessibilityLabel: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 7) {
+            HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                Text(title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    .frame(width: 28, alignment: .leading)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.text)
+                    Text(detail)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
             }
-            .foregroundStyle(ThemeManager.shared.currentAccentFill)
-            .frame(maxWidth: .infinity)
-            .frame(height: 42)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(CD.ColorToken.card.opacity(0.72))
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(PD.ColorToken.stroke.opacity(0.58), lineWidth: 1)
-            )
-            .contentShape(Capsule())
+            .padding(.vertical, 13)
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(PD.ColorToken.stroke.opacity(0.42))
+                    .frame(height: 1)
+            }
+            .contentShape(Rectangle())
         }
-        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+        .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
     }
 

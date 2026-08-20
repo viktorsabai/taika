@@ -450,6 +450,29 @@ public struct AppHeader: View {
         )
     }
 
+    /// Contextual collection switch: the glyph always points to the other collection.
+    @ViewBuilder
+    private func collectionHeaderButton(
+        icon: String,
+        count: Int,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            if count > 0 {
+                headerCounterBadge(
+                    icon: icon,
+                    text: "\(count)",
+                    active: true
+                )
+            } else {
+                headerIcon(icon, isAccent: false)
+            }
+        }
+        .buttonStyle(TaikaHeaderButtonStyle())
+        .accessibilityLabel(count > 0 ? "\(accessibilityLabel), \(count) фраз" : accessibilityLabel)
+    }
+
     /// Личный словарь: bookmark glyph (+ счётчик).
     @ViewBuilder
     private func dictionaryHeaderButton(
@@ -572,9 +595,31 @@ public struct AppHeader: View {
                             .accessibilityLabel("Выбрать курсы, попыток \(speakerDailyAttemptsRemaining)")
                         }
                     case 3:
-                        // Favorites: личный словарь — отдельная utility entry point, не фильтр.
-                        if let onDict = onTapDictionary {
-                            dictionaryHeaderButton(count: dictionaryCount, action: onDict)
+                        // Favorites: one contextual icon switches to the other collection.
+                        if favoritesFilter.selectedTab == .dictionary {
+                            collectionHeaderButton(
+                                icon: "heart.fill",
+                                count: favoritesTotalCount,
+                                accessibilityLabel: "Открыть избранное"
+                            ) {
+                                withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                                    favoritesFilter.selectedTab = .cards
+                                }
+                            }
+                        } else {
+                            collectionHeaderButton(
+                                icon: "bookmark.fill",
+                                count: dictionaryCount,
+                                accessibilityLabel: "Открыть словарь"
+                            ) {
+                                if let onDict = onTapDictionary {
+                                    onDict()
+                                } else {
+                                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                                        favoritesFilter.selectedTab = .dictionary
+                                    }
+                                }
+                            }
                         }
                         if let onSearch = onTapFavoritesSearch {
                             headerIconButton("magnifyingglass", action: onSearch)
