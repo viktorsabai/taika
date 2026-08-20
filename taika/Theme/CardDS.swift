@@ -2700,10 +2700,14 @@ private struct CDCourseStatusPill: View {
             Text(title)
                 .font(.system(size: 13, weight: .bold))
                 .lineLimit(1)
+                .minimumScaleFactor(0.68)
+                .allowsTightening(true)
+                .layoutPriority(1)
             Image(systemName: trailingIcon)
                 .font(.system(size: 11, weight: .bold))
         }
         .foregroundStyle(Color.black.opacity(0.92))
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(

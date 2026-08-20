@@ -1450,3 +1450,9 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Сохранить completed-course card behavior только для полного курса.
 - [ ] Явно подписать reinforcement score в in-progress summary.
 - [ ] Проверить сценарии `1/7 + game` и `7/7 + game` статически и через diff.
+
+# Minimal fix: CourseView status chip overflow
+
+- [ ] Сверить статус с canonical Start: system 13 bold, spacing 6, padding 14/8, arrow 11 bold, PressDownStyle.
+- [ ] Убрать обрезку `КУРС ПРОЙДЕН` на узкой course card: дать тексту минимальный scale factor/fixed-size behavior без увеличения capsule.
+- [ ] Проверить одинаковый compact layout на face `КУРС ПРОЙДЕН` и back `ЗАКРЕПЛЕНИЕ`.
