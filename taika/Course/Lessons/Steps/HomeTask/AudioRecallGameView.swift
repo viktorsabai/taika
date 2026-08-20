@@ -897,7 +897,7 @@ struct AudioRecallGameView: View {
     private var completionOverlay: some View {
         ZStack {
             OverlayEtalonBackground(onDismiss: onClose)
-            OverlayEtalonCard(title: "Аудио-реплика завершена", onDismiss: onClose) {
+            OverlayEtalonCard(title: "Урок закреплён", onDismiss: onClose) {
                 VStack(spacing: 16) {
                     completionOverlayStats
                     completionOverlayActionButtons
@@ -932,6 +932,7 @@ struct AudioRecallGameView: View {
                 reloadSession()
                 GameHeaderStore.shared.config = headerConfig()
             },
+            errorCount: failedTargetRUs.count,
             onNextGame: onNextGame.map { next in
                 {
                     StepAudio.shared.stop()

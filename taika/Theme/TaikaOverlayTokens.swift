@@ -73,12 +73,16 @@ struct GlassBackdrop: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        Theme.Surfaces.blackGlassScrim
-            .opacity(TaikaOverlayTokens.Material.backdropOpacity)
-            .ignoresSafeArea()
-            .contentShape(Rectangle())
-            .onTapGesture(perform: onDismiss)
-            .accessibilityHidden(true)
+        ZStack {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+            Rectangle()
+                .fill(Color.black.opacity(TaikaOverlayTokens.Material.backdropOpacity))
+        }
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onDismiss)
+        .accessibilityHidden(true)
     }
 }
 

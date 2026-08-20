@@ -1,3 +1,12 @@
+# Games 2–3 — единый каноничный completion overlay
+
+| Задача | Статус |
+|---|---|
+| Сравнить Match/Recall/AudioRecall completion overlay и фон | Не начато |
+| Убрать отдельный AudioRecall final overlay, не использующий каноничный blur | Не начато |
+| Свести заголовок, статистику, error CTA, Speaker и next game к единому компоненту | Не начато |
+| Проверить Pro/non-Pro и ошибки в играх 2–3 | Не начато |
+
 # Compile fix — GameCompletionActions argument order
 
 | Задача | Статус |
