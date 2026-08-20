@@ -710,6 +710,8 @@ public enum CDCourseStatus { case new, inProgress, done }
 public enum CourseScreenTab: String, CaseIterable, Identifiable {
     /// Начатые и избранные курсы каталога.
     case resume
+    /// Только полностью пройденные курсы.
+    case completed
     /// Курсы «База от Тайки».
     case base
     /// Тематические курсы (жизнь, душа, волна).
@@ -724,6 +726,7 @@ public enum CourseScreenTab: String, CaseIterable, Identifiable {
     public var title: String {
         switch self {
         case .resume: return "Продолжить"
+        case .completed: return "Пройденные"
         case .base: return "База"
         case .scenarios: return "Сценарии"
         case .dictionary: return "Словарь"
@@ -735,6 +738,7 @@ public enum CourseScreenTab: String, CaseIterable, Identifiable {
     public var taikaFMScope: TaikaFMScope {
         switch self {
         case .resume: return .resume
+        case .completed: return .resume
         case .base: return .course
         case .scenarios: return .scenarios
         case .dictionary: return .dictionary
@@ -1883,7 +1887,7 @@ public struct CDWeeklyRhythmSection: View {
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
                     rhythmValue(value: displayLessons, label: lessonWord(model.lessons), delay: 0)
-                    rhythmValue(value: displayMinutes, label: "мин", delay: 0.08)
+                    rhythmValue(value: displayMinutes, label: "учебн. мин", delay: 0.08)
                     rhythmValue(value: displayWords, label: wordWord(model.words), delay: 0.16)
                 }
                 .padding(.horizontal, CD.Spacing.screen)
@@ -1941,7 +1945,7 @@ public struct CDWeeklyRhythmSection: View {
         TaikaStatMetric(
             valueText: "\(value)",
             label: label,
-            valueSize: 64,
+            valueSize: 42,
             accent: false,
             appeared: appeared,
             delay: delay

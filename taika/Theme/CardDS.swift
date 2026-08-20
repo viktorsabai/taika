@@ -2581,11 +2581,20 @@ private struct CardBackActionButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 Capsule(style: .continuous)
-                    .fill(Color.clear)
+                    .fill(
+                        isMastery
+                        ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.14))
+                        : AnyShapeStyle(Color.clear)
+                    )
             )
             .overlay(
                 Capsule(style: .continuous)
-                    .stroke(isMastery ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.88)) : AnyShapeStyle(Color.white.opacity(0.28)), lineWidth: 1)
+                    .stroke(
+                        isMastery
+                        ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
+                        : AnyShapeStyle(Color.white.opacity(0.28)),
+                        lineWidth: 1
+                    )
             )
             .contentShape(Capsule(style: .continuous))
             .opacity(configuration.isPressed ? 0.68 : 1)
@@ -2981,11 +2990,19 @@ public struct CourseLessonCard: View {
     private var courseProShadowY: CGFloat { showsProWash ? 5 : 0 }
 
     private var effectiveAccentTreatment: CardDS.AccentTreatment {
-        if case .none = accentTreatment, statusKind == .completed {
-            return .taikaValues(
-                fill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
-                glow: TaikaMasteryTokens.greenGlow
-            )
+        if case .none = accentTreatment {
+            if statusKind == .completed {
+                return .taikaValues(
+                    fill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
+                    glow: TaikaMasteryTokens.greenGlow
+                )
+            }
+            if isFavoriteActive {
+                return .taikaValues(
+                    fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                    glow: ThemeManager.shared.currentAccentTintColor
+                )
+            }
         }
         return accentTreatment
     }
@@ -2998,7 +3015,7 @@ public struct CourseLessonCard: View {
         case let .taikaValues(_, glow):
             CDOrganicLearnedTreatment(
                 glow: glow,
-                isFavorite: statusKind == .completed && isFavoriteActive
+                isFavorite: isFavoriteActive
             )
         }
     }
@@ -3037,6 +3054,12 @@ public struct CourseLessonCard: View {
                             icon: "",
                             trailingIcon: isBack ? "arrow.left" : "arrow.right"
                         )
+                    } else if statusKind == .completed && backFaceKind == .lessonCompletion {
+                        CDCourseStatusPill(
+                            title: "УРОК ПРОЙДЕН",
+                            icon: "checkmark",
+                            trailingIcon: isBack ? "arrow.left" : "arrow.right"
+                        )
                     } else if statusKind == .completed {
                         AppStatusChip(kind: .completed, title: "УРОК ПРОЙДЕН")
                     } else {
@@ -3044,7 +3067,7 @@ public struct CourseLessonCard: View {
                     }
                 }
                 .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
-                .accessibilityLabel(isBack ? "Вернуться к карточке курса" : "Открыть зачёт курса")
+                .accessibilityLabel(isBack ? "Вернуться к лицевой стороне урока" : "Открыть зачёт урока")
             }
         }
 
@@ -3059,7 +3082,7 @@ public struct CourseLessonCard: View {
                 .padding(.bottom, 0)
             } else {
                 HStack(alignment: .center, spacing: 8) {
-                    if statusKind == .completed && backFaceKind == .courseGradeSheet {
+                    if statusKind == .completed && (backFaceKind == .courseGradeSheet || backFaceKind == .lessonCompletion) {
                         statusControl(isBack: false)
                         Spacer(minLength: 0)
                     } else {
@@ -3084,7 +3107,7 @@ public struct CourseLessonCard: View {
                             CourseProAnimatedCrown(onTap: { onPrimaryTap?() })
                         } else if showProTeaserChip {
                             CourseProAnimatedCrown(onTap: nil)
-                        } else if !(statusKind == .completed && backFaceKind == .courseGradeSheet) {
+                        } else if !(statusKind == .completed && (backFaceKind == .courseGradeSheet || backFaceKind == .lessonCompletion)) {
                             statusControl(isBack: false)
                         }
                     }
@@ -3239,13 +3262,12 @@ public struct CourseLessonCard: View {
         func gradeMetric(value: String, label: String) -> some View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(value)
-                    .font(.system(size: 17, weight: .bold, design: .monospaced))
-                    .monospacedDigit()
+                    .font(Theme.Fonts.metric(17))
                     .foregroundStyle(Color.white.opacity(0.96))
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
                 Text(label.uppercased())
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.white.opacity(0.50))
                     .kerning(0.45)
             }
@@ -3255,7 +3277,7 @@ public struct CourseLessonCard: View {
         func gradeRow(title: String, value: String?) -> some View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(title.uppercased())
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.white.opacity(0.68))
                     .kerning(0.35)
                     .lineLimit(1)
@@ -3264,7 +3286,7 @@ public struct CourseLessonCard: View {
 
                 if let value, !value.isEmpty {
                     Text(value)
-                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .font(Theme.Fonts.metric(18))
                         .foregroundStyle(value == "ещё нет" ? AnyShapeStyle(Color.white.opacity(0.52)) : AnyShapeStyle(Color.white.opacity(0.98)))
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
@@ -3284,21 +3306,9 @@ public struct CourseLessonCard: View {
             switch backFaceKind {
             case .lessonCompletion:
                 VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 13, weight: .bold))
-                        Text("УРОК ПРОЙДЕН")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .kerning(0.35)
-                    }
-                    .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 6)
-                    .background(Capsule(style: .continuous).fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient)))
-
                     Text("ЗАЧЁТ ПО УРОКУ")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.70))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.76))
                         .textCase(.uppercase)
                         .kerning(0.7)
 

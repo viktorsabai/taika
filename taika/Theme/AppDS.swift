@@ -4676,6 +4676,8 @@ public struct AppInlineFilterPicker: View {
     public var titles: [String]
     public var selectedIndex: Int
     public var onSelect: (Int) -> Void
+    /// Optional surface-specific accent; nil preserves the global accent.
+    public var selectionAccent: AnyShapeStyle?
     /// Если false — в закрытом чипе только стрелка (название видно в меню / в заголовке секции).
     public var showsSelectedTitle: Bool
 
@@ -4683,11 +4685,13 @@ public struct AppInlineFilterPicker: View {
         titles: [String],
         selectedIndex: Int,
         showsSelectedTitle: Bool = true,
+        selectionAccent: AnyShapeStyle? = nil,
         onSelect: @escaping (Int) -> Void
     ) {
         self.titles = titles
         self.selectedIndex = selectedIndex
         self.showsSelectedTitle = showsSelectedTitle
+        self.selectionAccent = selectionAccent
         self.onSelect = onSelect
     }
 
@@ -4723,7 +4727,7 @@ public struct AppInlineFilterPicker: View {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .bold))
             }
-            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            .foregroundStyle(selectionAccent ?? AnyShapeStyle(ThemeManager.shared.currentAccentFill))
             .padding(.horizontal, showsSelectedTitle ? 12 : 10)
             .frame(height: 32)
             .frame(minWidth: showsSelectedTitle ? nil : 32)
@@ -4731,15 +4735,20 @@ public struct AppInlineFilterPicker: View {
                 ZStack {
                     let shape = Capsule(style: .continuous)
                     shape.fill(CD.ColorToken.card)
-                    shape.fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.06), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom
+                    if let selectionAccent {
+                        shape.fill(selectionAccent.opacity(0.12))
+                        shape.stroke(selectionAccent, lineWidth: Theme.Strokes.strokeLineWidth)
+                    } else {
+                        shape.fill(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.06), .clear],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
                         )
-                    )
-                    .blendMode(.plusLighter)
-                    shape.stroke(Theme.Strokes.strokeStrong, lineWidth: Theme.Strokes.strokeLineWidth)
+                        .blendMode(.plusLighter)
+                        shape.stroke(Theme.Strokes.strokeStrong, lineWidth: Theme.Strokes.strokeLineWidth)
+                    }
                 }
             )
             .contentShape(Capsule(style: .continuous))

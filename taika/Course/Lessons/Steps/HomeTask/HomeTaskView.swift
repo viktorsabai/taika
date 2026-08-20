@@ -270,7 +270,7 @@ public struct HomeTaskView: View {
                 withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
             })
 
-            OverlayEtalonCard(title: "закрепление завершено", onDismiss: {
+            OverlayEtalonCard(title: completionOverlayTitle, onDismiss: {
                 withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
             }) {
                 finishedBlockContent
@@ -278,6 +278,20 @@ public struct HomeTaskView: View {
                     .padding(.bottom, 20)
             }
         }
+    }
+
+    private var completionOverlayTitle: String {
+        if lessonId.isEmpty && !(lessonIds ?? []).isEmpty { return "закрепление курса" }
+        if isFromLessonStep { return "урок закреплён" }
+        return "закрепление завершено"
+    }
+
+    private var courseCompletionHint: String {
+        let mistakes = max(0, tries - matchedPairIds.count)
+        if mistakes > 0 {
+            return "Карточки закреплены. \(mistakes) ошибок сохранены в уроках — начни следующую практику с них."
+        }
+        return "Карточки закреплены. Следующий шаг — коротко повторить их в Спикере или пройти следующую игру."
     }
 
     private var finishedBlockContent: some View {
@@ -304,10 +318,19 @@ public struct HomeTaskView: View {
                 }
             }
 
+            if lessonId.isEmpty && !(lessonIds ?? []).isEmpty {
+                Text(courseCompletionHint)
+                    .font(CD.FontToken.body(13, weight: .regular))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             VStack(spacing: 12) {
-                GameCompletionActions(
-                    isFromLessonStep: isFromLessonStep,
-                    isProUser: isProUser,
+                    GameCompletionActions(
+                        isFromLessonStep: isFromLessonStep,
+                        isCourseReinforcement: lessonId.isEmpty && !(lessonIds ?? []).isEmpty,
+                        isProUser: isProUser,
                     continueLearningTitle: resolvedContinueTitle,
                     nextGameTitle: nextGameTitle,
                     onRepeat: {
@@ -663,6 +686,7 @@ public struct HomeTaskView: View {
 
                     GameCompletionActions(
                         isFromLessonStep: isFromLessonStep,
+                        isCourseReinforcement: lessonId.isEmpty && !(lessonIds ?? []).isEmpty,
                         isProUser: isProUser,
                         continueLearningTitle: resolvedContinueTitle,
                         nextGameTitle: nextGameTitle,
@@ -857,8 +881,17 @@ public struct HomeTaskView: View {
         let accuracy = Double(total) / Double(attempts)
         let percent = max(0, min(100, Int((accuracy * 100).rounded())))
         let matched = allTriples.filter { matchedPairIds.contains("\($0.ru)|\($0.ph)") }
-        guard !matched.isEmpty else { return }
-
+        if matched.isEmpty {
+            let scope = reinforcementLessonScope
+            guard !scope.isEmpty else { return }
+            ReinforcementStore.shared.recordSession(
+                courseId: courseId,
+                gameType: "match",
+                score: percent,
+                lessonIds: scope
+            )
+            return
+        }
         let grouped = Dictionary(grouping: matched) { triple in
             let sourceCourse = triple.courseId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return sourceCourse.isEmpty ? courseId : sourceCourse

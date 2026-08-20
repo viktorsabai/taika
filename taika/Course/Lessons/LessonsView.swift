@@ -162,10 +162,9 @@ private extension LessonsView {
     }
 
     private var reinforcementLessonScores: [String: Int] {
-        guard let cid = currentCourse?.courseID,
-              let metrics = ReinforcementStore.shared.metrics(courseId: cid) else { return [:] }
+        guard let cid = currentCourse?.courseID else { return [:] }
         return Dictionary(uniqueKeysWithValues: completedLessonOptions.compactMap { option in
-            guard let score = metrics.byLesson[option.id]?.lastScore else { return nil }
+            guard let score = ReinforcementStore.shared.lessonScore(courseId: cid, lessonId: option.id) else { return nil }
             return (option.id, score)
         })
     }
@@ -272,10 +271,13 @@ private extension LessonsView {
         )
     }
 
-    private func launchSpeakerTraining() {
-        guard let cid = currentCourse?.courseID,
-              let firstID = effectiveReinforcementLessonIds.first else { return }
-        let ids = effectiveReinforcementLessonIds
+    private func launchSpeakerTraining(for scopedLessonIds: [String]? = nil) {
+        guard let cid = currentCourse?.courseID else { return }
+        let ids = scopedLessonIds?.filter { !$0.isEmpty }
+            ?? (effectiveReinforcementLessonIds.isEmpty
+                ? lessonsSorted.map { $0.lessonID }
+                : effectiveReinforcementLessonIds)
+        guard let firstID = ids.first else { return }
         SpeakerManager.shared.setSpeakerUIMode(.training)
         SpeakerRequestedCourseId.shared.set(cid, lessonIds: ids)
         UserSession.shared.markActive(courseId: cid, lessonId: firstID, stepIndex: 0)
@@ -283,10 +285,10 @@ private extension LessonsView {
         nav.requestTab(2)
     }
 
-    private func presentGameModePicker(preselected mode: GameModeType? = nil) {
-        guard let cid = currentCourse?.courseID,
-              !effectiveReinforcementLessonIds.isEmpty else { return }
-        let ids = effectiveReinforcementLessonIds
+    private func presentGameModePicker(for scopedLessonIds: [String]? = nil, preselected mode: GameModeType? = nil) {
+        guard let cid = currentCourse?.courseID else { return }
+        let ids = scopedLessonIds ?? effectiveReinforcementLessonIds
+        guard !ids.isEmpty else { return }
         GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: ids)
         selectedGameLessonId = ids.count == 1 ? ids.first : nil
         if let mode { selectedGameType = mode }
@@ -297,19 +299,38 @@ private extension LessonsView {
         }
     }
 
-    private func launchGameTraining() {
-        presentGameModePicker()
+    private func launchGameTraining(for scopedLessonIds: [String]? = nil) {
+        if let scopedLessonIds, !scopedLessonIds.isEmpty {
+            presentGameModePicker(for: scopedLessonIds)
+        } else {
+            presentGameModePicker()
+        }
     }
 
-    /// Every game entry point uses the same picker; the row only preselects a mode.
+    /// A classified skill row opens its selected mode directly; the generic Game Park entry keeps the picker.
     private func launchClassifiedGame(modeRawValue: String) {
-        guard let mode = GameModeType(rawValue: modeRawValue) else { return }
-        presentGameModePicker(preselected: mode)
+        guard let mode = GameModeType(rawValue: modeRawValue),
+              let cid = currentCourse?.courseID else { return }
+        let ids = effectiveReinforcementLessonIds.isEmpty
+            ? lessonsSorted.map { $0.lessonID }
+            : effectiveReinforcementLessonIds
+        guard !ids.isEmpty else { return }
+        GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: ids)
+        selectedGameLessonId = ids.count == 1 ? ids.first : nil
+        selectedGameType = mode
+        nav.go(.game(
+            courseId: cid,
+            lessonId: selectedGameLessonId,
+            gameType: mode.rawValue
+        ))
     }
 
-    /// Pro access is surfaced by the shared picker, not by a second standalone paywall.
+    /// Locked game access opens the shared Taika+ paywall, never the game-mode picker.
     private func showGamesProSheet() {
-        presentGameModePicker()
+        OverlayPresenter.shared.presentPro(
+            reason: .games,
+            courseId: currentCourse?.courseID ?? ""
+        )
     }
 
     @ViewBuilder
@@ -378,6 +399,14 @@ private extension LessonsView {
                 onOpen: openCompletedLesson,
                 onSelectAll: selectAllTrainingLessons,
                 onClearAll: clearAllTrainingLessons,
+                onSelectWeak: weakCompletedLessonIds.isEmpty ? nil : {
+                    updateReinforcementSelection(weakCompletedLessonIds)
+                },
+                onTrainWeak: weakCompletedLessonIds.isEmpty ? nil : {
+                    let ids = Array(weakCompletedLessonIds).sorted()
+                    updateReinforcementSelection(weakCompletedLessonIds)
+                    launchGameTraining(for: ids)
+                },
                 accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
                 accentColor: TaikaMasteryTokens.greenGlow
             )
@@ -705,7 +734,15 @@ public struct LessonsView: View {
                                 onOpen: openCompletedLesson,
                                 onSelectAll: selectAllTrainingLessons,
                                 onClearAll: clearAllTrainingLessons,
-                                accentFill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                                onSelectWeak: weakCompletedLessonIds.isEmpty ? nil : {
+                                    updateReinforcementSelection(weakCompletedLessonIds)
+                                },
+                                onTrainWeak: weakCompletedLessonIds.isEmpty ? nil : {
+                                    let ids = Array(weakCompletedLessonIds).sorted()
+                                    updateReinforcementSelection(weakCompletedLessonIds)
+                                    launchGameTraining(for: ids)
+                                },
+                                accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
                                 accentColor: ThemeManager.shared.currentAccentTintColor
                             )
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
@@ -907,13 +944,7 @@ let withTasks = base
         } else {
             lessonsHeaderStore.setActions(
                 onSpeaker: {
-                    guard let cid = currentCourse?.courseID else { return }
-                    let ids = effectiveReinforcementLessonIds
-                    guard let firstID = ids.first else { return }
-                    UserSession.shared.markActive(courseId: cid, lessonId: firstID, stepIndex: 0)
-                    NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                    SpeakerRequestedCourseId.shared.set(cid, lessonIds: ids)
-                    nav.requestTab(2)
+                    launchSpeakerTraining()
                 },
                 onReinforce: {
                     guard currentCourse?.courseID != nil else { return }
@@ -1026,16 +1057,7 @@ let withTasks = base
                 } else {
                     lessonsHeaderStore.setActions(
                         onSpeaker: {
-                            guard let cid = currentCourse?.courseID else { return }
-                            let lid = selectedLessonId
-                            if let lid {
-                                UserSession.shared.markActive(courseId: cid, lessonId: lid, stepIndex: 0)
-                            } else {
-                                UserSession.shared.markActive(courseId: cid)
-                            }
-                            NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                            SpeakerRequestedCourseId.shared.set(cid, lessonId: lid)
-                            nav.requestTab(2)
+                            launchSpeakerTraining()
                         },
                         onReinforce: {
                             launchGameTraining()
@@ -1147,7 +1169,7 @@ extension LessonsView {
         let score = ReinforcementStore.shared.overallScore(courseId: cid)
         let matchedPercent = totalCards > 0 ? min(100, Int((Double(covered) / Double(totalCards) * 100).rounded())) : nil
         let weakCount = lessonsSorted.reduce(0) { count, lesson in
-            let lessonScore = metrics?.byLesson[lesson.lessonID]?.lastScore ?? 100
+            let lessonScore = ReinforcementStore.shared.lessonScore(courseId: cid, lessonId: lesson.lessonID) ?? 100
             return count + (lessonScore < 70 ? 1 : 0)
         }
         let recommendation = weakCount > 0
@@ -1305,18 +1327,29 @@ extension LessonsView {
                         Image(systemName: "chevron.down")
                             .font(.system(size: 10, weight: .bold))
                     }
-                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
+                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
                     .padding(.horizontal, 12)
                     .frame(height: 32)
-                    .background(Capsule(style: .continuous).fill(PD.ColorToken.card))
-                    .overlay(Capsule(style: .continuous).stroke(TaikaMasteryTokens.green.opacity(0.72), lineWidth: 1))
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(PD.ColorToken.card)
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .fill(TaikaMasteryTokens.greenGradient.opacity(0.12))
+                            )
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(TaikaMasteryTokens.greenGradient, lineWidth: 1)
+                    )
                 }
                 .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
                 .accessibilityLabel("Раздел материалов курса")
             } else {
                 AppInlineFilterPicker(
                     titles: [LSCourseContentMode.lessons.title, LSCourseContentMode.lifehacks.title],
-                    selectedIndex: courseContentMode.rawValue
+                    selectedIndex: courseContentMode.rawValue,
+                    selectionAccent: AnyShapeStyle(TaikaMasteryTokens.greenGradient)
                 ) { index in
                     guard let next = LSCourseContentMode(rawValue: index), next != courseContentMode else { return }
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -1499,6 +1532,10 @@ extension LessonsView {
                 let arr = lessonsSorted
                 guard item.index >= 0 && item.index < arr.count else { return }
                 let lid = arr[item.index].lessonID
+                if item.status == .completed {
+                    launchGameTraining(for: [lid])
+                    return
+                }
                 guard openLessonIfAllowed(lid) else {
                     UINotificationFeedbackGenerator().notificationOccurred(.warning)
                     return
@@ -1515,12 +1552,8 @@ extension LessonsView {
                     presentation: .canonical
                 ))
             },
-            onSpeaker: isTheoryBonusCourse || isCompletedCourse ? nil : { item in
-                guard let cid = currentCourse?.courseID else { return }
-                UserSession.shared.markActive(courseId: cid, lessonId: item.id, stepIndex: 0)
-                NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                SpeakerRequestedCourseId.shared.set(cid, lessonId: item.id)
-                nav.requestTab(2)
+            onSpeaker: isTheoryBonusCourse ? nil : { item in
+                launchSpeakerTraining(for: [item.id])
             },
             onNext: { item in
                 let arr = lessonsSorted

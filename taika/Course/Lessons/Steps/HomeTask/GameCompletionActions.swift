@@ -5,6 +5,7 @@ import SwiftUI
 /// - Из игрового парка: повторить → следующая игра (или замок Taika+) → закрыть.
 struct GameCompletionActions: View {
     var isFromLessonStep: Bool
+    var isCourseReinforcement: Bool = false
     var isProUser: Bool
     /// «Следующий урок» / «Следующий курс» — только из степа.
     var continueLearningTitle: String? = nil
@@ -19,12 +20,15 @@ struct GameCompletionActions: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            primaryButton(title: "Повторить", action: onRepeat)
-
-            if isFromLessonStep {
-                stepFollowUpButtons
+            if isCourseReinforcement {
+                reinforcementFollowUpButtons
             } else {
-                parkFollowUpButtons
+                primaryButton(title: "Повторить", action: onRepeat)
+                if isFromLessonStep {
+                    stepFollowUpButtons
+                } else {
+                    parkFollowUpButtons
+                }
             }
 
             if let onClose {
@@ -38,6 +42,17 @@ struct GameCompletionActions: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    @ViewBuilder
+    private var reinforcementFollowUpButtons: some View {
+        if let onNextGame {
+            primaryButton(title: "Следующая игра", action: onNextGame)
+        } else if let onSpeakerPractice {
+            primaryButton(title: "Тренировать произношение", action: onSpeakerPractice)
+        }
+
+        outlineButton(title: "Повторить эту игру", systemImage: "arrow.counterclockwise", action: onRepeat)
     }
 
     @ViewBuilder
@@ -98,12 +113,16 @@ struct GameCompletionActions: View {
         } label: {
             Text(title)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Color(white: 0.14))
+                .foregroundStyle(theme.currentAccentFill)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(theme.currentAccentFill)
+                        .fill(PD.ColorToken.card.opacity(0.72))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(theme.currentAccentFill.opacity(0.84), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)

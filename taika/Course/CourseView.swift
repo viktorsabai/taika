@@ -285,14 +285,27 @@ struct CourseView: View {
     }
 
 
-    /// Курсы каталога, которые пользователь уже начал или добавил в избранное.
+    /// Единая completion check для каталога: completed курс не должен жить в «Продолжить».
+    private func isCourseCompleted(_ course: Course) -> Bool {
+        let lessonsTotal = max(course.lessonCount, LessonsData.shared.lessons(for: course.id).count)
+        let (done, total) = lessonsManager.headerCounts(for: course.id, lessonsTotal: lessonsTotal)
+        return total > 0 && done >= total
+    }
+
+    /// Только начатые или добавленные в избранное, но ещё не полностью завершённые курсы.
     private func inProgressCourses(in pool: [Course]) -> [Course] {
         let started = pool.filter { c in
+            guard !isCourseCompleted(c) else { return false }
             if isFavorite(c) { return true }
             let (done, _) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
             return done > 0
         }
         return deduplicateByText(started)
+    }
+
+    /// Курсы с закрытыми всеми уроками — отдельный achievement/library scope.
+    private func completedCourses(in pool: [Course]) -> [Course] {
+        deduplicateByText(pool.filter { isCourseCompleted($0) })
     }
 
 
@@ -405,12 +418,15 @@ struct CourseView: View {
         }
     }
 
-    /// «Продолжить» только если есть начатые/избранные курсы — иначе новичок сразу в Базе.
+    /// Dynamic tabs: completed courses are an achievement scope, never part of «Продолжить».
     private var visibleCourseTabs: [CourseScreenTab] {
-        if allCatalogInProgress.isEmpty {
-            return CourseScreenTab.mvpTabs.filter { $0 != .resume }
+        var tabs = CourseScreenTab.mvpTabs.filter { tab in
+            tab != .resume || !allCatalogInProgress.isEmpty
         }
-        return CourseScreenTab.mvpTabs
+        guard !allCatalogCompleted.isEmpty else { return tabs }
+        let insertIndex = tabs.firstIndex(of: .base) ?? tabs.endIndex
+        tabs.insert(.completed, at: insertIndex)
+        return tabs
     }
 
     private func courseScreenHeaderView() -> some View {
@@ -432,6 +448,8 @@ struct CourseView: View {
         switch selectedCourseTab {
         case .resume:
             resumeTabContentView()
+        case .completed:
+            completedTabContentView()
         case .base:
             baseTabContentView()
         case .scenarios:
@@ -445,7 +463,9 @@ struct CourseView: View {
     private var allCatalogInProgress: [Course] {
         inProgressCourses(in: deduplicateByID(basa + other))
     }
-
+    private var allCatalogCompleted: [Course] {
+        completedCourses(in: deduplicateByID(basa + other))
+    }
     private func resumeTabContentView() -> some View {
         let courses = allCatalogInProgress
         let items = mapCourseItems(from: courses)
@@ -461,6 +481,25 @@ struct CourseView: View {
         }
     }
 
+    private func completedTabContentView() -> some View {
+        let items = mapCourseItems(from: allCatalogCompleted)
+        return Group {
+            if items.isEmpty {
+                courseEmptyState(
+                    title: "Пока нет пройденных курсов",
+                    subtitle: "Закрой все уроки курса — он появится здесь как достижение.",
+                    actionTitle: "Открыть базу",
+                    action: { selectedCourseTab = .base }
+                )
+            } else {
+                CDAllCoursesSection(
+                    title: "Пройденные",
+                    items: items,
+                    initialCarouselIndex: 0
+                )
+            }
+        }
+    }
     private func baseTabContentView() -> some View {
         baseSectionView()
     }
@@ -606,6 +645,8 @@ struct CourseView: View {
         switch selectedCourseTab {
         case .resume:
             return Set(allCatalogInProgress.map(\.id))
+        case .completed:
+            return Set(allCatalogCompleted.map(\.id))
         case .base:
             return Set(filteredBasa.map(\.id))
         case .scenarios:
@@ -643,11 +684,11 @@ struct CourseView: View {
             let key = "\(courseId)|\(lessonId)"
             guard !lessonKeys.contains(key) else { return }
             lessonKeys.insert(key)
+            // Curriculum time for a unique lesson touched this week. Do not invent minutes
+            // when lesson data has no declared duration; USActivityEvent has no elapsed field.
             if let mins = LessonsData.shared.lesson(courseID: courseId, lessonID: lessonId)?.durationMinutes,
                mins > 0 {
                 minutesFromLessons += mins
-            } else {
-                minutesFromLessons += 7
             }
         }
 
@@ -737,6 +778,12 @@ struct CourseView: View {
                 "Продолжи с того места, где остановился",
                 "Тап по карточке — сразу в урок",
                 "Игра и спикер — иконки внизу карточки"
+            ]
+        case .completed:
+            return [
+                "Твои закрытые курсы — как библиотека достижений",
+                "Открой курс, чтобы продолжить закрепление",
+                "Повторяй уроки и возвращайся к слабым местам"
             ]
         case .base:
             return [
@@ -1137,6 +1184,9 @@ struct CourseView: View {
                         ensureValidCourseTabSelection()
                     }
                     .onChange(of: allCatalogInProgress.count) { _, _ in
+                        ensureValidCourseTabSelection()
+                    }
+                    .onChange(of: allCatalogCompleted.count) { _, _ in
                         ensureValidCourseTabSelection()
                     }
                     .onChange(of: scrollToCategory) { _, target in

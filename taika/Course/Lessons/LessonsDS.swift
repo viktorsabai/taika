@@ -1466,6 +1466,7 @@ public struct LSLessonCardV: View {
                 LSLessonActivity.mark(item.id)
                 onTap(item)
             },
+            isFavoriteActive: favoriteCount > 0,
             isConsoleEnabled: item.status == .completed,
             completionFraction: item.status == .completed ? 1.0 : item.progress,
             pronunciationPercent: lessonPronunciationPercent,
@@ -1771,6 +1772,7 @@ public struct LSCompletedTrainingHero: View {
     public let onProLocked: (() -> Void)?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var didReveal = false
+    @State private var displayedScore = 0
 
     public init(
         stats: LSCourseStats,
@@ -1792,7 +1794,8 @@ public struct LSCompletedTrainingHero: View {
         self.onProLocked = onProLocked
     }
 
-    private var scoreText: String { stats.reinforcementScore.map(String.init) ?? "—" }
+    private var scoreText: String { stats.reinforcementScore.map { "\($0)%" } ?? "—" }
+    private var scoreValue: Int { stats.reinforcementScore ?? 0 }
     private var skillRows: [LSReinforcementSkill] {
         if !stats.reinforcementSkills.isEmpty { return stats.reinforcementSkills }
         return [
@@ -1817,38 +1820,33 @@ public struct LSCompletedTrainingHero: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 14) {
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(scoreText + (stats.reinforcementScore == nil ? "" : "%"))
-                            .font(.system(size: 48, weight: .bold, design: .monospaced))
-                            .monospacedDigit()
+                        Text(stats.reinforcementScore == nil ? "—" : "\(displayedScore)%")
+                            .font(Theme.Fonts.metric(48))
                             .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                            .monospacedDigit()
                             .lineLimit(1)
                             .minimumScaleFactor(0.68)
                             .contentTransition(.numericText())
                             .animation(.easeOut(duration: 0.32), value: scoreText)
-                        Text(stats.reinforcementScore == nil ? "результат" : "эффективность")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(TaikaMasteryTokens.greenGlow.opacity(0.82))
                     }
                     .frame(width: 88, alignment: .leading)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Результат закрепления")
-                            .font(.system(size: 19, weight: .semibold))
-                            .foregroundStyle(PD.ColorToken.text)
+                    VStack(alignment: .trailing, spacing: 4) {
                         Text(recommendation)
                             .font(.system(size: 13, weight: .regular))
                             .lineSpacing(2)
                             .foregroundStyle(PD.ColorToken.textSecondary)
-                            .lineLimit(2)
+                            .multilineTextAlignment(.trailing)
+                            .lineLimit(3)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 HStack(alignment: .top, spacing: 0) {
                     metric(value: "\(stats.gameCoveredCards)", label: "карточки в игре")
                     metric(value: "\(stats.gameSessions)", label: "игровые сессии")
-                    metric(value: "\(selectedCount)/\(totalLessons)", label: "уроки выбраны")
+                    metric(value: "\(weakCount)", label: "ошибки")
                 }
                 .foregroundStyle(PD.ColorToken.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
             .opacity(didReveal ? 1 : 0)
             .offset(y: didReveal ? 0 : 5)
@@ -1877,9 +1875,11 @@ public struct LSCompletedTrainingHero: View {
             guard !didReveal else { return }
             if reduceMotion {
                 didReveal = true
+                displayedScore = scoreValue
             } else {
                 withAnimation(.easeOut(duration: 0.32)) {
                     didReveal = true
+                    displayedScore = scoreValue
                 }
             }
         }
@@ -1896,8 +1896,6 @@ public struct LSCompletedTrainingHero: View {
             return onGamePark
         }()
         let enabled = action != nil && selectedCount > 0
-        let result = skill.isProLocked ? "Taika Pro" : (skill.score.map { "\($0)%" } ?? (skill.sessions > 0 ? "есть данные" : "нет результата"))
-        let detail = skill.sessions > 0 ? "\(skill.sessions) сессии" : "первая тренировка впереди"
         let content = HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(skill.title)
@@ -1907,43 +1905,28 @@ public struct LSCompletedTrainingHero: View {
                     .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(PD.ColorToken.textSecondary)
                     .lineLimit(1)
-                Text(detail)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
-                    .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .trailing, spacing: 4) {
+            HStack(alignment: .center, spacing: 8) {
                 if skill.isProLocked {
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.86)))
-                    Text(result)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .lineLimit(1)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
+                        .accessibilityLabel("Недоступно")
                 } else {
                     Text(skill.score.map { "\($0)%" } ?? "—")
-                        .font(.system(size: 21, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
+                        .font(Theme.Fonts.metric(21))
                         .foregroundStyle(skill.score == nil ? AnyShapeStyle(PD.ColorToken.textSecondary) : AnyShapeStyle(PD.ColorToken.text))
                         .lineLimit(1)
                         .minimumScaleFactor(0.78)
                         .contentTransition(.numericText())
                         .animation(.easeOut(duration: 0.28), value: skill.score)
-                    if skill.score == nil {
-                        Text(skill.sessions > 0 ? "есть данные" : "нет результата")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.72)
-                    }
                 }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.82)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4)))
+                    .foregroundStyle(skill.isProLocked ? AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.56)) : (enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.82)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4))))
             }
-            .frame(width: 100, alignment: .trailing)
+            .frame(minWidth: 88, alignment: .trailing)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 12)
@@ -1955,8 +1938,7 @@ public struct LSCompletedTrainingHero: View {
     private func metric(value: String, label: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(value)
-                .font(.system(size: 23, weight: .semibold, design: .rounded))
-                .monospacedDigit()
+                .font(Theme.Fonts.metric(23))
                 .foregroundStyle(PD.ColorToken.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.78)
@@ -1968,8 +1950,9 @@ public struct LSCompletedTrainingHero: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.trailing, 8)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 4)
     }
 
     @ViewBuilder
@@ -2003,21 +1986,23 @@ public struct LSCompletedTrainingHero: View {
 private struct LSSelectionActionButtonStyle: ButtonStyle {
     let isActive: Bool
     let accentColor: Color
+    let accentFill: AnyShapeStyle
 
-    init(isActive: Bool, accentColor: Color = TaikaMasteryTokens.greenGlow) {
+    init(isActive: Bool, accentColor: Color = TaikaMasteryTokens.greenGlow, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGradient)) {
         self.isActive = isActive
         self.accentColor = accentColor
+        self.accentFill = accentFill
     }
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(isActive ? AnyShapeStyle(accentColor) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
+            .foregroundStyle(isActive ? AnyShapeStyle(Color.black) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, minHeight: 34)
-            .background(Capsule(style: .continuous).fill(Color.clear))
-            .overlay(Capsule(style: .continuous).stroke(isActive ? accentColor.opacity(0.55) : PD.ColorToken.stroke.opacity(0.25), lineWidth: 1))
+            .background(Capsule(style: .continuous).fill(isActive ? accentFill : AnyShapeStyle(Color.clear)))
+            .overlay(Capsule(style: .continuous).stroke(isActive ? accentFill : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.25)), lineWidth: 1))
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }
@@ -2032,10 +2017,12 @@ public struct LSCompletedLessonList: View {
     public let onOpen: ((String) -> Void)?
     public let onSelectAll: (() -> Void)?
     public let onClearAll: (() -> Void)?
+    public let onSelectWeak: (() -> Void)?
+    public let onTrainWeak: (() -> Void)?
     public let accentFill: AnyShapeStyle
     public let accentColor: Color
 
-    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], courseSessionCount: Int = 0, onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGradient), accentColor: Color = TaikaMasteryTokens.greenGlow) {
+    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], courseSessionCount: Int = 0, onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, onSelectWeak: (() -> Void)? = nil, onTrainWeak: (() -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGradient), accentColor: Color = TaikaMasteryTokens.greenGlow) {
         self.items = items
         self.selectedIds = selectedIds
         self.weakIds = weakIds
@@ -2045,6 +2032,8 @@ public struct LSCompletedLessonList: View {
         self.onOpen = onOpen
         self.onSelectAll = onSelectAll
         self.onClearAll = onClearAll
+        self.onSelectWeak = onSelectWeak
+        self.onTrainWeak = onTrainWeak
         self.accentFill = accentFill
         self.accentColor = accentColor
     }
@@ -2068,18 +2057,46 @@ public struct LSCompletedLessonList: View {
             HStack(spacing: 8) {
                 if let onSelectAll {
                     Button("Выбрать все", action: onSelectAll)
-                        .buttonStyle(LSSelectionActionButtonStyle(isActive: selectedIds.count < items.count, accentColor: accentColor))
+                        .buttonStyle(LSSelectionActionButtonStyle(isActive: selectedIds.count < items.count, accentColor: accentColor, accentFill: accentFill))
                         .frame(maxWidth: .infinity)
                 }
                 if let onClearAll {
                     Button("Снять все", action: onClearAll)
-                        .buttonStyle(LSSelectionActionButtonStyle(isActive: !selectedIds.isEmpty, accentColor: accentColor))
+                        .buttonStyle(LSSelectionActionButtonStyle(isActive: !selectedIds.isEmpty, accentColor: accentColor, accentFill: accentFill))
                         .frame(maxWidth: .infinity)
                 }
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 2)
             .padding(.bottom, 6)
+
+            if !weakIds.isEmpty, let onTrainWeak {
+                Button(action: onTrainWeak) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "waveform.path.ecg")
+                        Text("Тренировать ошибки")
+                        Spacer(minLength: 4)
+                        Text("\(weakIds.count)")
+                            .font(Theme.Fonts.metric(14))
+                            .monospacedDigit()
+                    }
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AnyShapeStyle(diagnosticColor))
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(diagnosticColor.opacity(0.10))
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(diagnosticColor.opacity(0.82), lineWidth: 1)
+                    )
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.94))
+                .accessibilityLabel("Тренировать только уроки с ошибками")
+            }
 
             VStack(spacing: 0) {
                 ForEach(items) { item in
@@ -2127,6 +2144,10 @@ public struct LSCompletedLessonList: View {
         .padding(.top, 4)
     }
 
+    private var diagnosticColor: Color {
+        Color(red: 0.94, green: 0.24, blue: 0.56)
+    }
+
     private var diagnosticsSummary: String {
         if !weakIds.isEmpty { return "Есть ошибки в \(weakIds.count) уроках — начни с них" }
         if !scores.isEmpty { return "Диагностика готова — выбери уроки для следующего подхода" }
@@ -2135,7 +2156,7 @@ public struct LSCompletedLessonList: View {
     }
 
     private var diagnosticsColor: AnyShapeStyle {
-        if !weakIds.isEmpty { return AnyShapeStyle(Color.red.opacity(0.92)) }
+        if !weakIds.isEmpty { return AnyShapeStyle(diagnosticColor) }
         if !scores.isEmpty { return accentFill }
         return AnyShapeStyle(PD.ColorToken.textSecondary)
     }

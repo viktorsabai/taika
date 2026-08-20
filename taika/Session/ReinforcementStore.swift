@@ -129,6 +129,11 @@ public final class ReinforcementStore: ObservableObject {
         courses[canonicalizeCourseId(courseId)]
     }
 
+    /// Lesson-level result with the same canonicalization used when game sessions are persisted.
+    public func lessonScore(courseId: String, lessonId: String) -> Int? {
+        metrics(courseId: courseId)?.byLesson[canonicalizeLessonId(lessonId)]?.lastScore
+    }
+
     /// Convenience: an overall reinforcement score for a course (0...100).
     /// Uses available mode averages; if none exist, returns nil.
     public func coveredCardCount(courseId: String) -> Int {
