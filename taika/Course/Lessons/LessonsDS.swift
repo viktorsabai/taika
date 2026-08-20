@@ -1843,7 +1843,7 @@ public struct LSCompletedTrainingHero: View {
                 HStack(alignment: .top, spacing: 0) {
                     metric(value: "\(stats.gameCoveredCards)", label: "карточки в игре")
                     metric(value: "\(stats.gameSessions)", label: "игровые сессии")
-                    metric(value: "\(weakCount)", label: "ошибки")
+                    metric(value: "\(weakCount)", label: "в фокусе")
                 }
                 .foregroundStyle(PD.ColorToken.text)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -1982,31 +1982,6 @@ public struct LSCompletedTrainingHero: View {
     }
 }
 
-/// Compact list used only after a course is fully completed.
-private struct LSSelectionActionButtonStyle: ButtonStyle {
-    let isActive: Bool
-    let accentColor: Color
-    let accentFill: AnyShapeStyle
-
-    init(isActive: Bool, accentColor: Color = TaikaMasteryTokens.greenGlow, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGradient)) {
-        self.isActive = isActive
-        self.accentColor = accentColor
-        self.accentFill = accentFill
-    }
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(isActive ? AnyShapeStyle(Color.black) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity, minHeight: 34)
-            .background(Capsule(style: .continuous).fill(isActive ? accentFill : AnyShapeStyle(Color.clear)))
-            .overlay(Capsule(style: .continuous).stroke(isActive ? accentFill : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.25)), lineWidth: 1))
-            .opacity(configuration.isPressed ? 0.7 : 1)
-    }
-}
-
 public struct LSCompletedLessonList: View {
     public let items: [LS.Item]
     public let selectedIds: Set<String>
@@ -2042,60 +2017,64 @@ public struct LSCompletedLessonList: View {
         VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("СЛЕДУЮЩЕЕ ЗАКРЕПЛЕНИЕ")
+                    Text("ФОКУС НА СЕГОДНЯ")
                         .taikaSectionTitleStyle()
                     Spacer(minLength: 8)
-                    Text("\(selectedIds.count) из \(items.count) уроков")
+                    Text(selectionLabel)
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(accentFill)
+                        .foregroundStyle(PD.ColorToken.textSecondary)
                 }
                 Text(diagnosticsSummary)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(diagnosticsColor)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
                     .lineLimit(2)
             }
-            HStack(spacing: 8) {
+            HStack(spacing: 18) {
                 if let onSelectAll {
                     Button("Выбрать все", action: onSelectAll)
-                        .buttonStyle(LSSelectionActionButtonStyle(isActive: selectedIds.count < items.count, accentColor: accentColor, accentFill: accentFill))
-                        .frame(maxWidth: .infinity)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(selectedIds.count < items.count ? AnyShapeStyle(accentFill) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.5)))
+                        .buttonStyle(.plain)
                 }
                 if let onClearAll {
-                    Button("Снять все", action: onClearAll)
-                        .buttonStyle(LSSelectionActionButtonStyle(isActive: !selectedIds.isEmpty, accentColor: accentColor, accentFill: accentFill))
-                        .frame(maxWidth: .infinity)
+                    Button("Снять выбор", action: onClearAll)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(!selectedIds.isEmpty ? AnyShapeStyle(accentFill) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.5)))
+                        .buttonStyle(.plain)
                 }
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity)
             .padding(.top, 2)
-            .padding(.bottom, 6)
+            .padding(.bottom, 4)
 
             if !weakIds.isEmpty, let onTrainWeak {
                 Button(action: onTrainWeak) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "waveform.path.ecg")
-                        Text("Тренировать ошибки")
-                        Spacer(minLength: 4)
-                        Text("\(weakIds.count)")
-                            .font(Theme.Fonts.metric(14))
-                            .monospacedDigit()
+                    HStack(alignment: .center, spacing: 11) {
+                        Circle()
+                            .fill(diagnosticSignal.opacity(0.82))
+                            .frame(width: 7, height: 7)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Начать с ошибок")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(PD.ColorToken.text)
+                            Text(weakFocusDetail)
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(PD.ColorToken.textSecondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 8)
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(AnyShapeStyle(accentFill))
                     }
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(AnyShapeStyle(diagnosticColor))
-                    .padding(.horizontal, 13)
-                    .padding(.vertical, 10)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(diagnosticColor.opacity(0.10))
-                    )
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .stroke(diagnosticColor.opacity(0.82), lineWidth: 1)
-                    )
-                    .contentShape(Capsule())
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
                 }
-                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.94))
-                .accessibilityLabel("Тренировать только уроки с ошибками")
+                .buttonStyle(.plain)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(PD.ColorToken.stroke.opacity(0.42)).frame(height: 1)
+                }
+                .accessibilityLabel("Начать закрепление с уроков, где есть ошибки")
             }
 
             VStack(spacing: 0) {
@@ -2116,7 +2095,7 @@ public struct LSCompletedLessonList: View {
                                         .lineLimit(1)
                                     Text(lessonStatus)
                                         .font(.system(size: 12, weight: .regular))
-                                        .foregroundStyle(weak ? AnyShapeStyle(Color.red.opacity(0.92)) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                                        .foregroundStyle(weak ? AnyShapeStyle(diagnosticSignal.opacity(0.76)) : AnyShapeStyle(PD.ColorToken.textSecondary))
                                         .lineLimit(1)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -2144,27 +2123,32 @@ public struct LSCompletedLessonList: View {
         .padding(.top, 4)
     }
 
-    private var diagnosticColor: Color {
+    private var selectionLabel: String {
+        if selectedIds.isEmpty { return "ничего не выбрано" }
+        if selectedIds.count == items.count { return "все уроки" }
+        return "\(selectedIds.count) выбрано"
+    }
+
+    private var diagnosticSignal: Color {
         Color(red: 0.94, green: 0.24, blue: 0.56)
     }
 
     private var diagnosticsSummary: String {
-        if !weakIds.isEmpty { return "Есть ошибки в \(weakIds.count) уроках — начни с них" }
-        if !scores.isEmpty { return "Диагностика готова — выбери уроки для следующего подхода" }
-        if courseSessionCount > 0 { return "Игра пройдена, но уроки ещё не диагностированы" }
+        if !weakIds.isEmpty { return "Сначала вернись к урокам, где закрепление просело" }
+        if !scores.isEmpty { return "Выбери уроки для следующего спокойного подхода" }
+        if courseSessionCount > 0 { return "Первый результат уже есть — следующая игра уточнит фокус" }
         return "Выбери пройденные уроки, чтобы собрать первую игру"
     }
 
-    private var diagnosticsColor: AnyShapeStyle {
-        if !weakIds.isEmpty { return AnyShapeStyle(diagnosticColor) }
-        if !scores.isEmpty { return accentFill }
-        return AnyShapeStyle(PD.ColorToken.textSecondary)
+    private var weakFocusDetail: String {
+        let lessonWord = weakIds.count == 1 ? "урок" : "урока"
+        return "\(weakIds.count) \(lessonWord) требуют внимания · остальные можно оставить на потом"
     }
 
     private func statusText(for id: String, weak: Bool) -> String {
-        if weak { return "Ошибка · \(scores[id, default: 0])% — повторить" }
-        if let score = scores[id] { return "Результат закрепления · \(score)%" }
-        if courseSessionCount > 0 { return "Игра есть · нужна диагностика" }
+        if weak { return "Фокус · \(scores[id, default: 0])%" }
+        if let score = scores[id] { return "Закреплено · \(score)%" }
+        if courseSessionCount > 0 { return "Ещё не проверен" }
         return "Готов к первой игре"
     }
 }
