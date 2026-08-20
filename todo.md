@@ -1318,3 +1318,11 @@
 - [ ] Сделать список уроков визуально нейтральным, с green только для selected/error indicators.
 - [ ] Синхронизировать global header и body green surface, не окрашивая toolbar.
 - [ ] Проверить density, contrast, selection handoff и static compile surface перед push.
+
+# LessonsView to Speaker reinforcement routing fix
+
+- [ ] Найти текущий destination для `SpeakerRequestedCourseId` и причину открытия Instant Translation.
+- [ ] Разделить reinforcement flow и Instant Translation route/state.
+- [ ] Передавать courseId и выбранные lessonIds в Speaker reinforcement carousel.
+- [ ] Проверить возврат из Speaker и сохранение source context.
+- [ ] Выполнить static validation и push routing fix.

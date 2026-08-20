@@ -223,6 +223,7 @@ private extension LessonsView {
         guard let cid = currentCourse?.courseID,
               let firstID = effectiveReinforcementLessonIds.first else { return }
         let ids = effectiveReinforcementLessonIds
+        SpeakerManager.shared.setSpeakerUIMode(.training)
         SpeakerRequestedCourseId.shared.set(cid, lessonIds: ids)
         UserSession.shared.markActive(courseId: cid, lessonId: firstID, stepIndex: 0)
         NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
