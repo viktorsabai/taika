@@ -1,0 +1,144 @@
+{
+  "project_info": {
+    "title": "Taika Real UI Flows",
+    "created": 1786963867.161,
+    "last_updated": 1787148964.192,
+    "total_slides": 12
+  },
+  "slides": [
+    {
+      "id": "cover",
+      "state": "edited",
+      "pageNum": 1
+    },
+    {
+      "id": "game_empty",
+      "state": "edited",
+      "pageNum": 2
+    },
+    {
+      "id": "game_modes_locked",
+      "state": "edited",
+      "pageNum": 3
+    },
+    {
+      "id": "attempts_paywall",
+      "state": "edited",
+      "pageNum": 4
+    },
+    {
+      "id": "search",
+      "state": "edited",
+      "pageNum": 5
+    },
+    {
+      "id": "speaker_listen",
+      "state": "edited",
+      "pageNum": 6
+    },
+    {
+      "id": "speaker_result",
+      "state": "edited",
+      "pageNum": 7
+    },
+    {
+      "id": "speaker_input",
+      "state": "edited",
+      "pageNum": 8
+    },
+    {
+      "id": "dictionary",
+      "state": "edited",
+      "pageNum": 9
+    },
+    {
+      "id": "system_flow",
+      "state": "edited",
+      "pageNum": 10
+    },
+    {
+      "id": "favorites_list_mode",
+      "state": "edited",
+      "pageNum": 11
+    },
+    {
+      "id": "favorites_grid_mode",
+      "state": "edited",
+      "pageNum": 12
+    }
+  ],
+  "outline": [
+    {
+      "id": "cover",
+      "title": "Taika Real UI Flows",
+      "summary": "Before → after mockups на базе реальных Taika screens.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "game_empty",
+      "title": "Game Park: пустое состояние",
+      "summary": "Текущий empty state рядом с новой contextual liquid-glass версией.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "game_modes_locked",
+      "title": "Game Park: режимы и locked tap",
+      "summary": "Реальные mode picker rows и native bottom peek для PRO.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "attempts_paywall",
+      "title": "Attempts → Taika+",
+      "summary": "Связанный flow лимита Speaker и контекстного paywall.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "search",
+      "title": "Search: три реальных состояния",
+      "summary": "Search overlay, results и no-results на базе текущего header.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "speaker_listen",
+      "title": "Speaker: слушаю и распознаю",
+      "summary": "Текущий Speaker canvas, но с continuous background и synchronized states.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "speaker_result",
+      "title": "Speaker: результат и ошибка",
+      "summary": "Result card и failure recovery с теми же action icons.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "speaker_input",
+      "title": "Speaker: ввод по-русски",
+      "summary": "Текущий keyboard sheet переработан как connected input surface.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "dictionary",
+      "title": "My Dictionary",
+      "summary": "Empty, list and inline edit states на базе реального dictionary flow.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "system_flow",
+      "title": "Что меняется во всех экранах",
+      "summary": "Before→after principles, shared primitives and next implementation gate.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "favorites_list_mode",
+      "title": "Favorites — List mode",
+      "summary": "Текущий Favorites экран в list mode с новой иерархией: compact header controls, единый Speaker/Games action rail, adaptive filters и плотная grouped list материалов.",
+      "image_plan": "Use the current Favorites list screenshot as visual reference; render a faithful Taika mobile UI mockup with the proposed compact hierarchy."
+    },
+    {
+      "id": "favorites_grid_mode",
+      "title": "Favorites — Grid mode",
+      "summary": "Текущий Favorites экран в grid mode с тем же header/action/filter order и компактными phrase tiles, чтобы материалы занимали главный экран.",
+      "image_plan": "Use the current Favorites grid screenshot as visual reference; render a faithful Taika mobile UI mockup with the proposed compact hierarchy."
+    }
+  ]
+}

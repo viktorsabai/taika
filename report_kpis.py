@@ -1,0 +1,16 @@
+import json
+from pathlib import Path
+r=json.loads(Path('content_quality_analysis.json').read_text(encoding='utf-8'))
+print('complete_duplicate_groups',len(r['complete_record_duplicates']))
+print('complete_duplicate_records_total',sum(x['count'] for x in r['complete_record_duplicates']))
+print('duplicate_counts',r['duplicate_counts'])
+print('order_duplicate_lesson_count',r['order_duplicate_lesson_count'])
+print('order_gap_lesson_count',r['order_gap_lesson_count'])
+print('lesson_title_close_pairs',len(r['lesson_title_close_pairs']))
+print('course_ids_missing_from_catalog',r['course_ids_missing_from_catalog'])
+print('catalog_ids_without_lessons',r['catalog_ids_without_lessons'])
+print('canon_keys',r['canon_keys'])
+print('top complete duplicate groups')
+for x in r['complete_record_duplicates'][:20]: print(x)
+print('top RU duplicate groups')
+for x in r['duplicate_examples']['key_ru'][:30]: print(x['count'],x['value'],x['locations'])

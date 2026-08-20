@@ -1,0 +1,48 @@
+# Curriculum data summary
+
+Courses: 42; lesson bundles: 267; step sets: 267
+
+## course_b_0 — None (3 lessons)
+- 1. `course_b_0_l1` — Как устроен язык | steps=7 | kinds={'tip': 7} | outcome=
+- 2. `course_b_0_l2` — Как работают тоны | steps=9 | kinds={'tip': 9} | outcome=
+- 3. `course_b_0_l3` — Как думают тайцы | steps=8 | kinds={'tip': 8} | outcome=
+
+## course_b_1 — None (7 lessons)
+- 1. `course_b_1_l1` — Приветствие | steps=9 | kinds={'tip': 2, 'phrase': 6, 'casual': 1} | outcome=
+- 2. `course_b_1_l2` — Знакомство | steps=7 | kinds={'tip': 1, 'phrase': 5, 'casual': 1} | outcome=
+- 3. `course_b_1_l3` — Как дела? | steps=9 | kinds={'tip': 1, 'phrase': 7, 'casual': 1} | outcome=
+- 4. `course_b_1_l4` — Просьбы | steps=9 | kinds={'tip': 1, 'phrase': 8} | outcome=
+- 5. `course_b_1_l5` — Где тут? | steps=9 | kinds={'tip': 1, 'phrase': 7, 'word': 1} | outcome=
+- 6. `course_b_1_l6` — Цена | steps=9 | kinds={'tip': 1, 'phrase': 8} | outcome=
+- 7. `course_b_1_l7` — Спасибо и извини | steps=7 | kinds={'tip': 1, 'phrase': 5, 'casual': 1} | outcome=
+
+## course_b_2 — None (6 lessons)
+- 1. `course_b_2_l1` — Три тона на примерах | steps=10 | kinds={'tip': 2, 'word': 4, 'phrase': 3, 'casual': 1} | outcome=
+- 2. `course_b_2_l2` — Падение и подъём | steps=10 | kinds={'tip': 2, 'word': 2, 'phrase': 5, 'casual': 1} | outcome=
+- 3. `course_b_2_l3` — Эмоции тоном | steps=10 | kinds={'tip': 2, 'word': 3, 'phrase': 4, 'casual': 1} | outcome=
+- 4. `course_b_2_l4` — Быстрая речь | steps=10 | kinds={'tip': 2, 'phrase': 7, 'casual': 1} | outcome=
+- 5. `course_b_2_l5` — Хвостики на и ной | steps=9 | kinds={'tip': 2, 'word': 1, 'phrase': 5, 'casual': 1} | outcome=
+- 6. `course_b_2_l6` — В 7-Eleven говорят так | steps=10 | kinds={'tip': 1, 'phrase': 8, 'casual': 1} | outcome=
+
+## course_b_3 — None (7 lessons)
+- 1. `course_b_3_l1` — Я и ты | steps=7 | kinds={'tip': 1, 'word': 4, 'phrase': 2} | outcome=
+- 2. `course_b_3_l2` — Он, она, они | steps=9 | kinds={'tip': 1, 'word': 1, 'phrase': 6, 'casual': 1} | outcome=
+- 3. `course_b_3_l3` — Семья | steps=10 | kinds={'tip': 1, 'word': 3, 'phrase': 5, 'casual': 1} | outcome=
+- 4. `course_b_3_l4` — Возраст и профессия | steps=10 | kinds={'tip': 1, 'word': 2, 'phrase': 6, 'casual': 1} | outcome=
+- 5. `course_b_3_l5` — Мой, твой, его | steps=10 | kinds={'tip': 1, 'word': 2, 'phrase': 6, 'casual': 1} | outcome=
+- 6. `course_b_3_l6` — Мини-диалог знакомства | steps=9 | kinds={'tip': 1, 'phrase': 7, 'casual': 1} | outcome=
+- 7. `course_b_3_l7` — Друзья и гости | steps=11 | kinds={'tip': 1, 'word': 2, 'phrase': 7, 'casual': 1} | outcome=
+
+## course_b_4 — None (6 lessons)
+- 1. `course_b_4_l1` — Числа 1–10 | steps=11 | kinds={'tip': 1, 'word': 5, 'phrase': 5} | outcome=
+- 2. `course_b_4_l2` — Числа 10–100 | steps=12 | kinds={'tip': 2, 'word': 5, 'phrase': 5} | outcome=
+- 3. `course_b_4_l3` — Который час? | steps=11 | kinds={'tip': 1, 'word': 5, 'phrase': 5} | outcome=
+- 4. `course_b_4_l4` — Дни недели | steps=11 | kinds={'tip': 1, 'word': 5, 'phrase': 5} | outcome=
+- 5. `course_b_4_l5` — Прямо, налево, 100 метров | steps=10 | kinds={'tip': 1, 'word': 5, 'phrase': 4} | outcome=
+- 6. `course_b_4_l6` — Сколько человек, раз | steps=11 | kinds={'tip': 1, 'word': 5, 'phrase': 5} | outcome=
+
+## course_b_5 — None (7 lessons)
+- 1. `course_b_5_l1` — Идти и приходить | steps=9 | kinds={'word': 2, 'phrase': 7} | outcome=
+- 2. `course_b_5_l2` — Хотеть и любить | steps=11 | kinds={'word': 2, 'phrase': 9} | outcome=
+- 3. `course_b_5_l3` — Говорить и понимать | steps=11 | kinds={'tip': 1, 'word': 2, 'phrase': 8} | outcome=
+GLOBAL_KINDS {'tip': 147, 'phrase': 1525, 'casual': 33, 'word': 563}

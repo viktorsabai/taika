@@ -1,0 +1,2032 @@
+{
+  "summary": {
+    "courses": 42,
+    "lessons": 267,
+    "cards": 2325,
+    "categories": {
+      "База от Тайки": 8,
+      "Тайский для жизни": 15,
+      "На одной волне": 6,
+      "Тайский для души": 6,
+      "Тайский для долгожителей": 7
+    },
+    "stale_card_count_total": 10,
+    "empty_outcomes_total": 36,
+    "invalid_prerequisites": 0,
+    "missing_stepsets": 0,
+    "orphan_stepsets": 0,
+    "casual_cards_total": 47
+  },
+  "courses": [
+    {
+      "id": "course_b_0",
+      "category": "База от Тайки",
+      "title": "Тайский без паники",
+      "lessons": 3,
+      "cards": 23,
+      "kinds": {
+        "tip": 23
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_b_1",
+      "category": "База от Тайки",
+      "title": "Разговорный старт",
+      "lessons": 7,
+      "cards": 62,
+      "kinds": {
+        "tip": 8,
+        "phrase": 49,
+        "casual": 4,
+        "word": 1
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 4
+    },
+    {
+      "id": "course_b_2",
+      "category": "База от Тайки",
+      "title": "Магия интонации",
+      "lessons": 6,
+      "cards": 59,
+      "kinds": {
+        "tip": 11,
+        "word": 10,
+        "phrase": 32,
+        "casual": 6
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 6
+    },
+    {
+      "id": "course_b_3",
+      "category": "База от Тайки",
+      "title": "Я, ты, он, семья",
+      "lessons": 7,
+      "cards": 67,
+      "kinds": {
+        "tip": 7,
+        "word": 14,
+        "phrase": 39,
+        "casual": 7
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 7
+    },
+    {
+      "id": "course_b_4",
+      "category": "База от Тайки",
+      "title": "Время, место, цифры",
+      "lessons": 6,
+      "cards": 67,
+      "kinds": {
+        "tip": 6,
+        "word": 30,
+        "phrase": 30,
+        "casual": 1
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 1
+    },
+    {
+      "id": "course_b_5",
+      "category": "База от Тайки",
+      "title": "Главные глаголы",
+      "lessons": 7,
+      "cards": 80,
+      "kinds": {
+        "word": 14,
+        "phrase": 62,
+        "casual": 2,
+        "tip": 2
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 2
+    },
+    {
+      "id": "course_b_6",
+      "category": "База от Тайки",
+      "title": "Вкусно, красиво, горячо",
+      "lessons": 6,
+      "cards": 67,
+      "kinds": {
+        "tip": 5,
+        "word": 13,
+        "phrase": 46,
+        "casual": 3
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 3
+    },
+    {
+      "id": "course_b_7",
+      "category": "База от Тайки",
+      "title": "Диалоги как у местных",
+      "lessons": 6,
+      "cards": 34,
+      "kinds": {
+        "tip": 5,
+        "phrase": 25,
+        "casual": 2,
+        "word": 2
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 2
+    },
+    {
+      "id": "course_l_1",
+      "category": "Тайский для жизни",
+      "title": "На посту с полицией",
+      "lessons": 7,
+      "cards": 67,
+      "kinds": {
+        "tip": 7,
+        "phrase": 55,
+        "word": 4,
+        "casual": 1
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 1
+    },
+    {
+      "id": "course_e_6",
+      "category": "На одной волне",
+      "title": "Мягкий тайский твой",
+      "lessons": 6,
+      "cards": 51,
+      "kinds": {
+        "tip": 3,
+        "word": 17,
+        "phrase": 29,
+        "casual": 2
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 2
+    },
+    {
+      "id": "course_e_2",
+      "category": "На одной волне",
+      "title": "Работа с тайцами",
+      "lessons": 6,
+      "cards": 49,
+      "kinds": {
+        "word": 15,
+        "phrase": 32,
+        "tip": 2
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_e_5",
+      "category": "На одной волне",
+      "title": "Коды Таиланда",
+      "lessons": 6,
+      "cards": 47,
+      "kinds": {
+        "tip": 4,
+        "word": 12,
+        "phrase": 29,
+        "casual": 2
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 2
+    },
+    {
+      "id": "course_e_3",
+      "category": "На одной волне",
+      "title": "Сервис и персонал",
+      "lessons": 6,
+      "cards": 49,
+      "kinds": {
+        "tip": 1,
+        "word": 17,
+        "phrase": 31
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_e_1",
+      "category": "На одной волне",
+      "title": "Понятный тайский",
+      "lessons": 6,
+      "cards": 48,
+      "kinds": {
+        "tip": 1,
+        "word": 11,
+        "phrase": 34,
+        "casual": 2
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 2
+    },
+    {
+      "id": "course_l_15",
+      "category": "Тайский для жизни",
+      "title": "После заката всё интереснее",
+      "lessons": 7,
+      "cards": 62,
+      "kinds": {
+        "word": 14,
+        "phrase": 45,
+        "tip": 2,
+        "casual": 1
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 1
+    },
+    {
+      "id": "course_l_2",
+      "category": "Тайский для жизни",
+      "title": "Таксист, вези меня домой",
+      "lessons": 7,
+      "cards": 67,
+      "kinds": {
+        "tip": 11,
+        "phrase": 55,
+        "word": 1
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_l_3",
+      "category": "Тайский для жизни",
+      "title": "Король рынка",
+      "lessons": 7,
+      "cards": 67,
+      "kinds": {
+        "word": 14,
+        "phrase": 49,
+        "tip": 2,
+        "casual": 2
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 2
+    },
+    {
+      "id": "course_l_4",
+      "category": "Тайский для жизни",
+      "title": "Вселенная тайской еды",
+      "lessons": 7,
+      "cards": 61,
+      "kinds": {
+        "tip": 5,
+        "word": 13,
+        "phrase": 43
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_l_5",
+      "category": "Тайский для жизни",
+      "title": "Доктор Тайка дежурит",
+      "lessons": 7,
+      "cards": 59,
+      "kinds": {
+        "tip": 4,
+        "word": 13,
+        "phrase": 42
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_l_6",
+      "category": "Тайский для жизни",
+      "title": "Белый лотос на максималках",
+      "lessons": 7,
+      "cards": 62,
+      "kinds": {
+        "word": 14,
+        "phrase": 46,
+        "tip": 2
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_l_14",
+      "category": "Тайский для жизни",
+      "title": "Таиланд доставляет",
+      "lessons": 7,
+      "cards": 60,
+      "kinds": {
+        "word": 14,
+        "phrase": 42,
+        "tip": 4
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_l_7",
+      "category": "Тайский для жизни",
+      "title": "Пляж как состояние",
+      "lessons": 7,
+      "cards": 61,
+      "kinds": {
+        "tip": 2,
+        "word": 14,
+        "phrase": 44,
+        "casual": 1
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 1
+    },
+    {
+      "id": "course_l_8",
+      "category": "Тайский для жизни",
+      "title": "Магазинные приключения",
+      "lessons": 7,
+      "cards": 64,
+      "kinds": {
+        "word": 14,
+        "phrase": 47,
+        "tip": 2,
+        "casual": 1
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 1
+    },
+    {
+      "id": "course_l_9",
+      "category": "Тайский для жизни",
+      "title": "Срочная помощь",
+      "lessons": 7,
+      "cards": 61,
+      "kinds": {
+        "tip": 4,
+        "word": 14,
+        "phrase": 43
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_l_10",
+      "category": "Тайский для жизни",
+      "title": "Между подходами",
+      "lessons": 7,
+      "cards": 62,
+      "kinds": {
+        "tip": 1,
+        "word": 14,
+        "phrase": 47
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_l_11",
+      "category": "Тайский для жизни",
+      "title": "Сезон Сонгкрана и не только",
+      "lessons": 7,
+      "cards": 64,
+      "kinds": {
+        "tip": 2,
+        "word": 14,
+        "phrase": 48
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_l_12",
+      "category": "Тайский для жизни",
+      "title": "Новый тайский образ",
+      "lessons": 6,
+      "cards": 52,
+      "kinds": {
+        "tip": 2,
+        "word": 10,
+        "phrase": 40
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_l_13",
+      "category": "Тайский для жизни",
+      "title": "Хозяин дома — почти сосед",
+      "lessons": 7,
+      "cards": 59,
+      "kinds": {
+        "tip": 4,
+        "word": 13,
+        "phrase": 42
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_e_4",
+      "category": "На одной волне",
+      "title": "Разговоры без конфликта",
+      "lessons": 6,
+      "cards": 48,
+      "kinds": {
+        "tip": 2,
+        "word": 23,
+        "phrase": 23
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_s_1",
+      "category": "Тайский для души",
+      "title": "Тайский для блогинга",
+      "lessons": 6,
+      "cards": 49,
+      "kinds": {
+        "word": 13,
+        "phrase": 35,
+        "tip": 1
+      },
+      "empty_outcomes": 6,
+      "stale_card_counts": [
+        {
+          "lesson": "course_s_1_l5",
+          "declared": 8,
+          "actual": 9
+        }
+      ],
+      "casual": 0
+    },
+    {
+      "id": "course_s_2",
+      "category": "Тайский для души",
+      "title": "Хобби и движ по-тайски",
+      "lessons": 6,
+      "cards": 49,
+      "kinds": {
+        "tip": 1,
+        "word": 18,
+        "phrase": 30
+      },
+      "empty_outcomes": 6,
+      "stale_card_counts": [
+        {
+          "lesson": "course_s_2_l1",
+          "declared": 8,
+          "actual": 9
+        }
+      ],
+      "casual": 0
+    },
+    {
+      "id": "course_s_3",
+      "category": "Тайский для души",
+      "title": "О чём говорят на самом деле",
+      "lessons": 6,
+      "cards": 46,
+      "kinds": {
+        "tip": 2,
+        "word": 12,
+        "phrase": 32
+      },
+      "empty_outcomes": 6,
+      "stale_card_counts": [
+        {
+          "lesson": "course_s_3_l1",
+          "declared": 7,
+          "actual": 8
+        },
+        {
+          "lesson": "course_s_3_l3",
+          "declared": 8,
+          "actual": 9
+        }
+      ],
+      "casual": 0
+    },
+    {
+      "id": "course_s_4",
+      "category": "Тайский для души",
+      "title": "Ретрит и внутренний сабай",
+      "lessons": 6,
+      "cards": 49,
+      "kinds": {
+        "tip": 2,
+        "word": 14,
+        "phrase": 33
+      },
+      "empty_outcomes": 6,
+      "stale_card_counts": [
+        {
+          "lesson": "course_s_4_l1",
+          "declared": 8,
+          "actual": 9
+        },
+        {
+          "lesson": "course_s_4_l5",
+          "declared": 8,
+          "actual": 9
+        }
+      ],
+      "casual": 0
+    },
+    {
+      "id": "course_s_5",
+      "category": "Тайский для души",
+      "title": "Романтика по-тайски",
+      "lessons": 6,
+      "cards": 49,
+      "kinds": {
+        "tip": 2,
+        "word": 12,
+        "phrase": 35
+      },
+      "empty_outcomes": 6,
+      "stale_card_counts": [
+        {
+          "lesson": "course_s_5_l1",
+          "declared": 8,
+          "actual": 9
+        },
+        {
+          "lesson": "course_s_5_l4",
+          "declared": 8,
+          "actual": 9
+        }
+      ],
+      "casual": 0
+    },
+    {
+      "id": "course_s_6",
+      "category": "Тайский для души",
+      "title": "Тай кидс",
+      "lessons": 6,
+      "cards": 47,
+      "kinds": {
+        "word": 13,
+        "phrase": 32,
+        "tip": 2
+      },
+      "empty_outcomes": 6,
+      "stale_card_counts": [
+        {
+          "lesson": "course_s_6_l2",
+          "declared": 8,
+          "actual": 9
+        },
+        {
+          "lesson": "course_s_6_l3",
+          "declared": 7,
+          "actual": 8
+        }
+      ],
+      "casual": 0
+    },
+    {
+      "id": "course_long_1",
+      "category": "Тайский для долгожителей",
+      "title": "Виза, продление, иммиграция",
+      "lessons": 6,
+      "cards": 50,
+      "kinds": {
+        "tip": 2,
+        "word": 14,
+        "phrase": 32,
+        "casual": 2
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 2
+    },
+    {
+      "id": "course_long_2",
+      "category": "Тайский для долгожителей",
+      "title": "Банки, деньги, крипта",
+      "lessons": 6,
+      "cards": 50,
+      "kinds": {
+        "word": 13,
+        "phrase": 34,
+        "tip": 2,
+        "casual": 1
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 1
+    },
+    {
+      "id": "course_long_3",
+      "category": "Тайский для долгожителей",
+      "title": "Полная медицина и страховка",
+      "lessons": 7,
+      "cards": 58,
+      "kinds": {
+        "word": 20,
+        "phrase": 32,
+        "casual": 4,
+        "tip": 2
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 4
+    },
+    {
+      "id": "course_long_4",
+      "category": "Тайский для долгожителей",
+      "title": "Транспорт для своих",
+      "lessons": 6,
+      "cards": 50,
+      "kinds": {
+        "word": 13,
+        "phrase": 33,
+        "tip": 2,
+        "casual": 2
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 2
+    },
+    {
+      "id": "course_long_5",
+      "category": "Тайский для долгожителей",
+      "title": "Соседи, кондо, правила дома",
+      "lessons": 6,
+      "cards": 50,
+      "kinds": {
+        "tip": 2,
+        "word": 19,
+        "phrase": 28,
+        "casual": 1
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 1
+    },
+    {
+      "id": "course_long_6",
+      "category": "Тайский для долгожителей",
+      "title": "Питомцы в Таиланде",
+      "lessons": 6,
+      "cards": 49,
+      "kinds": {
+        "tip": 1,
+        "word": 20,
+        "phrase": 28
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    },
+    {
+      "id": "course_long_7",
+      "category": "Тайский для долгожителей",
+      "title": "Тайский юмор, мемы, поп-культура",
+      "lessons": 6,
+      "cards": 50,
+      "kinds": {
+        "tip": 2,
+        "phrase": 30,
+        "word": 18
+      },
+      "empty_outcomes": 0,
+      "stale_card_counts": [],
+      "casual": 0
+    }
+  ],
+  "invalid_prerequisites": [],
+  "cross_course_duplicate_phrases": {
+    "здравствуйте вежливо": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_2",
+        "lesson": "course_b_2_l6",
+        "kind": "phrase"
+      }
+    ],
+    "как тебя зовут?": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l3",
+        "kind": "phrase"
+      }
+    ],
+    "хорошо": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_2",
+        "lesson": "course_b_2_l4",
+        "kind": "phrase"
+      }
+    ],
+    "всё ок": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l3",
+        "kind": "casual"
+      },
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_13",
+        "lesson": "course_l_13_l6",
+        "kind": "phrase"
+      }
+    ],
+    "без острого": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l2",
+        "kind": "phrase"
+      }
+    ],
+    "счёт пожалуйста": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l5",
+        "kind": "phrase"
+      }
+    ],
+    "ещё один": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l3",
+        "kind": "phrase"
+      }
+    ],
+    "повторите пожалуйста": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_5",
+        "lesson": "course_b_5_l3",
+        "kind": "phrase"
+      }
+    ],
+    "медленнее пожалуйста": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_e_1",
+        "lesson": "course_e_1_l1",
+        "kind": "phrase"
+      }
+    ],
+    "сколько стоит?": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_2",
+        "lesson": "course_b_2_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_5",
+        "lesson": "course_l_5_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l1",
+        "kind": "phrase"
+      }
+    ],
+    "сколько за это?": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_3",
+        "lesson": "course_l_3_l1",
+        "kind": "phrase"
+      }
+    ],
+    "дорого": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_3",
+        "lesson": "course_l_3_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l2",
+        "kind": "phrase"
+      }
+    ],
+    "можно скидку?": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_3",
+        "lesson": "course_l_3_l3",
+        "kind": "phrase"
+      }
+    ],
+    "ок беру": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_3",
+        "lesson": "course_l_3_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l2",
+        "kind": "phrase"
+      }
+    ],
+    "спасибо": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l7",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l7",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_3",
+        "lesson": "course_l_3_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_5",
+        "lesson": "course_l_5_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_14",
+        "lesson": "course_l_14_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_14",
+        "lesson": "course_l_14_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_14",
+        "lesson": "course_l_14_l7",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_9",
+        "lesson": "course_l_9_l7",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_11",
+        "lesson": "course_l_11_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_12",
+        "lesson": "course_l_12_l6",
+        "kind": "phrase"
+      }
+    ],
+    "спасибо большое": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l7",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_2",
+        "lesson": "course_b_2_l4",
+        "kind": "phrase"
+      }
+    ],
+    "ничего страшного": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l7",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l5",
+        "kind": "casual"
+      }
+    ],
+    "пока": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l7",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l6",
+        "kind": "phrase"
+      }
+    ],
+    "до встречи": [
+      {
+        "course": "course_b_1",
+        "lesson": "course_b_1_l7",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_11",
+        "lesson": "course_l_11_l6",
+        "kind": "phrase"
+      }
+    ],
+    "не хочу": [
+      {
+        "course": "course_b_2",
+        "lesson": "course_b_2_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_5",
+        "lesson": "course_b_5_l2",
+        "kind": "phrase"
+      }
+    ],
+    "новый дом": [
+      {
+        "course": "course_b_2",
+        "lesson": "course_b_2_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_6",
+        "lesson": "course_b_6_l6",
+        "kind": "phrase"
+      }
+    ],
+    "очень вкусно": [
+      {
+        "course": "course_b_2",
+        "lesson": "course_b_2_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_6",
+        "lesson": "course_b_6_l1",
+        "kind": "phrase"
+      }
+    ],
+    "воды пожалуйста": [
+      {
+        "course": "course_b_2",
+        "lesson": "course_b_2_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l1",
+        "kind": "phrase"
+      }
+    ],
+    "секундочку": [
+      {
+        "course": "course_b_3",
+        "lesson": "course_b_3_l7",
+        "kind": "casual"
+      },
+      {
+        "course": "course_b_4",
+        "lesson": "course_b_4_l3",
+        "kind": "casual"
+      }
+    ],
+    "сто": [
+      {
+        "course": "course_b_4",
+        "lesson": "course_b_4_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_3",
+        "lesson": "course_l_3_l1",
+        "kind": "phrase"
+      }
+    ],
+    "направо": [
+      {
+        "course": "course_b_4",
+        "lesson": "course_b_4_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l3",
+        "kind": "phrase"
+      }
+    ],
+    "один раз": [
+      {
+        "course": "course_b_4",
+        "lesson": "course_b_4_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l1",
+        "kind": "phrase"
+      }
+    ],
+    "куда идёшь?": [
+      {
+        "course": "course_b_5",
+        "lesson": "course_b_5_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l6",
+        "kind": "phrase"
+      }
+    ],
+    "мало остро": [
+      {
+        "course": "course_b_6",
+        "lesson": "course_b_6_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l1",
+        "kind": "phrase"
+      }
+    ],
+    "лёд": [
+      {
+        "course": "course_b_6",
+        "lesson": "course_b_6_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l3",
+        "kind": "phrase"
+      }
+    ],
+    "хороший день": [
+      {
+        "course": "course_b_6",
+        "lesson": "course_b_6_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l6",
+        "kind": "phrase"
+      }
+    ],
+    "всё нормально": [
+      {
+        "course": "course_b_6",
+        "lesson": "course_b_6_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_1",
+        "lesson": "course_l_1_l4",
+        "kind": "phrase"
+      }
+    ],
+    "пакет": [
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_3",
+        "lesson": "course_l_3_l6",
+        "kind": "phrase"
+      }
+    ],
+    "готово": [
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l4",
+        "kind": "phrase"
+      }
+    ],
+    "в отель": [
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l1",
+        "kind": "phrase"
+      }
+    ],
+    "налево": [
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l3",
+        "kind": "phrase"
+      }
+    ],
+    "до свидания": [
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_1",
+        "lesson": "course_l_1_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_1",
+        "lesson": "course_l_1_l7",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_e_3",
+        "lesson": "course_e_3_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_12",
+        "lesson": "course_l_12_l6",
+        "kind": "phrase"
+      }
+    ],
+    "слишком дорого": [
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_3",
+        "lesson": "course_l_3_l4",
+        "kind": "phrase"
+      }
+    ],
+    "поехали": [
+      {
+        "course": "course_b_7",
+        "lesson": "course_b_7_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l5",
+        "kind": "phrase"
+      }
+    ],
+    "сабай": [
+      {
+        "course": "course_l_1",
+        "lesson": "course_l_1_l4",
+        "kind": "casual"
+      },
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l5",
+        "kind": "phrase"
+      }
+    ],
+    "вот паспорт": [
+      {
+        "course": "course_l_1",
+        "lesson": "course_l_1_l7",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l6",
+        "kind": "phrase"
+      }
+    ],
+    "не звучать резко": [
+      {
+        "course": "course_e_6",
+        "lesson": "course_e_6_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_e_1",
+        "lesson": "course_e_1_l2",
+        "kind": "phrase"
+      }
+    ],
+    "без давления": [
+      {
+        "course": "course_e_2",
+        "lesson": "course_e_2_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_e_2",
+        "lesson": "course_e_2_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_s_5",
+        "lesson": "course_s_5_l4",
+        "kind": "phrase"
+      }
+    ],
+    "приятно": [
+      {
+        "course": "course_e_5",
+        "lesson": "course_e_5_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_e_3",
+        "lesson": "course_e_3_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_12",
+        "lesson": "course_l_12_l3",
+        "kind": "phrase"
+      }
+    ],
+    "понял вас": [
+      {
+        "course": "course_e_5",
+        "lesson": "course_e_5_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_e_1",
+        "lesson": "course_e_1_l1",
+        "kind": "phrase"
+      }
+    ],
+    "удобно после обеда?": [
+      {
+        "course": "course_e_3",
+        "lesson": "course_e_3_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_13",
+        "lesson": "course_l_13_l5",
+        "kind": "phrase"
+      }
+    ],
+    "доставка": [
+      {
+        "course": "course_e_3",
+        "lesson": "course_e_3_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_14",
+        "lesson": "course_l_14_l1",
+        "kind": "phrase"
+      }
+    ],
+    "вода": [
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_11",
+        "lesson": "course_l_11_l1",
+        "kind": "phrase"
+      }
+    ],
+    "счёт": [
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_13",
+        "lesson": "course_l_13_l2",
+        "kind": "phrase"
+      }
+    ],
+    "два по цене одного": [
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l5",
+        "kind": "phrase"
+      }
+    ],
+    "ок": [
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_12",
+        "lesson": "course_l_12_l5",
+        "kind": "phrase"
+      }
+    ],
+    "интересно": [
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l4",
+        "kind": "phrase"
+      }
+    ],
+    "флирт": [
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_s_5",
+        "lesson": "course_s_5_l1",
+        "kind": "phrase"
+      }
+    ],
+    "границы": [
+      {
+        "course": "course_l_15",
+        "lesson": "course_l_15_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_s_5",
+        "lesson": "course_s_5_l4",
+        "kind": "phrase"
+      }
+    ],
+    "договорились": [
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_3",
+        "lesson": "course_l_3_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_3",
+        "lesson": "course_l_3_l7",
+        "kind": "phrase"
+      }
+    ],
+    "там": [
+      {
+        "course": "course_l_2",
+        "lesson": "course_l_2_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l1",
+        "kind": "phrase"
+      }
+    ],
+    "вкусно": [
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l3",
+        "kind": "phrase"
+      }
+    ],
+    "понятно": [
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_5",
+        "lesson": "course_l_5_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l1",
+        "kind": "phrase"
+      }
+    ],
+    "всё вместе": [
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_12",
+        "lesson": "course_l_12_l5",
+        "kind": "phrase"
+      }
+    ],
+    "подождать": [
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l3",
+        "kind": "phrase"
+      }
+    ],
+    "платить": [
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l3",
+        "kind": "phrase"
+      }
+    ],
+    "отдельно": [
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_12",
+        "lesson": "course_l_12_l5",
+        "kind": "phrase"
+      }
+    ],
+    "картой": [
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l3",
+        "kind": "phrase"
+      }
+    ],
+    "наличные": [
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_13",
+        "lesson": "course_l_13_l2",
+        "kind": "phrase"
+      }
+    ],
+    "подойдёт": [
+      {
+        "course": "course_l_4",
+        "lesson": "course_l_4_l7",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_5",
+        "lesson": "course_l_5_l5",
+        "kind": "phrase"
+      }
+    ],
+    "аптека": [
+      {
+        "course": "course_l_5",
+        "lesson": "course_l_5_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_long_3",
+        "lesson": "course_long_3_l6",
+        "kind": "phrase"
+      }
+    ],
+    "после еды": [
+      {
+        "course": "course_l_5",
+        "lesson": "course_l_5_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_long_3",
+        "lesson": "course_long_3_l6",
+        "kind": "phrase"
+      }
+    ],
+    "лифт": [
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_long_5",
+        "lesson": "course_long_5_l3",
+        "kind": "phrase"
+      }
+    ],
+    "этаж": [
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_8",
+        "lesson": "course_l_8_l1",
+        "kind": "phrase"
+      }
+    ],
+    "почините пожалуйста": [
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_13",
+        "lesson": "course_l_13_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_13",
+        "lesson": "course_l_13_l7",
+        "kind": "phrase"
+      }
+    ],
+    "полотенце": [
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l5",
+        "kind": "phrase"
+      }
+    ],
+    "красиво": [
+      {
+        "course": "course_l_7",
+        "lesson": "course_l_7_l5",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_11",
+        "lesson": "course_l_11_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_11",
+        "lesson": "course_l_11_l3",
+        "kind": "phrase"
+      }
+    ],
+    "срочно": [
+      {
+        "course": "course_l_9",
+        "lesson": "course_l_9_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_13",
+        "lesson": "course_l_13_l3",
+        "kind": "phrase"
+      }
+    ],
+    "больница": [
+      {
+        "course": "course_l_9",
+        "lesson": "course_l_9_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_long_3",
+        "lesson": "course_long_3_l7",
+        "kind": "phrase"
+      }
+    ],
+    "сообщить": [
+      {
+        "course": "course_l_9",
+        "lesson": "course_l_9_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_13",
+        "lesson": "course_l_13_l1",
+        "kind": "phrase"
+      }
+    ],
+    "пробное занятие": [
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_s_2",
+        "lesson": "course_s_2_l3",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_s_2",
+        "lesson": "course_s_2_l3",
+        "kind": "phrase"
+      }
+    ],
+    "где зал?": [
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l1",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_s_4",
+        "lesson": "course_s_4_l4",
+        "kind": "phrase"
+      }
+    ],
+    "утро вечер": [
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_s_4",
+        "lesson": "course_s_4_l2",
+        "kind": "phrase"
+      }
+    ],
+    "до завтра": [
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_13",
+        "lesson": "course_l_13_l2",
+        "kind": "phrase"
+      }
+    ],
+    "приду ещё": [
+      {
+        "course": "course_l_10",
+        "lesson": "course_l_10_l6",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_l_12",
+        "lesson": "course_l_12_l6",
+        "kind": "phrase"
+      }
+    ],
+    "участвовать": [
+      {
+        "course": "course_l_11",
+        "lesson": "course_l_11_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_long_5",
+        "lesson": "course_long_5_l5",
+        "kind": "phrase"
+      }
+    ],
+    "форма": [
+      {
+        "course": "course_l_12",
+        "lesson": "course_l_12_l4",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_long_1",
+        "lesson": "course_long_1_l1",
+        "kind": "phrase"
+      }
+    ],
+    "перевод": [
+      {
+        "course": "course_l_13",
+        "lesson": "course_l_13_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_long_2",
+        "lesson": "course_long_2_l2",
+        "kind": "phrase"
+      }
+    ],
+    "документы": [
+      {
+        "course": "course_long_1",
+        "lesson": "course_long_1_l2",
+        "kind": "phrase"
+      },
+      {
+        "course": "course_long_4",
+        "lesson": "course_long_4_l2",
+        "kind": "phrase"
+      }
+    ]
+  },
+  "inconsistent_thai_phonetics": {
+    "ยี่สิบ": [
+      {
+        "course": "course_b_4",
+        "lesson": "course_b_4_l2",
+        "phonetic": "йи→ сип→",
+        "ru": "Двадцать"
+      },
+      {
+        "course": "course_l_3",
+        "lesson": "course_l_3_l1",
+        "phonetic": "ий→ сип→",
+        "ru": "Двадцать"
+      }
+    ],
+    "แอร์ไม่ทำงาน": [
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l3",
+        "phonetic": "эа→ май↘ тхам→ нган→",
+        "ru": "Кондиционер не работает"
+      },
+      {
+        "course": "course_l_6",
+        "lesson": "course_l_6_l7",
+        "phonetic": "эа→ май→ там→ нгаан↘",
+        "ru": "Кондиционер не работает"
+      }
+    ]
+  }
+}

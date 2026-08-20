@@ -1,0 +1,16 @@
+L courses: 15
+L lessons: 104
+L cards/items: 863
+errors: 0
+notes: 10
+--- top duplicate notes ---
+NOTE: cross-course duplicate 15x: спасибо
+NOTE: cross-course duplicate 5x: счёт
+NOTE: cross-course duplicate 5x: дорого
+NOTE: cross-course duplicate 5x: счёт пожалуйста
+NOTE: cross-course duplicate 5x: сколько стоит?
+NOTE: cross-course duplicate 5x: до свидания
+NOTE: cross-course duplicate 4x: вода
+NOTE: cross-course duplicate 4x: всё вместе
+NOTE: cross-course duplicate 4x: наличные
+NOTE: cross-course duplicate 4x: почините пожалуйста

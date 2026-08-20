@@ -1,0 +1,24 @@
+course_l_1 {'items': 56}
+course_l_15 {'items': 67}
+course_l_2 {'items': 67}
+course_l_3 {'items': 70}
+course_l_4 {'items': 65}
+course_l_5 {'items': 64}
+course_l_6 {'items': 66}
+course_l_14 {'items': 65}
+course_l_7 {'items': 71}
+course_l_8 {'items': 67}
+course_l_9 {'items': 66}
+course_l_10 {'items': 67}
+course_l_11 {'items': 69}
+course_l_12 {'items': 55}
+course_l_13 {'items': 63}
+stats {'items': 978, 'tips': 125, 'casual': 7, 'meta_flags': 7}
+flags 7
+{'type': 'meta_or_abstract', 'course': 'course_l_15', 'lesson': 'course_l_15_l3', 'order': 2, 'ru': 'Весело сегодня?', 'thai': 'สนุกไหมวันนี้'}
+{'type': 'meta_or_abstract', 'course': 'course_l_4', 'lesson': 'course_l_4_l3', 'order': 9, 'ru': 'Понятно', 'thai': 'เข้าใจ'}
+{'type': 'meta_or_abstract', 'course': 'course_l_5', 'lesson': 'course_l_5_l2', 'order': 9, 'ru': 'Понятно', 'thai': 'เข้าใจ'}
+{'type': 'meta_or_abstract', 'course': 'course_l_7', 'lesson': 'course_l_7_l5', 'order': 8, 'ru': 'Всё ок', 'thai': 'โอเค'}
+{'type': 'meta_or_abstract', 'course': 'course_l_8', 'lesson': 'course_l_8_l1', 'order': 9, 'ru': 'Понятно', 'thai': 'เข้าใจ'}
+{'type': 'meta_or_abstract', 'course': 'course_l_8', 'lesson': 'course_l_8_l7', 'order': 12, 'ru': 'Всё ок, спасибо', 'thai': 'โอเค ขอบคุณนะ'}
+{'type': 'meta_or_abstract', 'course': 'course_l_13', 'lesson': 'course_l_13_l6', 'order': 7, 'ru': 'Всё ок', 'thai': 'โอเคครับ'}

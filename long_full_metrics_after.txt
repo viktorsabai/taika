@@ -1,0 +1,25 @@
+{
+  "courses": 42,
+  "lessons": 267,
+  "cards": 2325,
+  "categories": {
+    "База от Тайки": 8,
+    "Тайский для жизни": 15,
+    "На одной волне": 6,
+    "Тайский для души": 6,
+    "Тайский для долгожителей": 7
+  },
+  "stale_card_count_total": 10,
+  "empty_outcomes_total": 36,
+  "invalid_prerequisites": 0,
+  "missing_stepsets": 0,
+  "orphan_stepsets": 0,
+  "casual_cards_total": 47
+}
+База от Тайки {'courses': 8, 'lessons': 48, 'cards': 459, 'casual': 25, 'empty_outcomes': 0, 'stale_card_counts': 0}
+Тайский для жизни {'courses': 15, 'lessons': 104, 'cards': 928, 'casual': 6, 'empty_outcomes': 0, 'stale_card_counts': 0}
+На одной волне {'courses': 6, 'lessons': 36, 'cards': 292, 'casual': 6, 'empty_outcomes': 0, 'stale_card_counts': 0}
+Тайский для души {'courses': 6, 'lessons': 36, 'cards': 289, 'casual': 0, 'empty_outcomes': 36, 'stale_card_counts': 10}
+Тайский для долгожителей {'courses': 7, 'lessons': 43, 'cards': 357, 'casual': 10, 'empty_outcomes': 0, 'stale_card_counts': 0}
+cross duplicates 84
+inconsistent Thai phonetics 2

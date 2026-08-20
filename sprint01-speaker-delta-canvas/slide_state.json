@@ -1,0 +1,23 @@
+{
+  "project_info": {
+    "title": "Current → After: Speaker",
+    "created": 1786969243.922,
+    "last_updated": 1786969275.208,
+    "total_slides": 1
+  },
+  "slides": [
+    {
+      "id": "speaker_delta",
+      "state": "edited",
+      "pageNum": 1
+    }
+  ],
+  "outline": [
+    {
+      "id": "speaker_delta",
+      "title": "Current → After: Speaker",
+      "summary": "Один крупный native-style экран Taika до и после совместного применения Sprint 0 foundation и Sprint 1 instant translation slice. Без explanatory collage и без pronunciation score в translation result.",
+      "image_plan": "Use a suitable image if needed"
+    }
+  ]
+}

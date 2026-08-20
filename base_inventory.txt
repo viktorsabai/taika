@@ -1,0 +1,56 @@
+COURSE|course_b_0|Тайский без паники|Теория без паники: логика языка, тоны и как думают тайцы.|lessons=3|cards=27
+LESSON|course_b_0_l1|Как устроен язык|Простые правила, которые снимают страх|cards=10|intro=|outline=|apply=
+LESSON|course_b_0_l2|Как работают тоны|Как перестать их бояться|cards=8|intro=|outline=|apply=
+LESSON|course_b_0_l3|Как думают тайцы|Почему они говорят именно так|cards=9|intro=|outline=|apply=
+COURSE|course_b_1|Разговорный старт|Survival-ядро: привет, просьбы, где, цена, спасибо.|lessons=7|cards=58
+LESSON|course_b_1_l1|Приветствие|Саватди и улыбка — открываем разговор|cards=6|intro=|outline=приветствие · вежливый кхрап/ка · casual привет · добрый вечер|apply=
+LESSON|course_b_1_l2|Знакомство|Имя и откуда — без допроса и грамматики|cards=7|intro=|outline=|apply=
+LESSON|course_b_1_l3|Как дела?|Сабай ди май и короткие ответы|cards=9|intro=|outline=|apply=
+LESSON|course_b_1_l4|Просьбы|Вода, счёт, без острого — формулы на кассе и в кафе|cards=9|intro=|outline=|apply=
+LESSON|course_b_1_l5|Где тут?|Где туалет, вайфай и как показать место|cards=8|intro=|outline=где · туалет · здесь · сюда пожалуйста · вайфай · пароль|apply=
+LESSON|course_b_1_l6|Цена|Сколько, дорого, скидка, карта — день на рынке|cards=9|intro=|outline=|apply=
+LESSON|course_b_1_l7|Спасибо и извини|Спасибо, извини и мягко попрощайся|cards=10|intro=|outline=спасибо · большое спасибо · извини · ничего страшного · пока · до встречи · спокойной ночи|apply=
+COURSE|course_b_2|Магия интонации|Тон, скорость и вежливые хвостики на знакомых фразах.|lessons=6|cards=59
+LESSON|course_b_2_l1|Три тона на примерах|Маа→, маа↘, маа↗ — прийти, собака, лошадь|cards=10|intro=|outline=|apply=
+LESSON|course_b_2_l2|Падение и подъём|Май↘ нет, май↗ новый — одна мелодия, разный смысл|cards=10|intro=|outline=|apply=
+LESSON|course_b_2_l3|Эмоции тоном|Оой↘, э↗?, вау↗ — боль, удивление, восторг|cards=10|intro=|outline=|apply=
+LESSON|course_b_2_l4|Быстрая речь|Сабади май — как тайцы глотают слоги|cards=10|intro=|outline=|apply=
+LESSON|course_b_2_l5|Хвостики на и ной|Мягче просьбы: на, ной на|cards=9|intro=|outline=|apply=
+LESSON|course_b_2_l6|В 7-Eleven говорят так|Саватди кхрап, чек-бин ка — вежливо и быстро|cards=10|intro=|outline=|apply=
+COURSE|course_b_3|Я, ты, он, семья|Я/ты/он, семья, профессия и мини-диалог знакомства.|lessons=7|cards=66
+LESSON|course_b_3_l1|Я и ты|Пхом, чхан, кхун — кто говорит и к кому|cards=7|intro=|outline=|apply=
+LESSON|course_b_3_l2|Он, она, они|Кхау, тхё, пхуак-кхау — говорим о других|cards=9|intro=|outline=|apply=
+LESSON|course_b_3_l3|Семья|Мама, папа, брат, сестра — с теплом|cards=10|intro=|outline=|apply=
+LESSON|course_b_3_l4|Возраст и профессия|Сколько лет, я работаю, чем занимаешься|cards=10|intro=|outline=|apply=
+LESSON|course_b_3_l5|Мой, твой, его|Кхонг чхан, кхонг кун — чья сумка, чей друг|cards=10|intro=|outline=|apply=
+LESSON|course_b_3_l6|Мини-диалог знакомства|Соберём всё: привет, имя, откуда, семья|cards=9|intro=|outline=|apply=
+LESSON|course_b_3_l7|Друзья и гости|Друг, прийти в гости, пригласить — зовём и идём|cards=11|intro=|outline=|apply=
+COURSE|course_b_4|Время, место, цифры|Числа, время, дни недели и навигация.|lessons=6|cards=66
+LESSON|course_b_4_l1|Числа 1–10|Нынг, сонг, сам — база для цен и счёта|cards=11|intro=|outline=|apply=
+LESSON|course_b_4_l2|Числа 10–100|Сип, сам-сип, рой — десятки и сотни|cards=12|intro=|outline=|apply=
+LESSON|course_b_4_l3|Который час?|Монг ге май, три часа, в десять утра|cards=11|intro=|outline=|apply=
+LESSON|course_b_4_l4|Дни недели|Ван-нит, ван-пхан — понедельник, вторник|cards=11|intro=|outline=|apply=
+LESSON|course_b_4_l5|Прямо, налево, 100 метров|Тронг пай, лиао сай, рой метер|cards=10|intro=|outline=|apply=
+LESSON|course_b_4_l6|Сколько человек, раз|Кон, кхраанг, чат — люди и счёт раз|cards=11|intro=|outline=|apply=
+COURSE|course_b_5|Главные глаголы|Главные глаголы для быта и разговора.|lessons=7|cards=78
+LESSON|course_b_5_l1|Идти и приходить|Пай, маа — куда идёшь, я пришёл|cards=9|intro=|outline=|apply=
+LESSON|course_b_5_l2|Хотеть и любить|Яак, чоп — хочу есть, люблю Таиланд|cards=11|intro=|outline=|apply=
+LESSON|course_b_5_l3|Говорить и понимать|Пхуут, кхао-джай — говорю по-тайски, понимаю|cards=11|intro=|outline=|apply=
+LESSON|course_b_5_l4|Есть, пить, покупать|Кин, дум, су — есть рис, пить воду, купить|cards=12|intro=|outline=|apply=
+LESSON|course_b_5_l5|Делать и работать|Там, там-нгаан — что делаешь, работаю|cards=12|intro=|outline=|apply=
+LESSON|course_b_5_l6|Спать, сидеть, давать|Нон, нонг, хай — быт и просьбы|cards=11|intro=|outline=|apply=
+LESSON|course_b_5_l7|Знать, видеть, жить|Руу, хэн, ю — знаю, вижу, живу здесь|cards=12|intro=|outline=|apply=
+COURSE|course_b_6|Вкусно, красиво, горячо|Оценки и описания: еда, цена, погода, размер.|lessons=6|cards=64
+LESSON|course_b_6_l1|Вкусно и остро|А-рой, пхет, май пхет — про еду|cards=10|intro=|outline=|apply=
+LESSON|course_b_6_l2|Красиво и дорого|Суай, пхэнг, тук — про вещи и цены|cards=9|intro=|outline=|apply=
+LESSON|course_b_6_l3|Горячо и холодно|Рон, нён — погода и еда|cards=12|intro=|outline=|apply=
+LESSON|course_b_6_l4|Большой, маленький|Яй, лек — размеры|cards=10|intro=|outline=|apply=
+LESSON|course_b_6_l5|Хороший и плохой|Ди, май ди — оценка|cards=11|intro=|outline=|apply=
+LESSON|course_b_6_l6|Новый, старый, быстрый|Май, гау, рео — ещё описания|cards=12|intro=|outline=|apply=
+COURSE|course_b_7|Диалоги как у местных|Капстоун: склейка Базы в сцены 7-Eleven, кафе, такси, рынок.|lessons=6|cards=32
+LESSON|course_b_7_l1|7-Eleven|Собери привет + просьбу + спасибо из старта в один заход|cards=5|intro=|outline=|apply=
+LESSON|course_b_7_l2|Кафе|Заказ напитка: старт + новые реплики заказа|cards=5|intro=|outline=|apply=
+LESSON|course_b_7_l3|Такси|Место + повороты из курса цифр + «останови» из старта|cards=7|intro=|outline=|apply=
+LESSON|course_b_7_l4|Рынок|Торг из старта + упаковка и количество|cards=5|intro=|outline=|apply=
+LESSON|course_b_7_l5|Сосед|Знакомство из старта + люди из «Я, ты, он»|cards=5|intro=|outline=|apply=
+LESSON|course_b_7_l6|Сборный день|Время + куда + до встречи — финальная склейка базы|cards=5|intro=|outline=|apply=

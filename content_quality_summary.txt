@@ -1,0 +1,354 @@
+{
+  "course_count": 42,
+  "lesson_count": 267,
+  "record_count": 2268,
+  "step_count_stats": {
+    "min": 5,
+    "max": 13,
+    "avg": 8.49
+  },
+  "kind_counts": {
+    "tip": 147,
+    "phrase": 1525,
+    "casual": 33,
+    "word": 563
+  },
+  "kind_percent": {
+    "tip": 6.5,
+    "phrase": 67.2,
+    "casual": 1.5,
+    "word": 24.8
+  },
+  "course_ids_missing_from_catalog": [],
+  "catalog_ids_without_lessons": [],
+  "order_duplicate_lesson_count": 0,
+  "order_gap_lesson_count": 0,
+  "lesson_title_exact_duplicate_groups": [],
+  "lesson_title_close_pairs": [
+    [
+      [
+        "course_b_1",
+        "course_b_1_l2",
+        "Знакомство"
+      ],
+      [
+        "course_l_15",
+        "course_l_15_l5",
+        "Знакомства"
+      ],
+      0.9
+    ],
+    [
+      [
+        "course_b_4",
+        "course_b_4_l1",
+        "Числа 1–10"
+      ],
+      [
+        "course_b_4",
+        "course_b_4_l2",
+        "Числа 10–100"
+      ],
+      0.909
+    ],
+    [
+      [
+        "course_b_6",
+        "course_b_6_l1",
+        "Вкусно и остро"
+      ],
+      [
+        "course_l_4",
+        "course_l_4_l6",
+        "Вкусно и счёт"
+      ],
+      0.815
+    ],
+    [
+      [
+        "course_e_5",
+        "course_e_5_l6",
+        "Коды сценка"
+      ],
+      [
+        "course_long_5",
+        "course_long_5_l6",
+        "Кондо сценка"
+      ],
+      0.87
+    ],
+    [
+      [
+        "course_e_3",
+        "course_e_3_l6",
+        "Сервис сценка"
+      ],
+      [
+        "course_s_1",
+        "course_s_1_l6",
+        "Сторис сценка"
+      ],
+      0.846
+    ],
+    [
+      [
+        "course_l_15",
+        "course_l_15_l2",
+        "Сколько за пиво?"
+      ],
+      [
+        "course_l_3",
+        "course_l_3_l2",
+        "Сколько за это"
+      ],
+      0.828
+    ],
+    [
+      [
+        "course_l_10",
+        "course_l_10_l6",
+        "Зал сценка"
+      ],
+      [
+        "course_l_12",
+        "course_l_12_l6",
+        "Салон сценка"
+      ],
+      0.818
+    ]
+  ],
+  "duplicate_counts": {
+    "key_ru": 161,
+    "key_thai": 205,
+    "key_phonetic": 206
+  },
+  "course_kind_counts": {
+    "course_b_0": {
+      "tip": 24
+    },
+    "course_b_1": {
+      "tip": 8,
+      "phrase": 46,
+      "casual": 4,
+      "word": 1
+    },
+    "course_b_2": {
+      "tip": 11,
+      "word": 10,
+      "phrase": 32,
+      "casual": 6
+    },
+    "course_b_3": {
+      "tip": 7,
+      "word": 14,
+      "phrase": 39,
+      "casual": 6
+    },
+    "course_b_4": {
+      "tip": 7,
+      "word": 30,
+      "phrase": 29
+    },
+    "course_b_5": {
+      "word": 14,
+      "phrase": 62,
+      "tip": 2
+    },
+    "course_b_6": {
+      "tip": 5,
+      "word": 13,
+      "phrase": 46
+    },
+    "course_b_7": {
+      "tip": 5,
+      "phrase": 25,
+      "word": 2
+    },
+    "course_l_1": {
+      "tip": 7,
+      "phrase": 51,
+      "word": 4,
+      "casual": 1
+    },
+    "course_e_6": {
+      "tip": 3,
+      "word": 17,
+      "phrase": 29,
+      "casual": 2
+    },
+    "course_e_2": {
+      "word": 15,
+      "phrase": 33,
+      "tip": 2
+    },
+    "course_e_5": {
+      "tip": 4,
+      "word": 15,
+      "phrase": 28,
+      "casual": 2
+    },
+    "course_e_3": {
+      "tip": 1,
+      "word": 18,
+      "phrase": 30
+    },
+    "course_e_1": {
+      "tip": 1,
+      "word": 11,
+      "phrase": 34,
+      "casual": 2
+    },
+    "course_l_15": {
+      "word": 14,
+      "phrase": 42,
+      "tip": 2
+    },
+    "course_l_2": {
+      "tip": 9,
+      "phrase": 55,
+      "word": 1
+    },
+    "course_l_3": {
+      "word": 14,
+      "phrase": 46,
+      "tip": 2
+    },
+    "course_l_4": {
+      "tip": 3,
+      "word": 13,
+      "phrase": 43
+    },
+    "course_l_5": {
+      "tip": 2,
+      "word": 13,
+      "phrase": 42
+    },
+    "course_l_6": {
+      "word": 14,
+      "phrase": 42,
+      "tip": 2
+    },
+    "course_l_14": {
+      "word": 14,
+      "phrase": 42,
+      "tip": 2
+    },
+    "course_l_7": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 41
+    },
+    "course_l_8": {
+      "word": 14,
+      "phrase": 43,
+      "tip": 2
+    },
+    "course_l_9": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 43
+    },
+    "course_l_10": {
+      "tip": 1,
+      "word": 14,
+      "phrase": 44
+    },
+    "course_l_11": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 42
+    },
+    "course_l_12": {
+      "tip": 2,
+      "word": 10,
+      "phrase": 36
+    },
+    "course_l_13": {
+      "tip": 2,
+      "word": 13,
+      "phrase": 42
+    },
+    "course_e_4": {
+      "tip": 2,
+      "word": 24,
+      "phrase": 24
+    },
+    "course_s_1": {
+      "word": 13,
+      "phrase": 35,
+      "tip": 1
+    },
+    "course_s_2": {
+      "tip": 1,
+      "word": 18,
+      "phrase": 30
+    },
+    "course_s_3": {
+      "tip": 2,
+      "word": 12,
+      "phrase": 32
+    },
+    "course_s_4": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 33
+    },
+    "course_s_5": {
+      "tip": 2,
+      "word": 12,
+      "phrase": 35
+    },
+    "course_s_6": {
+      "word": 13,
+      "phrase": 32,
+      "tip": 2
+    },
+    "course_long_1": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 32,
+      "casual": 2
+    },
+    "course_long_2": {
+      "word": 13,
+      "phrase": 34,
+      "tip": 2,
+      "casual": 1
+    },
+    "course_long_3": {
+      "word": 20,
+      "phrase": 32,
+      "casual": 4,
+      "tip": 2
+    },
+    "course_long_4": {
+      "word": 13,
+      "phrase": 33,
+      "tip": 2,
+      "casual": 2
+    },
+    "course_long_5": {
+      "tip": 2,
+      "word": 19,
+      "phrase": 28,
+      "casual": 1
+    },
+    "course_long_6": {
+      "tip": 1,
+      "word": 20,
+      "phrase": 28
+    },
+    "course_long_7": {
+      "tip": 2,
+      "phrase": 30,
+      "word": 18
+    }
+  },
+  "canon_keys": {
+    "version": "int",
+    "phonetic_canon": 48,
+    "gloss_canon": 5,
+    "phonetic_allow_multi": 1,
+    "card_tip_bank": 190
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "project_info": {
+    "title": "Sprint 3 — Quota + Paywall states",
+    "created": 1786972509.188,
+    "last_updated": 1786972538.595,
+    "total_slides": 1
+  },
+  "slides": [
+    {
+      "id": "quota_paywall_states",
+      "state": "edited",
+      "pageNum": 1
+    }
+  ],
+  "outline": [
+    {
+      "id": "quota_paywall_states",
+      "title": "Sprint 3 — Quota + Paywall states",
+      "summary": "Native-style Canvas mockup showing Game Park locked peek, unified quota state, source-aware Taika+ paywall with selected plan, and close returning to Game Park. No new pricing model or navigation architecture.",
+      "image_plan": "Use a suitable image if needed"
+    }
+  ]
+}

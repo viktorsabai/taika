@@ -1,0 +1,140 @@
+
+=== lessons.json ===
+type: dict top keys: ['version', 'courses']
+list courses len 42
+
+=== steps.json ===
+type: dict top keys: ['version', 'stepsets']
+list stepsets len 267
+
+=== taika/Resourses/taika_basa_course.json ===
+type: list top keys: None
+
+=== CATEGORY RECORDS ===
+records 42
+{
+  "id": "course_e_1",
+  "title": "Понятный тайский",
+  "description": "Коротко и понятно: попросить повторить, уточнить смысл и не звучать резко, каа.",
+  "category": "На одной волне",
+  "is_pro": true,
+  "lesson_count": 6,
+  "duration_minutes": 22,
+  "icon_name": "thank_you_hand",
+  "is_new": false,
+  "learning_outcomes": [
+    {
+      "type": "Понимание",
+      "count": 8
+    },
+    {
+      "type": "Вежливость",
+      "count": 8
+    }
+  ]
+}
+{
+  "id": "course_e_2",
+  "title": "Работа с тайцами",
+  "description": "Рабочие задачи, сроки и small talk: попросить, уточнить статус и напомнить без давления, каа.",
+  "category": "На одной волне",
+  "is_pro": true,
+  "lesson_count": 6,
+  "duration_minutes": 22,
+  "icon_name": "open_door",
+  "is_new": false,
+  "learning_outcomes": [
+    {
+      "type": "Работа",
+      "count": 10
+    },
+    {
+      "type": "Фразы",
+      "count": 14
+    }
+  ]
+}
+{
+  "id": "course_e_3",
+  "title": "Сервис и персонал",
+  "description": "Сервис без конфликта: уборка, ремонт, сроки и подтверждение результата — прямо для жизни в Таиланде, каа.",
+  "category": "На одной волне",
+  "is_pro": true,
+  "lesson_count": 6,
+  "duration_minutes": 22,
+  "icon_name": "body_language",
+  "is_new": false,
+  "learning_outcomes": [
+    {
+      "type": "Сервис",
+      "count": 12
+    },
+    {
+      "type": "Фразы",
+      "count": 16
+    }
+  ]
+}
+{
+  "id": "course_e_4",
+  "title": "Разговоры без конфликта",
+  "description": "Недопонимание решаем мягко: извиниться, уточнить, предложить вариант и сохранить лицо обоим, каа.",
+  "category": "На одной волне",
+  "is_pro": true,
+  "lesson_count": 6,
+  "duration_minutes": 22,
+  "icon_name": "apologize",
+  "is_new": false,
+  "learning_outcomes": [
+    {
+      "type": "Конфликты",
+      "count": 10
+    },
+    {
+      "type": "Фразы",
+      "count": 16
+    }
+  ]
+}
+{
+  "id": "course_e_5",
+  "title": "Коды Таиланда",
+  "description": "Крэнг-джай, джай-йен и мягкий отказ: читать контекст, но всегда уточнять, а не угадывать, каа.",
+  "category": "На одной волне",
+  "is_pro": true,
+  "lesson_count": 6,
+  "duration_minutes": 22,
+  "icon_name": "thai_humor",
+  "is_new": false,
+  "learning_outcomes": [
+    {
+      "type": "Культура",
+      "count": 10
+    },
+    {
+      "type": "Фразы",
+      "count": 14
+    }
+  ]
+}
+{
+  "id": "course_e_6",
+  "title": "Мягкий тайский твой",
+  "description": "Интонация, темп и вежливые хвосты: сделать просьбу мягче голосом, а не только словами, каа.",
+  "category": "На одной волне",
+  "is_pro": true,
+  "lesson_count": 6,
+  "duration_minutes": 22,
+  "icon_name": "feelings",
+  "is_new": false,
+  "learning_outcomes": [
+    {
+      "type": "Интонация",
+      "count": 10
+    },
+    {
+      "type": "Вежливость",
+      "count": 14
+    }
+  ]
+}

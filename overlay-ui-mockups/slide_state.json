@@ -1,0 +1,133 @@
+{
+  "project_info": {
+    "title": "Taika Overlay System",
+    "created": 1786963028.782,
+    "last_updated": 1786963261.569,
+    "total_slides": 11
+  },
+  "slides": [
+    {
+      "id": "cover",
+      "state": "edited",
+      "pageNum": 1
+    },
+    {
+      "id": "game_empty",
+      "state": "edited",
+      "pageNum": 2
+    },
+    {
+      "id": "game_modes",
+      "state": "edited",
+      "pageNum": 3
+    },
+    {
+      "id": "game_locked",
+      "state": "edited",
+      "pageNum": 4
+    },
+    {
+      "id": "speaker_limit",
+      "state": "edited",
+      "pageNum": 5
+    },
+    {
+      "id": "paywall",
+      "state": "edited",
+      "pageNum": 6
+    },
+    {
+      "id": "search_states",
+      "state": "edited",
+      "pageNum": 7
+    },
+    {
+      "id": "speaker_states",
+      "state": "edited",
+      "pageNum": 8
+    },
+    {
+      "id": "speaker_input",
+      "state": "edited",
+      "pageNum": 9
+    },
+    {
+      "id": "dictionary_states",
+      "state": "edited",
+      "pageNum": 10
+    },
+    {
+      "id": "system",
+      "state": "edited",
+      "pageNum": 11
+    }
+  ],
+  "outline": [
+    {
+      "id": "cover",
+      "title": "Taika Overlay System",
+      "summary": "Liquid Glass / Continuous Canvas. UI mockups for nine information and action scenarios.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "game_empty",
+      "title": "Игровой парк: пустое состояние",
+      "summary": "Empty state с понятными двумя шагами и CTA «Открыть курсы».",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "game_modes",
+      "title": "Игровой парк: выбор режима",
+      "summary": "Три режима с понятной механикой, доступностью и PRO value.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "game_locked",
+      "title": "Locked game: native peek",
+      "summary": "Короткий bottom peek при tap на PRO-режим, без тяжёлой навигации.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "speaker_limit",
+      "title": "Лимит попыток Speaker",
+      "summary": "Quota state с одной метрикой, progress и возвратом в исходный контекст.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "paywall",
+      "title": "Paywall Taika+",
+      "summary": "Контекстный paywall с конкретной ценностью, планами и ясным CTA.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "search_states",
+      "title": "Search: empty / results / no results",
+      "summary": "Continuous search workbench с тремя состояниями и recovery action.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "speaker_states",
+      "title": "Speaker: listening → result",
+      "summary": "Единый waveform-orb canvas для listening, recognizing, result и failure.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "speaker_input",
+      "title": "Speaker: Russian input",
+      "summary": "Keyboard-safe input surface, который morphs в тот же result state.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "dictionary_states",
+      "title": "Dictionary: empty / saved / edit",
+      "summary": "Личный словарь с empty, saved, inline edit и lightweight confirmation.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "system",
+      "title": "Единая система Taika Overlay",
+      "summary": "Четыре surface-класса и interaction rules для последующей SwiftUI implementation.",
+      "image_plan": "Use a suitable image if needed"
+    }
+  ]
+}

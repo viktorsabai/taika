@@ -1,0 +1,7253 @@
+{
+  "course_count": 42,
+  "lesson_count": 267,
+  "record_count": 2268,
+  "step_count_stats": {
+    "min": 5,
+    "max": 13,
+    "avg": 8.49
+  },
+  "kind_counts": {
+    "tip": 147,
+    "phrase": 1525,
+    "casual": 33,
+    "word": 563
+  },
+  "kind_percent": {
+    "tip": 6.5,
+    "phrase": 67.2,
+    "casual": 1.5,
+    "word": 24.8
+  },
+  "course_ids_missing_from_catalog": [],
+  "catalog_ids_without_lessons": [],
+  "order_duplicate_lesson_count": 0,
+  "order_gap_lesson_count": 0,
+  "lesson_title_exact_duplicate_groups": [],
+  "lesson_title_close_pairs": [
+    [
+      [
+        "course_b_1",
+        "course_b_1_l2",
+        "Знакомство"
+      ],
+      [
+        "course_l_15",
+        "course_l_15_l5",
+        "Знакомства"
+      ],
+      0.9
+    ],
+    [
+      [
+        "course_b_4",
+        "course_b_4_l1",
+        "Числа 1–10"
+      ],
+      [
+        "course_b_4",
+        "course_b_4_l2",
+        "Числа 10–100"
+      ],
+      0.909
+    ],
+    [
+      [
+        "course_b_6",
+        "course_b_6_l1",
+        "Вкусно и остро"
+      ],
+      [
+        "course_l_4",
+        "course_l_4_l6",
+        "Вкусно и счёт"
+      ],
+      0.815
+    ],
+    [
+      [
+        "course_e_5",
+        "course_e_5_l6",
+        "Коды сценка"
+      ],
+      [
+        "course_long_5",
+        "course_long_5_l6",
+        "Кондо сценка"
+      ],
+      0.87
+    ],
+    [
+      [
+        "course_e_3",
+        "course_e_3_l6",
+        "Сервис сценка"
+      ],
+      [
+        "course_s_1",
+        "course_s_1_l6",
+        "Сторис сценка"
+      ],
+      0.846
+    ],
+    [
+      [
+        "course_l_15",
+        "course_l_15_l2",
+        "Сколько за пиво?"
+      ],
+      [
+        "course_l_3",
+        "course_l_3_l2",
+        "Сколько за это"
+      ],
+      0.828
+    ],
+    [
+      [
+        "course_l_10",
+        "course_l_10_l6",
+        "Зал сценка"
+      ],
+      [
+        "course_l_12",
+        "course_l_12_l6",
+        "Салон сценка"
+      ],
+      0.818
+    ]
+  ],
+  "complete_record_duplicates": [
+    {
+      "key": [
+        "здравствуйте вежливо",
+        "สวัสดีครับ",
+        "са ват ди кхрап"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_1/course_b_1_l1#4",
+        "course_b_2/course_b_2_l6#2"
+      ]
+    },
+    {
+      "key": [
+        "до встречи",
+        "แล้วเจอกัน",
+        "лэу дже кан"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_1/course_b_1_l1#9",
+        "course_b_7/course_b_7_l6#5"
+      ]
+    },
+    {
+      "key": [
+        "как тебя зовут",
+        "คุณชื่ออะไร",
+        "кун чыу а рай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_1/course_b_1_l2#2",
+        "course_l_15/course_l_15_l3#3"
+      ]
+    },
+    {
+      "key": [
+        "хорошо",
+        "สบายดี",
+        "са бай ди"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_1/course_b_1_l3#3",
+        "course_b_2/course_b_2_l4#10"
+      ]
+    },
+    {
+      "key": [
+        "все ок",
+        "โอเค",
+        "о кэ"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_1/course_b_1_l3#9",
+        "course_l_7/course_l_7_l5#7"
+      ]
+    },
+    {
+      "key": [
+        "останови здесь",
+        "จอดตรงนี้",
+        "чот тронг ни"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_1/course_b_1_l5#6",
+        "course_b_7/course_b_7_l3#6"
+      ]
+    },
+    {
+      "key": [
+        "сколько стоит",
+        "เท่าไหร่",
+        "тао рай"
+      ],
+      "count": 5,
+      "locations": [
+        "course_b_1/course_b_1_l6#2",
+        "course_b_2/course_b_2_l4#5",
+        "course_l_5/course_l_5_l6#7",
+        "course_l_7/course_l_7_l4#6",
+        "course_l_10/course_l_10_l1#6"
+      ]
+    },
+    {
+      "key": [
+        "сколько за это",
+        "อันนี้เท่าไหร่",
+        "ан ни тао рай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_1/course_b_1_l6#3",
+        "course_l_3/course_l_3_l1#6"
+      ]
+    },
+    {
+      "key": [
+        "дорого",
+        "แพง",
+        "пхэнг"
+      ],
+      "count": 5,
+      "locations": [
+        "course_b_1/course_b_1_l6#4",
+        "course_l_15/course_l_15_l2#4",
+        "course_l_2/course_l_2_l2#3",
+        "course_l_3/course_l_3_l1#7",
+        "course_l_8/course_l_8_l2#6"
+      ]
+    },
+    {
+      "key": [
+        "спасибо",
+        "ขอบคุณ",
+        "кхоп кхун"
+      ],
+      "count": 7,
+      "locations": [
+        "course_b_1/course_b_1_l7#2",
+        "course_l_3/course_l_3_l6#3",
+        "course_l_6/course_l_6_l1#8",
+        "course_l_14/course_l_14_l3#8",
+        "course_l_8/course_l_8_l3#9",
+        "course_l_10/course_l_10_l6#1",
+        "course_l_11/course_l_11_l6#3"
+      ]
+    },
+    {
+      "key": [
+        "спасибо большое",
+        "ขอบคุณมาก",
+        "кхоп кхун мак"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_1/course_b_1_l7#3",
+        "course_b_2/course_b_2_l4#8"
+      ]
+    },
+    {
+      "key": [
+        "приходить",
+        "มา",
+        "маа"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_2/course_b_2_l1#3",
+        "course_b_5/course_b_5_l1#2"
+      ]
+    },
+    {
+      "key": [
+        "вода",
+        "น้ำ",
+        "нам"
+      ],
+      "count": 5,
+      "locations": [
+        "course_b_2/course_b_2_l1#7",
+        "course_l_15/course_l_15_l1#6",
+        "course_l_7/course_l_7_l3#6",
+        "course_l_10/course_l_10_l5#6",
+        "course_l_11/course_l_11_l1#5"
+      ]
+    },
+    {
+      "key": [
+        "новый",
+        "ใหม่",
+        "май"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_2/course_b_2_l2#3",
+        "course_b_6/course_b_6_l6#2"
+      ]
+    },
+    {
+      "key": [
+        "не хочу",
+        "ไม่อยาก",
+        "май яак"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_2/course_b_2_l2#6",
+        "course_b_5/course_b_5_l2#6"
+      ]
+    },
+    {
+      "key": [
+        "новый дом",
+        "บ้านใหม่",
+        "баан май"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_2/course_b_2_l2#7",
+        "course_b_6/course_b_6_l6#7"
+      ]
+    },
+    {
+      "key": [
+        "очень вкусно",
+        "อร่อยมาก",
+        "а рой мак"
+      ],
+      "count": 3,
+      "locations": [
+        "course_b_2/course_b_2_l3#8",
+        "course_b_6/course_b_6_l1#5",
+        "course_l_4/course_l_4_l6#1"
+      ]
+    },
+    {
+      "key": [
+        "двадцать",
+        "ยี่สิบ",
+        "ий сип"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_4/course_b_4_l2#4",
+        "course_l_3/course_l_3_l1#1"
+      ]
+    },
+    {
+      "key": [
+        "сто",
+        "ร้อย",
+        "рой"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_4/course_b_4_l2#5",
+        "course_l_3/course_l_3_l1#3"
+      ]
+    },
+    {
+      "key": [
+        "пятьдесят",
+        "ห้าสิบ",
+        "ха сип"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_4/course_b_4_l2#9",
+        "course_l_3/course_l_3_l1#2"
+      ]
+    },
+    {
+      "key": [
+        "сто бат",
+        "ร้อยบาท",
+        "рой бат"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_4/course_b_4_l2#10",
+        "course_l_2/course_l_2_l2#6"
+      ]
+    },
+    {
+      "key": [
+        "который час",
+        "กี่โมง",
+        "ги монг"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_4/course_b_4_l3#2",
+        "course_b_7/course_b_7_l6#1"
+      ]
+    },
+    {
+      "key": [
+        "сейчас",
+        "ตอนนี้",
+        "тон ни"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_4/course_b_4_l3#8",
+        "course_l_2/course_l_2_l5#8"
+      ]
+    },
+    {
+      "key": [
+        "прямо",
+        "ตรงไป",
+        "тронг пай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_4/course_b_4_l5#2",
+        "course_l_2/course_l_2_l3#2"
+      ]
+    },
+    {
+      "key": [
+        "налево",
+        "เลี้ยวซ้าย",
+        "лиао сай"
+      ],
+      "count": 3,
+      "locations": [
+        "course_b_4/course_b_4_l5#3",
+        "course_b_7/course_b_7_l3#4",
+        "course_l_2/course_l_2_l3#3"
+      ]
+    },
+    {
+      "key": [
+        "направо",
+        "เลี้ยวขวา",
+        "лиао кхва"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_4/course_b_4_l5#4",
+        "course_b_7/course_b_7_l3#5"
+      ]
+    },
+    {
+      "key": [
+        "куда идешь",
+        "ไปไหน",
+        "пай най"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_5/course_b_5_l1#3",
+        "course_b_7/course_b_7_l6#2"
+      ]
+    },
+    {
+      "key": [
+        "вкусно",
+        "อร่อย",
+        "а рой"
+      ],
+      "count": 3,
+      "locations": [
+        "course_b_6/course_b_6_l1#2",
+        "course_l_4/course_l_4_l1#9",
+        "course_l_7/course_l_7_l3#9"
+      ]
+    },
+    {
+      "key": [
+        "мало остро",
+        "เผ็ดน้อย",
+        "пхет ной"
+      ],
+      "count": 3,
+      "locations": [
+        "course_b_6/course_b_6_l1#6",
+        "course_l_4/course_l_4_l1#7",
+        "course_l_4/course_l_4_l3#2"
+      ]
+    },
+    {
+      "key": [
+        "красиво",
+        "สวย",
+        "суай"
+      ],
+      "count": 3,
+      "locations": [
+        "course_b_6/course_b_6_l2#2",
+        "course_l_7/course_l_7_l5#5",
+        "course_l_11/course_l_11_l2#8"
+      ]
+    },
+    {
+      "key": [
+        "цена",
+        "ราคา",
+        "ра кха"
+      ],
+      "count": 3,
+      "locations": [
+        "course_b_6/course_b_6_l2#5",
+        "course_l_15/course_l_15_l2#3",
+        "course_l_8/course_l_8_l2#2"
+      ]
+    },
+    {
+      "key": [
+        "лед",
+        "น้ำแข็ง",
+        "нам кхэнг"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_6/course_b_6_l3#12",
+        "course_l_7/course_l_7_l3#7"
+      ]
+    },
+    {
+      "key": [
+        "хороший день",
+        "วันดี",
+        "ван ди"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_6/course_b_6_l5#7",
+        "course_b_7/course_b_7_l6#4"
+      ]
+    },
+    {
+      "key": [
+        "пакет",
+        "ถุง",
+        "тхунг"
+      ],
+      "count": 3,
+      "locations": [
+        "course_b_7/course_b_7_l1#4",
+        "course_l_3/course_l_3_l6#6",
+        "course_l_8/course_l_8_l4#1"
+      ]
+    },
+    {
+      "key": [
+        "в отель",
+        "ไปโรงแรม",
+        "пай ронг рэм"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_7/course_b_7_l3#3",
+        "course_l_2/course_l_2_l1#6"
+      ]
+    },
+    {
+      "key": [
+        "до свидания",
+        "ลาก่อน",
+        "ла кон"
+      ],
+      "count": 5,
+      "locations": [
+        "course_b_7/course_b_7_l3#7",
+        "course_l_6/course_l_6_l5#7",
+        "course_l_7/course_l_7_l6#6",
+        "course_l_8/course_l_8_l6#6",
+        "course_l_12/course_l_12_l6#5"
+      ]
+    },
+    {
+      "key": [
+        "слишком дорого",
+        "แพงไป",
+        "пхэнг пай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_b_7/course_b_7_l4#5",
+        "course_l_3/course_l_3_l4#7"
+      ]
+    },
+    {
+      "key": [
+        "документы",
+        "เอกสาร",
+        "эк ка сан"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_1/course_l_1_l1#3",
+        "course_long_1/course_long_1_l2#3",
+        "course_long_4/course_long_4_l2#5"
+      ]
+    },
+    {
+      "key": [
+        "паспорт",
+        "พาสปอร์ต",
+        "пас порт"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_1/course_l_1_l1#4",
+        "course_long_2/course_long_2_l1#3"
+      ]
+    },
+    {
+      "key": [
+        "вот виза",
+        "นี่วีซ่า",
+        "ни ви са"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_1/course_l_1_l1#6",
+        "course_l_1/course_l_1_l7#4"
+      ]
+    },
+    {
+      "key": [
+        "откуда",
+        "มาจากไหน",
+        "ма джак най"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_1/course_l_1_l3#7",
+        "course_l_15/course_l_15_l3#2"
+      ]
+    },
+    {
+      "key": [
+        "можно идти",
+        "ไปได้ไหม",
+        "пай дай май"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_1/course_l_1_l4#5",
+        "course_l_1/course_l_1_l7#7"
+      ]
+    },
+    {
+      "key": [
+        "спасибо за проверку",
+        "ขอบคุณที่ตรวจ",
+        "кхоп кхун ти туат"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_1/course_l_1_l4#7",
+        "course_l_1/course_l_1_l5#2",
+        "course_l_1/course_l_1_l7#8"
+      ]
+    },
+    {
+      "key": [
+        "сабай",
+        "สบาย",
+        "са бай"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_1/course_l_1_l4#8",
+        "course_e_5/course_e_5_l3#2",
+        "course_l_7/course_l_7_l5#3"
+      ]
+    },
+    {
+      "key": [
+        "до свидания",
+        "ลาก่อนครับ",
+        "ла кон кхрап"
+      ],
+      "count": 4,
+      "locations": [
+        "course_l_1/course_l_1_l5#4",
+        "course_l_1/course_l_1_l7#9",
+        "course_e_3/course_e_3_l6#3",
+        "course_l_2/course_l_2_l6#10"
+      ]
+    },
+    {
+      "key": [
+        "вот паспорт",
+        "นี่พาสปอร์ต",
+        "ни пас порт"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_1/course_l_1_l7#3",
+        "course_l_6/course_l_6_l6#4"
+      ]
+    },
+    {
+      "key": [
+        "без давления",
+        "ไม่กดดัน",
+        "май кот дан"
+      ],
+      "count": 3,
+      "locations": [
+        "course_e_2/course_e_2_l2#7",
+        "course_e_5/course_e_5_l6#2",
+        "course_s_5/course_s_5_l4#8"
+      ]
+    },
+    {
+      "key": [
+        "спасибо за работу",
+        "ขอบคุณที่ช่วย",
+        "кхоп кхун ти чуай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_e_2/course_e_2_l4#4",
+        "course_e_2/course_e_2_l6#1"
+      ]
+    },
+    {
+      "key": [
+        "понял вас",
+        "เข้าใจครับ",
+        "кхао джай кхрап"
+      ],
+      "count": 2,
+      "locations": [
+        "course_e_5/course_e_5_l6#3",
+        "course_e_1/course_e_1_l1#9"
+      ]
+    },
+    {
+      "key": [
+        "доставка",
+        "จัดส่ง",
+        "чат сонг"
+      ],
+      "count": 2,
+      "locations": [
+        "course_e_3/course_e_3_l3#6",
+        "course_l_14/course_l_14_l1#5"
+      ]
+    },
+    {
+      "key": [
+        "счет",
+        "เช็คบิล",
+        "чек бин"
+      ],
+      "count": 4,
+      "locations": [
+        "course_l_15/course_l_15_l1#7",
+        "course_l_4/course_l_4_l6#2",
+        "course_l_6/course_l_6_l5#1",
+        "course_l_6/course_l_6_l6#7"
+      ]
+    },
+    {
+      "key": [
+        "два по цене одного",
+        "สองในราคาหนึ่ง",
+        "сон най ра ха нынг"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_15/course_l_15_l2#6",
+        "course_l_8/course_l_8_l5#8"
+      ]
+    },
+    {
+      "key": [
+        "ок",
+        "โอเค",
+        "о кэ"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_15/course_l_15_l2#7",
+        "course_l_10/course_l_10_l2#8",
+        "course_l_12/course_l_12_l5#6"
+      ]
+    },
+    {
+      "key": [
+        "счет пожалуйста",
+        "เช็คบิลครับ",
+        "чек бин кхрап"
+      ],
+      "count": 4,
+      "locations": [
+        "course_l_15/course_l_15_l2#8",
+        "course_l_15/course_l_15_l6#6",
+        "course_l_4/course_l_4_l1#10",
+        "course_l_6/course_l_6_l5#3"
+      ]
+    },
+    {
+      "key": [
+        "флирт",
+        "จีบ",
+        "джип"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_15/course_l_15_l5#5",
+        "course_s_5/course_s_5_l1#5"
+      ]
+    },
+    {
+      "key": [
+        "границы",
+        "ขอบเขต",
+        "кхоп кхет"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_15/course_l_15_l5#6",
+        "course_s_4/course_s_4_l6#2",
+        "course_s_5/course_s_5_l4#4"
+      ]
+    },
+    {
+      "key": [
+        "пока",
+        "บาย",
+        "бай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_15/course_l_15_l5#7",
+        "course_l_10/course_l_10_l6#5"
+      ]
+    },
+    {
+      "key": [
+        "до встречи",
+        "เจอกัน",
+        "дже кан"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_15/course_l_15_l6#4",
+        "course_l_11/course_l_11_l6#4"
+      ]
+    },
+    {
+      "key": [
+        "вот адрес",
+        "นี่ที่อยู่",
+        "ни ти ю"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_2/course_l_2_l1#9",
+        "course_l_14/course_l_14_l2#2",
+        "course_l_9/course_l_9_l6#3"
+      ]
+    },
+    {
+      "key": [
+        "договорились",
+        "ตกลง",
+        "ток лонг"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_2/course_l_2_l2#9",
+        "course_l_3/course_l_3_l4#6",
+        "course_e_4/course_e_4_l6#2"
+      ]
+    },
+    {
+      "key": [
+        "там",
+        "ตรงนั้น",
+        "тронг нан"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_2/course_l_2_l4#4",
+        "course_l_8/course_l_8_l1#7"
+      ]
+    },
+    {
+      "key": [
+        "спасибо",
+        "ขอบคุณครับ",
+        "кхоп кхун кхрап"
+      ],
+      "count": 9,
+      "locations": [
+        "course_l_2/course_l_2_l4#9",
+        "course_l_2/course_l_2_l7#9",
+        "course_l_5/course_l_5_l6#6",
+        "course_l_6/course_l_6_l6#8",
+        "course_l_14/course_l_14_l6#7",
+        "course_l_14/course_l_14_l7#7",
+        "course_l_8/course_l_8_l6#5",
+        "course_l_9/course_l_9_l7#5",
+        "course_l_12/course_l_12_l6#4"
+      ]
+    },
+    {
+      "key": [
+        "готово",
+        "เสร็จแล้ว",
+        "сет леу"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_2/course_l_2_l5#9",
+        "course_l_12/course_l_12_l6#1"
+      ]
+    },
+    {
+      "key": [
+        "сколько стоит",
+        "เท่าไหร่ครับ",
+        "тао рай кхрап"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_2/course_l_2_l6#4",
+        "course_l_12/course_l_12_l5#1"
+      ]
+    },
+    {
+      "key": [
+        "последняя цена",
+        "ราคาสุดท้าย",
+        "ра ха сут тай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_3/course_l_3_l3#5",
+        "course_l_3/course_l_3_l7#6"
+      ]
+    },
+    {
+      "key": [
+        "ок беру",
+        "โอเคเอา",
+        "о кэ ау"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_3/course_l_3_l4#3",
+        "course_l_7/course_l_7_l2#8",
+        "course_l_8/course_l_8_l2#8"
+      ]
+    },
+    {
+      "key": [
+        "кокос",
+        "มะพร้าว",
+        "ма пхрау"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_3/course_l_3_l5#6",
+        "course_l_7/course_l_7_l3#2"
+      ]
+    },
+    {
+      "key": [
+        "сколько всего",
+        "รวมเท่าไหร่",
+        "руам тао рай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_3/course_l_3_l6#1",
+        "course_l_7/course_l_7_l6#4"
+      ]
+    },
+    {
+      "key": [
+        "еще риса",
+        "ข้าวอีก",
+        "кхау ик"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_4/course_l_4_l2#6",
+        "course_l_4/course_l_4_l4#3"
+      ]
+    },
+    {
+      "key": [
+        "понятно",
+        "เข้าใจ",
+        "кхао джай"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_4/course_l_4_l3#9",
+        "course_l_5/course_l_5_l2#8",
+        "course_l_8/course_l_8_l1#8"
+      ]
+    },
+    {
+      "key": [
+        "подождать",
+        "รอ",
+        "ро"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_4/course_l_4_l5#7",
+        "course_l_10/course_l_10_l3#6"
+      ]
+    },
+    {
+      "key": [
+        "платить",
+        "จ่าย",
+        "джай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_4/course_l_4_l6#3",
+        "course_l_8/course_l_8_l3#4"
+      ]
+    },
+    {
+      "key": [
+        "все вместе",
+        "รวม",
+        "руам"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_4/course_l_4_l6#4",
+        "course_l_8/course_l_8_l6#2",
+        "course_l_12/course_l_12_l5#3"
+      ]
+    },
+    {
+      "key": [
+        "отдельно",
+        "แยก",
+        "иэк"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_4/course_l_4_l6#5",
+        "course_l_12/course_l_12_l5#4"
+      ]
+    },
+    {
+      "key": [
+        "картой",
+        "บัตร",
+        "бат"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_4/course_l_4_l6#6",
+        "course_l_6/course_l_6_l5#4",
+        "course_l_8/course_l_8_l3#7"
+      ]
+    },
+    {
+      "key": [
+        "наличные",
+        "เงินสด",
+        "нген сот"
+      ],
+      "count": 4,
+      "locations": [
+        "course_l_4/course_l_4_l6#7",
+        "course_l_6/course_l_6_l5#5",
+        "course_l_8/course_l_8_l3#8",
+        "course_l_13/course_l_13_l2#5"
+      ]
+    },
+    {
+      "key": [
+        "подойдет",
+        "ได้ครับ",
+        "дай кхрап"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_4/course_l_4_l7#8",
+        "course_l_5/course_l_5_l5#9"
+      ]
+    },
+    {
+      "key": [
+        "аптека",
+        "ร้านยา",
+        "ран я"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_5/course_l_5_l1#5",
+        "course_long_3/course_long_3_l6#3"
+      ]
+    },
+    {
+      "key": [
+        "температура",
+        "ไข้",
+        "кхай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_5/course_l_5_l2#2",
+        "course_long_3/course_long_3_l1#3"
+      ]
+    },
+    {
+      "key": [
+        "симптомы",
+        "อาการ",
+        "а кан"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_5/course_l_5_l2#7",
+        "course_l_5/course_l_5_l7#7"
+      ]
+    },
+    {
+      "key": [
+        "таблетка от головы",
+        "ยาปวดหัว",
+        "я пуат хуа"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_5/course_l_5_l3#1",
+        "course_l_5/course_l_5_l6#3"
+      ]
+    },
+    {
+      "key": [
+        "после еды",
+        "หลังกินข้าว",
+        "ланг кин кхау"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_5/course_l_5_l3#7",
+        "course_long_3/course_long_3_l6#5"
+      ]
+    },
+    {
+      "key": [
+        "нет аллергии",
+        "ไม่แพ้",
+        "май пхэ"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_5/course_l_5_l5#3",
+        "course_long_3/course_long_3_l3#4"
+      ]
+    },
+    {
+      "key": [
+        "лифт",
+        "ลิฟต์",
+        "лиф"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_6/course_l_6_l1#5",
+        "course_long_5/course_long_5_l3#4"
+      ]
+    },
+    {
+      "key": [
+        "этаж",
+        "ชั้น",
+        "чан"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_6/course_l_6_l1#6",
+        "course_l_8/course_l_8_l1#4"
+      ]
+    },
+    {
+      "key": [
+        "полотенце",
+        "ผ้าเช็ดตัว",
+        "пха чхет туа"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_6/course_l_6_l2#1",
+        "course_l_7/course_l_7_l2#5",
+        "course_l_10/course_l_10_l5#3"
+      ]
+    },
+    {
+      "key": [
+        "не работает",
+        "ไม่ทำงาน",
+        "май там нгаан"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_6/course_l_6_l3#3",
+        "course_l_13/course_l_13_l3#2"
+      ]
+    },
+    {
+      "key": [
+        "кондиционер сломан",
+        "แอร์เสีย",
+        "эр сиа"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_6/course_l_6_l3#4",
+        "course_l_13/course_l_13_l3#1"
+      ]
+    },
+    {
+      "key": [
+        "почините пожалуйста",
+        "ช่วยซ่อมหน่อย",
+        "чуай сом ной"
+      ],
+      "count": 4,
+      "locations": [
+        "course_l_6/course_l_6_l3#5",
+        "course_l_6/course_l_6_l7#2",
+        "course_l_13/course_l_13_l3#5",
+        "course_l_13/course_l_13_l7#5"
+      ]
+    },
+    {
+      "key": [
+        "вода течет",
+        "น้ำรั่ว",
+        "нам руа"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_6/course_l_6_l3#7",
+        "course_l_6/course_l_6_l7#3",
+        "course_l_13/course_l_13_l1#2"
+      ]
+    },
+    {
+      "key": [
+        "когда починят",
+        "เมื่อไหร่ซ่อม",
+        "мыа рай сом"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_6/course_l_6_l3#8",
+        "course_l_6/course_l_6_l7#5"
+      ]
+    },
+    {
+      "key": [
+        "спасибо за помощь",
+        "ขอบคุณที่ช่วย",
+        "кхоп кхун ти чуай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_6/course_l_6_l7#8",
+        "course_long_6/course_long_6_l6#1"
+      ]
+    },
+    {
+      "key": [
+        "где моя посылка",
+        "พัสดุอยู่ไหน",
+        "пхат са ду ю най"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_14/course_l_14_l3#3",
+        "course_l_14/course_l_14_l7#2"
+      ]
+    },
+    {
+      "key": [
+        "зонт входит",
+        "รวมร่มไหม",
+        "руам ром май"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_7/course_l_7_l1#8",
+        "course_l_7/course_l_7_l2#6"
+      ]
+    },
+    {
+      "key": [
+        "тур снорклинг",
+        "ทัวร์ดำน้ำ",
+        "туа дам нам"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_7/course_l_7_l4#2",
+        "course_l_7/course_l_7_l7#4"
+      ]
+    },
+    {
+      "key": [
+        "очередь",
+        "คิว",
+        "кхиу"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_8/course_l_8_l3#3",
+        "course_long_1/course_long_1_l2#7"
+      ]
+    },
+    {
+      "key": [
+        "все",
+        "หมด",
+        "мот"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_8/course_l_8_l5#7",
+        "course_l_8/course_l_8_l6#1"
+      ]
+    },
+    {
+      "key": [
+        "срочно",
+        "ด่วน",
+        "дуан"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_9/course_l_9_l1#4",
+        "course_l_13/course_l_13_l3#6"
+      ]
+    },
+    {
+      "key": [
+        "скорая",
+        "รถพยาบาล",
+        "рот пха я бан"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_9/course_l_9_l1#5",
+        "course_l_9/course_l_9_l2#3"
+      ]
+    },
+    {
+      "key": [
+        "полиция",
+        "ตำรวจ",
+        "там руат"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_9/course_l_9_l1#6",
+        "course_l_9/course_l_9_l2#1"
+      ]
+    },
+    {
+      "key": [
+        "больница",
+        "โรงพยาบาล",
+        "ронг пха я бан"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_9/course_l_9_l1#7",
+        "course_l_9/course_l_9_l3#1",
+        "course_long_3/course_long_3_l7#4"
+      ]
+    },
+    {
+      "key": [
+        "пожарные",
+        "ดับเพลิง",
+        "дап пхленг"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_9/course_l_9_l2#6",
+        "course_l_9/course_l_9_l5#3"
+      ]
+    },
+    {
+      "key": [
+        "сообщить",
+        "แจ้ง",
+        "чэнг"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_9/course_l_9_l4#7",
+        "course_l_13/course_l_13_l1#5"
+      ]
+    },
+    {
+      "key": [
+        "выход",
+        "ทางออก",
+        "танг ок"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_9/course_l_9_l5#7",
+        "course_e_4/course_e_4_l3#3"
+      ]
+    },
+    {
+      "key": [
+        "спасибо что приехали",
+        "ขอบคุณที่มา",
+        "кхоп кхун ти маа"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_9/course_l_9_l6#8",
+        "course_l_13/course_l_13_l6#2"
+      ]
+    },
+    {
+      "key": [
+        "расписание",
+        "ตาราง",
+        "та ранг"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_10/course_l_10_l2#2",
+        "course_s_4/course_s_4_l2#1"
+      ]
+    },
+    {
+      "key": [
+        "утро вечер",
+        "เช้าเย็น",
+        "чау ен"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_10/course_l_10_l2#4",
+        "course_s_4/course_s_4_l2#3"
+      ]
+    },
+    {
+      "key": [
+        "йога",
+        "โยคะ",
+        "йо кха"
+      ],
+      "count": 3,
+      "locations": [
+        "course_l_10/course_l_10_l2#5",
+        "course_l_10/course_l_10_l7#2",
+        "course_s_2/course_s_2_l1#3"
+      ]
+    },
+    {
+      "key": [
+        "сколько занятие",
+        "คลาสเท่าไหร่",
+        "кхлат тао рай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_10/course_l_10_l4#6",
+        "course_l_10/course_l_10_l7#5"
+      ]
+    },
+    {
+      "key": [
+        "от входа до выхода",
+        "จากเข้าถึงออก",
+        "джай кхау тхынг ок"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_10/course_l_10_l6#2",
+        "course_l_12/course_l_12_l6#3"
+      ]
+    },
+    {
+      "key": [
+        "приду еще",
+        "จะมาอีก",
+        "ча ма ик"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_10/course_l_10_l6#7",
+        "course_l_12/course_l_12_l6#7"
+      ]
+    },
+    {
+      "key": [
+        "муай тай",
+        "มวยไทย",
+        "муай тай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_10/course_l_10_l7#3",
+        "course_s_2/course_s_2_l1#2"
+      ]
+    },
+    {
+      "key": [
+        "счастливого сонгкрана",
+        "สุขสันต์วันสงกรานต์",
+        "сук сан ван сонг кран"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_11/course_l_11_l1#2",
+        "course_l_11/course_l_11_l7#1"
+      ]
+    },
+    {
+      "key": [
+        "ноябрь",
+        "พฤศจิกายน",
+        "пхрут са джи ка йон"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_11/course_l_11_l2#7",
+        "course_l_11/course_l_11_l3#6"
+      ]
+    },
+    {
+      "key": [
+        "участвовать",
+        "ร่วม",
+        "руам"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_11/course_l_11_l4#6",
+        "course_long_5/course_long_5_l5#3"
+      ]
+    },
+    {
+      "key": [
+        "веселись",
+        "สนุกนะ",
+        "са нук на"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_11/course_l_11_l5#1",
+        "course_l_11/course_l_11_l7#5"
+      ]
+    },
+    {
+      "key": [
+        "хорошего праздника",
+        "ขอให้สนุก",
+        "кхо хай са нук"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_11/course_l_11_l5#3",
+        "course_l_11/course_l_11_l7#3"
+      ]
+    },
+    {
+      "key": [
+        "фото можно",
+        "ถ่ายรูปได้ไหม",
+        "тай руп дай май"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_11/course_l_11_l5#5",
+        "course_l_11/course_l_11_l6#1"
+      ]
+    },
+    {
+      "key": [
+        "сколько по времени",
+        "ใช้เวลากี่นาที",
+        "чай ве ла ги на ти"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_12/course_l_12_l3#5",
+        "course_l_12/course_l_12_l5#8"
+      ]
+    },
+    {
+      "key": [
+        "перевод",
+        "โอน",
+        "он"
+      ],
+      "count": 2,
+      "locations": [
+        "course_l_13/course_l_13_l2#4",
+        "course_long_2/course_long_2_l2#5"
+      ]
+    },
+    {
+      "key": [
+        "вайб дня",
+        "อารมณ์วัน",
+        "а ром ван"
+      ],
+      "count": 2,
+      "locations": [
+        "course_s_1/course_s_1_l1#7",
+        "course_s_1/course_s_1_l2#7"
+      ]
+    },
+    {
+      "key": [
+        "555",
+        "ห้าห้าห้า",
+        "ха ха ха"
+      ],
+      "count": 2,
+      "locations": [
+        "course_s_1/course_s_1_l5#2",
+        "course_s_3/course_s_3_l1#2"
+      ]
+    },
+    {
+      "key": [
+        "смех в чате",
+        "หัวเราะดังๆ",
+        "хуа ло данг данг"
+      ],
+      "count": 2,
+      "locations": [
+        "course_s_1/course_s_1_l5#3",
+        "course_s_3/course_s_3_l1#3"
+      ]
+    },
+    {
+      "key": [
+        "шутки по тайски",
+        "ตลกแบบไทย",
+        "тхолок бэп тай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_s_3/course_s_3_l5#7",
+        "course_s_3/course_s_3_l6#5"
+      ]
+    },
+    {
+      "key": [
+        "безопасность",
+        "ความปลอดภัย",
+        "кхвам плот пай"
+      ],
+      "count": 2,
+      "locations": [
+        "course_s_6/course_s_6_l3#6",
+        "course_s_6/course_s_6_l5#5"
+      ]
+    }
+  ],
+  "duplicate_counts": {
+    "key_ru": 161,
+    "key_thai": 200,
+    "key_phonetic": 206
+  },
+  "duplicate_examples": {
+    "key_ru": [
+      {
+        "value": "спасибо",
+        "count": 16,
+        "locations": [
+          "course_b_1/course_b_1_l7#2",
+          "course_l_2/course_l_2_l4#9",
+          "course_l_2/course_l_2_l7#9",
+          "course_l_3/course_l_3_l6#3",
+          "course_l_5/course_l_5_l6#6",
+          "course_l_6/course_l_6_l1#8",
+          "course_l_6/course_l_6_l6#8",
+          "course_l_14/course_l_14_l3#8",
+          "course_l_14/course_l_14_l6#7",
+          "course_l_14/course_l_14_l7#7",
+          "course_l_8/course_l_8_l3#9",
+          "course_l_8/course_l_8_l6#5"
+        ],
+        "samples": [
+          "Спасибо",
+          "Спасибо",
+          "Спасибо",
+          "Спасибо",
+          "Спасибо"
+        ]
+      },
+      {
+        "value": "до свидания",
+        "count": 9,
+        "locations": [
+          "course_b_7/course_b_7_l3#7",
+          "course_l_1/course_l_1_l5#4",
+          "course_l_1/course_l_1_l7#9",
+          "course_e_3/course_e_3_l6#3",
+          "course_l_2/course_l_2_l6#10",
+          "course_l_6/course_l_6_l5#7",
+          "course_l_7/course_l_7_l6#6",
+          "course_l_8/course_l_8_l6#6",
+          "course_l_12/course_l_12_l6#5"
+        ],
+        "samples": [
+          "До свидания",
+          "До свидания",
+          "До свидания",
+          "До свидания",
+          "До свидания"
+        ]
+      },
+      {
+        "value": "сколько стоит",
+        "count": 7,
+        "locations": [
+          "course_b_1/course_b_1_l6#2",
+          "course_b_2/course_b_2_l4#5",
+          "course_l_2/course_l_2_l6#4",
+          "course_l_5/course_l_5_l6#7",
+          "course_l_7/course_l_7_l4#6",
+          "course_l_10/course_l_10_l1#6",
+          "course_l_12/course_l_12_l5#1"
+        ],
+        "samples": [
+          "Сколько стоит?",
+          "Сколько стоит?",
+          "Сколько стоит?",
+          "Сколько стоит?",
+          "Сколько стоит?"
+        ]
+      },
+      {
+        "value": "счет пожалуйста",
+        "count": 6,
+        "locations": [
+          "course_b_1/course_b_1_l4#6",
+          "course_l_15/course_l_15_l2#8",
+          "course_l_15/course_l_15_l6#6",
+          "course_l_4/course_l_4_l1#10",
+          "course_l_6/course_l_6_l5#3",
+          "course_l_7/course_l_7_l6#2"
+        ],
+        "samples": [
+          "Счёт пожалуйста",
+          "Счёт пожалуйста",
+          "Счёт пожалуйста",
+          "Счёт пожалуйста",
+          "Счёт пожалуйста"
+        ]
+      },
+      {
+        "value": "дорого",
+        "count": 6,
+        "locations": [
+          "course_b_1/course_b_1_l6#4",
+          "course_l_15/course_l_15_l2#4",
+          "course_l_2/course_l_2_l2#3",
+          "course_l_3/course_l_3_l1#7",
+          "course_l_3/course_l_3_l3#2",
+          "course_l_8/course_l_8_l2#6"
+        ],
+        "samples": [
+          "Дорого",
+          "Дорого",
+          "Дорого",
+          "Дорого",
+          "Дорого"
+        ]
+      },
+      {
+        "value": "вода",
+        "count": 5,
+        "locations": [
+          "course_b_2/course_b_2_l1#7",
+          "course_l_15/course_l_15_l1#6",
+          "course_l_7/course_l_7_l3#6",
+          "course_l_10/course_l_10_l5#6",
+          "course_l_11/course_l_11_l1#5"
+        ],
+        "samples": [
+          "Вода",
+          "Вода",
+          "Вода",
+          "Вода",
+          "Вода"
+        ]
+      },
+      {
+        "value": "счет",
+        "count": 5,
+        "locations": [
+          "course_l_15/course_l_15_l1#7",
+          "course_l_4/course_l_4_l6#2",
+          "course_l_6/course_l_6_l5#1",
+          "course_l_6/course_l_6_l6#7",
+          "course_l_13/course_l_13_l2#3"
+        ],
+        "samples": [
+          "Счёт",
+          "Счёт",
+          "Счёт",
+          "Счёт",
+          "Счёт"
+        ]
+      },
+      {
+        "value": "до встречи",
+        "count": 4,
+        "locations": [
+          "course_b_1/course_b_1_l1#9",
+          "course_b_7/course_b_7_l6#5",
+          "course_l_15/course_l_15_l6#4",
+          "course_l_11/course_l_11_l6#4"
+        ],
+        "samples": [
+          "До встречи",
+          "До встречи",
+          "До встречи",
+          "До встречи"
+        ]
+      },
+      {
+        "value": "ок беру",
+        "count": 4,
+        "locations": [
+          "course_b_1/course_b_1_l6#7",
+          "course_l_3/course_l_3_l4#3",
+          "course_l_7/course_l_7_l2#8",
+          "course_l_8/course_l_8_l2#8"
+        ],
+        "samples": [
+          "Ок беру",
+          "Ок беру",
+          "Ок беру",
+          "Ок беру"
+        ]
+      },
+      {
+        "value": "вкусно",
+        "count": 4,
+        "locations": [
+          "course_b_2/course_b_2_l4#7",
+          "course_b_6/course_b_6_l1#2",
+          "course_l_4/course_l_4_l1#9",
+          "course_l_7/course_l_7_l3#9"
+        ],
+        "samples": [
+          "Вкусно?",
+          "Вкусно",
+          "Вкусно",
+          "Вкусно"
+        ]
+      },
+      {
+        "value": "красиво",
+        "count": 4,
+        "locations": [
+          "course_b_6/course_b_6_l2#2",
+          "course_l_7/course_l_7_l5#5",
+          "course_l_11/course_l_11_l2#8",
+          "course_l_11/course_l_11_l3#7"
+        ],
+        "samples": [
+          "Красиво",
+          "Красиво",
+          "Красиво",
+          "Красиво"
+        ]
+      },
+      {
+        "value": "готово",
+        "count": 4,
+        "locations": [
+          "course_b_7/course_b_7_l1#5",
+          "course_l_2/course_l_2_l5#9",
+          "course_l_4/course_l_4_l4#8",
+          "course_l_12/course_l_12_l6#1"
+        ],
+        "samples": [
+          "Готово",
+          "Готово",
+          "Готово",
+          "Готово"
+        ]
+      },
+      {
+        "value": "без давления",
+        "count": 4,
+        "locations": [
+          "course_e_2/course_e_2_l1#4",
+          "course_e_2/course_e_2_l2#7",
+          "course_e_5/course_e_5_l6#2",
+          "course_s_5/course_s_5_l4#8"
+        ],
+        "samples": [
+          "Без давления",
+          "Без давления",
+          "Без давления",
+          "Без давления"
+        ]
+      },
+      {
+        "value": "понятно",
+        "count": 4,
+        "locations": [
+          "course_e_1/course_e_1_l1#2",
+          "course_l_4/course_l_4_l3#9",
+          "course_l_5/course_l_5_l2#8",
+          "course_l_8/course_l_8_l1#8"
+        ],
+        "samples": [
+          "Понятно?",
+          "Понятно",
+          "Понятно",
+          "Понятно"
+        ]
+      },
+      {
+        "value": "договорились",
+        "count": 4,
+        "locations": [
+          "course_l_2/course_l_2_l2#9",
+          "course_l_3/course_l_3_l4#6",
+          "course_l_3/course_l_3_l7#7",
+          "course_e_4/course_e_4_l6#2"
+        ],
+        "samples": [
+          "Договорились",
+          "Договорились",
+          "Договорились",
+          "Договорились"
+        ]
+      },
+      {
+        "value": "все вместе",
+        "count": 4,
+        "locations": [
+          "course_l_4/course_l_4_l4#7",
+          "course_l_4/course_l_4_l6#4",
+          "course_l_8/course_l_8_l6#2",
+          "course_l_12/course_l_12_l5#3"
+        ],
+        "samples": [
+          "Всё вместе",
+          "Всё вместе",
+          "Всё вместе",
+          "Всё вместе"
+        ]
+      },
+      {
+        "value": "наличные",
+        "count": 4,
+        "locations": [
+          "course_l_4/course_l_4_l6#7",
+          "course_l_6/course_l_6_l5#5",
+          "course_l_8/course_l_8_l3#8",
+          "course_l_13/course_l_13_l2#5"
+        ],
+        "samples": [
+          "Наличные",
+          "Наличные",
+          "Наличные",
+          "Наличные"
+        ]
+      },
+      {
+        "value": "почините пожалуйста",
+        "count": 4,
+        "locations": [
+          "course_l_6/course_l_6_l3#5",
+          "course_l_6/course_l_6_l7#2",
+          "course_l_13/course_l_13_l3#5",
+          "course_l_13/course_l_13_l7#5"
+        ],
+        "samples": [
+          "Почините пожалуйста",
+          "Почините пожалуйста",
+          "Почините пожалуйста",
+          "Почините пожалуйста"
+        ]
+      },
+      {
+        "value": "пока",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l1#8",
+          "course_l_15/course_l_15_l5#7",
+          "course_l_10/course_l_10_l6#5"
+        ],
+        "samples": [
+          "Пока",
+          "Пока",
+          "Пока"
+        ]
+      },
+      {
+        "value": "все ок",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l3#9",
+          "course_l_7/course_l_7_l5#7",
+          "course_l_13/course_l_13_l6#8"
+        ],
+        "samples": [
+          "Всё ок",
+          "Всё ок",
+          "Всё ок"
+        ]
+      },
+      {
+        "value": "еще один",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l4#8",
+          "course_l_15/course_l_15_l1#1",
+          "course_l_7/course_l_7_l3#8"
+        ],
+        "samples": [
+          "Ещё один",
+          "Ещё один",
+          "Ещё один"
+        ]
+      },
+      {
+        "value": "очень вкусно",
+        "count": 3,
+        "locations": [
+          "course_b_2/course_b_2_l3#8",
+          "course_b_6/course_b_6_l1#5",
+          "course_l_4/course_l_4_l6#1"
+        ],
+        "samples": [
+          "Очень вкусно",
+          "Очень вкусно",
+          "Очень вкусно"
+        ]
+      },
+      {
+        "value": "налево",
+        "count": 3,
+        "locations": [
+          "course_b_4/course_b_4_l5#3",
+          "course_b_7/course_b_7_l3#4",
+          "course_l_2/course_l_2_l3#3"
+        ],
+        "samples": [
+          "Налево",
+          "Налево",
+          "Налево"
+        ]
+      },
+      {
+        "value": "направо",
+        "count": 3,
+        "locations": [
+          "course_b_4/course_b_4_l5#4",
+          "course_b_7/course_b_7_l3#5",
+          "course_l_2/course_l_2_l3#4"
+        ],
+        "samples": [
+          "Направо",
+          "Направо",
+          "Направо"
+        ]
+      },
+      {
+        "value": "мало остро",
+        "count": 3,
+        "locations": [
+          "course_b_6/course_b_6_l1#6",
+          "course_l_4/course_l_4_l1#7",
+          "course_l_4/course_l_4_l3#2"
+        ],
+        "samples": [
+          "Мало остро",
+          "Мало остро",
+          "Мало остро"
+        ]
+      },
+      {
+        "value": "цена",
+        "count": 3,
+        "locations": [
+          "course_b_6/course_b_6_l2#5",
+          "course_l_15/course_l_15_l2#3",
+          "course_l_8/course_l_8_l2#2"
+        ],
+        "samples": [
+          "Цена",
+          "Цена",
+          "Цена"
+        ]
+      },
+      {
+        "value": "все нормально",
+        "count": 3,
+        "locations": [
+          "course_b_6/course_b_6_l5#10",
+          "course_l_1/course_l_1_l4#2",
+          "course_l_1/course_l_1_l6#5"
+        ],
+        "samples": [
+          "Всё нормально",
+          "Всё нормально",
+          "Всё нормально?"
+        ]
+      },
+      {
+        "value": "пакет",
+        "count": 3,
+        "locations": [
+          "course_b_7/course_b_7_l1#4",
+          "course_l_3/course_l_3_l6#6",
+          "course_l_8/course_l_8_l4#1"
+        ],
+        "samples": [
+          "Пакет",
+          "Пакет",
+          "Пакет"
+        ]
+      },
+      {
+        "value": "слишком дорого",
+        "count": 3,
+        "locations": [
+          "course_b_7/course_b_7_l4#5",
+          "course_l_3/course_l_3_l4#7",
+          "course_e_4/course_e_4_l6#7"
+        ],
+        "samples": [
+          "Слишком дорого",
+          "Слишком дорого",
+          "Слишком дорого"
+        ]
+      },
+      {
+        "value": "вот документы",
+        "count": 3,
+        "locations": [
+          "course_l_1/course_l_1_l1#2",
+          "course_l_1/course_l_1_l6#3",
+          "course_long_1/course_long_1_l6#1"
+        ],
+        "samples": [
+          "Вот документы",
+          "Вот документы",
+          "Вот документы"
+        ]
+      }
+    ],
+    "key_thai": [
+      {
+        "value": "ขอบคุณครับ",
+        "count": 9,
+        "locations": [
+          "course_l_2/course_l_2_l4#9",
+          "course_l_2/course_l_2_l7#9",
+          "course_l_5/course_l_5_l6#6",
+          "course_l_6/course_l_6_l6#8",
+          "course_l_14/course_l_14_l6#7",
+          "course_l_14/course_l_14_l7#7",
+          "course_l_8/course_l_8_l6#5",
+          "course_l_9/course_l_9_l7#5",
+          "course_l_12/course_l_12_l6#4"
+        ],
+        "samples": [
+          "ขอบคุณครับ",
+          "ขอบคุณครับ",
+          "ขอบคุณครับ",
+          "ขอบคุณครับ",
+          "ขอบคุณครับ"
+        ]
+      },
+      {
+        "value": "ขอบคุณ",
+        "count": 7,
+        "locations": [
+          "course_b_1/course_b_1_l7#2",
+          "course_l_3/course_l_3_l6#3",
+          "course_l_6/course_l_6_l1#8",
+          "course_l_14/course_l_14_l3#8",
+          "course_l_8/course_l_8_l3#9",
+          "course_l_10/course_l_10_l6#1",
+          "course_l_11/course_l_11_l6#3"
+        ],
+        "samples": [
+          "ขอบคุณ",
+          "ขอบคุณ",
+          "ขอบคุณ",
+          "ขอบคุณ",
+          "ขอบคุณ"
+        ]
+      },
+      {
+        "value": "โอเค",
+        "count": 5,
+        "locations": [
+          "course_b_1/course_b_1_l3#9",
+          "course_l_15/course_l_15_l2#7",
+          "course_l_7/course_l_7_l5#7",
+          "course_l_10/course_l_10_l2#8",
+          "course_l_12/course_l_12_l5#6"
+        ],
+        "samples": [
+          "โอเค",
+          "โอเค",
+          "โอเค",
+          "โอเค",
+          "โอเค"
+        ]
+      },
+      {
+        "value": "เช็คบิล",
+        "count": 5,
+        "locations": [
+          "course_b_1/course_b_1_l4#6",
+          "course_l_15/course_l_15_l1#7",
+          "course_l_4/course_l_4_l6#2",
+          "course_l_6/course_l_6_l5#1",
+          "course_l_6/course_l_6_l6#7"
+        ],
+        "samples": [
+          "เช็คบิล",
+          "เช็คบิล",
+          "เช็คบิล",
+          "เช็คบิล",
+          "เช็คบิล"
+        ]
+      },
+      {
+        "value": "เท่าไหร่",
+        "count": 5,
+        "locations": [
+          "course_b_1/course_b_1_l6#2",
+          "course_b_2/course_b_2_l4#5",
+          "course_l_5/course_l_5_l6#7",
+          "course_l_7/course_l_7_l4#6",
+          "course_l_10/course_l_10_l1#6"
+        ],
+        "samples": [
+          "เท่าไหร่",
+          "เท่าไหร่",
+          "เท่าไหร่",
+          "เท่าไหร่",
+          "เท่าไหร่"
+        ]
+      },
+      {
+        "value": "แพง",
+        "count": 5,
+        "locations": [
+          "course_b_1/course_b_1_l6#4",
+          "course_l_15/course_l_15_l2#4",
+          "course_l_2/course_l_2_l2#3",
+          "course_l_3/course_l_3_l1#7",
+          "course_l_8/course_l_8_l2#6"
+        ],
+        "samples": [
+          "แพง",
+          "แพง",
+          "แพง",
+          "แพง",
+          "แพง"
+        ]
+      },
+      {
+        "value": "เงินสด",
+        "count": 5,
+        "locations": [
+          "course_b_1/course_b_1_l6#8",
+          "course_l_4/course_l_4_l6#7",
+          "course_l_6/course_l_6_l5#5",
+          "course_l_8/course_l_8_l3#8",
+          "course_l_13/course_l_13_l2#5"
+        ],
+        "samples": [
+          "เงินสด",
+          "เงินสด",
+          "เงินสด",
+          "เงินสด",
+          "เงินสด"
+        ]
+      },
+      {
+        "value": "น้ำ",
+        "count": 5,
+        "locations": [
+          "course_b_2/course_b_2_l1#7",
+          "course_l_15/course_l_15_l1#6",
+          "course_l_7/course_l_7_l3#6",
+          "course_l_10/course_l_10_l5#6",
+          "course_l_11/course_l_11_l1#5"
+        ],
+        "samples": [
+          "น้ำ",
+          "น้ำ",
+          "น้ำ",
+          "น้ำ",
+          "น้ำ"
+        ]
+      },
+      {
+        "value": "เช็คบิลครับ",
+        "count": 5,
+        "locations": [
+          "course_b_2/course_b_2_l6#7",
+          "course_l_15/course_l_15_l2#8",
+          "course_l_15/course_l_15_l6#6",
+          "course_l_4/course_l_4_l1#10",
+          "course_l_6/course_l_6_l5#3"
+        ],
+        "samples": [
+          "เช็คบิลครับ",
+          "เช็คบิลครับ",
+          "เช็คบิลครับ",
+          "เช็คบิลครับ",
+          "เช็คบิลครับ"
+        ]
+      },
+      {
+        "value": "นี่ครับ",
+        "count": 5,
+        "locations": [
+          "course_b_7/course_b_7_l1#3",
+          "course_l_1/course_l_1_l6#3",
+          "course_l_3/course_l_3_l6#2",
+          "course_l_5/course_l_5_l6#8",
+          "course_l_8/course_l_8_l3#6"
+        ],
+        "samples": [
+          "นี่ครับ",
+          "นี่ครับ",
+          "นี่ครับ",
+          "นี่ครับ",
+          "นี่ครับ"
+        ]
+      },
+      {
+        "value": "ลาก่อน",
+        "count": 5,
+        "locations": [
+          "course_b_7/course_b_7_l3#7",
+          "course_l_6/course_l_6_l5#7",
+          "course_l_7/course_l_7_l6#6",
+          "course_l_8/course_l_8_l6#6",
+          "course_l_12/course_l_12_l6#5"
+        ],
+        "samples": [
+          "ลาก่อน",
+          "ลาก่อน",
+          "ลาก่อน",
+          "ลาก่อน",
+          "ลาก่อน"
+        ]
+      },
+      {
+        "value": "สบาย",
+        "count": 5,
+        "locations": [
+          "course_l_1/course_l_1_l4#8",
+          "course_e_5/course_e_5_l3#2",
+          "course_l_7/course_l_7_l5#3",
+          "course_l_12/course_l_12_l3#6",
+          "course_s_5/course_s_5_l6#2"
+        ],
+        "samples": [
+          "สบาย",
+          "สบาย",
+          "สบาย",
+          "สบาย",
+          "สบาย"
+        ]
+      },
+      {
+        "value": "อร่อยมาก",
+        "count": 4,
+        "locations": [
+          "course_b_2/course_b_2_l3#8",
+          "course_b_6/course_b_6_l1#5",
+          "course_l_4/course_l_4_l2#8",
+          "course_l_4/course_l_4_l6#1"
+        ],
+        "samples": [
+          "อร่อยมาก",
+          "อร่อยมาก",
+          "อร่อยมาก",
+          "อร่อยมาก"
+        ]
+      },
+      {
+        "value": "ไปไหน",
+        "count": 4,
+        "locations": [
+          "course_b_2/course_b_2_l4#6",
+          "course_b_5/course_b_5_l1#3",
+          "course_b_7/course_b_7_l6#2",
+          "course_l_11/course_l_11_l4#2"
+        ],
+        "samples": [
+          "ไปไหน",
+          "ไปไหน",
+          "ไปไหน",
+          "ไปไหน"
+        ]
+      },
+      {
+        "value": "เข้าใจ",
+        "count": 4,
+        "locations": [
+          "course_b_5/course_b_5_l3#3",
+          "course_l_4/course_l_4_l3#9",
+          "course_l_5/course_l_5_l2#8",
+          "course_l_8/course_l_8_l1#8"
+        ],
+        "samples": [
+          "เข้าใจ",
+          "เข้าใจ",
+          "เข้าใจ",
+          "เข้าใจ"
+        ]
+      },
+      {
+        "value": "ลาก่อนครับ",
+        "count": 4,
+        "locations": [
+          "course_l_1/course_l_1_l5#4",
+          "course_l_1/course_l_1_l7#9",
+          "course_e_3/course_e_3_l6#3",
+          "course_l_2/course_l_2_l6#10"
+        ],
+        "samples": [
+          "ลาก่อนครับ",
+          "ลาก่อนครับ",
+          "ลาก่อนครับ",
+          "ลาก่อนครับ"
+        ]
+      },
+      {
+        "value": "ไม่กดดัน",
+        "count": 4,
+        "locations": [
+          "course_e_2/course_e_2_l2#7",
+          "course_e_5/course_e_5_l6#2",
+          "course_e_1/course_e_1_l3#5",
+          "course_s_5/course_s_5_l4#8"
+        ],
+        "samples": [
+          "ไม่กดดัน",
+          "ไม่กดดัน",
+          "ไม่กดดัน",
+          "ไม่กดดัน"
+        ]
+      },
+      {
+        "value": "ขอบคุณที่ช่วย",
+        "count": 4,
+        "locations": [
+          "course_e_2/course_e_2_l4#4",
+          "course_e_2/course_e_2_l6#1",
+          "course_l_6/course_l_6_l7#8",
+          "course_long_6/course_long_6_l6#1"
+        ],
+        "samples": [
+          "ขอบคุณที่ช่วย",
+          "ขอบคุณที่ช่วย",
+          "ขอบคุณที่ช่วย",
+          "ขอบคุณที่ช่วย"
+        ]
+      },
+      {
+        "value": "ช่วยซ่อมหน่อย",
+        "count": 4,
+        "locations": [
+          "course_l_6/course_l_6_l3#5",
+          "course_l_6/course_l_6_l7#2",
+          "course_l_13/course_l_13_l3#5",
+          "course_l_13/course_l_13_l7#5"
+        ],
+        "samples": [
+          "ช่วยซ่อมหน่อย",
+          "ช่วยซ่อมหน่อย",
+          "ช่วยซ่อมหน่อย",
+          "ช่วยซ่อมหน่อย"
+        ]
+      },
+      {
+        "value": "แล้วเจอกัน",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l1#9",
+          "course_b_7/course_b_7_l6#5",
+          "course_l_1/course_l_1_l5#6"
+        ],
+        "samples": [
+          "แล้วเจอกัน",
+          "แล้วเจอกัน",
+          "แล้วเจอกัน"
+        ]
+      },
+      {
+        "value": "คุณชื่ออะไร",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l2#2",
+          "course_l_15/course_l_15_l3#3",
+          "course_l_15/course_l_15_l5#2"
+        ],
+        "samples": [
+          "คุณชื่ออะไร",
+          "คุณชื่ออะไร",
+          "คุณชื่ออะไร"
+        ]
+      },
+      {
+        "value": "สบายดีไหม",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l3#2",
+          "course_b_2/course_b_2_l4#3",
+          "course_b_2/course_b_2_l4#4"
+        ],
+        "samples": [
+          "สบายดีไหม",
+          "สบายดีไหม",
+          "สบายดีไหม"
+        ]
+      },
+      {
+        "value": "อยู่ที่ไหน",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l5#2",
+          "course_b_5/course_b_5_l7#10",
+          "course_l_8/course_l_8_l1#1"
+        ],
+        "samples": [
+          "อยู่ที่ไหน",
+          "อยู่ที่ไหน",
+          "… อยู่ที่ไหน"
+        ]
+      },
+      {
+        "value": "จอดตรงนี้",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l5#6",
+          "course_b_7/course_b_7_l3#6",
+          "course_l_2/course_l_2_l4#2"
+        ],
+        "samples": [
+          "จอดตรงนี้",
+          "จอดตรงนี้",
+          "จอดตรงนี้"
+        ]
+      },
+      {
+        "value": "อันนี้เท่าไหร่",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l6#3",
+          "course_l_3/course_l_3_l1#6",
+          "course_l_8/course_l_8_l2#1"
+        ],
+        "samples": [
+          "อันนี้เท่าไหร่",
+          "อันนี้เท่าไหร่",
+          "อันนี้เท่าไหร่"
+        ]
+      },
+      {
+        "value": "เท่าไหร่ครับ",
+        "count": 3,
+        "locations": [
+          "course_b_2/course_b_2_l6#4",
+          "course_l_2/course_l_2_l6#4",
+          "course_l_12/course_l_12_l5#1"
+        ],
+        "samples": [
+          "เท่าไหร่ครับ",
+          "เท่าไหร่ครับ",
+          "เท่าไหร่ครับ"
+        ]
+      },
+      {
+        "value": "กี่โมง",
+        "count": 3,
+        "locations": [
+          "course_b_4/course_b_4_l3#2",
+          "course_b_7/course_b_7_l6#1",
+          "course_l_13/course_l_13_l4#8"
+        ],
+        "samples": [
+          "กี่โมง",
+          "กี่โมง",
+          "กี่โมง"
+        ]
+      },
+      {
+        "value": "เย็น",
+        "count": 3,
+        "locations": [
+          "course_b_4/course_b_4_l3#6",
+          "course_b_6/course_b_6_l3#3",
+          "course_l_7/course_l_7_l3#5"
+        ],
+        "samples": [
+          "เย็น",
+          "เย็น",
+          "เย็น"
+        ]
+      },
+      {
+        "value": "เลี้ยวซ้าย",
+        "count": 3,
+        "locations": [
+          "course_b_4/course_b_4_l5#3",
+          "course_b_7/course_b_7_l3#4",
+          "course_l_2/course_l_2_l3#3"
+        ],
+        "samples": [
+          "เลี้ยวซ้าย",
+          "เลี้ยวซ้าย",
+          "เลี้ยวซ้าย"
+        ]
+      },
+      {
+        "value": "ช่วยหน่อย",
+        "count": 3,
+        "locations": [
+          "course_b_5/course_b_5_l5#12",
+          "course_l_5/course_l_5_l1#6",
+          "course_l_9/course_l_9_l1#3"
+        ],
+        "samples": [
+          "ช่วยหน่อย",
+          "ช่วยหน่อย",
+          "ช่วยหน่อย"
+        ]
+      }
+    ],
+    "key_phonetic": [
+      {
+        "value": "кхоп кхун кхрап",
+        "count": 9,
+        "locations": [
+          "course_l_2/course_l_2_l4#9",
+          "course_l_2/course_l_2_l7#9",
+          "course_l_5/course_l_5_l6#6",
+          "course_l_6/course_l_6_l6#8",
+          "course_l_14/course_l_14_l6#7",
+          "course_l_14/course_l_14_l7#7",
+          "course_l_8/course_l_8_l6#5",
+          "course_l_9/course_l_9_l7#5",
+          "course_l_12/course_l_12_l6#4"
+        ],
+        "samples": [
+          "кхоп→ кхун→ кхрап↘",
+          "кхоп→ кхун→ кхрап↘",
+          "кхоп→ кхун→ кхрап↘",
+          "кхоп→ кхун→ кхрап↘",
+          "кхоп→ кхун→ кхрап↘"
+        ]
+      },
+      {
+        "value": "кхоп кхун",
+        "count": 7,
+        "locations": [
+          "course_b_1/course_b_1_l7#2",
+          "course_l_3/course_l_3_l6#3",
+          "course_l_6/course_l_6_l1#8",
+          "course_l_14/course_l_14_l3#8",
+          "course_l_8/course_l_8_l3#9",
+          "course_l_10/course_l_10_l6#1",
+          "course_l_11/course_l_11_l6#3"
+        ],
+        "samples": [
+          "кхоп→ кхун→",
+          "кхоп→ кхун→",
+          "кхоп→ кхун→",
+          "кхоп→ кхун→",
+          "кхоп→ кхун→"
+        ]
+      },
+      {
+        "value": "чек бин кхрап",
+        "count": 6,
+        "locations": [
+          "course_b_2/course_b_2_l6#7",
+          "course_l_15/course_l_15_l2#8",
+          "course_l_15/course_l_15_l6#6",
+          "course_l_4/course_l_4_l1#10",
+          "course_l_6/course_l_6_l5#3",
+          "course_l_7/course_l_7_l6#2"
+        ],
+        "samples": [
+          "чек→ бин→ кхрап↘",
+          "чек→ бин→ кхрап↘",
+          "чек→ бин→ кхрап↘",
+          "чек→ бин→ кхрап↘",
+          "чек→ бин→ кхрап↘"
+        ]
+      },
+      {
+        "value": "о кэ",
+        "count": 5,
+        "locations": [
+          "course_b_1/course_b_1_l3#9",
+          "course_l_15/course_l_15_l2#7",
+          "course_l_7/course_l_7_l5#7",
+          "course_l_10/course_l_10_l2#8",
+          "course_l_12/course_l_12_l5#6"
+        ],
+        "samples": [
+          "о→ кэ→",
+          "о→ кэ→",
+          "о→ кэ→",
+          "о→ кэ→",
+          "о→ кэ→"
+        ]
+      },
+      {
+        "value": "чек бин",
+        "count": 5,
+        "locations": [
+          "course_b_1/course_b_1_l4#6",
+          "course_l_15/course_l_15_l1#7",
+          "course_l_4/course_l_4_l6#2",
+          "course_l_6/course_l_6_l5#1",
+          "course_l_6/course_l_6_l6#7"
+        ],
+        "samples": [
+          "чек→ бин→",
+          "чек→ бин→",
+          "чек→ бин→",
+          "чек→ бин→",
+          "чек→ бин→"
+        ]
+      },
+      {
+        "value": "тао рай",
+        "count": 5,
+        "locations": [
+          "course_b_1/course_b_1_l6#2",
+          "course_b_2/course_b_2_l4#5",
+          "course_l_5/course_l_5_l6#7",
+          "course_l_7/course_l_7_l4#6",
+          "course_l_10/course_l_10_l1#6"
+        ],
+        "samples": [
+          "тао→ рай↗",
+          "тао→ рай↗",
+          "тао→ рай↗",
+          "тао→ рай↗",
+          "тао→ рай↗"
+        ]
+      },
+      {
+        "value": "пхэнг",
+        "count": 5,
+        "locations": [
+          "course_b_1/course_b_1_l6#4",
+          "course_l_15/course_l_15_l2#4",
+          "course_l_2/course_l_2_l2#3",
+          "course_l_3/course_l_3_l1#7",
+          "course_l_8/course_l_8_l2#6"
+        ],
+        "samples": [
+          "пхэнг→",
+          "пхэнг→",
+          "пхэнг→",
+          "пхэнг→",
+          "пхэнг→"
+        ]
+      },
+      {
+        "value": "нген сот",
+        "count": 5,
+        "locations": [
+          "course_b_1/course_b_1_l6#8",
+          "course_l_4/course_l_4_l6#7",
+          "course_l_6/course_l_6_l5#5",
+          "course_l_8/course_l_8_l3#8",
+          "course_l_13/course_l_13_l2#5"
+        ],
+        "samples": [
+          "нгён→ сот↘",
+          "нгён→ сот↘",
+          "нгён→ сот↘",
+          "нгён→ сот↘",
+          "нгён→ сот↘"
+        ]
+      },
+      {
+        "value": "нам",
+        "count": 5,
+        "locations": [
+          "course_b_2/course_b_2_l1#7",
+          "course_l_15/course_l_15_l1#6",
+          "course_l_7/course_l_7_l3#6",
+          "course_l_10/course_l_10_l5#6",
+          "course_l_11/course_l_11_l1#5"
+        ],
+        "samples": [
+          "нам↗",
+          "нам↗",
+          "нам↗",
+          "нам↗",
+          "нам↗"
+        ]
+      },
+      {
+        "value": "ни кхрап",
+        "count": 5,
+        "locations": [
+          "course_b_7/course_b_7_l1#3",
+          "course_l_1/course_l_1_l6#3",
+          "course_l_3/course_l_3_l6#2",
+          "course_l_5/course_l_5_l6#8",
+          "course_l_8/course_l_8_l3#6"
+        ],
+        "samples": [
+          "ни→ кхрап↘",
+          "ни→ кхрап↘",
+          "ни→ кхрап↘",
+          "ни→ кхрап↘",
+          "ни→ кхрап↘"
+        ]
+      },
+      {
+        "value": "ла кон",
+        "count": 5,
+        "locations": [
+          "course_b_7/course_b_7_l3#7",
+          "course_l_6/course_l_6_l5#7",
+          "course_l_7/course_l_7_l6#6",
+          "course_l_8/course_l_8_l6#6",
+          "course_l_12/course_l_12_l6#5"
+        ],
+        "samples": [
+          "ла→ кон→",
+          "ла→ кон→",
+          "ла→ кон→",
+          "ла→ кон→",
+          "ла→ кон→"
+        ]
+      },
+      {
+        "value": "са бай",
+        "count": 5,
+        "locations": [
+          "course_l_1/course_l_1_l4#8",
+          "course_e_5/course_e_5_l3#2",
+          "course_l_7/course_l_7_l5#3",
+          "course_l_12/course_l_12_l3#6",
+          "course_s_5/course_s_5_l6#2"
+        ],
+        "samples": [
+          "са→ бай→",
+          "са→ бай→",
+          "са→ бай→",
+          "са→ бай→",
+          "са→ бай→"
+        ]
+      },
+      {
+        "value": "руам",
+        "count": 5,
+        "locations": [
+          "course_l_4/course_l_4_l6#4",
+          "course_l_8/course_l_8_l6#2",
+          "course_l_11/course_l_11_l4#6",
+          "course_l_12/course_l_12_l5#3",
+          "course_long_5/course_long_5_l5#3"
+        ],
+        "samples": [
+          "руам→",
+          "руам→",
+          "руам↘",
+          "руам→",
+          "руам↘"
+        ]
+      },
+      {
+        "value": "о кэ ау",
+        "count": 4,
+        "locations": [
+          "course_b_1/course_b_1_l6#7",
+          "course_l_3/course_l_3_l4#3",
+          "course_l_7/course_l_7_l2#8",
+          "course_l_8/course_l_8_l2#8"
+        ],
+        "samples": [
+          "о→ кэ→ ау→",
+          "о→ кэ→ ау→",
+          "о→ кэ→ ау→",
+          "о→ кэ→ ау→"
+        ]
+      },
+      {
+        "value": "маа",
+        "count": 4,
+        "locations": [
+          "course_b_2/course_b_2_l1#3",
+          "course_b_2/course_b_2_l1#4",
+          "course_b_2/course_b_2_l1#5",
+          "course_b_5/course_b_5_l1#2"
+        ],
+        "samples": [
+          "маа→",
+          "маа↘",
+          "маа↗",
+          "маа→"
+        ]
+      },
+      {
+        "value": "а рой мак",
+        "count": 4,
+        "locations": [
+          "course_b_2/course_b_2_l3#8",
+          "course_b_6/course_b_6_l1#5",
+          "course_l_4/course_l_4_l2#8",
+          "course_l_4/course_l_4_l6#1"
+        ],
+        "samples": [
+          "а→ рой→ мак↘",
+          "а→ рой→ мак↘",
+          "а→ рой→ мак↘",
+          "а→ рой→ мак↘"
+        ]
+      },
+      {
+        "value": "пай най",
+        "count": 4,
+        "locations": [
+          "course_b_2/course_b_2_l4#6",
+          "course_b_5/course_b_5_l1#3",
+          "course_b_7/course_b_7_l6#2",
+          "course_l_11/course_l_11_l4#2"
+        ],
+        "samples": [
+          "пай→ най↗",
+          "пай→ най↗",
+          "пай→ най↗",
+          "пай→ най↗"
+        ]
+      },
+      {
+        "value": "кхао джай",
+        "count": 4,
+        "locations": [
+          "course_b_5/course_b_5_l3#3",
+          "course_l_4/course_l_4_l3#9",
+          "course_l_5/course_l_5_l2#8",
+          "course_l_8/course_l_8_l1#8"
+        ],
+        "samples": [
+          "кхао→ джай↘",
+          "кхао→ джай↘",
+          "кхао→ джай↘",
+          "кхао→ джай↘"
+        ]
+      },
+      {
+        "value": "ла кон кхрап",
+        "count": 4,
+        "locations": [
+          "course_l_1/course_l_1_l5#4",
+          "course_l_1/course_l_1_l7#9",
+          "course_e_3/course_e_3_l6#3",
+          "course_l_2/course_l_2_l6#10"
+        ],
+        "samples": [
+          "ла→ кон→ кхрап→",
+          "ла→ кон→ кхрап→",
+          "ла→ кон→ кхрап→",
+          "ла→ кон→ кхрап→"
+        ]
+      },
+      {
+        "value": "май кот дан",
+        "count": 4,
+        "locations": [
+          "course_e_2/course_e_2_l2#7",
+          "course_e_5/course_e_5_l6#2",
+          "course_e_1/course_e_1_l3#5",
+          "course_s_5/course_s_5_l4#8"
+        ],
+        "samples": [
+          "май→ кот→ дан↘",
+          "май→ кот→ дан↘",
+          "май→ кот→ дан↘",
+          "май→ кот→ дан↘"
+        ]
+      },
+      {
+        "value": "кхоп кхун ти чуай",
+        "count": 4,
+        "locations": [
+          "course_e_2/course_e_2_l4#4",
+          "course_e_2/course_e_2_l6#1",
+          "course_l_6/course_l_6_l7#8",
+          "course_long_6/course_long_6_l6#1"
+        ],
+        "samples": [
+          "кхоп→ кхун→ ти→ чуай→",
+          "кхоп→ кхун→ ти→ чуай→",
+          "кхоп→ кхун→ ти→ чуай→",
+          "кхоп→ кхун→ ти→ чуай→"
+        ]
+      },
+      {
+        "value": "бат",
+        "count": 4,
+        "locations": [
+          "course_l_3/course_l_3_l7#5",
+          "course_l_4/course_l_4_l6#6",
+          "course_l_6/course_l_6_l5#4",
+          "course_l_8/course_l_8_l3#7"
+        ],
+        "samples": [
+          "бат↘",
+          "бат→",
+          "бат→",
+          "бат→"
+        ]
+      },
+      {
+        "value": "чуай сом ной",
+        "count": 4,
+        "locations": [
+          "course_l_6/course_l_6_l3#5",
+          "course_l_6/course_l_6_l7#2",
+          "course_l_13/course_l_13_l3#5",
+          "course_l_13/course_l_13_l7#5"
+        ],
+        "samples": [
+          "чуай→ сом→ ной→",
+          "чуай→ сом→ ной→",
+          "чуай→ сом→ ной→",
+          "чуай→ сом→ ной→"
+        ]
+      },
+      {
+        "value": "лэу дже кан",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l1#9",
+          "course_b_7/course_b_7_l6#5",
+          "course_l_1/course_l_1_l5#6"
+        ],
+        "samples": [
+          "лэу→ джё→ кан→",
+          "лэу→ джё→ кан→",
+          "лэу→ джё→ кан→"
+        ]
+      },
+      {
+        "value": "кун чыу а рай",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l2#2",
+          "course_l_15/course_l_15_l3#3",
+          "course_l_15/course_l_15_l5#2"
+        ],
+        "samples": [
+          "кун→ чыу→ а→ рай↗",
+          "кун→ чыу→ а→ рай↗",
+          "кун→ чыу→ а→ рай↗"
+        ]
+      },
+      {
+        "value": "ю ти най",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l5#2",
+          "course_b_5/course_b_5_l7#10",
+          "course_l_8/course_l_8_l1#1"
+        ],
+        "samples": [
+          "ю→ ти→ най↗",
+          "ю→ ти→ най↗",
+          "…→ ю→ ти→ най↗"
+        ]
+      },
+      {
+        "value": "чот тронг ни",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l5#6",
+          "course_b_7/course_b_7_l3#6",
+          "course_l_2/course_l_2_l4#2"
+        ],
+        "samples": [
+          "чот→ тронг→ ни↘",
+          "чот→ тронг→ ни↘",
+          "чот→ тронг→ ни↘"
+        ]
+      },
+      {
+        "value": "ан ни тао рай",
+        "count": 3,
+        "locations": [
+          "course_b_1/course_b_1_l6#3",
+          "course_l_3/course_l_3_l1#6",
+          "course_l_8/course_l_8_l2#1"
+        ],
+        "samples": [
+          "ан→ ни→ тао→ рай↗",
+          "ан→ ни→ тао→ рай↗",
+          "ан→ ни→ тао→ рай↗"
+        ]
+      },
+      {
+        "value": "май",
+        "count": 3,
+        "locations": [
+          "course_b_2/course_b_2_l2#3",
+          "course_b_2/course_b_2_l2#4",
+          "course_b_6/course_b_6_l6#2"
+        ],
+        "samples": [
+          "май↗",
+          "май↘",
+          "май↗"
+        ]
+      },
+      {
+        "value": "тао рай кхрап",
+        "count": 3,
+        "locations": [
+          "course_b_2/course_b_2_l6#4",
+          "course_l_2/course_l_2_l6#4",
+          "course_l_12/course_l_12_l5#1"
+        ],
+        "samples": [
+          "тао→ рай→ кхрап↗",
+          "тао→ рай→ кхрап↗",
+          "тао→ рай→ кхрап↗"
+        ]
+      }
+    ]
+  },
+  "course_kind_counts": {
+    "course_b_0": {
+      "tip": 24
+    },
+    "course_b_1": {
+      "tip": 8,
+      "phrase": 46,
+      "casual": 4,
+      "word": 1
+    },
+    "course_b_2": {
+      "tip": 11,
+      "word": 10,
+      "phrase": 32,
+      "casual": 6
+    },
+    "course_b_3": {
+      "tip": 7,
+      "word": 14,
+      "phrase": 39,
+      "casual": 6
+    },
+    "course_b_4": {
+      "tip": 7,
+      "word": 30,
+      "phrase": 29
+    },
+    "course_b_5": {
+      "word": 14,
+      "phrase": 62,
+      "tip": 2
+    },
+    "course_b_6": {
+      "tip": 5,
+      "word": 13,
+      "phrase": 46
+    },
+    "course_b_7": {
+      "tip": 5,
+      "phrase": 25,
+      "word": 2
+    },
+    "course_l_1": {
+      "tip": 7,
+      "phrase": 51,
+      "word": 4,
+      "casual": 1
+    },
+    "course_e_6": {
+      "tip": 3,
+      "word": 17,
+      "phrase": 29,
+      "casual": 2
+    },
+    "course_e_2": {
+      "word": 15,
+      "phrase": 33,
+      "tip": 2
+    },
+    "course_e_5": {
+      "tip": 4,
+      "word": 15,
+      "phrase": 28,
+      "casual": 2
+    },
+    "course_e_3": {
+      "tip": 1,
+      "word": 18,
+      "phrase": 30
+    },
+    "course_e_1": {
+      "tip": 1,
+      "word": 11,
+      "phrase": 34,
+      "casual": 2
+    },
+    "course_l_15": {
+      "word": 14,
+      "phrase": 42,
+      "tip": 2
+    },
+    "course_l_2": {
+      "tip": 9,
+      "phrase": 55,
+      "word": 1
+    },
+    "course_l_3": {
+      "word": 14,
+      "phrase": 46,
+      "tip": 2
+    },
+    "course_l_4": {
+      "tip": 3,
+      "word": 13,
+      "phrase": 43
+    },
+    "course_l_5": {
+      "tip": 2,
+      "word": 13,
+      "phrase": 42
+    },
+    "course_l_6": {
+      "word": 14,
+      "phrase": 42,
+      "tip": 2
+    },
+    "course_l_14": {
+      "word": 14,
+      "phrase": 42,
+      "tip": 2
+    },
+    "course_l_7": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 41
+    },
+    "course_l_8": {
+      "word": 14,
+      "phrase": 43,
+      "tip": 2
+    },
+    "course_l_9": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 43
+    },
+    "course_l_10": {
+      "tip": 1,
+      "word": 14,
+      "phrase": 44
+    },
+    "course_l_11": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 42
+    },
+    "course_l_12": {
+      "tip": 2,
+      "word": 10,
+      "phrase": 36
+    },
+    "course_l_13": {
+      "tip": 2,
+      "word": 13,
+      "phrase": 42
+    },
+    "course_e_4": {
+      "tip": 2,
+      "word": 24,
+      "phrase": 24
+    },
+    "course_s_1": {
+      "word": 13,
+      "phrase": 35,
+      "tip": 1
+    },
+    "course_s_2": {
+      "tip": 1,
+      "word": 18,
+      "phrase": 30
+    },
+    "course_s_3": {
+      "tip": 2,
+      "word": 12,
+      "phrase": 32
+    },
+    "course_s_4": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 33
+    },
+    "course_s_5": {
+      "tip": 2,
+      "word": 12,
+      "phrase": 35
+    },
+    "course_s_6": {
+      "word": 13,
+      "phrase": 32,
+      "tip": 2
+    },
+    "course_long_1": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 32,
+      "casual": 2
+    },
+    "course_long_2": {
+      "word": 13,
+      "phrase": 34,
+      "tip": 2,
+      "casual": 1
+    },
+    "course_long_3": {
+      "word": 20,
+      "phrase": 32,
+      "casual": 4,
+      "tip": 2
+    },
+    "course_long_4": {
+      "word": 13,
+      "phrase": 33,
+      "tip": 2,
+      "casual": 2
+    },
+    "course_long_5": {
+      "tip": 2,
+      "word": 19,
+      "phrase": 28,
+      "casual": 1
+    },
+    "course_long_6": {
+      "tip": 1,
+      "word": 20,
+      "phrase": 28
+    },
+    "course_long_7": {
+      "tip": 2,
+      "phrase": 30,
+      "word": 18
+    }
+  },
+  "lesson_rows": [
+    {
+      "course_id": "course_b_0",
+      "course_index": 0,
+      "lesson_index": 1,
+      "lesson_id": "course_b_0_l1",
+      "title": "Как устроен язык",
+      "step_count": 7,
+      "kinds": {
+        "tip": 7
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_0",
+      "course_index": 0,
+      "lesson_index": 2,
+      "lesson_id": "course_b_0_l2",
+      "title": "Как работают тоны",
+      "step_count": 9,
+      "kinds": {
+        "tip": 9
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_0",
+      "course_index": 0,
+      "lesson_index": 3,
+      "lesson_id": "course_b_0_l3",
+      "title": "Как думают тайцы",
+      "step_count": 8,
+      "kinds": {
+        "tip": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_1",
+      "course_index": 1,
+      "lesson_index": 1,
+      "lesson_id": "course_b_1_l1",
+      "title": "Приветствие",
+      "step_count": 9,
+      "kinds": {
+        "tip": 2,
+        "phrase": 6,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_1",
+      "course_index": 1,
+      "lesson_index": 2,
+      "lesson_id": "course_b_1_l2",
+      "title": "Знакомство",
+      "step_count": 7,
+      "kinds": {
+        "tip": 1,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_1",
+      "course_index": 1,
+      "lesson_index": 3,
+      "lesson_id": "course_b_1_l3",
+      "title": "Как дела?",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 7,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_1",
+      "course_index": 1,
+      "lesson_index": 4,
+      "lesson_id": "course_b_1_l4",
+      "title": "Просьбы",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_1",
+      "course_index": 1,
+      "lesson_index": 5,
+      "lesson_id": "course_b_1_l5",
+      "title": "Где тут?",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 7,
+        "word": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_1",
+      "course_index": 1,
+      "lesson_index": 6,
+      "lesson_id": "course_b_1_l6",
+      "title": "Цена",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_1",
+      "course_index": 1,
+      "lesson_index": 7,
+      "lesson_id": "course_b_1_l7",
+      "title": "Спасибо и извини",
+      "step_count": 7,
+      "kinds": {
+        "tip": 1,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_2",
+      "course_index": 2,
+      "lesson_index": 1,
+      "lesson_id": "course_b_2_l1",
+      "title": "Три тона на примерах",
+      "step_count": 10,
+      "kinds": {
+        "tip": 2,
+        "word": 4,
+        "phrase": 3,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_2",
+      "course_index": 2,
+      "lesson_index": 2,
+      "lesson_id": "course_b_2_l2",
+      "title": "Падение и подъём",
+      "step_count": 10,
+      "kinds": {
+        "tip": 2,
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_2",
+      "course_index": 2,
+      "lesson_index": 3,
+      "lesson_id": "course_b_2_l3",
+      "title": "Эмоции тоном",
+      "step_count": 10,
+      "kinds": {
+        "tip": 2,
+        "word": 3,
+        "phrase": 4,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_2",
+      "course_index": 2,
+      "lesson_index": 4,
+      "lesson_id": "course_b_2_l4",
+      "title": "Быстрая речь",
+      "step_count": 10,
+      "kinds": {
+        "tip": 2,
+        "phrase": 7,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_2",
+      "course_index": 2,
+      "lesson_index": 5,
+      "lesson_id": "course_b_2_l5",
+      "title": "Хвостики на и ной",
+      "step_count": 9,
+      "kinds": {
+        "tip": 2,
+        "word": 1,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_2",
+      "course_index": 2,
+      "lesson_index": 6,
+      "lesson_id": "course_b_2_l6",
+      "title": "В 7-Eleven говорят так",
+      "step_count": 10,
+      "kinds": {
+        "tip": 1,
+        "phrase": 8,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_3",
+      "course_index": 3,
+      "lesson_index": 1,
+      "lesson_id": "course_b_3_l1",
+      "title": "Я и ты",
+      "step_count": 7,
+      "kinds": {
+        "tip": 1,
+        "word": 4,
+        "phrase": 2
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_3",
+      "course_index": 3,
+      "lesson_index": 2,
+      "lesson_id": "course_b_3_l2",
+      "title": "Он, она, они",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 1,
+        "phrase": 6,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_3",
+      "course_index": 3,
+      "lesson_index": 3,
+      "lesson_id": "course_b_3_l3",
+      "title": "Семья",
+      "step_count": 10,
+      "kinds": {
+        "tip": 1,
+        "word": 3,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_3",
+      "course_index": 3,
+      "lesson_index": 4,
+      "lesson_id": "course_b_3_l4",
+      "title": "Возраст и профессия",
+      "step_count": 10,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_3",
+      "course_index": 3,
+      "lesson_index": 5,
+      "lesson_id": "course_b_3_l5",
+      "title": "Мой, твой, его",
+      "step_count": 10,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_3",
+      "course_index": 3,
+      "lesson_index": 6,
+      "lesson_id": "course_b_3_l6",
+      "title": "Мини-диалог знакомства",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 7,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_3",
+      "course_index": 3,
+      "lesson_index": 7,
+      "lesson_id": "course_b_3_l7",
+      "title": "Друзья и гости",
+      "step_count": 11,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 7,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_4",
+      "course_index": 4,
+      "lesson_index": 1,
+      "lesson_id": "course_b_4_l1",
+      "title": "Числа 1–10",
+      "step_count": 11,
+      "kinds": {
+        "tip": 1,
+        "word": 5,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_4",
+      "course_index": 4,
+      "lesson_index": 2,
+      "lesson_id": "course_b_4_l2",
+      "title": "Числа 10–100",
+      "step_count": 12,
+      "kinds": {
+        "tip": 2,
+        "word": 5,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_4",
+      "course_index": 4,
+      "lesson_index": 3,
+      "lesson_id": "course_b_4_l3",
+      "title": "Который час?",
+      "step_count": 11,
+      "kinds": {
+        "tip": 1,
+        "word": 5,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_4",
+      "course_index": 4,
+      "lesson_index": 4,
+      "lesson_id": "course_b_4_l4",
+      "title": "Дни недели",
+      "step_count": 11,
+      "kinds": {
+        "tip": 1,
+        "word": 5,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_4",
+      "course_index": 4,
+      "lesson_index": 5,
+      "lesson_id": "course_b_4_l5",
+      "title": "Прямо, налево, 100 метров",
+      "step_count": 10,
+      "kinds": {
+        "tip": 1,
+        "word": 5,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_4",
+      "course_index": 4,
+      "lesson_index": 6,
+      "lesson_id": "course_b_4_l6",
+      "title": "Сколько человек, раз",
+      "step_count": 11,
+      "kinds": {
+        "tip": 1,
+        "word": 5,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_5",
+      "course_index": 5,
+      "lesson_index": 1,
+      "lesson_id": "course_b_5_l1",
+      "title": "Идти и приходить",
+      "step_count": 9,
+      "kinds": {
+        "word": 2,
+        "phrase": 7
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_5",
+      "course_index": 5,
+      "lesson_index": 2,
+      "lesson_id": "course_b_5_l2",
+      "title": "Хотеть и любить",
+      "step_count": 11,
+      "kinds": {
+        "word": 2,
+        "phrase": 9
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_5",
+      "course_index": 5,
+      "lesson_index": 3,
+      "lesson_id": "course_b_5_l3",
+      "title": "Говорить и понимать",
+      "step_count": 11,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_5",
+      "course_index": 5,
+      "lesson_index": 4,
+      "lesson_id": "course_b_5_l4",
+      "title": "Есть, пить, покупать",
+      "step_count": 12,
+      "kinds": {
+        "word": 2,
+        "phrase": 10
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_5",
+      "course_index": 5,
+      "lesson_index": 5,
+      "lesson_id": "course_b_5_l5",
+      "title": "Делать и работать",
+      "step_count": 12,
+      "kinds": {
+        "word": 2,
+        "phrase": 10
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_5",
+      "course_index": 5,
+      "lesson_index": 6,
+      "lesson_id": "course_b_5_l6",
+      "title": "Спать, сидеть, давать",
+      "step_count": 11,
+      "kinds": {
+        "word": 2,
+        "phrase": 9
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_5",
+      "course_index": 5,
+      "lesson_index": 7,
+      "lesson_id": "course_b_5_l7",
+      "title": "Знать, видеть, жить",
+      "step_count": 12,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 9
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_6",
+      "course_index": 6,
+      "lesson_index": 1,
+      "lesson_id": "course_b_6_l1",
+      "title": "Вкусно и остро",
+      "step_count": 10,
+      "kinds": {
+        "tip": 1,
+        "word": 3,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_6",
+      "course_index": 6,
+      "lesson_index": 2,
+      "lesson_id": "course_b_6_l2",
+      "title": "Красиво и дорого",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_6",
+      "course_index": 6,
+      "lesson_index": 3,
+      "lesson_id": "course_b_6_l3",
+      "title": "Горячо и холодно",
+      "step_count": 12,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 9
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_6",
+      "course_index": 6,
+      "lesson_index": 4,
+      "lesson_id": "course_b_6_l4",
+      "title": "Большой, маленький",
+      "step_count": 10,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 7
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_6",
+      "course_index": 6,
+      "lesson_index": 5,
+      "lesson_id": "course_b_6_l5",
+      "title": "Хороший и плохой",
+      "step_count": 11,
+      "kinds": {
+        "word": 2,
+        "phrase": 9
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_6",
+      "course_index": 6,
+      "lesson_index": 6,
+      "lesson_id": "course_b_6_l6",
+      "title": "Новый, старый, быстрый",
+      "step_count": 12,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 9
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_7",
+      "course_index": 7,
+      "lesson_index": 1,
+      "lesson_id": "course_b_7_l1",
+      "title": "7-Eleven",
+      "step_count": 5,
+      "kinds": {
+        "tip": 1,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_7",
+      "course_index": 7,
+      "lesson_index": 2,
+      "lesson_id": "course_b_7_l2",
+      "title": "Кафе",
+      "step_count": 5,
+      "kinds": {
+        "tip": 1,
+        "word": 1,
+        "phrase": 3
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_7",
+      "course_index": 7,
+      "lesson_index": 3,
+      "lesson_id": "course_b_7_l3",
+      "title": "Такси",
+      "step_count": 7,
+      "kinds": {
+        "tip": 1,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_7",
+      "course_index": 7,
+      "lesson_index": 4,
+      "lesson_id": "course_b_7_l4",
+      "title": "Рынок",
+      "step_count": 5,
+      "kinds": {
+        "tip": 1,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_7",
+      "course_index": 7,
+      "lesson_index": 5,
+      "lesson_id": "course_b_7_l5",
+      "title": "Сосед",
+      "step_count": 5,
+      "kinds": {
+        "tip": 1,
+        "word": 1,
+        "phrase": 3
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_b_7",
+      "course_index": 7,
+      "lesson_index": 6,
+      "lesson_id": "course_b_7_l6",
+      "title": "Сборный день",
+      "step_count": 5,
+      "kinds": {
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_1",
+      "course_index": 8,
+      "lesson_index": 1,
+      "lesson_id": "course_l_1_l1",
+      "title": "Вежливо на посту",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 5,
+        "word": 3
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_1",
+      "course_index": 8,
+      "lesson_index": 2,
+      "lesson_id": "course_l_1_l2",
+      "title": "Паспорт и виза",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 7,
+        "word": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_1",
+      "course_index": 8,
+      "lesson_index": 3,
+      "lesson_id": "course_l_1_l3",
+      "title": "Вопросы полиции",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_1",
+      "course_index": 8,
+      "lesson_index": 4,
+      "lesson_id": "course_l_1_l4",
+      "title": "Всё ок",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 7,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_1",
+      "course_index": 8,
+      "lesson_index": 5,
+      "lesson_id": "course_l_1_l5",
+      "title": "Спасибо и до свидания",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_1",
+      "course_index": 8,
+      "lesson_index": 6,
+      "lesson_id": "course_l_1_l6",
+      "title": "Мини-сценка поста",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_1",
+      "course_index": 8,
+      "lesson_index": 7,
+      "lesson_id": "course_l_1_l7",
+      "title": "Полный диалог на посту",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_6",
+      "course_index": 9,
+      "lesson_index": 1,
+      "lesson_id": "course_e_6_l1",
+      "title": "Смягчить просьбу",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_6",
+      "course_index": 9,
+      "lesson_index": 2,
+      "lesson_id": "course_e_6_l2",
+      "title": "Тон и громкость",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_6",
+      "course_index": 9,
+      "lesson_index": 3,
+      "lesson_id": "course_e_6_l3",
+      "title": "Маркеры каа и кхрап",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 4,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_6",
+      "course_index": 9,
+      "lesson_index": 4,
+      "lesson_id": "course_e_6_l4",
+      "title": "Чувства словами",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_6",
+      "course_index": 9,
+      "lesson_index": 5,
+      "lesson_id": "course_e_6_l5",
+      "title": "Фаранг-резкость",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 3,
+        "phrase": 4,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_6",
+      "course_index": 9,
+      "lesson_index": 6,
+      "lesson_id": "course_e_6_l6",
+      "title": "Мягкий тайский сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_2",
+      "course_index": 10,
+      "lesson_index": 1,
+      "lesson_id": "course_e_2_l1",
+      "title": "Сделай пожалуйста",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_2",
+      "course_index": 10,
+      "lesson_index": 2,
+      "lesson_id": "course_e_2_l2",
+      "title": "Как статус?",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_2",
+      "course_index": 10,
+      "lesson_index": 3,
+      "lesson_id": "course_e_2_l3",
+      "title": "Можно быстрее?",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_2",
+      "course_index": 10,
+      "lesson_index": 4,
+      "lesson_id": "course_e_2_l4",
+      "title": "Комплименты коллегам",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_2",
+      "course_index": 10,
+      "lesson_index": 5,
+      "lesson_id": "course_e_2_l5",
+      "title": "Рабочий small talk",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_2",
+      "course_index": 10,
+      "lesson_index": 6,
+      "lesson_id": "course_e_2_l6",
+      "title": "Работа сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 5,
+        "phrase": 3
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_5",
+      "course_index": 11,
+      "lesson_index": 1,
+      "lesson_id": "course_e_5_l1",
+      "title": "Крэнг-джай",
+      "step_count": 8,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_5",
+      "course_index": 11,
+      "lesson_index": 2,
+      "lesson_id": "course_e_5_l2",
+      "title": "Джай-йен",
+      "step_count": 7,
+      "kinds": {
+        "tip": 1,
+        "word": 1,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_5",
+      "course_index": 11,
+      "lesson_index": 3,
+      "lesson_id": "course_e_5_l3",
+      "title": "Сабай и май пэн рай",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_5",
+      "course_index": 11,
+      "lesson_index": 4,
+      "lesson_id": "course_e_5_l4",
+      "title": "Обходные фразы",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_5",
+      "course_index": 11,
+      "lesson_index": 5,
+      "lesson_id": "course_e_5_l5",
+      "title": "Скрытые смыслы",
+      "step_count": 8,
+      "kinds": {
+        "word": 5,
+        "phrase": 2,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_5",
+      "course_index": 11,
+      "lesson_index": 6,
+      "lesson_id": "course_e_5_l6",
+      "title": "Коды сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_3",
+      "course_index": 12,
+      "lesson_index": 1,
+      "lesson_id": "course_e_3_l1",
+      "title": "Уберите пожалуйста",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_3",
+      "course_index": 12,
+      "lesson_index": 2,
+      "lesson_id": "course_e_3_l2",
+      "title": "Почините кондиционер",
+      "step_count": 8,
+      "kinds": {
+        "phrase": 7,
+        "word": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_3",
+      "course_index": 12,
+      "lesson_index": 3,
+      "lesson_id": "course_e_3_l3",
+      "title": "Можно пораньше?",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_3",
+      "course_index": 12,
+      "lesson_index": 4,
+      "lesson_id": "course_e_3_l4",
+      "title": "Уточнение деталей",
+      "step_count": 8,
+      "kinds": {
+        "phrase": 7,
+        "word": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_3",
+      "course_index": 12,
+      "lesson_index": 5,
+      "lesson_id": "course_e_3_l5",
+      "title": "Благодарность за сервис",
+      "step_count": 8,
+      "kinds": {
+        "word": 4,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_3",
+      "course_index": 12,
+      "lesson_index": 6,
+      "lesson_id": "course_e_3_l6",
+      "title": "Сервис сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 6,
+        "phrase": 2
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_1",
+      "course_index": 13,
+      "lesson_index": 1,
+      "lesson_id": "course_e_1_l1",
+      "title": "Ясность без резкости",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_1",
+      "course_index": 13,
+      "lesson_index": 2,
+      "lesson_id": "course_e_1_l2",
+      "title": "Мягкость в ритме",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_1",
+      "course_index": 13,
+      "lesson_index": 3,
+      "lesson_id": "course_e_1_l3",
+      "title": "Частицы смягчения",
+      "step_count": 7,
+      "kinds": {
+        "word": 1,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_1",
+      "course_index": 13,
+      "lesson_index": 4,
+      "lesson_id": "course_e_1_l4",
+      "title": "Без резких формулировок",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_1",
+      "course_index": 13,
+      "lesson_index": 5,
+      "lesson_id": "course_e_1_l5",
+      "title": "Маркеры вежливости",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_1",
+      "course_index": 13,
+      "lesson_index": 6,
+      "lesson_id": "course_e_1_l6",
+      "title": "Понятный тайский сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_15",
+      "course_index": 14,
+      "lesson_index": 1,
+      "lesson_id": "course_l_15_l1",
+      "title": "Ещё один",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_15",
+      "course_index": 14,
+      "lesson_index": 2,
+      "lesson_id": "course_l_15_l2",
+      "title": "Сколько за пиво?",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_15",
+      "course_index": 14,
+      "lesson_index": 3,
+      "lesson_id": "course_l_15_l3",
+      "title": "Small talk",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_15",
+      "course_index": 14,
+      "lesson_index": 4,
+      "lesson_id": "course_l_15_l4",
+      "title": "Музыка и танцы",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_15",
+      "course_index": 14,
+      "lesson_index": 5,
+      "lesson_id": "course_l_15_l5",
+      "title": "Знакомства",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_15",
+      "course_index": 14,
+      "lesson_index": 6,
+      "lesson_id": "course_l_15_l6",
+      "title": "Ночная сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_15",
+      "course_index": 14,
+      "lesson_index": 7,
+      "lesson_id": "course_l_15_l7",
+      "title": "Диалоги в баре",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_2",
+      "course_index": 15,
+      "lesson_index": 1,
+      "lesson_id": "course_l_2_l1",
+      "title": "Куда едем",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 7,
+        "word": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_2",
+      "course_index": 15,
+      "lesson_index": 2,
+      "lesson_id": "course_l_2_l2",
+      "title": "Цена до поездки",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_2",
+      "course_index": 15,
+      "lesson_index": 3,
+      "lesson_id": "course_l_2_l3",
+      "title": "Прямо и налево",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_2",
+      "course_index": 15,
+      "lesson_index": 4,
+      "lesson_id": "course_l_2_l4",
+      "title": "Останови здесь",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_2",
+      "course_index": 15,
+      "lesson_index": 5,
+      "lesson_id": "course_l_2_l5",
+      "title": "Чуть подожди",
+      "step_count": 10,
+      "kinds": {
+        "tip": 2,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_2",
+      "course_index": 15,
+      "lesson_index": 6,
+      "lesson_id": "course_l_2_l6",
+      "title": "Сценка такси",
+      "step_count": 10,
+      "kinds": {
+        "tip": 2,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_2",
+      "course_index": 15,
+      "lesson_index": 7,
+      "lesson_id": "course_l_2_l7",
+      "title": "День vs Ночь и Grab",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 8
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_3",
+      "course_index": 16,
+      "lesson_index": 1,
+      "lesson_id": "course_l_3_l1",
+      "title": "Числа на рынке",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_3",
+      "course_index": 16,
+      "lesson_index": 2,
+      "lesson_id": "course_l_3_l2",
+      "title": "Сколько за это",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_3",
+      "course_index": 16,
+      "lesson_index": 3,
+      "lesson_id": "course_l_3_l3",
+      "title": "Дорого и дешевле",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_3",
+      "course_index": 16,
+      "lesson_index": 4,
+      "lesson_id": "course_l_3_l4",
+      "title": "Давай 200",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_3",
+      "course_index": 16,
+      "lesson_index": 5,
+      "lesson_id": "course_l_3_l5",
+      "title": "Фрукты и штуки",
+      "step_count": 13,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 10
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_3",
+      "course_index": 16,
+      "lesson_index": 6,
+      "lesson_id": "course_l_3_l6",
+      "title": "Король рынка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_3",
+      "course_index": 16,
+      "lesson_index": 7,
+      "lesson_id": "course_l_3_l7",
+      "title": "Торг за разное",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_4",
+      "course_index": 17,
+      "lesson_index": 1,
+      "lesson_id": "course_l_4_l1",
+      "title": "Пад тай и сом там",
+      "step_count": 10,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 7
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_4",
+      "course_index": 17,
+      "lesson_index": 2,
+      "lesson_id": "course_l_4_l2",
+      "title": "Том ям и кхао ман",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_4",
+      "course_index": 17,
+      "lesson_index": 3,
+      "lesson_id": "course_l_4_l3",
+      "title": "Мало остро",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_4",
+      "course_index": 17,
+      "lesson_index": 4,
+      "lesson_id": "course_l_4_l4",
+      "title": "Без рыбы и ещё риса",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_4",
+      "course_index": 17,
+      "lesson_index": 5,
+      "lesson_id": "course_l_4_l5",
+      "title": "На фудкорте",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_4",
+      "course_index": 17,
+      "lesson_index": 6,
+      "lesson_id": "course_l_4_l6",
+      "title": "Вкусно и счёт",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_4",
+      "course_index": 17,
+      "lesson_index": 7,
+      "lesson_id": "course_l_4_l7",
+      "title": "Заказ с аллергиями",
+      "step_count": 8,
+      "kinds": {
+        "tip": 1,
+        "word": 1,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_5",
+      "course_index": 18,
+      "lesson_index": 1,
+      "lesson_id": "course_l_5_l1",
+      "title": "Голова болит",
+      "step_count": 8,
+      "kinds": {
+        "tip": 1,
+        "word": 1,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_5",
+      "course_index": 18,
+      "lesson_index": 2,
+      "lesson_id": "course_l_5_l2",
+      "title": "Живот и температура",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_5",
+      "course_index": 18,
+      "lesson_index": 3,
+      "lesson_id": "course_l_5_l3",
+      "title": "Таблетка от …",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_5",
+      "course_index": 18,
+      "lesson_index": 4,
+      "lesson_id": "course_l_5_l4",
+      "title": "Сколько раз в день",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_5",
+      "course_index": 18,
+      "lesson_index": 5,
+      "lesson_id": "course_l_5_l5",
+      "title": "Аллергия и нет",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_5",
+      "course_index": 18,
+      "lesson_index": 6,
+      "lesson_id": "course_l_5_l6",
+      "title": "В аптеке диалог",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_5",
+      "course_index": 18,
+      "lesson_index": 7,
+      "lesson_id": "course_l_5_l7",
+      "title": "В клинике",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_6",
+      "course_index": 19,
+      "lesson_index": 1,
+      "lesson_id": "course_l_6_l1",
+      "title": "Номер и ключ",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_6",
+      "course_index": 19,
+      "lesson_index": 2,
+      "lesson_id": "course_l_6_l2",
+      "title": "Уборка и полотенце",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_6",
+      "course_index": 19,
+      "lesson_index": 3,
+      "lesson_id": "course_l_6_l3",
+      "title": "Кондиционер",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_6",
+      "course_index": 19,
+      "lesson_index": 4,
+      "lesson_id": "course_l_6_l4",
+      "title": "Ранний заезд",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_6",
+      "course_index": 19,
+      "lesson_index": 5,
+      "lesson_id": "course_l_6_l5",
+      "title": "Счёт и выезд",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_6",
+      "course_index": 19,
+      "lesson_index": 6,
+      "lesson_id": "course_l_6_l6",
+      "title": "В отеле сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_6",
+      "course_index": 19,
+      "lesson_index": 7,
+      "lesson_id": "course_l_6_l7",
+      "title": "Проблемы в номере",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_14",
+      "course_index": 20,
+      "lesson_index": 1,
+      "lesson_id": "course_l_14_l1",
+      "title": "Посылка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_14",
+      "course_index": 20,
+      "lesson_index": 2,
+      "lesson_id": "course_l_14_l2",
+      "title": "Адрес",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_14",
+      "course_index": 20,
+      "lesson_index": 3,
+      "lesson_id": "course_l_14_l3",
+      "title": "Трек-номер",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_14",
+      "course_index": 20,
+      "lesson_index": 4,
+      "lesson_id": "course_l_14_l4",
+      "title": "Курьер где?",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_14",
+      "course_index": 20,
+      "lesson_index": 5,
+      "lesson_id": "course_l_14_l5",
+      "title": "Сколько доставка?",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_14",
+      "course_index": 20,
+      "lesson_index": 6,
+      "lesson_id": "course_l_14_l6",
+      "title": "Доставка сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_14",
+      "course_index": 20,
+      "lesson_index": 7,
+      "lesson_id": "course_l_14_l7",
+      "title": "Проблемы с доставкой",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_7",
+      "course_index": 21,
+      "lesson_index": 1,
+      "lesson_id": "course_l_7_l1",
+      "title": "Тень и солнце",
+      "step_count": 8,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_7",
+      "course_index": 21,
+      "lesson_index": 2,
+      "lesson_id": "course_l_7_l2",
+      "title": "Шезлонг и лежак",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_7",
+      "course_index": 21,
+      "lesson_index": 3,
+      "lesson_id": "course_l_7_l3",
+      "title": "Кокос и напитки",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_7",
+      "course_index": 21,
+      "lesson_index": 4,
+      "lesson_id": "course_l_7_l4",
+      "title": "Снорклинг",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_7",
+      "course_index": 21,
+      "lesson_index": 5,
+      "lesson_id": "course_l_7_l5",
+      "title": "Пляжный день",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_7",
+      "course_index": 21,
+      "lesson_index": 6,
+      "lesson_id": "course_l_7_l6",
+      "title": "На пляже сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_7",
+      "course_index": 21,
+      "lesson_index": 7,
+      "lesson_id": "course_l_7_l7",
+      "title": "Аренда и напитки",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_8",
+      "course_index": 22,
+      "lesson_index": 1,
+      "lesson_id": "course_l_8_l1",
+      "title": "Где товар",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_8",
+      "course_index": 22,
+      "lesson_index": 2,
+      "lesson_id": "course_l_8_l2",
+      "title": "Цена на полке",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_8",
+      "course_index": 22,
+      "lesson_index": 3,
+      "lesson_id": "course_l_8_l3",
+      "title": "Касса и очередь",
+      "step_count": 10,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 7
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_8",
+      "course_index": 22,
+      "lesson_index": 4,
+      "lesson_id": "course_l_8_l4",
+      "title": "Пакет и карта",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_8",
+      "course_index": 22,
+      "lesson_index": 5,
+      "lesson_id": "course_l_8_l5",
+      "title": "Big C и Tesco",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_8",
+      "course_index": 22,
+      "lesson_index": 6,
+      "lesson_id": "course_l_8_l6",
+      "title": "Магазин сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_8",
+      "course_index": 22,
+      "lesson_index": 7,
+      "lesson_id": "course_l_8_l7",
+      "title": "В Big C и возврат",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_9",
+      "course_index": 23,
+      "lesson_index": 1,
+      "lesson_id": "course_l_9_l1",
+      "title": "Помогите",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_9",
+      "course_index": 23,
+      "lesson_index": 2,
+      "lesson_id": "course_l_9_l2",
+      "title": "Полиция и скорая",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_9",
+      "course_index": 23,
+      "lesson_index": 3,
+      "lesson_id": "course_l_9_l3",
+      "title": "Больница",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_9",
+      "course_index": 23,
+      "lesson_index": 4,
+      "lesson_id": "course_l_9_l4",
+      "title": "У меня украли",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_9",
+      "course_index": 23,
+      "lesson_index": 5,
+      "lesson_id": "course_l_9_l5",
+      "title": "Пожар",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_9",
+      "course_index": 23,
+      "lesson_index": 6,
+      "lesson_id": "course_l_9_l6",
+      "title": "Адрес и телефон",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_9",
+      "course_index": 23,
+      "lesson_index": 7,
+      "lesson_id": "course_l_9_l7",
+      "title": "Экстренный диалог",
+      "step_count": 9,
+      "kinds": {
+        "word": 2,
+        "phrase": 7
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_10",
+      "course_index": 24,
+      "lesson_index": 1,
+      "lesson_id": "course_l_10_l1",
+      "title": "Абонемент",
+      "step_count": 10,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 7
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_10",
+      "course_index": 24,
+      "lesson_index": 2,
+      "lesson_id": "course_l_10_l2",
+      "title": "Тренировка",
+      "step_count": 9,
+      "kinds": {
+        "word": 2,
+        "phrase": 7
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_10",
+      "course_index": 24,
+      "lesson_index": 3,
+      "lesson_id": "course_l_10_l3",
+      "title": "Веса и тренажёры",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_10",
+      "course_index": 24,
+      "lesson_index": 4,
+      "lesson_id": "course_l_10_l4",
+      "title": "Тренер",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_10",
+      "course_index": 24,
+      "lesson_index": 5,
+      "lesson_id": "course_l_10_l5",
+      "title": "Душ и шкафчик",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_10",
+      "course_index": 24,
+      "lesson_index": 6,
+      "lesson_id": "course_l_10_l6",
+      "title": "Зал сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_10",
+      "course_index": 24,
+      "lesson_index": 7,
+      "lesson_id": "course_l_10_l7",
+      "title": "Диалог с тренером",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_11",
+      "course_index": 25,
+      "lesson_index": 1,
+      "lesson_id": "course_l_11_l1",
+      "title": "Сонгкран",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_11",
+      "course_index": 25,
+      "lesson_index": 2,
+      "lesson_id": "course_l_11_l2",
+      "title": "Лой Кратонг",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_11",
+      "course_index": 25,
+      "lesson_index": 3,
+      "lesson_id": "course_l_11_l3",
+      "title": "Йи Пенг",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_11",
+      "course_index": 25,
+      "lesson_index": 4,
+      "lesson_id": "course_l_11_l4",
+      "title": "Праздник и ярмарка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_11",
+      "course_index": 25,
+      "lesson_index": 5,
+      "lesson_id": "course_l_11_l5",
+      "title": "Поздравления",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_11",
+      "course_index": 25,
+      "lesson_index": 6,
+      "lesson_id": "course_l_11_l6",
+      "title": "Фестиваль сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_11",
+      "course_index": 25,
+      "lesson_index": 7,
+      "lesson_id": "course_l_11_l7",
+      "title": "Праздники 2026",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_12",
+      "course_index": 26,
+      "lesson_index": 1,
+      "lesson_id": "course_l_12_l1",
+      "title": "Стрижка",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_12",
+      "course_index": 26,
+      "lesson_index": 2,
+      "lesson_id": "course_l_12_l2",
+      "title": "Длина и форма",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_12",
+      "course_index": 26,
+      "lesson_index": 3,
+      "lesson_id": "course_l_12_l3",
+      "title": "Массаж головы",
+      "step_count": 7,
+      "kinds": {
+        "word": 1,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_12",
+      "course_index": 26,
+      "lesson_index": 4,
+      "lesson_id": "course_l_12_l4",
+      "title": "Борода",
+      "step_count": 8,
+      "kinds": {
+        "tip": 1,
+        "word": 1,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_12",
+      "course_index": 26,
+      "lesson_index": 5,
+      "lesson_id": "course_l_12_l5",
+      "title": "Цена и время",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_12",
+      "course_index": 26,
+      "lesson_index": 6,
+      "lesson_id": "course_l_12_l6",
+      "title": "Салон сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_13",
+      "course_index": 27,
+      "lesson_index": 1,
+      "lesson_id": "course_l_13_l1",
+      "title": "Протечка",
+      "step_count": 8,
+      "kinds": {
+        "tip": 1,
+        "word": 1,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_13",
+      "course_index": 27,
+      "lesson_index": 2,
+      "lesson_id": "course_l_13_l2",
+      "title": "Оплата",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_13",
+      "course_index": 27,
+      "lesson_index": 3,
+      "lesson_id": "course_l_13_l3",
+      "title": "Кондиционер сломан",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_13",
+      "course_index": 27,
+      "lesson_index": 4,
+      "lesson_id": "course_l_13_l4",
+      "title": "Можно починить?",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_13",
+      "course_index": 27,
+      "lesson_index": 5,
+      "lesson_id": "course_l_13_l5",
+      "title": "Когда приедете?",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_13",
+      "course_index": 27,
+      "lesson_index": 6,
+      "lesson_id": "course_l_13_l6",
+      "title": "Чат с хозяином",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_l_13",
+      "course_index": 27,
+      "lesson_index": 7,
+      "lesson_id": "course_l_13_l7",
+      "title": "Диалог о ремонте и соседи",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_4",
+      "course_index": 28,
+      "lesson_index": 1,
+      "lesson_id": "course_e_4_l1",
+      "title": "Извините",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 5,
+        "phrase": 3
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_4",
+      "course_index": 28,
+      "lesson_index": 2,
+      "lesson_id": "course_e_4_l2",
+      "title": "Я не так имел в виду",
+      "step_count": 8,
+      "kinds": {
+        "word": 4,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_4",
+      "course_index": 28,
+      "lesson_index": 3,
+      "lesson_id": "course_e_4_l3",
+      "title": "Давай решим по-другому",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_4",
+      "course_index": 28,
+      "lesson_index": 4,
+      "lesson_id": "course_e_4_l4",
+      "title": "Уровни вежливости",
+      "step_count": 8,
+      "kinds": {
+        "word": 5,
+        "phrase": 3
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_4",
+      "course_index": 28,
+      "lesson_index": 5,
+      "lesson_id": "course_e_4_l5",
+      "title": "Выход из неловкости",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 5,
+        "phrase": 3
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_e_4",
+      "course_index": 28,
+      "lesson_index": 6,
+      "lesson_id": "course_e_4_l6",
+      "title": "Без конфликта сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_1",
+      "course_index": 29,
+      "lesson_index": 1,
+      "lesson_id": "course_s_1_l1",
+      "title": "Сегодня сабай",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_1",
+      "course_index": 29,
+      "lesson_index": 2,
+      "lesson_id": "course_s_1_l2",
+      "title": "Вайб 100",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_1",
+      "course_index": 29,
+      "lesson_index": 3,
+      "lesson_id": "course_s_1_l3",
+      "title": "Подписи к фото",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_1",
+      "course_index": 29,
+      "lesson_index": 4,
+      "lesson_id": "course_s_1_l4",
+      "title": "Ответы подписчикам",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_1",
+      "course_index": 29,
+      "lesson_index": 5,
+      "lesson_id": "course_s_1_l5",
+      "title": "Эмодзи и сленг",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_1",
+      "course_index": 29,
+      "lesson_index": 6,
+      "lesson_id": "course_s_1_l6",
+      "title": "Сторис сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_2",
+      "course_index": 30,
+      "lesson_index": 1,
+      "lesson_id": "course_s_2_l1",
+      "title": "Муай-тай и йога",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_2",
+      "course_index": 30,
+      "lesson_index": 2,
+      "lesson_id": "course_s_2_l2",
+      "title": "Где зал?",
+      "step_count": 8,
+      "kinds": {
+        "word": 4,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_2",
+      "course_index": 30,
+      "lesson_index": 3,
+      "lesson_id": "course_s_2_l3",
+      "title": "Сколько стоит занятие?",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_2",
+      "course_index": 30,
+      "lesson_index": 4,
+      "lesson_id": "course_s_2_l4",
+      "title": "Когда следующий класс?",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_2",
+      "course_index": 30,
+      "lesson_index": 5,
+      "lesson_id": "course_s_2_l5",
+      "title": "Серфинг и керамика",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_2",
+      "course_index": 30,
+      "lesson_index": 6,
+      "lesson_id": "course_s_2_l6",
+      "title": "С тренером сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_3",
+      "course_index": 31,
+      "lesson_index": 1,
+      "lesson_id": "course_s_3_l1",
+      "title": "555 и джин",
+      "step_count": 8,
+      "kinds": {
+        "tip": 1,
+        "word": 3,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_3",
+      "course_index": 31,
+      "lesson_index": 2,
+      "lesson_id": "course_s_3_l2",
+      "title": "Джай-рай и фан",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_3",
+      "course_index": 31,
+      "lesson_index": 3,
+      "lesson_id": "course_s_3_l3",
+      "title": "Идиомы нам-джай",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_3",
+      "course_index": 31,
+      "lesson_index": 4,
+      "lesson_id": "course_s_3_l4",
+      "title": "Кхон ди и другие",
+      "step_count": 5,
+      "kinds": {
+        "word": 1,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_3",
+      "course_index": 31,
+      "lesson_index": 5,
+      "lesson_id": "course_s_3_l5",
+      "title": "Шутки и подкасты",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_3",
+      "course_index": 31,
+      "lesson_index": 6,
+      "lesson_id": "course_s_3_l6",
+      "title": "Неформальное сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_4",
+      "course_index": 32,
+      "lesson_index": 1,
+      "lesson_id": "course_s_4_l1",
+      "title": "Правила молчания",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_4",
+      "course_index": 32,
+      "lesson_index": 2,
+      "lesson_id": "course_s_4_l2",
+      "title": "Расписание",
+      "step_count": 7,
+      "kinds": {
+        "word": 2,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_4",
+      "course_index": 32,
+      "lesson_index": 3,
+      "lesson_id": "course_s_4_l3",
+      "title": "Можно медитировать?",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_4",
+      "course_index": 32,
+      "lesson_index": 4,
+      "lesson_id": "course_s_4_l4",
+      "title": "Где дхарма-холл?",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_4",
+      "course_index": 32,
+      "lesson_index": 5,
+      "lesson_id": "course_s_4_l5",
+      "title": "С монахами",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_4",
+      "course_index": 32,
+      "lesson_index": 6,
+      "lesson_id": "course_s_4_l6",
+      "title": "Ретрит сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_5",
+      "course_index": 33,
+      "lesson_index": 1,
+      "lesson_id": "course_s_5_l1",
+      "title": "На-рак",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_5",
+      "course_index": 33,
+      "lesson_index": 2,
+      "lesson_id": "course_s_5_l2",
+      "title": "Как ты?",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_5",
+      "course_index": 33,
+      "lesson_index": 3,
+      "lesson_id": "course_s_5_l3",
+      "title": "Намёки и интерес",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_5",
+      "course_index": 33,
+      "lesson_index": 4,
+      "lesson_id": "course_s_5_l4",
+      "title": "Май яак",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_5",
+      "course_index": 33,
+      "lesson_index": 5,
+      "lesson_id": "course_s_5_l5",
+      "title": "Пен а-рай ган",
+      "step_count": 7,
+      "kinds": {
+        "word": 2,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_5",
+      "course_index": 33,
+      "lesson_index": 6,
+      "lesson_id": "course_s_5_l6",
+      "title": "Романтика сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_6",
+      "course_index": 34,
+      "lesson_index": 1,
+      "lesson_id": "course_s_6_l1",
+      "title": "Играть?",
+      "step_count": 7,
+      "kinds": {
+        "word": 2,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_6",
+      "course_index": 34,
+      "lesson_index": 2,
+      "lesson_id": "course_s_6_l2",
+      "title": "Кэнг маак",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_6",
+      "course_index": 34,
+      "lesson_index": 3,
+      "lesson_id": "course_s_6_l3",
+      "title": "Раванг на",
+      "step_count": 8,
+      "kinds": {
+        "tip": 1,
+        "word": 1,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_6",
+      "course_index": 34,
+      "lesson_index": 4,
+      "lesson_id": "course_s_6_l4",
+      "title": "С родителями",
+      "step_count": 7,
+      "kinds": {
+        "word": 3,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_6",
+      "course_index": 34,
+      "lesson_index": 5,
+      "lesson_id": "course_s_6_l5",
+      "title": "На пляже и в кафе",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_s_6",
+      "course_index": 34,
+      "lesson_index": 6,
+      "lesson_id": "course_s_6_l6",
+      "title": "Тай кидс сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_1",
+      "course_index": 35,
+      "lesson_index": 1,
+      "lesson_id": "course_long_1_l1",
+      "title": "90-day report",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_1",
+      "course_index": 35,
+      "lesson_index": 2,
+      "lesson_id": "course_long_1_l2",
+      "title": "Продление визы",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_1",
+      "course_index": 35,
+      "lesson_index": 3,
+      "lesson_id": "course_long_1_l3",
+      "title": "TM.30 и фото 4×6",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_1",
+      "course_index": 35,
+      "lesson_index": 4,
+      "lesson_id": "course_long_1_l4",
+      "title": "Почему отказали?",
+      "step_count": 8,
+      "kinds": {
+        "word": 4,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_1",
+      "course_index": 35,
+      "lesson_index": 5,
+      "lesson_id": "course_long_1_l5",
+      "title": "Где оплатить штраф?",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_1",
+      "course_index": 35,
+      "lesson_index": 6,
+      "lesson_id": "course_long_1_l6",
+      "title": "Иммиграция сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_2",
+      "course_index": 36,
+      "lesson_index": 1,
+      "lesson_id": "course_long_2_l1",
+      "title": "Открытие счёта",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_2",
+      "course_index": 36,
+      "lesson_index": 2,
+      "lesson_id": "course_long_2_l2",
+      "title": "Wise и PromptPay",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_2",
+      "course_index": 36,
+      "lesson_index": 3,
+      "lesson_id": "course_long_2_l3",
+      "title": "Крипто-обменники",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_2",
+      "course_index": 36,
+      "lesson_index": 4,
+      "lesson_id": "course_long_2_l4",
+      "title": "Перевод не пришёл",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_2",
+      "course_index": 36,
+      "lesson_index": 5,
+      "lesson_id": "course_long_2_l5",
+      "title": "Карта заблокирована",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_2",
+      "course_index": 36,
+      "lesson_index": 6,
+      "lesson_id": "course_long_2_l6",
+      "title": "Банк сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_3",
+      "course_index": 37,
+      "lesson_index": 1,
+      "lesson_id": "course_long_3_l1",
+      "title": "Симптомы подробно",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_3",
+      "course_index": 37,
+      "lesson_index": 2,
+      "lesson_id": "course_long_3_l2",
+      "title": "УЗИ и анализы",
+      "step_count": 8,
+      "kinds": {
+        "word": 4,
+        "phrase": 3,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_3",
+      "course_index": 37,
+      "lesson_index": 3,
+      "lesson_id": "course_long_3_l3",
+      "title": "Аллергия на пенициллин",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_3",
+      "course_index": 37,
+      "lesson_index": 4,
+      "lesson_id": "course_long_3_l4",
+      "title": "Страховка покрывает?",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_3",
+      "course_index": 37,
+      "lesson_index": 5,
+      "lesson_id": "course_long_3_l5",
+      "title": "Ассистанс",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_3",
+      "course_index": 37,
+      "lesson_index": 6,
+      "lesson_id": "course_long_3_l6",
+      "title": "Рецепт и аптека",
+      "step_count": 8,
+      "kinds": {
+        "word": 5,
+        "phrase": 3
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_3",
+      "course_index": 37,
+      "lesson_index": 7,
+      "lesson_id": "course_long_3_l7",
+      "title": "Медицина сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_4",
+      "course_index": 38,
+      "lesson_index": 1,
+      "lesson_id": "course_long_4_l1",
+      "title": "Мототакси и GrabBike",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_4",
+      "course_index": 38,
+      "lesson_index": 2,
+      "lesson_id": "course_long_4_l2",
+      "title": "Аренда байка",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_4",
+      "course_index": 38,
+      "lesson_index": 3,
+      "lesson_id": "course_long_4_l3",
+      "title": "Где шлем?",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_4",
+      "course_index": 38,
+      "lesson_index": 4,
+      "lesson_id": "course_long_4_l4",
+      "title": "Страховка байка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_4",
+      "course_index": 38,
+      "lesson_index": 5,
+      "lesson_id": "course_long_4_l5",
+      "title": "Сонгтео",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_4",
+      "course_index": 38,
+      "lesson_index": 6,
+      "lesson_id": "course_long_4_l6",
+      "title": "Транспорт сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_5",
+      "course_index": 39,
+      "lesson_index": 1,
+      "lesson_id": "course_long_5_l1",
+      "title": "Шум и тишина",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 5,
+        "casual": 1
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_5",
+      "course_index": 39,
+      "lesson_index": 2,
+      "lesson_id": "course_long_5_l2",
+      "title": "Курение на балконе",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 4,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_5",
+      "course_index": 39,
+      "lesson_index": 3,
+      "lesson_id": "course_long_5_l3",
+      "title": "Общие зоны",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_5",
+      "course_index": 39,
+      "lesson_index": 4,
+      "lesson_id": "course_long_5_l4",
+      "title": "Кто-то оставил мусор",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_5",
+      "course_index": 39,
+      "lesson_index": 5,
+      "lesson_id": "course_long_5_l5",
+      "title": "Собрание жильцов",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_5",
+      "course_index": 39,
+      "lesson_index": 6,
+      "lesson_id": "course_long_5_l6",
+      "title": "Кондо сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 4,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_6",
+      "course_index": 40,
+      "lesson_index": 1,
+      "lesson_id": "course_long_6_l1",
+      "title": "Ветеринар",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_6",
+      "course_index": 40,
+      "lesson_index": 2,
+      "lesson_id": "course_long_6_l2",
+      "title": "Прививки",
+      "step_count": 8,
+      "kinds": {
+        "word": 4,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_6",
+      "course_index": 40,
+      "lesson_index": 3,
+      "lesson_id": "course_long_6_l3",
+      "title": "Пёс кашляет",
+      "step_count": 8,
+      "kinds": {
+        "word": 4,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_6",
+      "course_index": 40,
+      "lesson_index": 4,
+      "lesson_id": "course_long_6_l4",
+      "title": "Где груминг?",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_6",
+      "course_index": 40,
+      "lesson_index": 5,
+      "lesson_id": "course_long_6_l5",
+      "title": "Отель с животным?",
+      "step_count": 8,
+      "kinds": {
+        "word": 4,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_6",
+      "course_index": 40,
+      "lesson_index": 6,
+      "lesson_id": "course_long_6_l6",
+      "title": "Питомцы сценка",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_7",
+      "course_index": 41,
+      "lesson_index": 1,
+      "lesson_id": "course_long_7_l1",
+      "title": "555 и смех",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "phrase": 3,
+        "word": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_7",
+      "course_index": 41,
+      "lesson_index": 2,
+      "lesson_id": "course_long_7_l2",
+      "title": "แซ่บ и нонг",
+      "step_count": 9,
+      "kinds": {
+        "tip": 1,
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_7",
+      "course_index": 41,
+      "lesson_index": 3,
+      "lesson_id": "course_long_7_l3",
+      "title": "Фразы из дорам",
+      "step_count": 8,
+      "kinds": {
+        "word": 3,
+        "phrase": 5
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_7",
+      "course_index": 41,
+      "lesson_index": 4,
+      "lesson_id": "course_long_7_l4",
+      "title": "Тикток-тренды",
+      "step_count": 8,
+      "kinds": {
+        "word": 4,
+        "phrase": 4
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_7",
+      "course_index": 41,
+      "lesson_index": 5,
+      "lesson_id": "course_long_7_l5",
+      "title": "Как шутить по-тайски",
+      "step_count": 8,
+      "kinds": {
+        "word": 2,
+        "phrase": 6
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    },
+    {
+      "course_id": "course_long_7",
+      "course_index": 41,
+      "lesson_index": 6,
+      "lesson_id": "course_long_7_l6",
+      "title": "Юмор сценка",
+      "step_count": 8,
+      "kinds": {
+        "phrase": 6,
+        "word": 2
+      },
+      "order_dupes": [],
+      "order_gaps": []
+    }
+  ],
+  "canon_keys": {
+    "version": "int",
+    "phonetic_canon": 48,
+    "gloss_canon": 5,
+    "phonetic_allow_multi": 1,
+    "card_tip_bank": 190
+  }
+}

@@ -1,0 +1,74 @@
+kinds {'tip': 42, 'phrase': 654, 'word': 180, 'casual': 1}
+low_density [('course_l_12_l3', 7, 'Массаж головы')]
+duplicate_clusters 70
+DUP ('Спасибо', 'кхоп→ кхун→ кхрап↘') [('course_l_2', 'course_l_2_l4', 9), ('course_l_2', 'course_l_2_l7', 9), ('course_l_5', 'course_l_5_l6', 6), ('course_l_6', 'course_l_6_l6', 8), ('course_l_14', 'course_l_14_l6', 7), ('course_l_14', 'course_l_14_l7', 7), ('course_l_8', 'course_l_8_l6', 5), ('course_l_9', 'course_l_9_l7', 5), ('course_l_12', 'course_l_12_l6', 4)]
+DUP ('Спасибо', 'кхоп→ кхун→') [('course_l_3', 'course_l_3_l6', 3), ('course_l_6', 'course_l_6_l1', 8), ('course_l_14', 'course_l_14_l3', 8), ('course_l_8', 'course_l_8_l3', 9), ('course_l_10', 'course_l_10_l6', 1), ('course_l_11', 'course_l_11_l6', 3)]
+DUP ('Счёт пожалуйста', 'чек→ бин→ кхрап↘') [('course_l_15', 'course_l_15_l2', 8), ('course_l_15', 'course_l_15_l6', 6), ('course_l_4', 'course_l_4_l1', 10), ('course_l_6', 'course_l_6_l5', 3), ('course_l_7', 'course_l_7_l6', 2)]
+DUP ('Вода', 'нам↗') [('course_l_15', 'course_l_15_l1', 6), ('course_l_7', 'course_l_7_l3', 6), ('course_l_10', 'course_l_10_l5', 6), ('course_l_11', 'course_l_11_l1', 5)]
+DUP ('Счёт', 'чек→ бин→') [('course_l_15', 'course_l_15_l1', 7), ('course_l_4', 'course_l_4_l6', 2), ('course_l_6', 'course_l_6_l5', 1), ('course_l_6', 'course_l_6_l6', 7)]
+DUP ('Дорого', 'пхэнг→') [('course_l_15', 'course_l_15_l2', 4), ('course_l_2', 'course_l_2_l2', 3), ('course_l_3', 'course_l_3_l1', 7), ('course_l_8', 'course_l_8_l2', 6)]
+DUP ('Наличные', 'нгён→ сот↘') [('course_l_4', 'course_l_4_l6', 7), ('course_l_6', 'course_l_6_l5', 5), ('course_l_8', 'course_l_8_l3', 8), ('course_l_13', 'course_l_13_l2', 5)]
+DUP ('Почините пожалуйста', 'чуай→ сом→ ной→') [('course_l_6', 'course_l_6_l3', 5), ('course_l_6', 'course_l_6_l7', 2), ('course_l_13', 'course_l_13_l3', 5), ('course_l_13', 'course_l_13_l7', 5)]
+DUP ('До свидания', 'ла→ кон→') [('course_l_6', 'course_l_6_l5', 7), ('course_l_7', 'course_l_7_l6', 6), ('course_l_8', 'course_l_8_l6', 6), ('course_l_12', 'course_l_12_l6', 5)]
+DUP ('Спасибо за проверку', 'кхоп→ кхун→ ти→ туат→') [('course_l_1', 'course_l_1_l4', 7), ('course_l_1', 'course_l_1_l5', 2), ('course_l_1', 'course_l_1_l7', 8)]
+DUP ('До свидания', 'ла→ кон→ кхрап→') [('course_l_1', 'course_l_1_l5', 4), ('course_l_1', 'course_l_1_l7', 9), ('course_l_2', 'course_l_2_l6', 10)]
+DUP ('Ок', 'о→ кэ→') [('course_l_15', 'course_l_15_l2', 7), ('course_l_10', 'course_l_10_l2', 8), ('course_l_12', 'course_l_12_l5', 6)]
+DUP ('Вот адрес', 'ни→ ти→ ю↘') [('course_l_2', 'course_l_2_l1', 9), ('course_l_14', 'course_l_14_l2', 2), ('course_l_9', 'course_l_9_l6', 3)]
+DUP ('Ок беру', 'о→ кэ→ ау→') [('course_l_3', 'course_l_3_l4', 3), ('course_l_7', 'course_l_7_l2', 8), ('course_l_8', 'course_l_8_l2', 8)]
+DUP ('Понятно', 'кхао→ джай↘') [('course_l_4', 'course_l_4_l3', 9), ('course_l_5', 'course_l_5_l2', 8), ('course_l_8', 'course_l_8_l1', 8)]
+DUP ('Всё вместе', 'руам→') [('course_l_4', 'course_l_4_l6', 4), ('course_l_8', 'course_l_8_l6', 2), ('course_l_12', 'course_l_12_l5', 3)]
+DUP ('Картой', 'бат→') [('course_l_4', 'course_l_4_l6', 6), ('course_l_6', 'course_l_6_l5', 4), ('course_l_8', 'course_l_8_l3', 7)]
+DUP ('Сколько стоит?', 'тао→ рай↗') [('course_l_5', 'course_l_5_l6', 7), ('course_l_7', 'course_l_7_l4', 6), ('course_l_10', 'course_l_10_l1', 6)]
+DUP ('Полотенце', 'пха→ чхет→ туа→') [('course_l_6', 'course_l_6_l2', 1), ('course_l_7', 'course_l_7_l2', 5), ('course_l_10', 'course_l_10_l5', 3)]
+DUP ('Вода течёт', 'нам→ руа↘') [('course_l_6', 'course_l_6_l3', 7), ('course_l_6', 'course_l_6_l7', 3), ('course_l_13', 'course_l_13_l1', 2)]
+DUP ('Вот виза', 'ни→ ви→ са↘') [('course_l_1', 'course_l_1_l1', 6), ('course_l_1', 'course_l_1_l7', 4)]
+DUP ('Можно идти?', 'пай→ дай→ май↗') [('course_l_1', 'course_l_1_l4', 5), ('course_l_1', 'course_l_1_l7', 7)]
+DUP ('Сабай', 'са→ бай→') [('course_l_1', 'course_l_1_l4', 8), ('course_l_7', 'course_l_7_l5', 3)]
+DUP ('Вот паспорт', 'ни→ пас→ порт→') [('course_l_1', 'course_l_1_l7', 3), ('course_l_6', 'course_l_6_l6', 4)]
+DUP ('Цена', 'ра→ кха→') [('course_l_15', 'course_l_15_l2', 3), ('course_l_8', 'course_l_8_l2', 2)]
+DUP ('Два по цене одного', 'сон→ най→ ра→ ха→ нынг→') [('course_l_15', 'course_l_15_l2', 6), ('course_l_8', 'course_l_8_l5', 8)]
+DUP ('Пока', 'бай→') [('course_l_15', 'course_l_15_l5', 7), ('course_l_10', 'course_l_10_l6', 5)]
+DUP ('До встречи', 'джё→ кан→') [('course_l_15', 'course_l_15_l6', 4), ('course_l_11', 'course_l_11_l6', 4)]
+DUP ('Договорились', 'ток→ лонг→') [('course_l_2', 'course_l_2_l2', 9), ('course_l_3', 'course_l_3_l4', 6)]
+DUP ('Там', 'тронг→ нан↘') [('course_l_2', 'course_l_2_l4', 4), ('course_l_8', 'course_l_8_l1', 7)]
+DUP ('Готово', 'сет→ леу↘') [('course_l_2', 'course_l_2_l5', 9), ('course_l_12', 'course_l_12_l6', 1)]
+DUP ('Сколько стоит?', 'тао→ рай→ кхрап↗') [('course_l_2', 'course_l_2_l6', 4), ('course_l_12', 'course_l_12_l5', 1)]
+DUP ('Последняя цена', 'ра→ ха→ сут→ тай↘') [('course_l_3', 'course_l_3_l3', 5), ('course_l_3', 'course_l_3_l7', 6)]
+DUP ('Кокос', 'ма→ пхрау↘') [('course_l_3', 'course_l_3_l5', 6), ('course_l_7', 'course_l_7_l3', 2)]
+DUP ('Сколько всего?', 'руам→ тао→ рай↗') [('course_l_3', 'course_l_3_l6', 1), ('course_l_7', 'course_l_7_l6', 4)]
+DUP ('Пакет', 'тхунг→') [('course_l_3', 'course_l_3_l6', 6), ('course_l_8', 'course_l_8_l4', 1)]
+DUP ('Мало остро', 'пхет→ ной→') [('course_l_4', 'course_l_4_l1', 7), ('course_l_4', 'course_l_4_l3', 2)]
+DUP ('Вкусно', 'а→ рой→') [('course_l_4', 'course_l_4_l1', 9), ('course_l_7', 'course_l_7_l3', 9)]
+DUP ('Ещё риса', 'кхау→ ик→') [('course_l_4', 'course_l_4_l2', 6), ('course_l_4', 'course_l_4_l4', 3)]
+DUP ('Подождать', 'ро→') [('course_l_4', 'course_l_4_l5', 7), ('course_l_10', 'course_l_10_l3', 6)]
+generic_tip_repeats
+94 Вопрос: в конце тон чуть [[вверх]].
+55 Произнеси со стрелками, потом быстрее.
+55 Закрой RU и вспомни только по ситуации.
+51 Запомни мелодией целиком, не по слогам.
+50 Скажи вслух и представь, кому это говоришь.
+50 Повтори 2 раза: медленно → как местный.
+33 Свяжи с картинкой в голове.
+27 Повтори с разными эмоциями — так липнет.
+23 Сначала тон, потом скорость.
+23 Короткое слово — идеально для ушей.
+22 Спрашивай цену спокойно — торг начинается после ответа.
+18 Вежливый хвост делает фразу теплее.
+17 Май↘ в начале — отрицание. Следи за тоном.
+9 Спасибо + [[кхрап]]/ка. Коротко и тепло.
+7 Ной смягчает просьбу — меньше приказного тона.
+6 После любой помощи — минимум вежливости, который запоминают.
+4 «Вот» + кхрап: отдаёшь вещь/документ вежливо.
+4 Вода. Сок — отдельно (нам + фрукт).
+4 В кафе/баре. Можно добавить кхрап/ка.
+4 Можно с улыбкой: констатация, не обвинение.
+4 Окей по-тайски тоже живёт. Кивок + окэ — норма.
+4 Счёт + вежливый хвост. В кафе почти ритуал.
+4 Наличные. На рынке всё ещё часто удобнее карты.
+4 Почините пожалуйста — мягкая просьба, не претензия.
+3 Да/можно + кхрап. Согласие звучит мягко.
+3 Сабай: комфорт/ок. Ключевое слово вайба Таиланда.
+3 Хорошего праздника/веселья. Тепло и просто.
+3 Вот адрес. Курьеру и таксисту — must.
+3 Там. Палец помогает больше грамматики.
+3 Ок, беру. Закрывает торг без лишних слов.

@@ -1,0 +1,19 @@
+courses= 15 lessons= 104 items= 980
+card_count_errors= 0 []
+contextual_tips= 104
+duplicate_ru_4plus= [('спасибо', 13), ('счёт', 5), ('дорого', 5), ('счёт пожалуйста', 5), ('сколько стоит?', 5), ('до свидания', 5), ('почините пожалуйста', 5), ('вода', 4), ('всё вместе', 4), ('наличные', 4)]
+course_l_1 7 56
+course_l_15 7 67
+course_l_2 7 67
+course_l_3 7 72
+course_l_4 7 65
+course_l_5 7 64
+course_l_6 7 67
+course_l_14 7 65
+course_l_7 7 68
+course_l_8 7 67
+course_l_9 7 66
+course_l_10 7 68
+course_l_11 7 69
+course_l_12 6 56
+course_l_13 7 63

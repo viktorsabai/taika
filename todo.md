@@ -1,3 +1,22 @@
+# Общий коммит текущего рабочего дерева
+
+| Задача | Статус |
+|---|---|
+| Проверить состав всех текущих изменений перед общим коммитом | Не начато |
+| Собрать все изменения в один commit и push | Не начато |
+| Передать точную команду обновления ветки в Xcode | Не начато |
+
+# LessonsView — цельный сценарий ошибок и закрепления
+
+| Задача | Статус |
+|---|---|
+| Убрать лоскутный малиновый error UI из grade sheet и описать ошибки как часть зачётки курса | Не начато |
+| Сформировать один главный next step для пройденного курса: сначала ошибки, затем targeted practice, без конкурирующих CTA | Не начато |
+| Перестроить визуальную иерархию: крупный результат курса, предметы зачётки, затем только релевантные уроки с диагностикой | Не начато |
+| Сделать error state спокойным и технологичным в айдентике Taika, используя малиновый только как signal внутри строки/метрики | Не начато |
+| Проверить состояния: ошибок нет, ошибки есть, выбранные ошибки, Pro и non-Pro | Не начато |
+| Проверить, что Train Errors запускает targeted practice напрямую и не открывает лишний picker | Не начато |
+
 # Completion UX bugfix refine
 
 | Проверка | Статус |
@@ -1683,3 +1702,127 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Сделать no-input/error states с одним понятным next action.
 - [x] Проверить result/retry/keyboard fallback flow и отсутствие layout jumps.
 - [x] Выполнить static validation и подготовить один финальный push.
+
+# Grade sheet diagnostics regression
+
+- [ ] Аудировать старый selection chip, score contrast/motion и плотность skill rows.
+- [ ] Перевести `уроки выбраны` и completed selection controls на natural mastery gradient.
+- [ ] Выровнять result block вправо и выделить одну крупную achievement metric.
+- [ ] Разделить предметы зачётки и упростить arrows/Pro states.
+- [ ] Показывать error-training lesson только при реальном lesson-level diagnostics.
+- [ ] Выполнить static validation и подготовить один финальный push.
+
+# LessonsView — in-progress course polish
+
+- [ ] Audit lesson card front/back rendering for completed lessons inside an unfinished course.
+- [ ] Remove Taika label from completed lesson card and use the canonical pink-to-green completion status treatment.
+- [ ] Restore pink favorite wave lines when a lesson card has favorites, while preserving graphite surface.
+- [ ] Remove duplicate status and fix typography/spacing on the lesson-card back.
+- [ ] Replace lower selection controls' old pink solid styling with the canonical gradient treatment.
+- [ ] Validate in-progress, completed-lesson, empty-diagnostics, and favorite/non-favorite states statically.
+- [ ] Commit and push the complete fix to branch 2026-01-21-k7hb-d2004.
+
+# Course View — weekly metrics and completed filter
+
+- [ ] Audit current weekly metrics and identify the exact source for lessons, minutes, and words.
+- [ ] Verify whether minutes come from lesson timer estimates, completed progress, games, or a mixed aggregate.
+- [ ] Define a bounded weekly time metric that does not inflate from course estimates or repeated sessions.
+- [ ] Reduce bottom metrics scale and hierarchy without losing the useful signal.
+- [ ] Add a visible «Пройденные» filter only when completed courses exist.
+- [ ] Remove completed courses from «Продолжить» and preserve in-progress/unstarted semantics.
+- [ ] Validate filter transitions, empty states, metric labels, and commit/push the fix.
+
+# Swift compiler fix — LessonsDS argument order
+
+- [ ] Fix `LessonsDS.swift:1479` so `isFavoriteActive` precedes `isConsoleEnabled` according to `CourseLessonCard` initializer order.
+- [ ] Scan all `CourseLessonCard` call sites for the same named-argument ordering issue.
+- [ ] Run static validation and commit/push the build-ready fix.
+
+
+# Final Lessons grade-sheet and navigation pass
+
+- [ ] Audit current grade-sheet metric rows, approved numeric font tokens, materials picker, game callback, and Lessons header Speaker callback.
+- [ ] Remove the unreadable efficiency label and duplicate selected-lessons count from the grade sheet.
+- [ ] Recompose grade-sheet subjects into one readable result/errors/chevron row and restore the approved numeric font.
+- [ ] Replace the old mint Lessons/Lifehacks picker styling with canonical gradient treatment.
+- [ ] Open the tapped game mode directly instead of reopening Game Park mode selection.
+- [ ] Route Lessons header Speaker to scoped course reinforcement for the whole course.
+- [ ] Run static validation and push one commit for all fixes.
+
+# Completed lesson card — final path bugfix
+
+- [ ] Audit why completed lesson back face still renders the wrong numeric/typeface treatment.
+- [ ] Trace console tap from completed lesson card and route it to the Game Mode Picker, not step completion/final message.
+- [ ] Trace Speaker tap from completed lesson card and route it to scoped course reinforcement, not Instant Speaker.
+- [ ] Trace post-game lesson-level diagnostic persistence and expose real weak lesson IDs/scores in LessonsView.
+- [ ] Run static path validation and push one unified bugfix commit.
+
+# LessonsView regression — final numeric and diagnostics correction
+
+- [ ] Restore the exact numeric font used by Course View bottom metrics, not MV-SKIFER.
+- [ ] Remove the hero sublabel under the main reinforcement score entirely.
+- [ ] Trace why saved game scores still do not become visible weak lesson diagnostics.
+- [ ] Ensure error-training CTA/list appears only from real lesson-level scores below threshold.
+- [ ] Replace the actual Lessons materials picker accent with the canonical approved gradient.
+- [ ] Run targeted validation and push one regression-fix commit.
+
+
+# Course favorites — pink organic wave treatment
+
+- [ ] Audit CourseCard favorite state and current organic wave renderer.
+- [ ] Ensure favorite courses receive pink background waves immediately after tap.
+- [ ] Keep completed-course green treatment dominant when both completed and favorite are true.
+- [ ] Validate live favorite refresh and push one focused commit.
+
+
+# CourseCard back-face accent regression
+
+- [ ] Locate the actual back-face action button and its old mint accent source.
+- [ ] Apply canonical gradient with completed/favorite state precedence.
+- [ ] Run static validation and push focused fix.
+
+
+# Diagnostic error UX polish
+
+- [ ] Audit current error count/indicator rendering and `Тренировать ошибки` callback.
+- [ ] Design a compact malinовый diagnostic chip/indicator distinct from selection controls.
+- [ ] Remove gradient from the error-training CTA and use a separate outline/action treatment.
+- [ ] Make the error-training action launch the scoped reinforcement flow.
+- [ ] Validate zero-error, one-error, and multiple-error states, then push one commit.
+
+
+# Post-game reinforcement completion flow
+
+- [ ] Audit current game completion overlay, context flags, and callbacks.
+- [ ] Define next-step matrix for course reinforcement, lesson game, errors, and Speaker.
+- [ ] Replace generic equal-weight popup actions with one contextual primary action and calm secondary close.
+- [ ] Align completion overlay with Taika FM / Step final-message visual language.
+- [ ] Keep real game metrics and error feedback visible without duplicating selection controls.
+- [ ] Validate all game origins and push one post-game flow commit.
+
+
+# Locked game subjects — Taika+ access flow
+
+- [ ] Audit locked subject row renderer and tap callback.
+- [ ] Remove `Taika Pro` text and gradient from locked subjects; keep only neutral lock/crown signal.
+- [ ] Route locked game tap to the existing Taika+ access sheet, never Game Park picker.
+- [ ] Validate locked and unlocked rows, then push one commit.
+
+
+# Consolidated Taika UI/UX commit
+
+- [ ] Audit branch HEAD, upstream, recent commits, and working tree.
+- [ ] Verify all recent Course/Lessons/CardDS, diagnostics, post-game, and locked-game changes are present.
+- [ ] Identify any local or missing changes before consolidation.
+- [ ] Create one consolidated commit without losing work and push it.
+- [ ] Report exact final HEAD and update command.
+
+
+# Post-game context and session diagnostics follow-up
+
+- [ ] Verify why a lesson-origin game still renders Step-like follow-up buttons.
+- [ ] Define course reinforcement CTA matrix for Pro and non-Pro users.
+- [ ] Trace game mistake count from runtime result to ReinforcementStore/session restore by lesson ID.
+- [ ] Ensure errors survive closing/reopening LessonsView and are scoped to the correct lesson.
+- [ ] Push one focused fix after static validation.
+

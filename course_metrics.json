@@ -1,0 +1,1132 @@
+[
+  {
+    "id": "course_b_0",
+    "title": "Тайский без паники",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 3,
+    "duration_minutes": 20,
+    "short_description": "Теория без страха",
+    "actual_lessons": 3,
+    "actual_steps": 24,
+    "kinds": {
+      "tip": 24
+    },
+    "learning_outcomes": [
+      {
+        "type": "Логика языка",
+        "count": 7
+      },
+      {
+        "type": "Тоны без страха",
+        "count": 9
+      },
+      {
+        "type": "Живое общение",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_b_1",
+    "title": "Разговорный старт",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 24,
+    "short_description": "Что сказать в первый день",
+    "actual_lessons": 7,
+    "actual_steps": 59,
+    "kinds": {
+      "tip": 8,
+      "phrase": 46,
+      "casual": 4,
+      "word": 1
+    },
+    "learning_outcomes": [
+      {
+        "type": "Приветствия",
+        "count": 6
+      },
+      {
+        "type": "Базовые вопросы",
+        "count": 4
+      },
+      {
+        "type": "Фразы",
+        "count": 16
+      }
+    ]
+  },
+  {
+    "id": "course_b_2",
+    "title": "Магия интонации",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": "Слушай тон, не зубри заново",
+    "actual_lessons": 6,
+    "actual_steps": 59,
+    "kinds": {
+      "tip": 11,
+      "word": 10,
+      "phrase": 32,
+      "casual": 6
+    },
+    "learning_outcomes": [
+      {
+        "type": "Тоны",
+        "count": 5
+      },
+      {
+        "type": "Интонация",
+        "count": 20
+      },
+      {
+        "type": "Фразы",
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": "course_b_3",
+    "title": "Я, ты, он, семья",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": "Я, ты, он — без повтора старта",
+    "actual_lessons": 7,
+    "actual_steps": 66,
+    "kinds": {
+      "tip": 7,
+      "word": 14,
+      "phrase": 39,
+      "casual": 6
+    },
+    "learning_outcomes": [
+      {
+        "type": "Местоимения",
+        "count": 12
+      },
+      {
+        "type": "Обращения",
+        "count": 8
+      },
+      {
+        "type": "Фразы",
+        "count": 18
+      }
+    ]
+  },
+  {
+    "id": "course_b_4",
+    "title": "Время, место, цифры",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": "Считать и ориентироваться",
+    "actual_lessons": 6,
+    "actual_steps": 66,
+    "kinds": {
+      "tip": 7,
+      "word": 30,
+      "phrase": 29
+    },
+    "learning_outcomes": [
+      {
+        "type": "Числа",
+        "count": 25
+      },
+      {
+        "type": "Время",
+        "count": 18
+      },
+      {
+        "type": "Навигация",
+        "count": 12
+      }
+    ]
+  },
+  {
+    "id": "course_b_5",
+    "title": "Главные глаголы",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": "Глагольный каркас",
+    "actual_lessons": 7,
+    "actual_steps": 78,
+    "kinds": {
+      "word": 14,
+      "phrase": 62,
+      "tip": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Глаголы",
+        "count": 45
+      },
+      {
+        "type": "Фразы",
+        "count": 25
+      }
+    ]
+  },
+  {
+    "id": "course_b_6",
+    "title": "Вкусно, красиво, горячо",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": "Описывать, не торговаться снова",
+    "actual_lessons": 6,
+    "actual_steps": 64,
+    "kinds": {
+      "tip": 5,
+      "word": 13,
+      "phrase": 46
+    },
+    "learning_outcomes": [
+      {
+        "type": "Прилагательные",
+        "count": 35
+      },
+      {
+        "type": "Фразы",
+        "count": 18
+      }
+    ]
+  },
+  {
+    "id": "course_b_7",
+    "title": "Диалоги как у местных",
+    "category": "База от Тайки",
+    "is_pro": false,
+    "lesson_count": 6,
+    "duration_minutes": 24,
+    "short_description": "Склейка базы в диалоги",
+    "actual_lessons": 6,
+    "actual_steps": 32,
+    "kinds": {
+      "tip": 5,
+      "phrase": 25,
+      "word": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Диалоги",
+        "count": 10
+      },
+      {
+        "type": "Фразы",
+        "count": 20
+      }
+    ]
+  },
+  {
+    "id": "course_l_1",
+    "title": "На посту с полицией",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 63,
+    "kinds": {
+      "tip": 7,
+      "phrase": 51,
+      "word": 4,
+      "casual": 1
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Словарь",
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": "course_l_2",
+    "title": "Таксист, вези меня домой",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 65,
+    "kinds": {
+      "tip": 9,
+      "phrase": 55,
+      "word": 1
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 14
+      },
+      {
+        "type": "Словарь",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_l_3",
+    "title": "Король рынка",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 62,
+    "kinds": {
+      "word": 14,
+      "phrase": 46,
+      "tip": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Числа",
+        "count": 18
+      },
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": "course_l_4",
+    "title": "Вселенная тайской еды",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 59,
+    "kinds": {
+      "tip": 3,
+      "word": 13,
+      "phrase": 43
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Названия блюд",
+        "count": 12
+      },
+      {
+        "type": "Словарь",
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": "course_l_5",
+    "title": "Доктор Тайка дежурит",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 57,
+    "kinds": {
+      "tip": 2,
+      "word": 13,
+      "phrase": 42
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 12
+      }
+    ]
+  },
+  {
+    "id": "course_l_6",
+    "title": "Белый лотос на максималках",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 58,
+    "kinds": {
+      "word": 14,
+      "phrase": 42,
+      "tip": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 11
+      },
+      {
+        "type": "Словарь",
+        "count": 7
+      }
+    ]
+  },
+  {
+    "id": "course_l_7",
+    "title": "Пляж как состояние",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 57,
+    "kinds": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 41
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 9
+      },
+      {
+        "type": "Словарь",
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": "course_l_8",
+    "title": "Магазинные приключения",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 59,
+    "kinds": {
+      "word": 14,
+      "phrase": 43,
+      "tip": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 11
+      }
+    ]
+  },
+  {
+    "id": "course_l_9",
+    "title": "Срочная помощь",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 59,
+    "kinds": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 43
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Словарь",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_l_10",
+    "title": "Между подходами",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 59,
+    "kinds": {
+      "tip": 1,
+      "word": 14,
+      "phrase": 44
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Словарь",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": "course_l_11",
+    "title": "Сезон Сонгкрана и не только",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 58,
+    "kinds": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 42
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 18
+      },
+      {
+        "type": "Словарь",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": "course_l_12",
+    "title": "Новый тайский образ",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 48,
+    "kinds": {
+      "tip": 2,
+      "word": 10,
+      "phrase": 36
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": "course_l_13",
+    "title": "Хозяин дома — почти сосед",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 57,
+    "kinds": {
+      "tip": 2,
+      "word": 13,
+      "phrase": 42
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 14
+      },
+      {
+        "type": "Словарь",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_l_14",
+    "title": "Таиланд доставляет",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 58,
+    "kinds": {
+      "word": 14,
+      "phrase": 42,
+      "tip": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 9
+      },
+      {
+        "type": "Словарь",
+        "count": 9
+      }
+    ]
+  },
+  {
+    "id": "course_l_15",
+    "title": "После заката всё интереснее",
+    "category": "Тайский для жизни",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 58,
+    "kinds": {
+      "word": 14,
+      "phrase": 42,
+      "tip": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 14
+      },
+      {
+        "type": "Словарь",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_e_1",
+    "title": "Понятный тайский",
+    "category": "На одной волне",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 48,
+    "kinds": {
+      "tip": 1,
+      "word": 11,
+      "phrase": 34,
+      "casual": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Вежливость",
+        "count": 5
+      },
+      {
+        "type": "Фразы",
+        "count": 7
+      }
+    ]
+  },
+  {
+    "id": "course_e_2",
+    "title": "Работа с тайцами",
+    "category": "На одной волне",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 50,
+    "kinds": {
+      "word": 15,
+      "phrase": 33,
+      "tip": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Комплименты",
+        "count": 10
+      },
+      {
+        "type": "Фразы",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_e_3",
+    "title": "Сервис и персонал",
+    "category": "На одной волне",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 49,
+    "kinds": {
+      "tip": 1,
+      "word": 18,
+      "phrase": 30
+    },
+    "learning_outcomes": [
+      {
+        "type": "Жесты",
+        "count": 5
+      },
+      {
+        "type": "Фразы",
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": "course_e_4",
+    "title": "Разговоры без конфликта",
+    "category": "На одной волне",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 50,
+    "kinds": {
+      "tip": 2,
+      "word": 24,
+      "phrase": 24
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 8
+      },
+      {
+        "type": "Вежливость",
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": "course_e_5",
+    "title": "Коды Таиланда",
+    "category": "На одной волне",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 49,
+    "kinds": {
+      "tip": 4,
+      "word": 15,
+      "phrase": 28,
+      "casual": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Идиомы",
+        "count": 5
+      },
+      {
+        "type": "Фразы",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": "course_e_6",
+    "title": "Мягкий тайский твой",
+    "category": "На одной волне",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 51,
+    "kinds": {
+      "tip": 3,
+      "word": 17,
+      "phrase": 29,
+      "casual": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Чувства",
+        "count": 15
+      },
+      {
+        "type": "Фразы",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": "course_s_1",
+    "title": "Тайский для блогинга",
+    "category": "Тайский для души",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 49,
+    "kinds": {
+      "word": 13,
+      "phrase": 35,
+      "tip": 1
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Словарь",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": "course_s_2",
+    "title": "Хобби и движ по-тайски",
+    "category": "Тайский для души",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 49,
+    "kinds": {
+      "tip": 1,
+      "word": 18,
+      "phrase": 30
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 15
+      }
+    ]
+  },
+  {
+    "id": "course_s_3",
+    "title": "О чём говорят на самом деле",
+    "category": "Тайский для души",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 46,
+    "kinds": {
+      "tip": 2,
+      "word": 12,
+      "phrase": 32
+    },
+    "learning_outcomes": [
+      {
+        "type": "Идиомы",
+        "count": 10
+      },
+      {
+        "type": "Сленг",
+        "count": 15
+      }
+    ]
+  },
+  {
+    "id": "course_s_4",
+    "title": "Ретрит и внутренний сабай",
+    "category": "Тайский для души",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 49,
+    "kinds": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 33
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Словарь",
+        "count": 12
+      }
+    ]
+  },
+  {
+    "id": "course_s_5",
+    "title": "Романтика по-тайски",
+    "category": "Тайский для души",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 49,
+    "kinds": {
+      "tip": 2,
+      "word": 12,
+      "phrase": 35
+    },
+    "learning_outcomes": [
+      {
+        "type": "Разговорные фразы",
+        "count": 20
+      },
+      {
+        "type": "Словарь",
+        "count": 15
+      }
+    ]
+  },
+  {
+    "id": "course_s_6",
+    "title": "Тай кидс",
+    "category": "Тайский для души",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 47,
+    "kinds": {
+      "word": 13,
+      "phrase": 32,
+      "tip": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Словарь",
+        "count": 12
+      }
+    ]
+  },
+  {
+    "id": "course_long_1",
+    "title": "Виза, продление, иммиграция",
+    "category": "Тайский для долгожителей",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 50,
+    "kinds": {
+      "tip": 2,
+      "word": 14,
+      "phrase": 32,
+      "casual": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Формы",
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": "course_long_2",
+    "title": "Банки, деньги, крипта",
+    "category": "Тайский для долгожителей",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 50,
+    "kinds": {
+      "word": 13,
+      "phrase": 34,
+      "tip": 2,
+      "casual": 1
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_long_3",
+    "title": "Полная медицина и страховка",
+    "category": "Тайский для долгожителей",
+    "is_pro": true,
+    "lesson_count": 7,
+    "duration_minutes": 26,
+    "short_description": null,
+    "actual_lessons": 7,
+    "actual_steps": 58,
+    "kinds": {
+      "word": 20,
+      "phrase": 32,
+      "casual": 4,
+      "tip": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 15
+      },
+      {
+        "type": "Симптомы",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": "course_long_4",
+    "title": "Транспорт для своих",
+    "category": "Тайский для долгожителей",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 50,
+    "kinds": {
+      "word": 13,
+      "phrase": 33,
+      "tip": 2,
+      "casual": 2
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 12
+      },
+      {
+        "type": "Словарь",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_long_5",
+    "title": "Соседи, кондо, правила дома",
+    "category": "Тайский для долгожителей",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 50,
+    "kinds": {
+      "tip": 2,
+      "word": 19,
+      "phrase": 28,
+      "casual": 1
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": "course_long_6",
+    "title": "Питомцы в Таиланде",
+    "category": "Тайский для долгожителей",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 49,
+    "kinds": {
+      "tip": 1,
+      "word": 20,
+      "phrase": 28
+    },
+    "learning_outcomes": [
+      {
+        "type": "Фразы",
+        "count": 10
+      },
+      {
+        "type": "Словарь",
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": "course_long_7",
+    "title": "Тайский юмор, мемы, поп-культура",
+    "category": "Тайский для долгожителей",
+    "is_pro": true,
+    "lesson_count": 6,
+    "duration_minutes": 22,
+    "short_description": null,
+    "actual_lessons": 6,
+    "actual_steps": 50,
+    "kinds": {
+      "tip": 2,
+      "phrase": 30,
+      "word": 18
+    },
+    "learning_outcomes": [
+      {
+        "type": "Выражения",
+        "count": 15
+      },
+      {
+        "type": "Мемы",
+        "count": 10
+      }
+    ]
+  }
+]

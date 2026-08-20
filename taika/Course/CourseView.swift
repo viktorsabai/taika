@@ -331,7 +331,8 @@ struct CourseView: View {
         let pronunciation = pronunciationMaps(from: speakerAttemptsAll, includeAdvanced: pro.isPro)
         return courses.map { c in
             let isTheoryBonus = courseExperienceKind(for: c.id) == .theoryBonus
-            let (done, total) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
+            let effectiveLessonTotal = max(c.lessonCount, LessonsData.shared.lessons(for: c.id).count)
+            let (done, total) = lessonsManager.headerCounts(for: c.id, lessonsTotal: effectiveLessonTotal)
             let courseCompleted = total > 0 && done >= total
             let courseProgress = lessonsManager.coursePercent(for: c.id)
             let canonCourseId = ProgressManager.shared.canonicalize(c.id)
@@ -359,7 +360,7 @@ struct CourseView: View {
                 subtitle: subtitleResolved,
                 applicationLine: sanitizedDescription.isEmpty ? nil : sanitizedDescription,
                 category: c.category,
-                lessons: c.lessonCount,
+                lessons: effectiveLessonTotal,
                 durationMin: c.durationMinutes,
                 cta: done == 0 ? "Начать" : (done < total ? "Продолжить" : "Повторить"),
                 isPro: c.isPro,

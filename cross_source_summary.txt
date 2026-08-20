@@ -1,0 +1,42 @@
+taikafm top sections
+version int
+main dict keys= 2 ['messages', 'reactions']
+course dict keys= 2 ['messages', 'reactions']
+resume dict keys= 2 ['messages', 'reactions']
+scenarios dict keys= 2 ['messages', 'reactions']
+dictionary dict keys= 2 ['messages', 'reactions']
+mine dict keys= 2 ['messages', 'reactions']
+lessons dict keys= 2 ['messages', 'reactions']
+step dict keys= 2 ['messages', 'reactions']
+fav dict keys= 2 ['messages', 'reactions']
+speaker dict keys= 2 ['messages', 'reactions']
+profile dict keys= 2 ['messages', 'reactions']
+games dict keys= 2 ['messages', 'reactions']
+canon
+version int 
+phonetic_canon dict 48
+gloss_canon dict 5
+phonetic_allow_multi list 1
+card_tip_bank dict 190
+step unique thai 1829 ru 1882
+section_payload main messages 20 reactions 6 sample ['я тут, [[кун кру]]! давай посмотрим, что тебе сегодня [[подойдёт]]', 'если чувствуешь себя [[лениво]] — окей, сделаем лёгкий день, [[май пэнь рай]]']
+section_payload course messages 15 reactions 6 sample ['этот курс — как [[сериальчик]]: короткие серии, [[минимум боли]], максимум [[пользы]]', 'внутри — [[живые диалоги]], бытовые фразы и чуть-чуть теории, без [[душнилова]]']
+section_payload resume messages 6 reactions 6 sample ['тут всё, что ты уже [[начал]] — один тап и продолжаешь с того же места', 'не вижу курсов? зайди в [[Базу]] или [[Сценарии]] и нажми «Начать»']
+section_payload scenarios messages 6 reactions 6 sample ['сценарии — это [[жизнь в Тае]]: еда, такси, болтовня, не [[учебник]]', 'выбирай по [[настроению]]: хочешь лёгкое — бери короткий, хочешь челлендж — смелее']
+section_payload dictionary messages 6 reactions 6 sample ['словарь пополняется из [[Спикера]] — говори фразу, сохраняй одним тапом', 'когда наберётся [[набор]] — собери урок во вкладке «Мои»']
+section_payload mine messages 6 reactions 6 sample ['«Мои» — урок из [[твоих фраз]]. спикер → словарь → [[собери карточки]]', 'Pro открывает сборку — но словарь копить можно и [[бесплатно]]']
+section_payload lessons messages 3 reactions 6 sample ['один урок — это как один подход в зале: сделал и уже молодец', 'если урок кажется сложным — это не ты тупой, это просто новый уровень']
+section_payload step messages 3 reactions 6 sample ['не обязательно выучить всё слово в ноль, важно зацепиться за звук и смысл', 'говори с акцентом — это нормально, ты не сдаёшь егэ, ты живёшь']
+section_payload fav messages 5 reactions 6 sample ['из избранного легко собрать свой личный курс под текущие цели', 'если что‑то попало в избранное случайно — не стесняйся чистить полку']
+section_payload speaker messages 5 reactions 6 sample ['нажми и [[говори]] — я сравню с эталоном и подскажу по тону', 'не гонись за идеалом с первого раза — тайцы ценят [[попытку]]']
+section_payload profile messages 5 reactions 6 sample ['загляни в [[прогресс]] — видно, как ты двигаешься по курсам', 'привяжи Apple ID — [[прогресс]] не потеряется при смене телефона']
+section_payload games messages 4 reactions 6 sample ['игры — это [[закрепление]], не экзамен. ошибся — попробуй ещё', '«найди пару» тренирует [[связь]] перевод ↔ звук']
+field kind filled 2268 missing 0
+field order filled 2268 missing 0
+field ru filled 2121 missing 147
+field thai filled 2121 missing 147
+field phonetic filled 2121 missing 147
+field tip filled 2145 missing 123
+kind Counter({'phrase': 1525, 'word': 563, 'tip': 147, 'casual': 33})
+step items with tip by kind {'casual': 33, 'phrase': 1525, 'tip': 24, 'word': 563}
+step items with tone arrows in phonetic 2121

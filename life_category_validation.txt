@@ -1,0 +1,30 @@
+L courses: 15
+L lessons: 104
+L cards/items: 863
+errors: 14
+notes: 10
+ERROR: course_l_15_l1: empty prerequisites
+ERROR: course_l_2_l1: empty prerequisites
+ERROR: course_l_3_l1: empty prerequisites
+ERROR: course_l_4_l1: empty prerequisites
+ERROR: course_l_5_l1: empty prerequisites
+ERROR: course_l_6_l1: empty prerequisites
+ERROR: course_l_14_l1: empty prerequisites
+ERROR: course_l_7_l1: empty prerequisites
+ERROR: course_l_8_l1: empty prerequisites
+ERROR: course_l_9_l1: empty prerequisites
+ERROR: course_l_10_l1: empty prerequisites
+ERROR: course_l_11_l1: empty prerequisites
+ERROR: course_l_12_l1: empty prerequisites
+ERROR: course_l_13_l1: empty prerequisites
+--- top duplicate notes ---
+NOTE: cross-course duplicate 15x: спасибо
+NOTE: cross-course duplicate 5x: счёт
+NOTE: cross-course duplicate 5x: дорого
+NOTE: cross-course duplicate 5x: счёт пожалуйста
+NOTE: cross-course duplicate 5x: сколько стоит?
+NOTE: cross-course duplicate 5x: до свидания
+NOTE: cross-course duplicate 4x: вода
+NOTE: cross-course duplicate 4x: всё вместе
+NOTE: cross-course duplicate 4x: наличные
+NOTE: cross-course duplicate 4x: почините пожалуйста

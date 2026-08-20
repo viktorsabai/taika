@@ -1,0 +1,23 @@
+{
+  "project_info": {
+    "title": "Sprint 2 — Game Park states",
+    "created": 1786971916.565,
+    "last_updated": 1786971979.302,
+    "total_slides": 1
+  },
+  "slides": [
+    {
+      "id": "game_park_states",
+      "state": "edited",
+      "pageNum": 1
+    }
+  ],
+  "outline": [
+    {
+      "id": "game_park_states",
+      "title": "Sprint 2 — Game Park states",
+      "summary": "Realistic native Game Park mockup showing empty state, mode picker, an available game, and a locked game contextual peek with return to Game Park. Uses existing Taika visual language and Sprint 0 glass primitives; no paywall flow or new architecture.",
+      "image_plan": "Use a suitable image if needed"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+STATS {'records': 2175, 'tokens': 6646, 'inconsistent_duplicates': 2}
+FORMAT_ISSUES 12
+INCONSISTENT_DUPLICATES 2
+{'type': 'missing_arrow', 'course': 'course_b_2', 'lesson': 'course_b_2_l3', 'order': 4, 'ru': 'Что а?', 'phonetic': 'э↗?', 'token': 'э↗?'}
+{'type': 'unsupported_markup', 'course': 'course_l_1', 'lesson': 'course_l_1_l3', 'order': 2, 'ru': 'Я турист', 'phonetic': 'пхом/чхан→ нак→ тонг→ тиау↘', 'token': 'пхом/чхан→'}
+{'type': 'unsupported_markup', 'course': 'course_e_6', 'lesson': 'course_e_6_l3', 'order': 4, 'ru': 'Маркер в конце', 'phonetic': 'кхрап/ка↘', 'token': 'кхрап/ка↘'}
+{'type': 'unsupported_markup', 'course': 'course_e_1', 'lesson': 'course_e_1_l2', 'order': 1, 'ru': 'Пожалуйста мягко', 'phonetic': 'на→ кхрап/ка↘', 'token': 'кхрап/ка↘'}
+{'type': 'unsupported_markup', 'course': 'course_e_1', 'lesson': 'course_e_1_l3', 'order': 4, 'ru': 'Каа в конце', 'phonetic': 'ка/кхрап↘', 'token': 'ка/кхрап↘'}
+{'type': 'unsupported_markup', 'course': 'course_e_1', 'lesson': 'course_e_1_l5', 'order': 1, 'ru': 'Благодарность с каа/кхрап', 'phonetic': 'кхоп→ кхун→ кхрап/ка↘', 'token': 'кхрап/ка↘'}
+{'type': 'unsupported_markup', 'course': 'course_l_15', 'lesson': 'course_l_15_l5', 'order': 3, 'ru': 'Меня зовут …', 'phonetic': 'пхом/чхан→ чыу→ …→', 'token': 'пхом/чхан→'}
+{'type': 'missing_arrow', 'course': 'course_l_15', 'lesson': 'course_l_15_l6', 'order': 10, 'ru': 'Можно просто посидеть?', 'phonetic': 'нанг↘ чхёй̌ чхёй̌ дай→ май↗', 'token': 'чхёй̌'}
+{'type': 'missing_arrow', 'course': 'course_l_15', 'lesson': 'course_l_15_l6', 'order': 10, 'ru': 'Можно просто посидеть?', 'phonetic': 'нанг↘ чхёй̌ чхёй̌ дай→ май↗', 'token': 'чхёй̌'}
+{'type': 'missing_arrow', 'course': 'course_l_15', 'lesson': 'course_l_15_l7', 'order': 10, 'ru': 'Давай просто поболтаем', 'phonetic': 'кхуй→ кан→ чхёй̌ чхёй̌ ко̂→ дай→', 'token': 'чхёй̌'}
+{'type': 'missing_arrow', 'course': 'course_l_15', 'lesson': 'course_l_15_l7', 'order': 10, 'ru': 'Давай просто поболтаем', 'phonetic': 'кхуй→ кан→ чхёй̌ чхёй̌ ко̂→ дай→', 'token': 'чхёй̌'}
+{'type': 'unsupported_markup', 'course': 'course_e_4', 'lesson': 'course_e_4_l1', 'order': 4, 'ru': 'Я виноват', 'phonetic': 'пхом/чхан→ фит↘', 'token': 'пхом/чхан→'}
+{'type': 'inconsistent_duplicate', 'thai': 'ยี่สิบ', 'rows': [{'phonetic': 'йи→ сип→', 'course': 'course_b_4', 'lesson': 'course_b_4_l2', 'order': 4, 'ru': 'Двадцать'}, {'phonetic': 'ий→ сип→', 'course': 'course_l_3', 'lesson': 'course_l_3_l1', 'order': 1, 'ru': 'Двадцать'}]}
+{'type': 'inconsistent_duplicate', 'thai': 'แอร์ไม่ทำงาน', 'rows': [{'phonetic': 'эа→ май↘ тхам→ нган→', 'course': 'course_l_6', 'lesson': 'course_l_6_l3', 'order': 10, 'ru': 'Кондиционер не работает'}, {'phonetic': 'эа→ май→ там→ нгаан↘', 'course': 'course_l_6', 'lesson': 'course_l_6_l7', 'order': 1, 'ru': 'Кондиционер не работает'}]}

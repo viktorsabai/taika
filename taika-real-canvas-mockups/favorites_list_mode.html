@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Favorites — List mode</title>
+<style>
+:root{--bg:#08080b;--panel:#1b1b21;--panel2:#24232a;--ink:#f7f5f8;--muted:#a5a0aa;--pink:#f38bd6;--pink2:#e7b5f2;--line:rgba(255,255,255,.16)}
+*{box-sizing:border-box} html,body{margin:0;background:#111;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif}
+.slide-container{min-height:720px;background:#111;display:flex;align-items:center;justify-content:center;gap:40px;padding-top:24px;padding-left:42px;padding-right:42px}
+.caption{width:250px}.eyebrow{font-size:13px;letter-spacing:2px;color:var(--pink);font-weight:700;text-transform:uppercase;margin-bottom:18px}.caption h1{font-size:34px;line-height:1.05;margin:0 0 18px}.caption p{font-size:15px;line-height:1.45;color:#aaa5ae;margin:0}.caption strong{color:#fff}
+.phone{width:326px;min-height:670px;background:linear-gradient(180deg,#151519 0%,#07070a 42%,#09090c 100%);border:8px solid #050506;border-radius:40px;box-shadow:0 22px 58px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.08);padding-top:16px;padding-left:18px;padding-right:18px;position:relative;overflow:hidden}
+.notch{width:104px;height:23px;background:#030304;border-radius:20px;margin:0 auto 14px}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.logo{font-size:23px;letter-spacing:-2px;font-weight:700;font-style:italic}.logo b{color:var(--pink)}.icons{display:flex;gap:8px}.orb{width:31px;height:31px;border:1px solid var(--line);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#d7d1d9;font-size:13px}.title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.title{font-size:25px;font-weight:750;letter-spacing:-.8px}.mode-row{display:flex;gap:8px;align-items:center}.seg{display:flex;background:#222128;border:1px solid var(--line);border-radius:22px;padding:3px}.seg span{width:30px;height:28px;display:flex;align-items:center;justify-content:center;color:#aaa5ae;font-size:13px}.seg .active{background:linear-gradient(135deg,var(--pink),var(--pink2));color:#19141b;border-radius:17px}.select{height:34px;padding:0 13px;border-radius:18px;background:#222128;border:1px solid var(--line);display:flex;align-items:center;gap:7px;color:#dfaad5;font-size:12px;font-weight:700}.chev{font-size:11px;color:#d9a7d4}.action-rail{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.action{height:42px;border-radius:21px;background:rgba(35,34,42,.92);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;gap:7px;color:#ee9cdd;font-size:13px;font-weight:700}.filters{display:flex;gap:7px;overflow:hidden;margin:5px 0 15px}.filter{padding:7px 13px;border-radius:16px;background:#24232a;color:#98929e;border:1px solid rgba(255,255,255,.10);font-size:12px;font-weight:650;white-space:nowrap}.filter.active{background:linear-gradient(135deg,var(--pink),var(--pink2));color:#18131a;border-color:transparent}.group{border:1px solid rgba(255,255,255,.20);border-radius:20px;background:linear-gradient(150deg,rgba(39,38,46,.94),rgba(22,22,27,.95));overflow:hidden}.group-head{height:47px;display:flex;align-items:center;gap:8px;padding:0 13px;border-bottom:1px solid rgba(255,255,255,.10);font-size:11px;letter-spacing:1.4px;color:#aaa5ae;font-weight:800}.rail{width:3px;height:20px;background:var(--pink);border-radius:3px}.group-count{margin-left:auto;color:#77727d;letter-spacing:0}.row{min-height:81px;padding:13px;display:grid;grid-template-columns:1fr 30px;gap:8px;border-bottom:1px solid rgba(255,255,255,.09)}.row:last-child{border-bottom:0}.thai{font-size:16px;font-weight:750}.arrow{color:var(--pink)}.ru{font-size:12px;color:#99939e;margin-top:5px}.sound{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--pink);font-size:15px}.bottom{position:absolute;left:15px;right:15px;bottom:13px;height:43px;border-radius:23px;background:rgba(36,35,42,.95);border:1px solid rgba(255,255,255,.13);display:flex;align-items:center;justify-content:space-around;color:#89838d;font-size:18px}.bottom .selected{color:var(--pink)}.micro-note{margin-top:18px;font-size:10px;color:#716b75;text-align:center;letter-spacing:.4px}
+</style>
+</head>
+<body>
+<div class="slide-container">
+  <div class="caption"><div class="eyebrow">Favorites / mockup 01</div><h1>List mode</h1><p><strong>Сохранённые фразы — главный герой.</strong><br><br>Фильтр остаётся только потому, что категорий несколько. Speaker и Игры становятся спокойным единым action rail, а не конкурирующими кнопками.</p></div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="top"><div class="logo">tai<span>k<b>AAA</b></span></div><div class="icons"><div class="orb">▮2</div><div class="orb">⌕</div><div class="orb">♛</div></div></div>
+    <div class="title-row"><div class="title">Избранное</div><div class="mode-row"><div class="seg"><span class="active">≡</span><span>▦</span></div><div class="select">Карточки <span class="chev">⌄</span></div></div></div>
+    <div class="action-rail"><div class="action">♟&nbsp; Спикер</div><div class="action">⌘&nbsp; Игры</div></div>
+    <div class="filters"><div class="filter active">Все</div><div class="filter">База</div><div class="filter">Сценарии</div></div>
+    <div class="group"><div class="group-head"><span class="rail"></span> ГЛАВНЫЕ ГЛАГОЛЫ <span class="group-count">2&nbsp;&nbsp;⌄</span></div><div class="row"><div><div class="thai">пай<span class="arrow">→</span> баан<span class="arrow">→</span></div><div class="ru">Иду домой</div></div><div class="sound">◖</div></div><div class="row"><div><div class="thai">маа<span class="arrow">→</span></div><div class="ru">Приходить</div></div><div class="sound">◖</div></div><div class="row"><div><div class="thai">юу<span class="arrow">↘</span> най<span class="arrow">↗</span></div><div class="ru">Где находиться</div></div><div class="sound">◖</div></div></div>
+    <div class="micro-note">адаптивный фильтр · материалы остаются в фокусе</div>
+    <div class="bottom"><span>⌂</span><span>♧</span><span>♩</span><span class="selected">♥</span><span>♙</span></div>
+  </div>
+</div>
+</body>
+</html>

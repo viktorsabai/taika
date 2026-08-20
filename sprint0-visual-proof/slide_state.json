@@ -1,0 +1,45 @@
+{
+  "project_info": {
+    "title": "Sprint 0 Visual Proof",
+    "created": 1786965840.528,
+    "last_updated": 1786965996.088,
+    "total_slides": 3
+  },
+  "slides": [
+    {
+      "id": "cover",
+      "state": "edited",
+      "pageNum": 1
+    },
+    {
+      "id": "speaker_foundation",
+      "state": "edited",
+      "pageNum": 2
+    },
+    {
+      "id": "game_message",
+      "state": "edited",
+      "pageNum": 3
+    }
+  ],
+  "outline": [
+    {
+      "id": "cover",
+      "title": "Sprint 0 Visual Proof",
+      "summary": "Что изменится после shared Liquid Glass foundation.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "speaker_foundation",
+      "title": "Speaker: continuous canvas foundation",
+      "summary": "Реальный Speaker screen до и после Sprint 0 material foundation.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "game_message",
+      "title": "Game Park: shared GlassMessage",
+      "summary": "Реальный Game Park overlay до и после общего GlassMessage primitive.",
+      "image_plan": "Use a suitable image if needed"
+    }
+  ]
+}

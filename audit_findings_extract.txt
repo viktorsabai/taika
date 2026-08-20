@@ -1,0 +1,224 @@
+
+### key_thai
+9 | ขอบค ณคร บ | course_l_2/course_l_2_l4#9; course_l_2/course_l_2_l7#9; course_l_5/course_l_5_l6#6; course_l_6/course_l_6_l6#8; course_l_14/course_l_14_l6#7; course_l_14/course_l_14_l7#7; course_l_8/course_l_8_l6#5; course_l_9/course_l_9_l7#5; course_l_12/course_l_12_l6#4
+7 | ขอบค ณ | course_b_1/course_b_1_l7#2; course_l_3/course_l_3_l6#3; course_l_6/course_l_6_l1#8; course_l_14/course_l_14_l3#8; course_l_8/course_l_8_l3#9; course_l_10/course_l_10_l6#1; course_l_11/course_l_11_l6#3
+5 | โอเค | course_b_1/course_b_1_l3#9; course_l_15/course_l_15_l2#7; course_l_7/course_l_7_l5#7; course_l_10/course_l_10_l2#8; course_l_12/course_l_12_l5#6
+5 | เช คบ ล | course_b_1/course_b_1_l4#6; course_l_15/course_l_15_l1#7; course_l_4/course_l_4_l6#2; course_l_6/course_l_6_l5#1; course_l_6/course_l_6_l6#7
+5 | เท าไหร | course_b_1/course_b_1_l6#2; course_b_2/course_b_2_l4#5; course_l_5/course_l_5_l6#7; course_l_7/course_l_7_l4#6; course_l_10/course_l_10_l1#6
+5 | แพง | course_b_1/course_b_1_l6#4; course_l_15/course_l_15_l2#4; course_l_2/course_l_2_l2#3; course_l_3/course_l_3_l1#7; course_l_8/course_l_8_l2#6
+5 | เง นสด | course_b_1/course_b_1_l6#8; course_l_4/course_l_4_l6#7; course_l_6/course_l_6_l5#5; course_l_8/course_l_8_l3#8; course_l_13/course_l_13_l2#5
+5 | น ำ | course_b_2/course_b_2_l1#7; course_l_15/course_l_15_l1#6; course_l_7/course_l_7_l3#6; course_l_10/course_l_10_l5#6; course_l_11/course_l_11_l1#5
+5 | เช คบ ลคร บ | course_b_2/course_b_2_l6#7; course_l_15/course_l_15_l2#8; course_l_15/course_l_15_l6#6; course_l_4/course_l_4_l1#10; course_l_6/course_l_6_l5#3
+5 | น คร บ | course_b_7/course_b_7_l1#3; course_l_1/course_l_1_l6#3; course_l_3/course_l_3_l6#2; course_l_5/course_l_5_l6#8; course_l_8/course_l_8_l3#6
+5 | ลาก อน | course_b_7/course_b_7_l3#7; course_l_6/course_l_6_l5#7; course_l_7/course_l_7_l6#6; course_l_8/course_l_8_l6#6; course_l_12/course_l_12_l6#5
+5 | สบาย | course_l_1/course_l_1_l4#8; course_e_5/course_e_5_l3#2; course_l_7/course_l_7_l5#3; course_l_12/course_l_12_l3#6; course_s_5/course_s_5_l6#2
+4 | อร อยมาก | course_b_2/course_b_2_l3#8; course_b_6/course_b_6_l1#5; course_l_4/course_l_4_l2#8; course_l_4/course_l_4_l6#1
+4 | ไปไหน | course_b_2/course_b_2_l4#6; course_b_5/course_b_5_l1#3; course_b_7/course_b_7_l6#2; course_l_11/course_l_11_l4#2
+4 | เข าใจ | course_b_5/course_b_5_l3#3; course_l_4/course_l_4_l3#9; course_l_5/course_l_5_l2#8; course_l_8/course_l_8_l1#8
+4 | ลาก อนคร บ | course_l_1/course_l_1_l5#4; course_l_1/course_l_1_l7#9; course_e_3/course_e_3_l6#3; course_l_2/course_l_2_l6#10
+4 | ไม กดด น | course_e_2/course_e_2_l2#7; course_e_5/course_e_5_l6#2; course_e_1/course_e_1_l3#5; course_s_5/course_s_5_l4#8
+4 | ขอบค ณท ช วย | course_e_2/course_e_2_l4#4; course_e_2/course_e_2_l6#1; course_l_6/course_l_6_l7#8; course_long_6/course_long_6_l6#1
+4 | ช วยซ อมหน อย | course_l_6/course_l_6_l3#5; course_l_6/course_l_6_l7#2; course_l_13/course_l_13_l3#5; course_l_13/course_l_13_l7#5
+3 | แล วเจอก น | course_b_1/course_b_1_l1#9; course_b_7/course_b_7_l6#5; course_l_1/course_l_1_l5#6
+3 | ค ณช ออะไร | course_b_1/course_b_1_l2#2; course_l_15/course_l_15_l3#3; course_l_15/course_l_15_l5#2
+3 | สบายด ไหม | course_b_1/course_b_1_l3#2; course_b_2/course_b_2_l4#3; course_b_2/course_b_2_l4#4
+3 | อย ท ไหน | course_b_1/course_b_1_l5#2; course_b_5/course_b_5_l7#10; course_l_8/course_l_8_l1#1
+3 | จอดตรงน | course_b_1/course_b_1_l5#6; course_b_7/course_b_7_l3#6; course_l_2/course_l_2_l4#2
+3 | อ นน เท าไหร | course_b_1/course_b_1_l6#3; course_l_3/course_l_3_l1#6; course_l_8/course_l_8_l2#1
+3 | เท าไหร คร บ | course_b_2/course_b_2_l6#4; course_l_2/course_l_2_l6#4; course_l_12/course_l_12_l5#1
+3 | ก โมง | course_b_4/course_b_4_l3#2; course_b_7/course_b_7_l6#1; course_l_13/course_l_13_l4#8
+3 | เย น | course_b_4/course_b_4_l3#6; course_b_6/course_b_6_l3#3; course_l_7/course_l_7_l3#5
+3 | เล ยวซ าย | course_b_4/course_b_4_l5#3; course_b_7/course_b_7_l3#4; course_l_2/course_l_2_l3#3
+3 | ช วยหน อย | course_b_5/course_b_5_l5#12; course_l_5/course_l_5_l1#6; course_l_9/course_l_9_l1#3
+
+### key_ru
+16 | спасибо | course_b_1/course_b_1_l7#2; course_l_2/course_l_2_l4#9; course_l_2/course_l_2_l7#9; course_l_3/course_l_3_l6#3; course_l_5/course_l_5_l6#6; course_l_6/course_l_6_l1#8; course_l_6/course_l_6_l6#8; course_l_14/course_l_14_l3#8; course_l_14/course_l_14_l6#7; course_l_14/course_l_14_l7#7; course_l_8/course_l_8_l3#9; course_l_8/course_l_8_l6#5
+9 | до свидания | course_b_7/course_b_7_l3#7; course_l_1/course_l_1_l5#4; course_l_1/course_l_1_l7#9; course_e_3/course_e_3_l6#3; course_l_2/course_l_2_l6#10; course_l_6/course_l_6_l5#7; course_l_7/course_l_7_l6#6; course_l_8/course_l_8_l6#6; course_l_12/course_l_12_l6#5
+7 | сколько стоит | course_b_1/course_b_1_l6#2; course_b_2/course_b_2_l4#5; course_l_2/course_l_2_l6#4; course_l_5/course_l_5_l6#7; course_l_7/course_l_7_l4#6; course_l_10/course_l_10_l1#6; course_l_12/course_l_12_l5#1
+6 | счет пожалуйста | course_b_1/course_b_1_l4#6; course_l_15/course_l_15_l2#8; course_l_15/course_l_15_l6#6; course_l_4/course_l_4_l1#10; course_l_6/course_l_6_l5#3; course_l_7/course_l_7_l6#2
+6 | дорого | course_b_1/course_b_1_l6#4; course_l_15/course_l_15_l2#4; course_l_2/course_l_2_l2#3; course_l_3/course_l_3_l1#7; course_l_3/course_l_3_l3#2; course_l_8/course_l_8_l2#6
+5 | вода | course_b_2/course_b_2_l1#7; course_l_15/course_l_15_l1#6; course_l_7/course_l_7_l3#6; course_l_10/course_l_10_l5#6; course_l_11/course_l_11_l1#5
+5 | счет | course_l_15/course_l_15_l1#7; course_l_4/course_l_4_l6#2; course_l_6/course_l_6_l5#1; course_l_6/course_l_6_l6#7; course_l_13/course_l_13_l2#3
+4 | до встречи | course_b_1/course_b_1_l1#9; course_b_7/course_b_7_l6#5; course_l_15/course_l_15_l6#4; course_l_11/course_l_11_l6#4
+4 | ок беру | course_b_1/course_b_1_l6#7; course_l_3/course_l_3_l4#3; course_l_7/course_l_7_l2#8; course_l_8/course_l_8_l2#8
+4 | вкусно | course_b_2/course_b_2_l4#7; course_b_6/course_b_6_l1#2; course_l_4/course_l_4_l1#9; course_l_7/course_l_7_l3#9
+4 | красиво | course_b_6/course_b_6_l2#2; course_l_7/course_l_7_l5#5; course_l_11/course_l_11_l2#8; course_l_11/course_l_11_l3#7
+4 | готово | course_b_7/course_b_7_l1#5; course_l_2/course_l_2_l5#9; course_l_4/course_l_4_l4#8; course_l_12/course_l_12_l6#1
+4 | без давления | course_e_2/course_e_2_l1#4; course_e_2/course_e_2_l2#7; course_e_5/course_e_5_l6#2; course_s_5/course_s_5_l4#8
+4 | понятно | course_e_1/course_e_1_l1#2; course_l_4/course_l_4_l3#9; course_l_5/course_l_5_l2#8; course_l_8/course_l_8_l1#8
+4 | договорились | course_l_2/course_l_2_l2#9; course_l_3/course_l_3_l4#6; course_l_3/course_l_3_l7#7; course_e_4/course_e_4_l6#2
+4 | все вместе | course_l_4/course_l_4_l4#7; course_l_4/course_l_4_l6#4; course_l_8/course_l_8_l6#2; course_l_12/course_l_12_l5#3
+4 | наличные | course_l_4/course_l_4_l6#7; course_l_6/course_l_6_l5#5; course_l_8/course_l_8_l3#8; course_l_13/course_l_13_l2#5
+4 | почините пожалуйста | course_l_6/course_l_6_l3#5; course_l_6/course_l_6_l7#2; course_l_13/course_l_13_l3#5; course_l_13/course_l_13_l7#5
+3 | пока | course_b_1/course_b_1_l1#8; course_l_15/course_l_15_l5#7; course_l_10/course_l_10_l6#5
+3 | все ок | course_b_1/course_b_1_l3#9; course_l_7/course_l_7_l5#7; course_l_13/course_l_13_l6#8
+3 | еще один | course_b_1/course_b_1_l4#8; course_l_15/course_l_15_l1#1; course_l_7/course_l_7_l3#8
+3 | очень вкусно | course_b_2/course_b_2_l3#8; course_b_6/course_b_6_l1#5; course_l_4/course_l_4_l6#1
+3 | налево | course_b_4/course_b_4_l5#3; course_b_7/course_b_7_l3#4; course_l_2/course_l_2_l3#3
+3 | направо | course_b_4/course_b_4_l5#4; course_b_7/course_b_7_l3#5; course_l_2/course_l_2_l3#4
+3 | мало остро | course_b_6/course_b_6_l1#6; course_l_4/course_l_4_l1#7; course_l_4/course_l_4_l3#2
+3 | цена | course_b_6/course_b_6_l2#5; course_l_15/course_l_15_l2#3; course_l_8/course_l_8_l2#2
+3 | все нормально | course_b_6/course_b_6_l5#10; course_l_1/course_l_1_l4#2; course_l_1/course_l_1_l6#5
+3 | пакет | course_b_7/course_b_7_l1#4; course_l_3/course_l_3_l6#6; course_l_8/course_l_8_l4#1
+3 | слишком дорого | course_b_7/course_b_7_l4#5; course_l_3/course_l_3_l4#7; course_e_4/course_e_4_l6#7
+3 | вот документы | course_l_1/course_l_1_l1#2; course_l_1/course_l_1_l6#3; course_long_1/course_long_1_l6#1
+
+### key_phonetic
+9 | кхоп кхун кхрап | course_l_2/course_l_2_l4#9; course_l_2/course_l_2_l7#9; course_l_5/course_l_5_l6#6; course_l_6/course_l_6_l6#8; course_l_14/course_l_14_l6#7; course_l_14/course_l_14_l7#7; course_l_8/course_l_8_l6#5; course_l_9/course_l_9_l7#5; course_l_12/course_l_12_l6#4
+7 | кхоп кхун | course_b_1/course_b_1_l7#2; course_l_3/course_l_3_l6#3; course_l_6/course_l_6_l1#8; course_l_14/course_l_14_l3#8; course_l_8/course_l_8_l3#9; course_l_10/course_l_10_l6#1; course_l_11/course_l_11_l6#3
+6 | чек бин кхрап | course_b_2/course_b_2_l6#7; course_l_15/course_l_15_l2#8; course_l_15/course_l_15_l6#6; course_l_4/course_l_4_l1#10; course_l_6/course_l_6_l5#3; course_l_7/course_l_7_l6#2
+5 | о кэ | course_b_1/course_b_1_l3#9; course_l_15/course_l_15_l2#7; course_l_7/course_l_7_l5#7; course_l_10/course_l_10_l2#8; course_l_12/course_l_12_l5#6
+5 | чек бин | course_b_1/course_b_1_l4#6; course_l_15/course_l_15_l1#7; course_l_4/course_l_4_l6#2; course_l_6/course_l_6_l5#1; course_l_6/course_l_6_l6#7
+5 | тао рай | course_b_1/course_b_1_l6#2; course_b_2/course_b_2_l4#5; course_l_5/course_l_5_l6#7; course_l_7/course_l_7_l4#6; course_l_10/course_l_10_l1#6
+5 | пхэнг | course_b_1/course_b_1_l6#4; course_l_15/course_l_15_l2#4; course_l_2/course_l_2_l2#3; course_l_3/course_l_3_l1#7; course_l_8/course_l_8_l2#6
+5 | нген сот | course_b_1/course_b_1_l6#8; course_l_4/course_l_4_l6#7; course_l_6/course_l_6_l5#5; course_l_8/course_l_8_l3#8; course_l_13/course_l_13_l2#5
+5 | нам | course_b_2/course_b_2_l1#7; course_l_15/course_l_15_l1#6; course_l_7/course_l_7_l3#6; course_l_10/course_l_10_l5#6; course_l_11/course_l_11_l1#5
+5 | ни кхрап | course_b_7/course_b_7_l1#3; course_l_1/course_l_1_l6#3; course_l_3/course_l_3_l6#2; course_l_5/course_l_5_l6#8; course_l_8/course_l_8_l3#6
+5 | ла кон | course_b_7/course_b_7_l3#7; course_l_6/course_l_6_l5#7; course_l_7/course_l_7_l6#6; course_l_8/course_l_8_l6#6; course_l_12/course_l_12_l6#5
+5 | са бай | course_l_1/course_l_1_l4#8; course_e_5/course_e_5_l3#2; course_l_7/course_l_7_l5#3; course_l_12/course_l_12_l3#6; course_s_5/course_s_5_l6#2
+5 | руам | course_l_4/course_l_4_l6#4; course_l_8/course_l_8_l6#2; course_l_11/course_l_11_l4#6; course_l_12/course_l_12_l5#3; course_long_5/course_long_5_l5#3
+4 | о кэ ау | course_b_1/course_b_1_l6#7; course_l_3/course_l_3_l4#3; course_l_7/course_l_7_l2#8; course_l_8/course_l_8_l2#8
+4 | маа | course_b_2/course_b_2_l1#3; course_b_2/course_b_2_l1#4; course_b_2/course_b_2_l1#5; course_b_5/course_b_5_l1#2
+4 | а рой мак | course_b_2/course_b_2_l3#8; course_b_6/course_b_6_l1#5; course_l_4/course_l_4_l2#8; course_l_4/course_l_4_l6#1
+4 | пай най | course_b_2/course_b_2_l4#6; course_b_5/course_b_5_l1#3; course_b_7/course_b_7_l6#2; course_l_11/course_l_11_l4#2
+4 | кхао джай | course_b_5/course_b_5_l3#3; course_l_4/course_l_4_l3#9; course_l_5/course_l_5_l2#8; course_l_8/course_l_8_l1#8
+4 | ла кон кхрап | course_l_1/course_l_1_l5#4; course_l_1/course_l_1_l7#9; course_e_3/course_e_3_l6#3; course_l_2/course_l_2_l6#10
+4 | май кот дан | course_e_2/course_e_2_l2#7; course_e_5/course_e_5_l6#2; course_e_1/course_e_1_l3#5; course_s_5/course_s_5_l4#8
+4 | кхоп кхун ти чуай | course_e_2/course_e_2_l4#4; course_e_2/course_e_2_l6#1; course_l_6/course_l_6_l7#8; course_long_6/course_long_6_l6#1
+4 | бат | course_l_3/course_l_3_l7#5; course_l_4/course_l_4_l6#6; course_l_6/course_l_6_l5#4; course_l_8/course_l_8_l3#7
+4 | чуай сом ной | course_l_6/course_l_6_l3#5; course_l_6/course_l_6_l7#2; course_l_13/course_l_13_l3#5; course_l_13/course_l_13_l7#5
+3 | лэу дже кан | course_b_1/course_b_1_l1#9; course_b_7/course_b_7_l6#5; course_l_1/course_l_1_l5#6
+3 | кун чыу а рай | course_b_1/course_b_1_l2#2; course_l_15/course_l_15_l3#3; course_l_15/course_l_15_l5#2
+3 | ю ти най | course_b_1/course_b_1_l5#2; course_b_5/course_b_5_l7#10; course_l_8/course_l_8_l1#1
+3 | чот тронг ни | course_b_1/course_b_1_l5#6; course_b_7/course_b_7_l3#6; course_l_2/course_l_2_l4#2
+3 | ан ни тао рай | course_b_1/course_b_1_l6#3; course_l_3/course_l_3_l1#6; course_l_8/course_l_8_l2#1
+3 | май | course_b_2/course_b_2_l2#3; course_b_2/course_b_2_l2#4; course_b_6/course_b_6_l6#2
+3 | тао рай кхрап | course_b_2/course_b_2_l6#4; course_l_2/course_l_2_l6#4; course_l_12/course_l_12_l5#1
+
+### Complete duplicate records
+2 ['здравствуйте вежливо', 'สว สด คร บ', 'са ват ди кхрап'] course_b_1/course_b_1_l1#4; course_b_2/course_b_2_l6#2
+2 ['до встречи', 'แล วเจอก น', 'лэу дже кан'] course_b_1/course_b_1_l1#9; course_b_7/course_b_7_l6#5
+2 ['как тебя зовут', 'ค ณช ออะไร', 'кун чыу а рай'] course_b_1/course_b_1_l2#2; course_l_15/course_l_15_l3#3
+2 ['хорошо', 'สบายด', 'са бай ди'] course_b_1/course_b_1_l3#3; course_b_2/course_b_2_l4#10
+2 ['все ок', 'โอเค', 'о кэ'] course_b_1/course_b_1_l3#9; course_l_7/course_l_7_l5#7
+2 ['останови здесь', 'จอดตรงน', 'чот тронг ни'] course_b_1/course_b_1_l5#6; course_b_7/course_b_7_l3#6
+5 ['сколько стоит', 'เท าไหร', 'тао рай'] course_b_1/course_b_1_l6#2; course_b_2/course_b_2_l4#5; course_l_5/course_l_5_l6#7; course_l_7/course_l_7_l4#6; course_l_10/course_l_10_l1#6
+2 ['сколько за это', 'อ นน เท าไหร', 'ан ни тао рай'] course_b_1/course_b_1_l6#3; course_l_3/course_l_3_l1#6
+5 ['дорого', 'แพง', 'пхэнг'] course_b_1/course_b_1_l6#4; course_l_15/course_l_15_l2#4; course_l_2/course_l_2_l2#3; course_l_3/course_l_3_l1#7; course_l_8/course_l_8_l2#6
+7 ['спасибо', 'ขอบค ณ', 'кхоп кхун'] course_b_1/course_b_1_l7#2; course_l_3/course_l_3_l6#3; course_l_6/course_l_6_l1#8; course_l_14/course_l_14_l3#8; course_l_8/course_l_8_l3#9; course_l_10/course_l_10_l6#1; course_l_11/course_l_11_l6#3
+2 ['спасибо большое', 'ขอบค ณมาก', 'кхоп кхун мак'] course_b_1/course_b_1_l7#3; course_b_2/course_b_2_l4#8
+2 ['приходить', 'มา', 'маа'] course_b_2/course_b_2_l1#3; course_b_5/course_b_5_l1#2
+5 ['вода', 'น ำ', 'нам'] course_b_2/course_b_2_l1#7; course_l_15/course_l_15_l1#6; course_l_7/course_l_7_l3#6; course_l_10/course_l_10_l5#6; course_l_11/course_l_11_l1#5
+2 ['новый', 'ใหม', 'май'] course_b_2/course_b_2_l2#3; course_b_6/course_b_6_l6#2
+2 ['не хочу', 'ไม อยาก', 'май яак'] course_b_2/course_b_2_l2#6; course_b_5/course_b_5_l2#6
+2 ['новый дом', 'บ านใหม', 'баан май'] course_b_2/course_b_2_l2#7; course_b_6/course_b_6_l6#7
+3 ['очень вкусно', 'อร อยมาก', 'а рой мак'] course_b_2/course_b_2_l3#8; course_b_6/course_b_6_l1#5; course_l_4/course_l_4_l6#1
+2 ['двадцать', 'ย ส บ', 'ий сип'] course_b_4/course_b_4_l2#4; course_l_3/course_l_3_l1#1
+2 ['сто', 'ร อย', 'рой'] course_b_4/course_b_4_l2#5; course_l_3/course_l_3_l1#3
+2 ['пятьдесят', 'ห าส บ', 'ха сип'] course_b_4/course_b_4_l2#9; course_l_3/course_l_3_l1#2
+2 ['сто бат', 'ร อยบาท', 'рой бат'] course_b_4/course_b_4_l2#10; course_l_2/course_l_2_l2#6
+2 ['который час', 'ก โมง', 'ги монг'] course_b_4/course_b_4_l3#2; course_b_7/course_b_7_l6#1
+2 ['сейчас', 'ตอนน', 'тон ни'] course_b_4/course_b_4_l3#8; course_l_2/course_l_2_l5#8
+2 ['прямо', 'ตรงไป', 'тронг пай'] course_b_4/course_b_4_l5#2; course_l_2/course_l_2_l3#2
+3 ['налево', 'เล ยวซ าย', 'лиао сай'] course_b_4/course_b_4_l5#3; course_b_7/course_b_7_l3#4; course_l_2/course_l_2_l3#3
+2 ['направо', 'เล ยวขวา', 'лиао кхва'] course_b_4/course_b_4_l5#4; course_b_7/course_b_7_l3#5
+2 ['куда идешь', 'ไปไหน', 'пай най'] course_b_5/course_b_5_l1#3; course_b_7/course_b_7_l6#2
+3 ['вкусно', 'อร อย', 'а рой'] course_b_6/course_b_6_l1#2; course_l_4/course_l_4_l1#9; course_l_7/course_l_7_l3#9
+3 ['мало остро', 'เผ ดน อย', 'пхет ной'] course_b_6/course_b_6_l1#6; course_l_4/course_l_4_l1#7; course_l_4/course_l_4_l3#2
+3 ['красиво', 'สวย', 'суай'] course_b_6/course_b_6_l2#2; course_l_7/course_l_7_l5#5; course_l_11/course_l_11_l2#8
+3 ['цена', 'ราคา', 'ра кха'] course_b_6/course_b_6_l2#5; course_l_15/course_l_15_l2#3; course_l_8/course_l_8_l2#2
+2 ['лед', 'น ำแข ง', 'нам кхэнг'] course_b_6/course_b_6_l3#12; course_l_7/course_l_7_l3#7
+2 ['хороший день', 'ว นด', 'ван ди'] course_b_6/course_b_6_l5#7; course_b_7/course_b_7_l6#4
+3 ['пакет', 'ถ ง', 'тхунг'] course_b_7/course_b_7_l1#4; course_l_3/course_l_3_l6#6; course_l_8/course_l_8_l4#1
+2 ['в отель', 'ไปโรงแรม', 'пай ронг рэм'] course_b_7/course_b_7_l3#3; course_l_2/course_l_2_l1#6
+5 ['до свидания', 'ลาก อน', 'ла кон'] course_b_7/course_b_7_l3#7; course_l_6/course_l_6_l5#7; course_l_7/course_l_7_l6#6; course_l_8/course_l_8_l6#6; course_l_12/course_l_12_l6#5
+2 ['слишком дорого', 'แพงไป', 'пхэнг пай'] course_b_7/course_b_7_l4#5; course_l_3/course_l_3_l4#7
+3 ['документы', 'เอกสาร', 'эк ка сан'] course_l_1/course_l_1_l1#3; course_long_1/course_long_1_l2#3; course_long_4/course_long_4_l2#5
+2 ['паспорт', 'พาสปอร ต', 'пас порт'] course_l_1/course_l_1_l1#4; course_long_2/course_long_2_l1#3
+2 ['вот виза', 'น ว ซ า', 'ни ви са'] course_l_1/course_l_1_l1#6; course_l_1/course_l_1_l7#4
+2 ['откуда', 'มาจากไหน', 'ма джак най'] course_l_1/course_l_1_l3#7; course_l_15/course_l_15_l3#2
+2 ['можно идти', 'ไปได ไหม', 'пай дай май'] course_l_1/course_l_1_l4#5; course_l_1/course_l_1_l7#7
+3 ['спасибо за проверку', 'ขอบค ณท ตรวจ', 'кхоп кхун ти туат'] course_l_1/course_l_1_l4#7; course_l_1/course_l_1_l5#2; course_l_1/course_l_1_l7#8
+3 ['сабай', 'สบาย', 'са бай'] course_l_1/course_l_1_l4#8; course_e_5/course_e_5_l3#2; course_l_7/course_l_7_l5#3
+4 ['до свидания', 'ลาก อนคร บ', 'ла кон кхрап'] course_l_1/course_l_1_l5#4; course_l_1/course_l_1_l7#9; course_e_3/course_e_3_l6#3; course_l_2/course_l_2_l6#10
+2 ['вот паспорт', 'น พาสปอร ต', 'ни пас порт'] course_l_1/course_l_1_l7#3; course_l_6/course_l_6_l6#4
+3 ['без давления', 'ไม กดด น', 'май кот дан'] course_e_2/course_e_2_l2#7; course_e_5/course_e_5_l6#2; course_s_5/course_s_5_l4#8
+2 ['спасибо за работу', 'ขอบค ณท ช วย', 'кхоп кхун ти чуай'] course_e_2/course_e_2_l4#4; course_e_2/course_e_2_l6#1
+2 ['понял вас', 'เข าใจคร บ', 'кхао джай кхрап'] course_e_5/course_e_5_l6#3; course_e_1/course_e_1_l1#9
+2 ['доставка', 'จ ดส ง', 'чат сонг'] course_e_3/course_e_3_l3#6; course_l_14/course_l_14_l1#5
+4 ['счет', 'เช คบ ล', 'чек бин'] course_l_15/course_l_15_l1#7; course_l_4/course_l_4_l6#2; course_l_6/course_l_6_l5#1; course_l_6/course_l_6_l6#7
+2 ['два по цене одного', 'สองในราคาหน ง', 'сон най ра ха нынг'] course_l_15/course_l_15_l2#6; course_l_8/course_l_8_l5#8
+3 ['ок', 'โอเค', 'о кэ'] course_l_15/course_l_15_l2#7; course_l_10/course_l_10_l2#8; course_l_12/course_l_12_l5#6
+4 ['счет пожалуйста', 'เช คบ ลคร บ', 'чек бин кхрап'] course_l_15/course_l_15_l2#8; course_l_15/course_l_15_l6#6; course_l_4/course_l_4_l1#10; course_l_6/course_l_6_l5#3
+2 ['флирт', 'จ บ', 'джип'] course_l_15/course_l_15_l5#5; course_s_5/course_s_5_l1#5
+3 ['границы', 'ขอบเขต', 'кхоп кхет'] course_l_15/course_l_15_l5#6; course_s_4/course_s_4_l6#2; course_s_5/course_s_5_l4#4
+2 ['пока', 'บาย', 'бай'] course_l_15/course_l_15_l5#7; course_l_10/course_l_10_l6#5
+2 ['до встречи', 'เจอก น', 'дже кан'] course_l_15/course_l_15_l6#4; course_l_11/course_l_11_l6#4
+3 ['вот адрес', 'น ท อย', 'ни ти ю'] course_l_2/course_l_2_l1#9; course_l_14/course_l_14_l2#2; course_l_9/course_l_9_l6#3
+3 ['договорились', 'ตกลง', 'ток лонг'] course_l_2/course_l_2_l2#9; course_l_3/course_l_3_l4#6; course_e_4/course_e_4_l6#2
+2 ['там', 'ตรงน น', 'тронг нан'] course_l_2/course_l_2_l4#4; course_l_8/course_l_8_l1#7
+9 ['спасибо', 'ขอบค ณคร บ', 'кхоп кхун кхрап'] course_l_2/course_l_2_l4#9; course_l_2/course_l_2_l7#9; course_l_5/course_l_5_l6#6; course_l_6/course_l_6_l6#8; course_l_14/course_l_14_l6#7; course_l_14/course_l_14_l7#7; course_l_8/course_l_8_l6#5; course_l_9/course_l_9_l7#5; course_l_12/course_l_12_l6#4
+2 ['готово', 'เสร จแล ว', 'сет леу'] course_l_2/course_l_2_l5#9; course_l_12/course_l_12_l6#1
+2 ['сколько стоит', 'เท าไหร คร บ', 'тао рай кхрап'] course_l_2/course_l_2_l6#4; course_l_12/course_l_12_l5#1
+2 ['последняя цена', 'ราคาส ดท าย', 'ра ха сут тай'] course_l_3/course_l_3_l3#5; course_l_3/course_l_3_l7#6
+3 ['ок беру', 'โอเคเอา', 'о кэ ау'] course_l_3/course_l_3_l4#3; course_l_7/course_l_7_l2#8; course_l_8/course_l_8_l2#8
+2 ['кокос', 'มะพร าว', 'ма пхрау'] course_l_3/course_l_3_l5#6; course_l_7/course_l_7_l3#2
+2 ['сколько всего', 'รวมเท าไหร', 'руам тао рай'] course_l_3/course_l_3_l6#1; course_l_7/course_l_7_l6#4
+2 ['еще риса', 'ข าวอ ก', 'кхау ик'] course_l_4/course_l_4_l2#6; course_l_4/course_l_4_l4#3
+3 ['понятно', 'เข าใจ', 'кхао джай'] course_l_4/course_l_4_l3#9; course_l_5/course_l_5_l2#8; course_l_8/course_l_8_l1#8
+2 ['подождать', 'รอ', 'ро'] course_l_4/course_l_4_l5#7; course_l_10/course_l_10_l3#6
+2 ['платить', 'จ าย', 'джай'] course_l_4/course_l_4_l6#3; course_l_8/course_l_8_l3#4
+3 ['все вместе', 'รวม', 'руам'] course_l_4/course_l_4_l6#4; course_l_8/course_l_8_l6#2; course_l_12/course_l_12_l5#3
+2 ['отдельно', 'แยก', 'иэк'] course_l_4/course_l_4_l6#5; course_l_12/course_l_12_l5#4
+3 ['картой', 'บ ตร', 'бат'] course_l_4/course_l_4_l6#6; course_l_6/course_l_6_l5#4; course_l_8/course_l_8_l3#7
+4 ['наличные', 'เง นสด', 'нген сот'] course_l_4/course_l_4_l6#7; course_l_6/course_l_6_l5#5; course_l_8/course_l_8_l3#8; course_l_13/course_l_13_l2#5
+2 ['подойдет', 'ได คร บ', 'дай кхрап'] course_l_4/course_l_4_l7#8; course_l_5/course_l_5_l5#9
+2 ['аптека', 'ร านยา', 'ран я'] course_l_5/course_l_5_l1#5; course_long_3/course_long_3_l6#3
+2 ['температура', 'ไข', 'кхай'] course_l_5/course_l_5_l2#2; course_long_3/course_long_3_l1#3
+2 ['симптомы', 'อาการ', 'а кан'] course_l_5/course_l_5_l2#7; course_l_5/course_l_5_l7#7
+
+### Course metrics
+| ID | Category | PRO | Course | Lessons | Min | Steps | Types | |
+|---|---|---:|---|---:|---:|---:|---|
+| course_b_0 | База от Тайки | no | Тайский без паники | 3 | 20 | 24 | tip 24 |
+| course_b_1 | База от Тайки | no | Разговорный старт | 7 | 24 | 59 | tip 8, phrase 46, casual 4, word 1 |
+| course_b_2 | База от Тайки | no | Магия интонации | 6 | 22 | 59 | tip 11, word 10, phrase 32, casual 6 |
+| course_b_3 | База от Тайки | no | Я, ты, он, семья | 7 | 26 | 66 | tip 7, word 14, phrase 39, casual 6 |
+| course_b_4 | База от Тайки | no | Время, место, цифры | 6 | 22 | 66 | tip 7, word 30, phrase 29 |
+| course_b_5 | База от Тайки | no | Главные глаголы | 7 | 26 | 78 | word 14, phrase 62, tip 2 |
+| course_b_6 | База от Тайки | no | Вкусно, красиво, горячо | 6 | 22 | 64 | tip 5, word 13, phrase 46 |
+| course_b_7 | База от Тайки | no | Диалоги как у местных | 6 | 24 | 32 | tip 5, phrase 25, word 2 |
+| course_l_1 | Тайский для жизни | yes | На посту с полицией | 7 | 26 | 63 | tip 7, phrase 51, word 4, casual 1 |
+| course_l_2 | Тайский для жизни | yes | Таксист, вези меня домой | 7 | 26 | 65 | tip 9, phrase 55, word 1 |
+| course_l_3 | Тайский для жизни | yes | Король рынка | 7 | 26 | 62 | word 14, phrase 46, tip 2 |
+| course_l_4 | Тайский для жизни | yes | Вселенная тайской еды | 7 | 26 | 59 | tip 3, word 13, phrase 43 |
+| course_l_5 | Тайский для жизни | yes | Доктор Тайка дежурит | 7 | 26 | 57 | tip 2, word 13, phrase 42 |
+| course_l_6 | Тайский для жизни | yes | Белый лотос на максималках | 7 | 26 | 58 | word 14, phrase 42, tip 2 |
+| course_l_7 | Тайский для жизни | yes | Пляж как состояние | 7 | 26 | 57 | tip 2, word 14, phrase 41 |
+| course_l_8 | Тайский для жизни | yes | Магазинные приключения | 7 | 26 | 59 | word 14, phrase 43, tip 2 |
+| course_l_9 | Тайский для жизни | yes | Срочная помощь | 7 | 26 | 59 | tip 2, word 14, phrase 43 |
+| course_l_10 | Тайский для жизни | yes | Между подходами | 7 | 26 | 59 | tip 1, word 14, phrase 44 |
+| course_l_11 | Тайский для жизни | yes | Сезон Сонгкрана и не только | 7 | 26 | 58 | tip 2, word 14, phrase 42 |
+| course_l_12 | Тайский для жизни | yes | Новый тайский образ | 6 | 22 | 48 | tip 2, word 10, phrase 36 |
+| course_l_13 | Тайский для жизни | yes | Хозяин дома — почти сосед | 7 | 26 | 57 | tip 2, word 13, phrase 42 |
+| course_l_14 | Тайский для жизни | yes | Таиланд доставляет | 7 | 26 | 58 | word 14, phrase 42, tip 2 |
+| course_l_15 | Тайский для жизни | yes | После заката всё интереснее | 7 | 26 | 58 | word 14, phrase 42, tip 2 |
+| course_e_1 | На одной волне | yes | Понятный тайский | 6 | 22 | 48 | tip 1, word 11, phrase 34, casual 2 |
+| course_e_2 | На одной волне | yes | Работа с тайцами | 6 | 22 | 50 | word 15, phrase 33, tip 2 |
+| course_e_3 | На одной волне | yes | Сервис и персонал | 6 | 22 | 49 | tip 1, word 18, phrase 30 |
+| course_e_4 | На одной волне | yes | Разговоры без конфликта | 6 | 22 | 50 | tip 2, word 24, phrase 24 |
+| course_e_5 | На одной волне | yes | Коды Таиланда | 6 | 22 | 49 | tip 4, word 15, phrase 28, casual 2 |
+| course_e_6 | На одной волне | yes | Мягкий тайский твой | 6 | 22 | 51 | tip 3, word 17, phrase 29, casual 2 |
+| course_s_1 | Тайский для души | yes | Тайский для блогинга | 6 | 22 | 49 | word 13, phrase 35, tip 1 |
+| course_s_2 | Тайский для души | yes | Хобби и движ по-тайски | 6 | 22 | 49 | tip 1, word 18, phrase 30 |
+| course_s_3 | Тайский для души | yes | О чём говорят на самом деле | 6 | 22 | 46 | tip 2, word 12, phrase 32 |
+| course_s_4 | Тайский для души | yes | Ретрит и внутренний сабай | 6 | 22 | 49 | tip 2, word 14, phrase 33 |
+| course_s_5 | Тайский для души | yes | Романтика по-тайски | 6 | 22 | 49 | tip 2, word 12, phrase 35 |
+| course_s_6 | Тайский для души | yes | Тай кидс | 6 | 22 | 47 | word 13, phrase 32, tip 2 |
+| course_long_1 | Тайский для долгожителей | yes | Виза, продление, иммиграция | 6 | 22 | 50 | tip 2, word 14, phrase 32, casual 2 |
+| course_long_2 | Тайский для долгожителей | yes | Банки, деньги, крипта | 6 | 22 | 50 | word 13, phrase 34, tip 2, casual 1 |
+| course_long_3 | Тайский для долгожителей | yes | Полная медицина и страховка | 7 | 26 | 58 | word 20, phrase 32, casual 4, tip 2 |
+| course_long_4 | Тайский для долгожителей | yes | Транспорт для своих | 6 | 22 | 50 | word 13, phrase 33, tip 2, casual 2 |
+| course_long_5 | Тайский для долгожителей | yes | Соседи, кондо, правила дома | 6 | 22 | 50 | tip 2, word 19, phrase 28, casual 1 |
+| course_long_6 | Тайский для долгожителей | yes | Питомцы в Таиланде | 6 | 22 | 49 | tip 1, word 20, phrase 28 |
+| course_long_7 | Тайский для долгожителей | yes | Тайский юмор, мемы, поп-культура | 6 | 22 | 50 | tip 2, phrase 30, word 18 |

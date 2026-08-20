@@ -1,0 +1,58 @@
+[
+  {
+    "type": "meta_or_abstract",
+    "course": "course_l_15",
+    "lesson": "course_l_15_l3",
+    "order": 2,
+    "ru": "Весело сегодня?",
+    "thai": "สนุกไหมวันนี้"
+  },
+  {
+    "type": "meta_or_abstract",
+    "course": "course_l_4",
+    "lesson": "course_l_4_l3",
+    "order": 9,
+    "ru": "Понятно",
+    "thai": "เข้าใจ"
+  },
+  {
+    "type": "meta_or_abstract",
+    "course": "course_l_5",
+    "lesson": "course_l_5_l2",
+    "order": 9,
+    "ru": "Понятно",
+    "thai": "เข้าใจ"
+  },
+  {
+    "type": "meta_or_abstract",
+    "course": "course_l_7",
+    "lesson": "course_l_7_l5",
+    "order": 8,
+    "ru": "Всё ок",
+    "thai": "โอเค"
+  },
+  {
+    "type": "meta_or_abstract",
+    "course": "course_l_8",
+    "lesson": "course_l_8_l1",
+    "order": 9,
+    "ru": "Понятно",
+    "thai": "เข้าใจ"
+  },
+  {
+    "type": "meta_or_abstract",
+    "course": "course_l_8",
+    "lesson": "course_l_8_l7",
+    "order": 12,
+    "ru": "Всё ок, спасибо",
+    "thai": "โอเค ขอบคุณนะ"
+  },
+  {
+    "type": "meta_or_abstract",
+    "course": "course_l_13",
+    "lesson": "course_l_13_l6",
+    "order": 7,
+    "ru": "Всё ок",
+    "thai": "โอเคครับ"
+  }
+]

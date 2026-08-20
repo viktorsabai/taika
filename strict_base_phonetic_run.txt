@@ -1,0 +1,9 @@
+STATS {'records': 394, 'tokens': 991, 'duplicate_thai_inconsistent': 5}
+FORMAT_ISSUES 0
+DUPLICATE_INCONSISTENCIES 5
+('duplicate_inconsistent', 'สบายดีไหม', [('са→ бай→ ди→ май↗', 'course_b_1', 'course_b_1_l3', 2, 'Как дела?'), ('са→ бай→ ди→ май↗?→', 'course_b_2', 'course_b_2_l4', 3, 'Как дела медленно'), ('са→ ба→ ди→ май↗?→', 'course_b_2', 'course_b_2_l4', 4, 'Как дела нативно')])
+('duplicate_inconsistent', 'ปกติ', [('пок→ га→ ти→', 'course_b_1', 'course_b_1_l3', 5, 'Нормально'), ('пока→ ти↘', 'course_b_6', 'course_b_6_l5', 5, 'Обычный')])
+('duplicate_inconsistent', 'โอเค', [('о→ кэ→', 'course_b_1', 'course_b_1_l3', 9, 'Всё ок'), ('о-кэ→', 'course_b_6', 'course_b_6_l5', 12, 'Окей')])
+('duplicate_inconsistent', 'ไม่เข้าใจ', [('май↘ кау→ джай→', 'course_b_1', 'course_b_1_l4', 10, 'Я не понимаю'), ('май→ кхао→ джай↘', 'course_b_5', 'course_b_5_l3', 6, 'Не понимаю')])
+('duplicate_inconsistent', 'ไม่เป็นไร', [('май→ пэн→ рай→', 'course_b_1', 'course_b_1_l7', 6, 'Ничего страшного'), ('май→ пен→ рай→', 'course_b_7', 'course_b_7_l5', 6, 'Ничего страшного')])
+STRICT_FORMAT_OK

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg: #090a0d;
+      --ink: #f4f2f8;
+      --muted: #a09da9;
+      --faint: #6e6b77;
+      --line: rgba(255,255,255,.13);
+      --glass: rgba(23,23,30,.78);
+      --glass2: rgba(28,27,35,.68);
+      --pink: #ff60cc;
+      --lilac: #d89aff;
+      --purple: #b44cff;
+    }
+    .slide-container {
+      width: 1280px;
+      min-height: 720px; /* keep requirement */
+      background:
+        radial-gradient(circle at 52% 43%, rgba(188,59,174,.12), transparent 29%),
+        radial-gradient(circle at 81% 74%, rgba(114,47,171,.08), transparent 24%),
+        var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Arial, sans-serif;
+      padding: 28px 34px 18px; /* slightly smaller bottom padding */
+    }
+    .topline { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:12px; }
+    .title { font-size: 25px; font-weight: 750; letter-spacing: -.5px; }
+    .subtitle { color: var(--muted); font-size: 12px; margin-top: 5px; }
+    .scope { color: var(--faint); font-size: 10px; letter-spacing: .7px; text-transform: uppercase; }
+    .comparison { display:grid; grid-template-columns: 1fr 54px 1fr; gap: 12px; align-items:center; }
+    .side { min-height: 535px; border:1px solid var(--line); border-radius:20px; background:rgba(12,13,17,.43); padding:12px 16px 12px; }
+    .side.after { border-color: rgba(255,96,204,.32); background:rgba(20,15,26,.5); }
+    .side-title { display:flex; justify-content:space-between; align-items:center; font-size:14px; font-weight:700; margin-bottom:4px; }
+    .side-title .tag { font-size:9px; letter-spacing:.6px; color:var(--faint); text-transform:uppercase; font-weight:600; }
+    .after .side-title .tag { color:var(--pink); }
+    .side-note { color:var(--muted); font-size:10px; min-height:26px; }
+    .arrow { color:var(--pink); font-size:38px; text-align:center; }
+    .phone-wrap { display:flex; justify-content:center; padding-top:8px; }
+    .phone { width: 258px; min-height: 390px; border:1.4px solid rgba(255,255,255,.36); border-radius:34px; padding:8px; background:#0d0e12; box-shadow: 0 20px 40px rgba(0,0,0,.42), 0 0 30px rgba(255,80,200,.06); }
+    .phone.after-phone { border-color: rgba(255,255,255,.46); box-shadow: 0 20px 44px rgba(0,0,0,.45), 0 0 42px rgba(255,80,200,.15); }
+    .screen { min-height: 360px; border-radius:26px; background:linear-gradient(180deg,#121319 0%,#0c0d11 100%); padding:10px 12px 8px; position:relative; }
+    .island { width:60px; min-height:13px; border-radius:9px; background:#020204; margin:0 auto 6px; }
+    .status { display:flex; justify-content:space-between; color:#777580; font-size:7px; margin:0 2px 12px; }
+    .appbar { display:flex; justify-content:space-between; align-items:center; font-size:14px; font-weight:700; margin-bottom:12px; }
+    .appbar .micro { color:var(--pink); font-size:7px; font-weight:600; border:1px solid rgba(255,96,204,.35); border-radius:8px; padding:3px 5px; }
+    .seam { height:1px; background:rgba(255,255,255,.1); margin:0 -1px 12px; }
+    .current-panel { min-height:220px; border-radius:18px; background:rgba(80,80,87,.43); border:1px solid rgba(255,255,255,.13); padding:28px 15px 10px; text-align:center; }
+    .current-panel .tiny { color:#8f8b96; font-size:9px; }
+    .dots { color:#bbb7c4; font-size:20px; margin:20px 0 20px; }
+    .cta { width:100%; min-height:34px; border-radius:13px; background:rgba(107,106,116,.78); color:#eee; display:flex; justify-content:center; align-items:center; font-size:10px; font-weight:700; }
+    .voice-stage { text-align:center; min-height:140px; padding-top:12px; }
+    .prompt { color:#a7a4af; font-size:10px; line-height:1.35; }
+    .agent { width:74px; min-height:66px; border-radius:50%; margin:18px auto 8px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle, #ff91d9 0 22%, #d94fb9 23% 35%, rgba(217,79,185,.25) 36% 52%, transparent 53%); box-shadow:0 0 0 1px rgba(255,180,238,.45), 0 0 0 11px rgba(255,80,200,.12), 0 0 0 22px rgba(255,80,200,.06), 0 0 36px rgba(255,80,200,.26); color:#31162e; font-size:21px; }
+    .after-cta { background:linear-gradient(90deg,var(--pink),var(--lilac)); color:#21121f; }
+    .result { min-height:150px; border-radius:17px; border:1px solid rgba(255,255,255,.2); background:linear-gradient(180deg,rgba(38,31,43,.74),rgba(18,18,24,.84)); padding:10px 10px 8px; }
+    .result .eyebrow { color:#8d8898; font-size:7px; margin-bottom:6px; }
+    .result .ru { font-size:13px; font-weight:700; line-height:1.2; }
+    .result .translit-label { color:#8d8898; font-size:7px; margin-top:10px; }
+    .result .translit { color:#e1b7ff; font-size:12px; font-weight:700; line-height:1.2; margin-top:4px; }
+    .actions { display:flex; justify-content:space-between; color:#b8b3c0; font-size:7px; margin-top:10px; }
+    .train { margin-top:8px; min-height:28px; border-radius:11px; display:flex; align-items:center; justify-content:center; background:linear-gradient(90deg,var(--pink),var(--lilac)); color:#261522; font-size:9px; font-weight:750; }
+    .nav { display:flex; justify-content:space-between; color:#888590; font-size:11px; margin-top:10px; padding:0 3px; }
+    .nav .active { color:var(--pink); }
+    .delta { margin-top:10px; border-top:1px solid var(--line); padding-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .delta p { color:var(--muted); font-size:11px; line-height:1.35; margin:0; }
+    .delta strong { color:var(--ink); font-weight:650; }
+    .footer-note { text-align:center; color:var(--faint); font-size:10px; margin-top:6px; }
+  </style>
+</head>
+<body>
+  <div class="slide-container">
+    <div class="topline">
+      <div>
+        <div class="title">Sprint 0 + 1 — что реально изменится в Speaker</div>
+        <div class="subtitle">Один и тот же продуктовый flow: русский голос → перевод → понятный следующий шаг.</div>
+      </div>
+      <div class="scope">native screen delta · not a new architecture</div>
+    </div>
+    <div class="comparison">
+      <section class="side">
+        <div class="side-title"><span>Сейчас</span><span class="tag">current surface</span></div>
+        <div class="side-note">Header и body ощущаются раздельно; результат и действие не собраны вместе.</div>
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="screen">
+              <div class="island"></div><div class="status"><span>17:32</span><span>•••</span></div>
+              <div class="appbar"><span>Спикер</span><span class="micro">Скажи сам</span></div>
+              <div class="seam"></div>
+              <div class="current-panel">
+                <div class="tiny">Скажи фразу</div><div class="dots">···</div><div class="cta">◉ &nbsp; Начать запись</div>
+              </div>
+              <div class="nav"><span>⌂</span><span>⌁</span><span class="active">◉</span><span>♡</span><span>◌</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <div class="arrow">→</div>
+      <section class="side after">
+        <div class="side-title"><span>После Sprint 0 + 1</span><span class="tag">same flow · clearer surface</span></div>
+        <div class="side-note">Sprint 0 даёт material; Sprint 1 применяет его к instant translation.</div>
+        <div class="phone-wrap">
+          <div class="phone after-phone">
+            <div class="screen">
+              <div class="island"></div><div class="status"><span>17:32</span><span>•••</span></div>
+              <div class="appbar"><span>Спикер</span><span class="micro">Скажи сам</span></div>
+              <div class="voice-stage"><div class="prompt">Скажи фразу<br/>по-русски</div><div class="agent">◌</div><div class="prompt">Говорить</div></div>
+              <div class="result">
+                <div class="eyebrow">Вы сказали</div><div class="ru">Мне нужен адрес<br/>этого места</div>
+                <div class="translit-label">Транслит</div><div class="translit">kŏr tîi-yùu kŏng<br/>tîi-nîi nòi</div>
+                <div class="actions"><span>◉ Слушать</span><span>□ Копировать</span><span>♡ Сохранить</span></div>
+                <div class="train">Тренировать фразу →</div>
+              </div>
+              <div class="nav"><span>⌂</span><span>⌁</span><span class="active">◉</span><span>♡</span><span>◌</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div class="delta">
+      <p><strong>Sprint 0:</strong> единая liquid-glass surface, blur вместо dusty opaque block, единая hierarchy и CTA.</p>
+      <p><strong>Sprint 1:</strong> Speaker получает ясный instant-translation flow: готов → слушает → получил фразу → слушать/копировать/сохранить.</p>
+    </div>
+    <div class="footer-note">Pronunciation score и assessment остаются внутри training pipeline.</div>
+  </div>
+</body>
+</html>
