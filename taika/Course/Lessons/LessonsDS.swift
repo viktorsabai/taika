@@ -2069,12 +2069,11 @@ public struct LSCompletedLessonList: View {
                 }
                 .buttonStyle(.plain)
                 Button {
-                    guard hasErrors else { return }
                     withAnimation(.easeInOut(duration: 0.18)) { showingErrorsOnly = true }
                 } label: {
                     Text("ОШИБКИ \(weakCardCount)")
                         .font(.system(size: 12, weight: showingErrorsOnly ? .semibold : .medium))
-                        .foregroundStyle(hasErrors ? (showingErrorsOnly ? PD.ColorToken.text : PD.ColorToken.textSecondary) : PD.ColorToken.textSecondary.opacity(0.45))
+                        .foregroundStyle(showingErrorsOnly ? PD.ColorToken.text : (hasErrors ? PD.ColorToken.textSecondary : PD.ColorToken.textSecondary.opacity(0.45)))
                         .padding(.bottom, 8)
                         .overlay(alignment: .bottom) {
                             Rectangle()
@@ -2083,7 +2082,7 @@ public struct LSCompletedLessonList: View {
                         }
                 }
                 .buttonStyle(.plain)
-                .disabled(!hasErrors)
+                .disabled(false)
             }
             .overlay(alignment: .bottom) {
                 Rectangle().fill(PD.ColorToken.stroke.opacity(0.55)).frame(height: 1)
@@ -2139,9 +2138,29 @@ public struct LSCompletedLessonList: View {
                                             .font(.system(size: 16, weight: .semibold))
                                             .foregroundStyle(PD.ColorToken.text)
                                             .lineLimit(1)
-                                        Text(item.errorCardCount > 0 ? "ошибки \(item.errorCardCount)" : "без ошибок")
-                                            .font(.system(size: 13, weight: .regular))
-                                            .foregroundStyle(item.errorCardCount > 0 ? errorFill : AnyShapeStyle(PD.ColorToken.textSecondary))
+                                        if item.errorCardCount > 0 {
+                                            HStack(spacing: 5) {
+                                                Image(systemName: "exclamationmark")
+                                                    .font(.system(size: 9, weight: .bold))
+                                                Text("ошибки \(item.errorCardCount)")
+                                                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                            }
+                                            .foregroundStyle(errorFill)
+                                            .padding(.horizontal, 7)
+                                            .padding(.vertical, 4)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                                    .fill(ThemeManager.shared.currentAccentTintColor.opacity(0.10))
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                                            .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.28), lineWidth: 1)
+                                                    )
+                                            )
+                                        } else {
+                                            Text("без ошибок")
+                                                .font(.system(size: 13, weight: .regular))
+                                                .foregroundStyle(PD.ColorToken.textSecondary)
+                                        }
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 }

@@ -1,3 +1,13 @@
+# Fix — completed error diagnostics hierarchy
+
+| Задача | Статус |
+|---|---|
+| Проверить error tab, lesson error rows, zero-error state и верхний course hint | Сделано |
+| Сделать error marker компактным structured issue signal без красной панели | Сделано |
+| Сделать zero-error state явным и CTA disabled | Сделано |
+| Синхронизировать tab count и верхний copy с реальными failedCardKeys | Сделано |
+| Проверить completed-only flow и запушить fix | В работе |
+
 # Fix — syllable recall game tap and slot index regression
 
 | Задача | Статус |

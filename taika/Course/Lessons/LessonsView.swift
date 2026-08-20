@@ -170,14 +170,12 @@ private extension LessonsView {
     }
 
     private var weakCompletedLessonIds: Set<String> {
-        guard let cid = currentCourse?.courseID else { return [] }
-        let failedKeys = ReinforcementStore.shared.failedCardKeys(
-            courseId: cid,
-            lessonIds: completedLessonOptions.map(\.id)
-        )
-        return Set(failedKeys.compactMap { key in
-            key.split(separator: "|", maxSplits: 1).first.map(String.init)
-        })
+        // Keep the lesson scope in lockstep with the row diagnostics. Parsing the
+        // persisted card key prefix can normalize IDs differently from lessonID
+        // (hyphens/case), which previously produced `ОШИБКИ 0` beside `ошибки 1`.
+        Set(lessonItems().filter { item in
+            item.status == .completed && item.errorCardCount > 0
+        }.map(\.id))
     }
 
     var completedLessonOptions: [LSCompletedLessonOption] {
