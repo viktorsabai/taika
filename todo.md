@@ -1611,3 +1611,10 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Сделать back affordance нативной с удобной областью нажатия.
 - [x] Проверить, что back не конфликтует с carousel/scroll gestures.
 - [x] Выполнить static validation и подготовить commit/push.
+
+# Reinforcement diagnostics and grade-sheet clarity
+
+- [x] Проверить сохранение результатов игры по courseId/lessonId и mapping ошибок.
+- [x] Сделать weak lessons и отсутствие диагностики различимыми в списке.
+- [x] Убрать лишние иконки у предметов «Вспоминание» и «На слух», сохранив строгую зачётку.
+- [x] Определить, нужен ли reset прогресса, выполнить static validation и подготовить commit/push.

@@ -573,7 +573,8 @@ public struct HomeTaskView: View {
                     ReinforcementStore.shared.recordSession(
                         courseId: courseId,
                         gameType: "recall",
-                        score: percent
+                        score: percent,
+                        lessonIds: reinforcementLessonScope
                     )
                 }
             }
@@ -839,6 +840,14 @@ public struct HomeTaskView: View {
         isFavoritesContext || isDictionaryContext || isLearnedParkContext
     }
 
+    /// The course reinforcement scope is the fallback when legacy learned cards lack lesson metadata.
+    private var reinforcementLessonScope: [String] {
+        let scoped = (lessonIds ?? []).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        if !scoped.isEmpty { return scoped }
+        let single = lessonId.trimmingCharacters(in: .whitespacesAndNewlines)
+        return single.isEmpty ? [] : [single]
+    }
+
     /// Persist the exact source cards encountered in this completed match session.
     /// Global Game Park is grouped back into real courses instead of writing to the pseudo-course.
     private func recordMatchedGameMastery() {
@@ -866,7 +875,8 @@ public struct HomeTaskView: View {
                 courseId: sourceCourseId,
                 gameType: "match",
                 score: percent,
-                sourceCardKeys: sourceKeys
+                sourceCardKeys: sourceKeys,
+                lessonIds: reinforcementLessonScope
             )
         }
     }

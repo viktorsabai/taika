@@ -227,7 +227,8 @@ struct AudioRecallGameView: View {
                 ReinforcementStore.shared.recordSession(
                     courseId: courseId,
                     gameType: "audioRecall",
-                    score: percent
+                    score: percent,
+                    lessonIds: [lessonId]
                 )
             }
             GameHeaderStore.shared.config = headerConfig()

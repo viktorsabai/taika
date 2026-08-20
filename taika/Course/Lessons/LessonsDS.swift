@@ -1897,10 +1897,12 @@ public struct LSCompletedTrainingHero: View {
         let result = skill.isProLocked ? "Taika Pro" : (skill.score.map { "\($0)%" } ?? (skill.sessions > 0 ? "есть данные" : "нет результата"))
         let detail = skill.sessions > 0 ? "\(skill.sessions) сессии" : "первая тренировка впереди"
         let content = HStack(alignment: .center, spacing: 10) {
-            Image(systemName: skill.icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(0.82)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.55)))
-                .frame(width: 24)
+            if skill.isSpeaker {
+                Image(systemName: skill.icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(0.82)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.55)))
+                    .frame(width: 24)
+            }
             VStack(alignment: .leading, spacing: 3) {
                 Text(skill.title)
                     .font(.system(size: 15, weight: .semibold))
@@ -2024,6 +2026,7 @@ public struct LSCompletedLessonList: View {
     public let selectedIds: Set<String>
     public let weakIds: Set<String>
     public let scores: [String: Int]
+    public let courseSessionCount: Int
     public let onToggle: (String) -> Void
     public let onOpen: ((String) -> Void)?
     public let onSelectAll: (() -> Void)?
@@ -2031,11 +2034,12 @@ public struct LSCompletedLessonList: View {
     public let accentFill: AnyShapeStyle
     public let accentColor: Color
 
-    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGlow), accentColor: Color = TaikaMasteryTokens.greenGlow) {
+    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], courseSessionCount: Int = 0, onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGlow), accentColor: Color = TaikaMasteryTokens.greenGlow) {
         self.items = items
         self.selectedIds = selectedIds
         self.weakIds = weakIds
         self.scores = scores
+        self.courseSessionCount = max(0, courseSessionCount)
         self.onToggle = onToggle
         self.onOpen = onOpen
         self.onSelectAll = onSelectAll
@@ -2051,7 +2055,7 @@ public struct LSCompletedLessonList: View {
                     .taikaSectionTitleStyle()
                 Spacer(minLength: 8)
                 if weakIds.isEmpty {
-                    Text(scores.isEmpty ? "нет диагностики" : "ошибок нет")
+                    Text(scores.isEmpty && courseSessionCount > 0 ? "игра есть · нужна диагностика" : (scores.isEmpty ? "нет диагностики" : "ошибок нет"))
                         .font(.system(size: 10, weight: .semibold, design: .monospaced))
                         .foregroundStyle(AnyShapeStyle(PD.ColorToken.textSecondary))
                 } else {
@@ -2096,7 +2100,7 @@ public struct LSCompletedLessonList: View {
                                         .lineLimit(1)
                                     Text(weak
                                          ? "Ошибка · \(scores[item.id, default: 0])% — нужно повторить"
-                                         : (scores[item.id].map { "Закреплено · \($0)%" } ?? "Пройден · ждёт новой диагностики"))
+                                         : (scores[item.id].map { "Закреплено · \($0)%" } ?? (courseSessionCount > 0 ? "Игра пройдена · повтори для диагностики" : "Пройден · ждёт новой диагностики")))
                                         .font(.system(size: 12, weight: .regular))
                                         .foregroundStyle(weak ? AnyShapeStyle(Color.red.opacity(0.92)) : AnyShapeStyle(PD.ColorToken.textSecondary))
                                         .lineLimit(1)

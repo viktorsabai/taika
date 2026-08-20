@@ -66,6 +66,7 @@ public final class ReinforcementStore: ObservableObject {
         gameType: String,
         score: Int? = nil,
         sourceCardKeys: [String] = [],
+        lessonIds: [String] = [],
         playedAt: Date = Date()
     ) {
         let cid = canonicalizeCourseId(courseId)
@@ -101,6 +102,19 @@ public final class ReinforcementStore: ObservableObject {
                 var lesson = cm.byLesson[lid] ?? LessonMetrics()
                 lesson.sessions += 1
                 lesson.coveredCardKeys.formUnion(keys)
+                lesson.lastScore = score.map { max(0, min(100, $0)) }
+                cm.byLesson[lid] = lesson
+            }
+        } else {
+            // Legacy learned cards may lack lessonId metadata. Preserve the result
+            // at lesson level when the caller already knows the reinforcement scope.
+            let scopedLessonIds = Set(lessonIds.compactMap { raw -> String? in
+                let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                return value.isEmpty ? nil : canonicalizeLessonId(value)
+            })
+            for lid in scopedLessonIds {
+                var lesson = cm.byLesson[lid] ?? LessonMetrics()
+                lesson.sessions += 1
                 lesson.lastScore = score.map { max(0, min(100, $0)) }
                 cm.byLesson[lid] = lesson
             }
