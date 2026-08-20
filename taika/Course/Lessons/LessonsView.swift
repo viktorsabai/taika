@@ -769,8 +769,9 @@ public struct LessonsView: View {
                                     launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
                                 },
                                 accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
-                                accentColor: ThemeManager.shared.currentAccentTintColor,
-                                isCompletedPresentation: false
+                                accentColor: TaikaMasteryTokens.greenGlow,
+                                isCompletedPresentation: true,
+                                sectionTitle: "УРОКИ КУРСА"
                             )
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
                         }

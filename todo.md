@@ -1,3 +1,12 @@
+# LessonsView — in-progress lesson list parity fix
+
+| Задача | Статус |
+|---|---|
+| Сравнить старую in-progress ветку со свежим completed lesson list | Сделано |
+| Перенести новый lesson row visual contract без изменения progress logic | Сделано |
+| Убрать старые mint/pink accents и привести controls к canonical palette | Сделано |
+| Проверить in-progress/completed navigation и push fix | В работе |
+
 # Favorites — final cards and dictionary redesign
 
 | Задача | Статус |

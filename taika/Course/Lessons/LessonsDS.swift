@@ -2015,9 +2015,10 @@ public struct LSCompletedLessonList: View {
     public let accentFill: AnyShapeStyle
     public let accentColor: Color
     public let isCompletedPresentation: Bool
+    public let sectionTitle: String
     @State private var showingErrorsOnly: Bool = false
 
-    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], courseSessionCount: Int = 0, onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, onSelectWeak: (() -> Void)? = nil, onTrainWeak: (() -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGradient), accentColor: Color = TaikaMasteryTokens.greenGlow, isCompletedPresentation: Bool = true) {
+    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], courseSessionCount: Int = 0, onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, onSelectWeak: (() -> Void)? = nil, onTrainWeak: (() -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGradient), accentColor: Color = TaikaMasteryTokens.greenGlow, isCompletedPresentation: Bool = true, sectionTitle: String = "ФОКУС НА СЕГОДНЯ") {
         self.items = items
         self.selectedIds = selectedIds
         self.weakIds = weakIds
@@ -2032,6 +2033,7 @@ public struct LSCompletedLessonList: View {
                 self.accentFill = accentFill
         self.accentColor = accentColor
         self.isCompletedPresentation = isCompletedPresentation
+        self.sectionTitle = sectionTitle
     }
     @ViewBuilder
     public var body: some View {
@@ -2051,7 +2053,7 @@ public struct LSCompletedLessonList: View {
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 20) {
-                Text("ФОКУС НА СЕГОДНЯ")
+                Text(sectionTitle)
                     .taikaSectionTitleStyle()
                 Spacer(minLength: 0)
                 Button {
