@@ -235,7 +235,7 @@ private extension LessonsView {
             return [
                 LSReinforcementSkill(id: "speaker", title: "Спикер", subtitle: "Произношение и тоны", icon: "mic.fill", isSpeaker: true),
                 LSReinforcementSkill(id: "match", title: "Память", subtitle: "Найди пару", icon: "gamecontroller.fill", modeRawValue: GameModeType.match.rawValue),
-                LSReinforcementSkill(id: "recall", title: "Вспоминание", subtitle: "Вспомни перевод", icon: "sparkles", modeRawValue: GameModeType.recall.rawValue, isProLocked: !pro.isPro),
+                LSReinforcementSkill(id: "recall", title: "Вспоминание", subtitle: "Собери по слогам", icon: "sparkles", modeRawValue: GameModeType.recall.rawValue, isProLocked: !pro.isPro),
                 LSReinforcementSkill(id: "audioRecall", title: "На слух", subtitle: "Распознай фразу", icon: "waveform", modeRawValue: GameModeType.audioRecall.rawValue, isProLocked: !pro.isPro)
             ]
         }
