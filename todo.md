@@ -1,3 +1,12 @@
+# Fix — restore selected/error hierarchy in completed lesson list
+
+| Задача | Статус |
+|---|---|
+| Проверить текущий neutral/selected/error style после color fix | Сделано |
+| Вернуть заметный selected lesson state без декоративного gradient | Сделано |
+| Разделить active tab, selected row и error text по контрасту | Сделано |
+| Сохранить Speaker background continuity и запушить hierarchy fix | В работе |
+
 # Speaker — instant translation visual continuity audit
 
 | Задача | Статус |

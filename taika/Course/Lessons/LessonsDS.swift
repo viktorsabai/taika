@@ -2044,7 +2044,8 @@ public struct LSCompletedLessonList: View {
 
     private var completedBody: some View {
         let visibleItems = showingErrorsOnly ? items.filter { weakIds.contains($0.id) } : items
-        let diagnosticFill = AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.82))
+        let selectedFill = AnyShapeStyle(PD.ColorToken.text.opacity(0.92))
+        let errorFill = AnyShapeStyle(ThemeManager.shared.currentAccentTintColor.opacity(0.82))
         let hasErrors = !weakIds.isEmpty
         let selectedCount = selectedIds.intersection(Set(visibleItems.map(\.id))).count
 
@@ -2062,7 +2063,7 @@ public struct LSCompletedLessonList: View {
                         .padding(.bottom, 8)
                         .overlay(alignment: .bottom) {
                             Rectangle()
-                                .fill(showingErrorsOnly ? AnyShapeStyle(Color.clear) : diagnosticFill)
+                                .fill(showingErrorsOnly ? AnyShapeStyle(Color.clear) : selectedFill)
                                 .frame(height: 2)
                         }
                 }
@@ -2077,7 +2078,7 @@ public struct LSCompletedLessonList: View {
                         .padding(.bottom, 8)
                         .overlay(alignment: .bottom) {
                             Rectangle()
-                                .fill(showingErrorsOnly ? diagnosticFill : AnyShapeStyle(Color.clear))
+                                .fill(showingErrorsOnly ? selectedFill : AnyShapeStyle(Color.clear))
                                 .frame(height: 2)
                         }
                 }
@@ -2127,7 +2128,7 @@ public struct LSCompletedLessonList: View {
                             Button { onToggle(item.id) } label: {
                                 HStack(spacing: 12) {
                                     Rectangle()
-                                        .fill(selected ? diagnosticFill : AnyShapeStyle(Color.clear))
+                                        .fill(selected ? selectedFill : AnyShapeStyle(Color.clear))
                                         .frame(width: 2)
                                     Text(String(format: "%02d", item.index + 1))
                                         .font(.system(size: 13, weight: .medium, design: .monospaced))
@@ -2140,7 +2141,7 @@ public struct LSCompletedLessonList: View {
                                             .lineLimit(1)
                                         Text(item.errorCardCount > 0 ? "ошибки \(item.errorCardCount)" : "без ошибок")
                                             .font(.system(size: 13, weight: .regular))
-                                            .foregroundStyle(item.errorCardCount > 0 ? diagnosticFill : AnyShapeStyle(PD.ColorToken.textSecondary))
+                                            .foregroundStyle(item.errorCardCount > 0 ? errorFill : AnyShapeStyle(PD.ColorToken.textSecondary))
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 }
@@ -2181,7 +2182,7 @@ public struct LSCompletedLessonList: View {
                         Spacer(minLength: 8)
                         Image(systemName: "chevron.right")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(diagnosticFill)
+                            .foregroundStyle(selectedFill)
                     }
                     .padding(.vertical, 14)
                     .contentShape(Rectangle())
