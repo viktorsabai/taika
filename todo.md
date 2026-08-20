@@ -1666,3 +1666,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Синхронизировать chips, wordmark accents, waves, crowns и grade sheet.
 - [x] Убрать смешение legacy solid/gradient treatments.
 - [x] Выполнить static validation и подготовить один финальный push.
+
+# Completed card and achievement visual sync
+
+- [x] Аудировать старые mint treatments на face/back карточек и в LessonsView.
+- [x] Зафиксировать единый natural gradient для всех completed action/status elements.
+- [x] Добавить pink-gradient halo для completed favorite card только при active favorite.
+- [x] Выделить одно главное achievement number в grade sheet и проверить motion/contrast.
+- [x] Выполнить static validation и подготовить один финальный push.

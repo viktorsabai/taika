@@ -1818,14 +1818,16 @@ public struct LSCompletedTrainingHero: View {
                 HStack(alignment: .center, spacing: 14) {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(scoreText + (stats.reinforcementScore == nil ? "" : "%"))
-                            .font(.system(size: 36, weight: .bold, design: .monospaced))
+                            .font(.system(size: 48, weight: .bold, design: .monospaced))
                             .monospacedDigit()
-                            .foregroundStyle(PD.ColorToken.text)
+                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.78)
-                        Text("эффективность")
+                            .minimumScaleFactor(0.68)
+                            .contentTransition(.numericText())
+                            .animation(.easeOut(duration: 0.32), value: scoreText)
+                        Text(stats.reinforcementScore == nil ? "результат" : "эффективность")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .foregroundStyle(TaikaMasteryTokens.greenGlow.opacity(0.82))
                     }
                     .frame(width: 88, alignment: .leading)
                     VStack(alignment: .leading, spacing: 3) {

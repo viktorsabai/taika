@@ -2573,7 +2573,7 @@ private struct CardBackActionButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(isMastery ? AnyShapeStyle(TaikaMasteryTokens.green) : AnyShapeStyle(Color.white.opacity(0.86)))
+            .foregroundStyle(isMastery ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(Color.white.opacity(0.86)))
             .lineLimit(1)
             .minimumScaleFactor(0.78)
             .padding(.horizontal, 14)
@@ -2585,7 +2585,7 @@ private struct CardBackActionButtonStyle: ButtonStyle {
             )
             .overlay(
                 Capsule(style: .continuous)
-                    .stroke(isMastery ? TaikaMasteryTokens.green.opacity(0.72) : Color.white.opacity(0.28), lineWidth: 1)
+                    .stroke(isMastery ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.88)) : AnyShapeStyle(Color.white.opacity(0.28)), lineWidth: 1)
             )
             .contentShape(Capsule(style: .continuous))
             .opacity(configuration.isPressed ? 0.68 : 1)
@@ -2623,6 +2623,7 @@ fileprivate struct CDOrganicWaveShape: Shape {
 
 fileprivate struct CDOrganicLearnedTreatment: View {
     let glow: Color
+    let isFavorite: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var phase: CGFloat = 0
 
@@ -2656,6 +2657,21 @@ fileprivate struct CDOrganicLearnedTreatment: View {
                 .frame(width: 180, height: 130)
                 .blur(radius: 22)
                 .offset(x: -74, y: 78)
+
+            if isFavorite {
+                ForEach(Array([0.55, 1.7, 3.1].enumerated()), id: \.offset) { index, seed in
+                    CDOrganicWaveShape(
+                        phase: reduceMotion ? 0 : phase,
+                        seed: seed
+                    )
+                    .stroke(
+                        AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(index == 1 ? 0.34 : 0.18)),
+                        style: StrokeStyle(lineWidth: index == 1 ? 1.2 : 0.72, lineCap: .round, lineJoin: .round)
+                    )
+                    .blur(radius: index == 1 ? 0.1 : 0.45)
+                    .offset(x: CGFloat(index - 1) * 14, y: CGFloat(index - 1) * 14)
+                }
+            }
 
             ForEach(Array([0.2, 1.35, 2.5, 3.7, 4.9].enumerated()), id: \.offset) { index, seed in
                 CDOrganicWaveShape(
@@ -2980,7 +2996,10 @@ public struct CourseLessonCard: View {
         case .none:
             EmptyView()
         case let .taikaValues(_, glow):
-            CDOrganicLearnedTreatment(glow: glow)
+            CDOrganicLearnedTreatment(
+                glow: glow,
+                isFavorite: statusKind == .completed && isFavoriteActive
+            )
         }
     }
 

@@ -1361,10 +1361,10 @@ public struct AppCardIconButton: View {
 
     private var iconInkStyle: AnyShapeStyle {
         if forceMasteryGreen, isEnabled {
-            return AnyShapeStyle(TaikaMasteryTokens.green)
+            return AnyShapeStyle(TaikaMasteryTokens.greenGradient)
         }
         if glossyBlackSurface, isEnabled {
-            return AnyShapeStyle(TaikaMasteryTokens.green)
+            return AnyShapeStyle(TaikaMasteryTokens.greenGradient)
         }
         if isAccent {
             return AnyShapeStyle(ThemeManager.shared.currentAccentFill)
