@@ -1456,3 +1456,10 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Сверить статус с canonical Start: system 13 bold, spacing 6, padding 14/8, arrow 11 bold, PressDownStyle.
 - [ ] Убрать обрезку `КУРС ПРОЙДЕН` на узкой course card: дать тексту минимальный scale factor/fixed-size behavior без увеличения capsule.
 - [ ] Проверить одинаковый compact layout на face `КУРС ПРОЙДЕН` и back `ЗАКРЕПЛЕНИЕ`.
+
+# Exact completed status placement
+
+- [ ] В completed CourseLessonCard убрать TaikaWordmarkLockup из верхней строки.
+- [ ] Разместить status capsule в верхней строке на его месте, не увеличивая capsule.
+- [ ] Использовать Start metrics: system 13 bold, spacing 6, padding 14/8, arrow 11 bold.
+- [ ] Проверить face `КУРС ПРОЙДЕН` и back `ЗАКРЕПЛЕНИЕ` на одинаковую ширину/читабельность.

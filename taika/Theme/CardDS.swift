@@ -2997,33 +2997,53 @@ public struct CourseLessonCard: View {
             return (completionFraction ?? 0).clamped01
         }()
         @ViewBuilder
+        func statusControl(isBack: Bool) -> some View {
+            if showStatusOnFace, let statusKind {
+                Button {
+                    if flipEnabled {
+                        withAnimation(.spring(response: 0.42, dampingFraction: 0.85)) {
+                            isFlipped.toggle()
+                        }
+                    }
+                } label: {
+                    if statusKind == .completed && backFaceKind == .courseGradeSheet {
+                        CDCourseStatusPill(
+                            title: isBack ? "ЗАКРЕПЛЕНИЕ" : "КУРС ПРОЙДЕН",
+                            icon: isBack ? "waveform.path.ecg" : "checkmark.seal.fill",
+                            trailingIcon: isBack ? "arrow.left" : "arrow.right"
+                        )
+                    } else if statusKind == .completed {
+                        AppStatusChip(kind: .completed, title: "УРОК ПРОЙДЕН")
+                    } else {
+                        AppStatusChip(kind: statusKind, title: statusChipTitle)
+                    }
+                }
+                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+                .accessibilityLabel(isBack ? "Вернуться к карточке курса" : "Открыть зачёт курса")
+            }
+        }
+
+        @ViewBuilder
         func topContent(isBack: Bool) -> some View {
             if isBack {
                 HStack(alignment: .center, spacing: 8) {
                     Spacer(minLength: 0)
-                    if showStatusOnFace, let statusKind {
-                        Button {
-                            if flipEnabled {
-                                withAnimation(.spring(response: 0.42, dampingFraction: 0.85)) {
-                                    isFlipped.toggle()
-                                }
-                            }
-                        } label: {
-                            CDCourseStatusPill(title: "ЗАКРЕПЛЕНИЕ", icon: "waveform.path.ecg", trailingIcon: "arrow.left")
-                        }
-                        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
-                        .accessibilityLabel("Вернуться к карточке курса")
-                    }
+                    statusControl(isBack: true)
                 }
                 .padding(.top, 18)
                 .padding(.bottom, 0)
             } else {
                 HStack(alignment: .center, spacing: 8) {
-                    TaikaWordmarkLockup(
-                        fontSize: 16,
-                        accentColor: statusKind == .completed ? TaikaMasteryTokens.green : nil
-                    )
-                    Spacer(minLength: 0)
+                    if statusKind == .completed && backFaceKind == .courseGradeSheet {
+                        statusControl(isBack: false)
+                        Spacer(minLength: 0)
+                    } else {
+                        TaikaWordmarkLockup(
+                            fontSize: 16,
+                            accentColor: statusKind == .completed ? TaikaMasteryTokens.green : nil
+                        )
+                        Spacer(minLength: 0)
+                    }
                     HStack(spacing: 8) {
                         if statusKind != .completed, let onTapInfo {
                             Button(action: onTapInfo) {
@@ -3039,27 +3059,8 @@ public struct CourseLessonCard: View {
                             CourseProAnimatedCrown(onTap: { onPrimaryTap?() })
                         } else if showProTeaserChip {
                             CourseProAnimatedCrown(onTap: nil)
-                        } else if showStatusOnFace, let statusKind {
-                            Button {
-                                if flipEnabled {
-                                    withAnimation(.spring(response: 0.42, dampingFraction: 0.85)) {
-                                        isFlipped.toggle()
-                                    }
-                                }
-                            } label: {
-                                if statusKind == .completed {
-                                    switch backFaceKind {
-                                    case .courseGradeSheet:
-                                        CDCourseStatusPill(title: "КУРС ПРОЙДЕН", icon: "checkmark.seal.fill", trailingIcon: isFlipped ? "arrow.left" : "arrow.right")
-                                    case .lessonCompletion, .lessonReminders:
-                                        AppStatusChip(kind: .completed, title: "УРОК ПРОЙДЕН")
-                                    }
-                                } else {
-                                    AppStatusChip(kind: statusKind, title: statusChipTitle)
-                                }
-                            }
-                            .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
-                            .accessibilityLabel(backFaceKind == .courseGradeSheet ? "Открыть зачёт курса" : "Открыть завершённый урок")
+                        } else if !(statusKind == .completed && backFaceKind == .courseGradeSheet) {
+                            statusControl(isBack: false)
                         }
                     }
                 }
