@@ -1,3 +1,13 @@
+# Speaker — pronunciation result and breakdown polish
+
+| Задача | Статус |
+|---|---|
+| Исправить обрезку фразы в training/live state | Сделано |
+| Упростить pronunciation result card до каноничного verdict flow | Сделано |
+| Оставить одно главное действие и убрать дублирующие CTA/pipeline | Сделано |
+| Вернуть blur/dim backdrop при загрузке и открытии syllable breakdown | Сделано |
+| Проверить Speaker E2E и запушить fix | В работе |
+
 # Speaker — instant translation motion-first redesign
 
 | Задача | Статус |

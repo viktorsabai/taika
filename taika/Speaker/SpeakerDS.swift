@@ -1012,8 +1012,9 @@ public struct SpeakerDSRoot: View {
             .frame(width: 240, height: 240)
 
             conversationLiveHeroText
-                .frame(height: 84, alignment: .center)
+                .frame(minHeight: 84, maxHeight: 128, alignment: .center)
                 .padding(.horizontal, 8)
+                .layoutPriority(1)
 
             // Idle has one clear instruction: tap the sphere. Status and pipeline
             // become useful only after the user starts a voice action.
@@ -1579,9 +1580,10 @@ public struct SpeakerDSRoot: View {
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.text)
                 .multilineTextAlignment(.center)
-                .lineLimit(4)
-                .minimumScaleFactor(0.85)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity)
+                .layoutPriority(1)
             MiniWaveform(meter: recordingMeter)
                 .frame(height: 26)
                 .frame(maxWidth: 220)
@@ -1714,15 +1716,11 @@ public struct SpeakerDSRoot: View {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
 
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("ТРЕНИРОВКА ФРАЗЫ")
-                            .font(.system(size: 10, weight: .bold))
-                            .tracking(0.7)
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
                         Text("Результат произношения")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(PD.ColorToken.text)
                     }
                     Spacer(minLength: 0)
@@ -1746,7 +1744,8 @@ public struct SpeakerDSRoot: View {
                 if !hintText.isEmpty {
                     Text(hintText)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.92))
+                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.82))
+                        .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -1756,7 +1755,7 @@ public struct SpeakerDSRoot: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "waveform.path.ecg")
-                        Text("Разбор тонов и слогов")
+                        Text("Разбор слогов")
                         Spacer(minLength: 0)
                         Image(systemName: "chevron.right")
                             .font(.system(size: 11, weight: .bold))
@@ -1774,7 +1773,7 @@ public struct SpeakerDSRoot: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Открыть разбор тонов и слогов")
             }
-            .padding(18)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Theme.Surfaces.blackGlass(shape))
         }
@@ -1859,6 +1858,8 @@ public struct SpeakerDSRoot: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 4)
+        .fixedSize(horizontal: false, vertical: true)
+        .layoutPriority(1)
     }
 
     // MARK: Footer actions + sticky mic
@@ -2400,6 +2401,7 @@ public struct SpeakerDSRoot: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
+                .presentationBackground(.ultraThinMaterial)
         }
         .animation(.easeInOut(duration: 0.18), value: phase.isFeedback)
         .onChange(of: extSelectedId) { newValue in
@@ -4043,7 +4045,7 @@ public struct SpeakerDSRoot: View {
             onPlayAttempt: external?.onPlayAttempt,
             presentsAsSheet: true
         )
-        .background(PD.ColorToken.background.ignoresSafeArea())
+        .background(Theme.Surfaces.blackGlassScrim.ignoresSafeArea())
         .onAppear {
             external?.onBreakdownAppear?()
             if breakdownSnapshotExpected.isEmpty && !liveTranslit.isEmpty {
@@ -4630,7 +4632,7 @@ public struct SpeakerDSRoot: View {
         if presentsAsSheet {
             return AnyView(
                 card
-                    .background(PD.ColorToken.background.ignoresSafeArea())
+                    .background(Theme.Surfaces.blackGlassScrim.ignoresSafeArea())
             )
         }
 
