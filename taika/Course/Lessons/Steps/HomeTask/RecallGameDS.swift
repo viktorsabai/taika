@@ -378,7 +378,7 @@ public struct RecallGameView: View {
         let textColor: AnyShapeStyle = {
             if isWrong { return AnyShapeStyle(Color.red.opacity(0.92)) }
             if isFilled { return AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.96)) }
-            return AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.30))
+            return AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.78))
         }()
 
         let underlineColor: AnyShapeStyle = {
@@ -407,7 +407,7 @@ public struct RecallGameView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
                         .foregroundStyle(textColor)
-                        .opacity(isFilled ? 1 : 0.62)
+                        .opacity(isFilled ? 1 : 0.96)
                         .frame(minWidth: 32, minHeight: 28)
 
                     if isFilled, !isLocked, isCorrect == nil, !isWrong {
@@ -447,6 +447,7 @@ public struct RecallGameView: View {
             Button { onTap(index) } label: { content }
                 .buttonStyle(.plain)
                 .accessibilityLabel(isFilled ? "Выбрать слот \(index + 1)" : "Заполнить слот \(index + 1)")
+                .accessibilityValue(isFilled ? syllableText : "Слог \(index + 1)")
                 .accessibilityHint("Выбери слог из пула")
         } else {
             content

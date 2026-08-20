@@ -1,3 +1,12 @@
+# Fix — syllable recall game tap and slot index regression
+
+| Задача | Статус |
+|---|---|
+| Трассировать round transition и syllable choice state после первого раунда | Сделано |
+| Вернуть tapability всех syllable buttons | Сделано |
+| Сделать текущий ordinal слога заметным и читаемым | Сделано |
+| Проверить полный game flow и запушить fix | В работе |
+
 # Fix — restore selected/error hierarchy in completed lesson list
 
 | Задача | Статус |

@@ -762,7 +762,6 @@ public final class HomeTaskManager: ObservableObject {
         guard index >= 0, index < builderQueue.count else { return }
         builderIndex = index
         startNextBuilderRound()
-        assembledBuilder = []
         builderState = .idle
     }
 
@@ -967,7 +966,6 @@ public final class HomeTaskManager: ObservableObject {
         }
 
         startNextBuilderRound()
-        assembledBuilder = []
         builderState = .idle
     }
 
