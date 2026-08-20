@@ -953,15 +953,14 @@ public struct SpeakerDSRoot: View {
 
     @ViewBuilder private var conversationFocusGlassBackdrop: some View {
         ZStack {
-            // Keep the same graphite plane through every Smart Speaker state.
-            // Focus may dim the history, but must not create a second grey scene.
-            PD.ColorToken.background
-                .opacity(0.985)
+            // The root already owns the graphite/canvas plane. Do not paint an opaque
+            // second background here: that was the visible scene swap on mic tap.
+            Color.black.opacity(0.16)
             ConversationLiveAmbientGlow(
                 accent: ThemeManager.shared.currentAccentTintColor,
                 intense: conversationIsRecording
             )
-            .opacity(0.72)
+            .opacity(conversationIsRecording ? 0.46 : 0.26)
         }
     }
 

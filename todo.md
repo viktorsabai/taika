@@ -1,3 +1,12 @@
+# Speaker — instant translation visual continuity audit
+
+| Задача | Статус |
+|---|---|
+| Проверить idle/recording/processing/result state machine | Сделано |
+| Найти резкие background swaps и разные root surfaces | Найден opaque focus swap |
+| Проверить mic block height/position и CTA duplication | Проверено |
+| Исправить visual continuity и проверить E2E flow | В работе |
+
 # Follow-up — neutral diagnostic selection controls
 
 | Задача | Статус |
