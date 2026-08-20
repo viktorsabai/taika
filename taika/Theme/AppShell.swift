@@ -174,6 +174,16 @@ struct AppShell: View {
                             nav.requestTab(1)
                         }
                     )
+                case .gameParkFromDictionary:
+                    GameParkOverlayView(
+                        source: .dictionary,
+                        onDismiss: { overlay.dismiss() },
+                        onOpenCourses: {
+                            overlay.dismiss()
+                            nav.popToRoot()
+                            nav.requestTab(1)
+                        }
+                    )
                 case .favoritesFilters:
                     FavoritesFiltersOverlayView(onDismiss: { overlay.dismiss() })
                 case .favoritesSearch:
@@ -251,7 +261,8 @@ struct AppShell: View {
             if welcomeSeen && onboardingDone && !showBootSplash && firstEntryPhase == .none
                 && overlay.overlay != .dictionaryQuickDrawer
                 && overlay.overlay != .gamePark
-                && overlay.overlay != .gameParkFromFavorites {
+                && overlay.overlay != .gameParkFromFavorites
+                && overlay.overlay != .gameParkFromDictionary {
                 ZStack(alignment: .top) {
                     // The transition layer is behind the header content and extends
                     // into the canvas without becoming an opaque page strip.
@@ -614,7 +625,13 @@ private struct ShellHeaderHost: View {
             onTapFavoritesSearch: { overlay.present(.favoritesSearch) },
             onTapDictionary: {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                overlay.present(.dictionaryQuickDrawer)
+                if selectedTab == 3 {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                        FavoritesFilterState.shared.selectedTab = .dictionary
+                    }
+                } else {
+                    overlay.present(.dictionaryQuickDrawer)
+                }
             },
             dictionaryCount: favorites.smartSpeakerDictionaryCardsDTO.count
         )

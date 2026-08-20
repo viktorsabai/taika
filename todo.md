@@ -1,3 +1,14 @@
+# Cross-app navigation and state audit
+
+| Область | Статус |
+|---|---|
+| Карта экранов, tabs и navigation entry points | Сделано |
+| NavigationIntent, routers, overlays и deep links | Сделано |
+| Managers, session persistence и state ownership | Сделано |
+| Course/lesson/card/game/speaker scope propagation | Сделано; fixes applied |
+| Canonical messages, paywalls и cross-screen action semantics | Сделано |
+| Audit matrix, prioritized fixes и финальный report | Сделано; Simulator E2E ожидает проверки |
+
 # LessonsView — completed grade sheet final polish
 
 | Задача | Статус |

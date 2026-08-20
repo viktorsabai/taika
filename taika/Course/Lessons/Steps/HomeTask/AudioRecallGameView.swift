@@ -133,12 +133,16 @@ struct AudioRecallGameView: View {
         return c == "__favorites__" || c == "--favorites--"
     }
 
+    private var isDictionaryContext: Bool {
+        DictionaryGameSource.isDictionaryCourseId(courseId)
+    }
+
     private var isLearnedParkContext: Bool {
         LearnedGameSource.isPseudoCourseId(courseId)
     }
 
     private var isGlobalParkContext: Bool {
-        isFavoritesContext || isLearnedParkContext
+        isFavoritesContext || isDictionaryContext || isLearnedParkContext
     }
 
     var body: some View {
@@ -203,6 +207,9 @@ struct AudioRecallGameView: View {
         .onDisappear {
             StepAudio.shared.stop()
             GameHeaderStore.shared.config = nil
+            if isDictionaryContext {
+                DictionarySessionSelection.shared.clear()
+            }
         }
         .onChange(of: roundIndex) { _, _ in
             GameHeaderStore.shared.config = headerConfig()

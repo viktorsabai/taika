@@ -1081,6 +1081,7 @@ struct AccentPickerOverlayView: View {
 enum GameParkSource {
     case main
     case favorites
+    case dictionary
 }
 
 // MARK: - Game Park Overlay (random game from completed lesson or from favorites, or CTA)
@@ -1105,6 +1106,7 @@ struct GameParkOverlayView: View {
         switch source {
         case .main: return hasLearnedCards
         case .favorites: return hasFavoriteCards
+        case .dictionary: return DictionaryGameSource.hasPlayableCards
         }
     }
 
@@ -1112,6 +1114,7 @@ struct GameParkOverlayView: View {
         switch source {
         case .main: return "Закрепи выученные фразы в игре"
         case .favorites: return "Закрепи свои сохранённые фразы"
+        case .dictionary: return "Закрепи фразы из личного словаря"
         }
     }
 
@@ -1219,6 +1222,8 @@ struct GameParkOverlayView: View {
                     ))
                 case .favorites:
                     nav.go(.game(courseId: "__favorites__", lessonId: nil, gameType: mode.rawValue))
+                case .dictionary:
+                    nav.go(.game(courseId: DictionaryGameSource.courseId, lessonId: nil, gameType: mode.rawValue))
                 }
             }
         } label: {

@@ -52,6 +52,7 @@ final class OverlayPresenter: ObservableObject {
         case voiceSettings
         case gamePark
         case gameParkFromFavorites
+        case gameParkFromDictionary
         case favoritesFilters
         /// Поиск по избранным фразам (вкладка «Карточки»).
         case favoritesSearch

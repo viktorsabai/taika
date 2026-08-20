@@ -32,6 +32,8 @@ struct GrandDialogueGameView: View {
     @State private var isEvaluating: Bool = false
     @State private var lastScore: Int = 0
     @State private var didRecordReinforcementSession: Bool = false
+    /// Turn ids that failed the pronunciation threshold in this session.
+    @State private var failedTurnIds: Set<String> = []
     @State private var messages: [DialogueMessage] = []
     @State private var isTaikaTyping: Bool = false
     @State private var promptShownTurnIndex: Int = -1
@@ -85,6 +87,14 @@ struct GrandDialogueGameView: View {
         return turns[turnIndex]
     }
 
+    private var isGlobalPseudoSource: Bool {
+        let raw = courseId.trimmingCharacters(in: .whitespacesAndNewlines)
+        return raw == "__favorites__"
+            || raw == "--favorites--"
+            || DictionaryGameSource.isDictionaryCourseId(raw)
+            || LearnedGameSource.isPseudoCourseId(raw)
+    }
+
     private let passThreshold: Int = 75
     private let maxSessionTurns: Int = 12
     private let uiCorner: CGFloat = Theme.Radii.card
@@ -128,6 +138,9 @@ struct GrandDialogueGameView: View {
         .onDisappear {
             stopRecordingIfNeeded()
             GameHeaderStore.shared.config = nil
+            if DictionaryGameSource.isDictionaryCourseId(courseId) {
+                DictionarySessionSelection.shared.clear()
+            }
         }
         .onChange(of: turnIndex) { _, _ in
             enqueuePromptIfNeeded()
@@ -146,16 +159,30 @@ struct GrandDialogueGameView: View {
             GameHeaderStore.shared.config = headerConfig()
         }
         .onChange(of: finished) { _, _ in
-            if finished, !didRecordReinforcementSession, courseId != "__favorites__", !LearnedGameSource.isPseudoCourseId(courseId) {
+            if finished, !didRecordReinforcementSession, !isGlobalPseudoSource {
                 didRecordReinforcementSession = true
                 let total = max(1, turns.count)
                 let percent = max(0, min(100, Int((Double(score) / Double(total) * 100).rounded())))
-                ReinforcementStore.shared.recordSession(
-                    courseId: courseId,
-                    gameType: "grandDialogue",
-                    score: percent,
-                    lessonIds: reinforcementLessonIds ?? []
-                )
+                let sourceEntries = turns.flatMap { turn in
+                    turn.expectedReplies.compactMap { reply -> (courseId: String, lessonId: String, key: String, failed: Bool)? in
+                        let sourceCourse = reply.courseId.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let lesson = reply.lessonId.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let phrase = (reply.item.ru ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                        guard !sourceCourse.isEmpty, !lesson.isEmpty, !phrase.isEmpty else { return nil }
+                        return (sourceCourse, lesson, "\(lesson)|\(phrase)", failedTurnIds.contains(turn.id))
+                    }
+                }
+                let grouped = Dictionary(grouping: sourceEntries) { $0.courseId }
+                for (sourceCourse, entries) in grouped {
+                    ReinforcementStore.shared.recordSession(
+                        courseId: sourceCourse,
+                        gameType: "grandDialogue",
+                        score: percent,
+                        sourceCardKeys: entries.map { $0.key },
+                        failedCardKeys: entries.filter { $0.failed }.map { $0.key },
+                        lessonIds: Array(Set(entries.map { $0.lessonId }))
+                    )
+                }
             }
             GameHeaderStore.shared.config = headerConfig()
         }
@@ -694,6 +721,7 @@ struct GrandDialogueGameView: View {
                 score += 1
                 TaikaVoice.shared.playMatchSuccess()
             } else {
+                failedTurnIds.insert(turn.id)
                 TaikaVoice.shared.playMatchFail()
             }
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -725,6 +753,7 @@ struct GrandDialogueGameView: View {
         score = 0
         finished = false
         didRecordReinforcementSession = false
+        failedTurnIds = []
         statusLine = ""
         lastScore = 0
         isEvaluating = false

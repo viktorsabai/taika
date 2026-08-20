@@ -203,7 +203,7 @@ struct FavoriteView: View {
                 accessibilityLabel: selectedTab == .dictionary ? "Открыть игры для словаря" : "Открыть игры для избранного"
             ) {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                overlay.present(.gameParkFromFavorites)
+                overlay.present(selectedTab == .dictionary ? .gameParkFromDictionary : .gameParkFromFavorites)
             }
         }
     }
