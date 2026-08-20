@@ -1,3 +1,21 @@
+# LessonsView in-progress — убрать лишний reinforcement summary
+
+| Задача | Статус |
+|---|---|
+| Не показывать game/reinforcement summary в основном блоке незавершённого курса | Не начато |
+| Оставить в начатом курсе только учебный прогресс, материалы и следующий урок | Не начато |
+| Показывать зачётку и targeted practice только после завершения курса | Не начато |
+
+# Runtime delivery audit — почему правки не видны
+
+| Задача | Статус |
+|---|---|
+| Сверить локальный HEAD и remote branch с коммитом, который должен тестироваться | Не начато |
+| Проверить фактический LessonsView/CourseView/Game entry point и target membership | Не начато |
+| Найти старые fallback-и, которые продолжают рисовать прежний UI | Не начато |
+| Проверить runtime scope: selected lesson IDs, failed card keys и picker callbacks | Не начато |
+| Собрать и отправить исправление только после подтверждения реального path | Не начато |
+
 # Card-level error queue — targeted practice
 
 | Задача | Статус |

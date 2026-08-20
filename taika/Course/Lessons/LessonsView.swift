@@ -1176,7 +1176,8 @@ extension LessonsView {
                         if !nav.path.isEmpty { nav.path.removeLast() }
                     }
                 },
-                completionSummary: courseIsCompleted ? nil : courseGameSummary,
+                // Reinforcement is a post-course layer. An in-progress course must keep this hero focused on learning.
+                completionSummary: courseIsCompleted ? completedCourseSummary : nil,
                 isCompletedCourse: courseIsCompleted,
                 // In completed mode the training dock owns material selection; avoid a second, oversized picker in the header card.
                                 bottomAccessory: courseIsCompleted ? nil : AnyView(courseMaterialsPicker)
