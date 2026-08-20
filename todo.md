@@ -1503,3 +1503,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Сделать game recommendation rows компактными и не обрезать locked states.
 - [ ] Добавить scroll-safe fallback для completion content, если высоты экрана недостаточно.
 - [ ] Проверить визуальный порядок и push после static validation.
+
+# Regular splash branded ritual
+
+- [ ] Найти текущий regular splash implementation и animation state.
+- [ ] Убрать розовое пятно и собрать графитовую branded composition.
+- [ ] Добавить restrained voice-wave motion и reduced-motion fallback.
+- [ ] Сохранить быстрый launch flow и проверить safe-area/contrast.
+- [ ] Закоммитить и запушить splash redesign.
