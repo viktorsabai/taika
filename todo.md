@@ -1511,3 +1511,10 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Добавить restrained voice-wave motion и reduced-motion fallback.
 - [ ] Сохранить быстрый launch flow и проверить safe-area/contrast.
 - [ ] Закоммитить и запушить splash redesign.
+
+# Completed course card wave flip
+
+- [ ] Найти общий rotating surface и текущий wave background ownership.
+- [ ] Перенести wave layer внутрь той же clipped face/back surface.
+- [ ] Сохранить face/back readability и не допустить bleed за границы карточки.
+- [ ] Проверить 3D flip visually/static и запушить fix.

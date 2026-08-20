@@ -3458,6 +3458,10 @@ public struct CourseLessonCard: View {
                         frontCard
                     }
                 }
+                // Internal card treatment belongs to the same rotating surface as the face.
+                // This keeps the organic waves physically attached during the flip.
+                .overlay { accentTreatmentOverlay }
+                .overlay { courseProWashOverlay }
                 // Only one face is measured at a time (prevents layout shifts).
                 .transition(.opacity)
                 .compositingGroup()
@@ -3465,15 +3469,15 @@ public struct CourseLessonCard: View {
                 .animation(.spring(response: 0.55, dampingFraction: 0.82), value: isFlipped)
             } else {
                 frontCard
+                    .overlay { accentTreatmentOverlay }
+                    .overlay { courseProWashOverlay }
             }
         }
         .animation(.spring(response: 0.34, dampingFraction: 0.86), value: lockedActionHint)
         .frame(width: resolvedSize.width, height: resolvedSize.height)
         .id(courseKey ?? title)
         .compositingGroup()
-        // Pro: только мягкий wash внутри clip — без accent-stroke (обрезал карточку справа).
-        .overlay { accentTreatmentOverlay }
-        .overlay { courseProWashOverlay }
+        // Internal treatments are attached above to the rotating face/back surface.
         .clipShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
         .shadow(color: courseProShadowColor, radius: courseProShadowRadius, y: courseProShadowY)
         .scaleEffect(visualScale)
