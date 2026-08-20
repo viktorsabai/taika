@@ -772,8 +772,8 @@ public final class HomeTaskManager: ObservableObject {
     }
 
     public var builderCanCheck: Bool {
-        guard let round = currentBuilderRound else { return false }
-        return assembledBuilder.count == round.correctPieces.count
+        guard let round = currentBuilderRound, assembledBuilder.count == round.correctPieces.count else { return false }
+        return assembledBuilder.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }
 
     /// Start multi-round builder game from triples pool.
@@ -832,36 +832,22 @@ public final class HomeTaskManager: ObservableObject {
             lessonId: triple.lessonId
         )
 
-        assembledBuilder = []
+        assembledBuilder = Array(repeating: "", count: currentBuilderRound?.slotCount ?? 0)
         builderState = .idle
     }
 
-    /// Append tapped syllable; если выбран слот на замену — заменяем его и снимаем выбор.
+    /// Append tapped syllable into the selected slot, or the first empty slot.
+    /// Slots are independent: the learner may fill them in any order.
+
     @MainActor
     public func appendBuilderPiece(_ piece: String) {
         guard let round = currentBuilderRound else { return }
 
-        if let idx = builderSelectedSlotForReplacement, idx >= 0, idx < assembledBuilder.count {
-            assembledBuilder[idx] = piece
-            builderSelectedSlotForReplacement = nil
-            if assembledBuilder.count == round.correctPieces.count {
-                let isCorrect = assembledBuilder == round.correctPieces
-                if isCorrect {
-                    builderState = .correct
-                    builderScore += 1
-                    builderReinforcementScore += 1
-                } else {
-                    builderState = .wrong
-                    builderMistakeCount += 1
-                }
-            } else {
-                builderState = .assembling
-            }
-            return
-        }
-
-        guard assembledBuilder.count < round.correctPieces.count else { return }
-        assembledBuilder.append(piece)
+        let targetIndex = builderSelectedSlotForReplacement
+            ?? assembledBuilder.firstIndex(where: { $0.isEmpty })
+        guard let idx = targetIndex, assembledBuilder.indices.contains(idx) else { return }
+        assembledBuilder[idx] = piece
+        builderSelectedSlotForReplacement = nil
         builderState = .assembling
     }
 
@@ -869,7 +855,7 @@ public final class HomeTaskManager: ObservableObject {
     @MainActor
     public func checkBuilderAnswer() {
         guard let round = currentBuilderRound else { return }
-        guard assembledBuilder.count == round.correctPieces.count else { return }
+        guard builderCanCheck else { return }
 
         builderSelectedSlotForReplacement = nil
         builderAttemptCount += 1
@@ -891,8 +877,8 @@ public final class HomeTaskManager: ObservableObject {
     /// Remove last syllable (в режиме «неверно» сбрасываем в .assembling, чтобы не показывать красные слоты при неполной сборке).
     @MainActor
     public func removeLastBuilderPiece() {
-        if !assembledBuilder.isEmpty {
-            assembledBuilder.removeLast()
+        if let idx = assembledBuilder.lastIndex(where: { !$0.isEmpty }) {
+            assembledBuilder[idx] = ""
             builderSelectedSlotForReplacement = nil
             if builderState == .wrong {
                 builderState = .assembling
@@ -904,10 +890,10 @@ public final class HomeTaskManager: ObservableObject {
     @MainActor
     public func removeLastBuilderPiece(matching piece: String) {
         guard let idx = assembledBuilder.lastIndex(of: piece) else { return }
-        assembledBuilder.remove(at: idx)
+        assembledBuilder[idx] = ""
         builderSelectedSlotForReplacement = nil
         if builderState == .wrong || builderState == .assembling {
-            builderState = assembledBuilder.isEmpty ? .idle : .assembling
+            builderState = assembledBuilder.allSatisfy({ $0.isEmpty }) ? .idle : .assembling
         }
     }
 
@@ -915,17 +901,21 @@ public final class HomeTaskManager: ObservableObject {
     @MainActor
     public func removeBuilderPiece(at index: Int) {
         guard assembledBuilder.indices.contains(index) else { return }
-        assembledBuilder.remove(at: index)
+        assembledBuilder[index] = ""
         builderSelectedSlotForReplacement = nil
         if builderState == .wrong || builderState == .assembling {
-            builderState = assembledBuilder.isEmpty ? .idle : .assembling
+            builderState = assembledBuilder.allSatisfy({ $0.isEmpty }) ? .idle : .assembling
         }
     }
 
     /// Выбор слота для замены: при тапе по красному слоту запоминаем индекс; следующий тап по слогу в пуле заменит этот слот.
     @MainActor
     public func selectSlotForReplacement(_ index: Int?) {
-        guard builderState == .wrong else { return }
+        guard let index, assembledBuilder.indices.contains(index) else {
+            builderSelectedSlotForReplacement = nil
+            return
+        }
+        guard builderState == .wrong || builderState == .assembling || builderState == .idle else { return }
         builderSelectedSlotForReplacement = index
     }
 
@@ -940,13 +930,13 @@ public final class HomeTaskManager: ObservableObject {
         guard builderState == .wrong,
               let round = currentBuilderRound,
               assembledBuilder.count == round.correctPieces.count else { return [] }
-        return Set(assembledBuilder.indices.filter { assembledBuilder[$0] != round.correctPieces[$0] })
+        return Set(assembledBuilder.indices.filter { !assembledBuilder[$0].isEmpty && assembledBuilder[$0] != round.correctPieces[$0] })
     }
 
     /// Reset builder state (очистить сборку и начать раунд заново).
     @MainActor
     public func resetBuilder() {
-        assembledBuilder = []
+        assembledBuilder = Array(repeating: "", count: currentBuilderRound?.slotCount ?? 0)
         builderSelectedSlotForReplacement = nil
         builderState = .idle
     }

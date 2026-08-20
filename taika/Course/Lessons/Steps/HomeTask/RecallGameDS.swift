@@ -176,9 +176,11 @@ public struct RecallGameView: View {
         .onChange(of: syllableItems.count) { _, _ in
             staggerRevealSyllables()
         }
-        .onChange(of: assembled.count) { _, _ in
+        .onChange(of: assembled) { _, _ in
             // Авто-проверка, когда слоты заполнены — без лишней кнопки.
-            guard !isLocked, isCorrect == nil, assembled.count == slotCount, slotCount > 0 else { return }
+            guard !isLocked, isCorrect == nil, assembled.count == slotCount,
+                  assembled.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }),
+                  slotCount > 0 else { return }
             onCheck()
         }
         .onChange(of: isCorrect) { _, new in
@@ -335,7 +337,7 @@ public struct RecallGameView: View {
                     ForEach(Array(row.enumerated()), id: \.element.offset) { _, item in
                         let index = item.offset
                         let seg = item.segment
-                        let isFilled = index < assembled.count
+                        let isFilled = index < assembled.count && !assembled[index].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         let isWrong = wrongSlotIndices.contains(index)
                         let isSelected = (selectedSlotForReplacement == index)
 
@@ -394,7 +396,7 @@ public struct RecallGameView: View {
 
         let syllableText: String = {
             if isFilled, index < assembled.count { return assembled[index] }
-            return " "
+            return "\(index + 1)"
         }()
 
         let content = VStack(alignment: .center, spacing: 8) {
@@ -405,7 +407,7 @@ public struct RecallGameView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
                         .foregroundStyle(textColor)
-                        .opacity(isFilled ? 1 : 0.001)
+                        .opacity(isFilled ? 1 : 0.62)
                         .frame(minWidth: 32, minHeight: 28)
 
                     if isFilled, !isLocked, isCorrect == nil, !isWrong {
@@ -440,16 +442,12 @@ public struct RecallGameView: View {
         .animation(.spring(response: 0.28, dampingFraction: 0.82), value: isSelected)
         .shadow(color: isSelected ? ThemeManager.shared.currentAccentTintColor.opacity(0.22) : Color.clear, radius: 10, x: 0, y: 0)
 
-        // Тап: красный слот → замена; обычный заполненный → снять слог.
+        // Любой слот можно выбрать: заполнение не обязано идти слева направо.
         if !isLocked, let onTap = onTapSlot {
-            if isWrong || (isFilled && isCorrect == nil) {
-                Button { onTap(index) } label: { content }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(isWrong ? "Заменить слог" : "Снять слог")
-                    .accessibilityHint(isWrong ? "Выбери другой слог из пула" : "Тап снимает слог")
-            } else {
-                content
-            }
+            Button { onTap(index) } label: { content }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isFilled ? "Выбрать слот \(index + 1)" : "Заполнить слот \(index + 1)")
+                .accessibilityHint("Выбери слог из пула")
         } else {
             content
         }

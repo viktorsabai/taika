@@ -483,7 +483,8 @@ public struct HomeTaskView: View {
             let isInUse = rank < (usedByText[text] ?? 0)
             let usedCount = usedByText[text] ?? 0
             let availableCount = syllables.filter { $0 == text }.count
-            let canAdd = !isInUse && usedCount < availableCount && assembled.count < round.slotCount
+            let occupiedCount = assembled.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
+            let canAdd = !isInUse && usedCount < availableCount && occupiedCount < round.slotCount
             // Повторный тап по уже поставленному чипу — снять; в replace — любой свободный/пул.
             let isSelectable = replaceMode || isInUse || canAdd
             return RecallSyllableItem(id: index, text: text, isSelectable: isSelectable, isInUse: isInUse)
@@ -526,14 +527,11 @@ public struct HomeTaskView: View {
                         wrongSlotIndices: store.builderWrongSlotIndices,
                         selectedSlotForReplacement: store.builderSelectedSlotForReplacement,
                         onTapSlot: { idx in
-                            if store.builderState == .wrong {
-                                if store.builderSelectedSlotForReplacement == idx {
-                                    store.clearSlotForReplacement()
-                                } else {
-                                    store.selectSlotForReplacement(idx)
-                                }
-                            } else if store.builderState != .correct {
-                                store.removeBuilderPiece(at: idx)
+                            guard store.builderState != .correct else { return }
+                            if store.builderSelectedSlotForReplacement == idx {
+                                store.clearSlotForReplacement()
+                            } else {
+                                store.selectSlotForReplacement(idx)
                             }
                         },
                         audioText: round.audioText,
@@ -567,9 +565,11 @@ public struct HomeTaskView: View {
                         statusMistakes: store.builderMistakeCount,
                         statusScore: store.builderScore
                     )
-                } else {
+                } else if store.builderState != .finished {
                     TaikaLoadingView(label: "подготовка…", compact: true)
                         .onAppear { startRecallGame() }
+                } else {
+                    Color.clear
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
