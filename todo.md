@@ -1625,3 +1625,12 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Зафиксировать единый главный сценарий и иерархию экранных сообщений.
 - [x] Убрать дубли статуса, mode chips и нижних кнопок без layout jumps.
 - [x] Выполнить static validation и подготовить commit/push.
+
+# Course quality pass: One Wave and Thai for Soul
+
+- [x] Составить карту каталога, уроков, steps, целей и повторений для обоих курсов.
+- [x] Проверить end-to-end сценарии: первый вход, урок, step, игра, Speaker, возврат и продолжение.
+- [x] Проверить стрелки, back navigation, selection, быстрые действия и отсутствие дублирующих CTA.
+- [x] Проверить методическую последовательность, связность русского/тайского материала и покрытие практикой.
+- [x] Сверить completed/in-progress/locked states, диагностику ошибок и синхронизацию прогресса.
+- [x] Исправить подтверждённые проблемы, провести static validation и подготовить один финальный push.

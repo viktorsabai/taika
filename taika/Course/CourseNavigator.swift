@@ -17,9 +17,22 @@ public final class CourseNavigator {
     private var lessonsData: LessonsData { .shared }
     private var courseData: CourseData { .shared }
 
-    // ordered course ids
+    // Ordered course ids preserve catalog order. When advancing from a
+    // course, the caller must use orderedCourses(continuingCourseId:) so the
+    // learner stays inside the current educational category.
     public func orderedCourses() -> [String] {
         courseData.courses.map { $0.courseID }
+    }
+
+    public func orderedCourses(continuingCourseId courseId: String) -> [String] {
+        guard let current = courseData.courses.first(where: { $0.courseID == courseId }) else {
+            return orderedCourses()
+        }
+        let category = current.category.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !category.isEmpty else { return orderedCourses() }
+        return courseData.courses
+            .filter { $0.category.trimmingCharacters(in: .whitespacesAndNewlines) == category }
+            .map { $0.courseID }
     }
 
     // ordered lesson ids for given course
@@ -53,7 +66,7 @@ public final class CourseNavigator {
             if next < lessons.count {
                 return .nextLesson(courseId: courseId, lessonId: lessons[next])
             } else {
-                let courses = orderedCourses()
+                let courses = orderedCourses(continuingCourseId: courseId)
                 if let ci = courses.firstIndex(of: courseId), ci + 1 < courses.count {
                     let nextCourse = courses[ci + 1]
                     if let first = firstLesson(in: nextCourse) {
