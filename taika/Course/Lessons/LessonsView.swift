@@ -771,7 +771,8 @@ public struct LessonsView: View {
                                     launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
                                 },
                                 accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
-                                accentColor: ThemeManager.shared.currentAccentTintColor
+                                accentColor: ThemeManager.shared.currentAccentTintColor,
+                                isCompletedPresentation: false
                             )
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
                         }
