@@ -309,10 +309,13 @@ private extension LessonsView {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(PD.ColorToken.textSecondary)
+                Spacer(minLength: 10)
                 Text(headerTitle)
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(PD.ColorToken.text)
                     .lineLimit(2)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
             completedTaikaFMSection
             courseMaterialsPicker

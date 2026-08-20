@@ -1374,3 +1374,12 @@
 - [ ] Проверить state-dependent arrows, play/game/speaker actions и application line.
 - [ ] Убедиться, что незавершённые карточки не получают completed green affordances.
 - [ ] Выполнить static validation, commit и push.
+
+# LessonsView visual reset
+
+- [ ] Сохранить текущую стрелку назад и выровнять название курса по правой стороне верхней строки.
+- [ ] Убрать тяжёлую зелёную заливку hero и оставить neutral card surface с тонкими jungle-wave линиями.
+- [ ] Уменьшить opacity/contrast waves, чтобы они не пересекали текст и результаты.
+- [ ] Перестроить skill rows в читаемую двухзонную структуру: название/назначение слева, score/status/action справа.
+- [ ] Убрать truncation и диагональное визуальное смещение в результатах.
+- [ ] Проверить density, action affordances и static compile surface перед push.

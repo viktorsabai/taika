@@ -1717,39 +1717,31 @@ private struct LSCompletedJungleWaves: View {
             let w = proxy.size.width
             let h = proxy.size.height
             ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.015, green: 0.075, blue: 0.055),
-                        Color(red: 0.025, green: 0.17, blue: 0.12),
-                        Color(red: 0.08, green: 0.28, blue: 0.22)
-                    ],
-                    startPoint: .bottomLeading,
-                    endPoint: .topTrailing
-                )
+                Color(red: 0.055, green: 0.062, blue: 0.066)
                 RadialGradient(
-                    colors: [Color(red: 0.68, green: 0.90, blue: 0.86).opacity(0.20), .clear],
+                    colors: [Color(red: 0.78, green: 0.90, blue: 0.88).opacity(0.055), .clear],
                     center: .topTrailing,
                     startRadius: 4,
-                    endRadius: max(w, h) * 0.78
+                    endRadius: max(w, h) * 0.82
                 )
                 Path { path in
                     path.move(to: CGPoint(x: -12, y: h * 0.76))
                     path.addCurve(to: CGPoint(x: w * 0.46, y: h * 0.57), control1: CGPoint(x: w * 0.14, y: h * 0.52), control2: CGPoint(x: w * 0.28, y: h * 0.84))
                     path.addCurve(to: CGPoint(x: w + 12, y: h * 0.42), control1: CGPoint(x: w * 0.67, y: h * 0.33), control2: CGPoint(x: w * 0.82, y: h * 0.54))
                 }
-                .stroke(Color(red: 0.72, green: 0.95, blue: 0.90).opacity(0.46), lineWidth: 1.2)
+                .stroke(Color(red: 0.72, green: 0.95, blue: 0.90).opacity(0.19), lineWidth: 1.0)
                 Path { path in
                     path.move(to: CGPoint(x: -12, y: h * 0.87))
                     path.addCurve(to: CGPoint(x: w * 0.42, y: h * 0.68), control1: CGPoint(x: w * 0.10, y: h * 0.74), control2: CGPoint(x: w * 0.28, y: h * 0.94))
                     path.addCurve(to: CGPoint(x: w + 12, y: h * 0.52), control1: CGPoint(x: w * 0.62, y: h * 0.40), control2: CGPoint(x: w * 0.82, y: h * 0.66))
                 }
-                .stroke(Color(red: 0.24, green: 0.82, blue: 0.62).opacity(0.34), lineWidth: 0.9)
+                .stroke(Color(red: 0.36, green: 0.82, blue: 0.68).opacity(0.12), lineWidth: 0.8)
                 Path { path in
                     path.move(to: CGPoint(x: -12, y: h * 0.62))
                     path.addCurve(to: CGPoint(x: w * 0.55, y: h * 0.46), control1: CGPoint(x: w * 0.18, y: h * 0.38), control2: CGPoint(x: w * 0.31, y: h * 0.72))
                     path.addCurve(to: CGPoint(x: w + 12, y: h * 0.30), control1: CGPoint(x: w * 0.72, y: h * 0.23), control2: CGPoint(x: w * 0.86, y: h * 0.39))
                 }
-                .stroke(Color.white.opacity(0.10), lineWidth: 0.8)
+                .stroke(Color.white.opacity(0.07), lineWidth: 0.7)
             }
         }
         .allowsHitTesting(false)
@@ -1857,30 +1849,38 @@ public struct LSCompletedTrainingHero: View {
         let action = skill.isSpeaker ? onSpeaker : onGamePark
         let enabled = action != nil && selectedCount > 0
         let result = skill.score.map { "\($0)%" } ?? (skill.sessions > 0 ? "есть данные" : "нет результата")
-        let detail = skill.sessions > 0 ? "\(skill.sessions) сесс. · \(result)" : "\(skill.subtitle) · первая тренировка впереди"
-        let content = HStack(spacing: 10) {
+        let detail = skill.sessions > 0 ? "\(skill.sessions) сессии" : "первая тренировка впереди"
+        let content = HStack(alignment: .center, spacing: 10) {
             Image(systemName: skill.icon)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.55)))
                 .frame(width: 24)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(skill.title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(PD.ColorToken.text)
-                Text(detail)
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                Text(skill.subtitle)
+                    .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(PD.ColorToken.textSecondary)
                     .lineLimit(1)
+                Text(detail)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
+                    .lineLimit(1)
             }
-            Spacer(minLength: 6)
-            Text(result)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundStyle(skill.score == nil ? AnyShapeStyle(PD.ColorToken.textSecondary) : AnyShapeStyle(PD.ColorToken.text))
-            Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4)))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(result)
+                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(skill.score == nil ? AnyShapeStyle(PD.ColorToken.textSecondary) : AnyShapeStyle(PD.ColorToken.text))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4)))
+            }
+            .frame(width: 72, alignment: .trailing)
         }
-        .padding(.vertical, 11)
+        .padding(.vertical, 12)
         .overlay(alignment: .bottom) { Rectangle().fill(PD.ColorToken.stroke.opacity(0.28)).frame(height: 1) }
         if enabled, let action { Button(action: action) { content }.buttonStyle(.plain) } else { content }
     }
