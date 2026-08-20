@@ -1534,3 +1534,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Сократить подпись до короткого branded cue.
 - [ ] Проверить обычную и reduced-motion анимацию.
 - [ ] Закоммитить и запушить polish.
+
+# LessonsView mastery gradient final
+
+- [ ] Найти текущие mastery green gradient/color usages.
+- [ ] Добавить exact gradient #36F5B0 → #19CFA0.
+- [ ] Подключить его только к completed/mastery accents.
+- [ ] Проверить, что in-progress и PRO colors не изменились.
+- [ ] Закоммитить и запушить color fix.
