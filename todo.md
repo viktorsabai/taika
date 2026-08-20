@@ -1576,3 +1576,10 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Вернуть Speaker глобальный graphite background token как на Main.
 - [x] Выполнить static validation (git diff --check и source audit).
 - [ ] Выполнить device/Xcode build gate check на macOS simulator.
+
+# Course and lesson progress gradient consistency
+
+- [ ] Найти все progress fill/track paths в CourseView и LessonsView.
+- [ ] Сверить их с утверждённым основным gradient token.
+- [ ] Синхронизировать прогресс CourseView и карточек уроков LessonsView.
+- [ ] Выполнить static validation и подготовить commit/push.

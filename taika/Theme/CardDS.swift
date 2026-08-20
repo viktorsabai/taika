@@ -2369,6 +2369,9 @@ public struct TaikaFMSection: View {
 struct CourseInlineProgressView: View {
     let fraction: Double
     let secondaryText: String?
+    /// Единый основной gradient для прогресса курса и урока.
+    let progressFill: AnyShapeStyle
+    /// Компаньон-цвет для компактных текстовых меток.
     let progressColor: Color
 
     @State private var animatedFraction: Double = 0
@@ -2376,10 +2379,12 @@ struct CourseInlineProgressView: View {
     init(
         fraction: Double,
         secondaryText: String? = nil,
+        progressFill: AnyShapeStyle = AnyShapeStyle(ThemeManager.shared.currentAccentFill),
         progressColor: Color = ThemeManager.shared.currentAccentTintColor
     ) {
         self.fraction = fraction
         self.secondaryText = secondaryText
+        self.progressFill = progressFill
         self.progressColor = progressColor
     }
 
@@ -2394,7 +2399,7 @@ struct CourseInlineProgressView: View {
                     .frame(width: w, height: barH)
                     .overlay(
                         RoundedRectangle(cornerRadius: barH / 2, style: .continuous)
-                            .fill(progressColor)
+                            .fill(progressFill)
                             .frame(
                                 width: max(0, w * CGFloat(animatedFraction)),
                                 height: barH
@@ -3421,11 +3426,12 @@ public struct CourseLessonCard: View {
                     let showPlanHint = flipEnabled && !isFlipped && isLearned
                     CourseInlineProgressView(
                          fraction: f,
-                         secondaryText: isLearned
-                             ? "выучено · закрепление доступно"
-                             : (showPlanHint ? "закрепление доступно" : nil),
-                             progressColor: ThemeManager.shared.currentAccentTintColor
-                     )
+                        secondaryText: isLearned
+                            ? "выучено · закрепление доступно"
+                            : (showPlanHint ? "закрепление доступно" : nil),
+                        progressFill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                        progressColor: ThemeManager.shared.currentAccentTintColor
+                    )
                 }
             }
         )
