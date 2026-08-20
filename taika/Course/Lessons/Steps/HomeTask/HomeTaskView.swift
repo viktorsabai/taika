@@ -618,10 +618,13 @@ public struct HomeTaskView: View {
                     didRecordReinforcementSession = true
                     let total = max(1, store.builderTotalRounds)
                     let percent = max(0, min(100, Int((Double(store.builderScore) / Double(total) * 100).rounded())))
+                    let sourceKeys = store.builderQueue.map(HomeTaskManager.builderCardKey)
                     ReinforcementStore.shared.recordSession(
                         courseId: courseId,
                         gameType: "recall",
                         score: percent,
+                        sourceCardKeys: sourceKeys,
+                        failedCardKeys: Array(store.builderSessionFailedKeys),
                         lessonIds: reinforcementLessonScope
                     )
                 }
@@ -680,11 +683,11 @@ public struct HomeTaskView: View {
         return triples
     }
 
-    private func startRecallGame() {
-        let triples = recallTriples()
-        guard !triples.isEmpty else { return }
+    private func startRecallGame(from triples: [HomeTaskManager.LearnedTriple]? = nil) {
+        let pool = triples ?? recallTriples()
+        guard !pool.isEmpty else { return }
         didRecordReinforcementSession = false
-        store.startBuilderRound(from: triples)
+        store.startBuilderRound(from: pool)
     }
 
     /// Оверлей завершения Recall: счёт, время, Повторить / Следующая игра (не кружить по кругу).
@@ -716,6 +719,12 @@ public struct HomeTaskView: View {
                         continueLearningTitle: resolvedContinueTitle,
                         nextGameTitle: nextGameTitle,
                         onRepeat: { startRecallGame() },
+                        errorCount: store.builderSessionFailedKeys.count,
+                        onRepeatErrors: store.builderSessionFailedKeys.isEmpty ? nil : {
+                            let failed = recallTriples().filter { store.builderSessionFailedKeys.contains(HomeTaskManager.builderCardKey($0)) }
+                            guard !failed.isEmpty else { return }
+                            startRecallGame(from: failed)
+                        },
                         onNextGame: onNextGame,
                         onSpeakerPractice: onSpeakerPractice,
                         onContinueLearning: onContinueLearning,
@@ -922,7 +931,7 @@ public struct HomeTaskView: View {
                 gameType: "match",
                 score: percent,
                 failedCardKeys: failed.compactMap(Self.cardKey),
-                clearedCardKeys: matched.compactMap(Self.cardKey),
+                // Не очищаем общий error queue после одного режима.
                 lessonIds: scope
             )
             return
@@ -945,7 +954,8 @@ public struct HomeTaskView: View {
                 score: percent,
                 sourceCardKeys: sourceKeys,
                 failedCardKeys: failed.filter { ($0.courseId ?? courseId) == sourceCourseId }.compactMap(Self.cardKey),
-                clearedCardKeys: triples.compactMap(Self.cardKey),
+                // Не очищаем общий error queue после одного режима: курс имеет три разных инструмента.
+                // Очистка должна происходить отдельным завершением corrective loop, а не этой сессией.
                 lessonIds: reinforcementLessonScope
             )
         }

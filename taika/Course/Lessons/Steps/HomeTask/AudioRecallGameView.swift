@@ -83,6 +83,8 @@ struct AudioRecallGameView: View {
     @State private var score: Int = 0
     @State private var mistakes: Int = 0
     @State private var failedTargetRUs: Set<String> = []
+    /// Ошибки только текущей сессии для действия «Повторить ошибки».
+    @State private var sessionFailedTargetRUs: Set<String> = []
     @State private var finished: Bool = false
     @State private var shuffleLessonOrder: Bool = false
     @State private var didLoadSession: Bool = false
@@ -238,14 +240,13 @@ struct AudioRecallGameView: View {
                     guard let phrase = key.split(separator: "|", maxSplits: 1).last else { return false }
                     return failedTargetRUs.contains(String(phrase).lowercased())
                 }
-                let clearedKeys = sourceCardKeys.filter { key in !failedKeys.contains(key) }
                 ReinforcementStore.shared.recordSession(
                     courseId: courseId,
                     gameType: "audioRecall",
                     score: percent,
                     sourceCardKeys: sourceCardKeys,
                     failedCardKeys: failedKeys,
-                    clearedCardKeys: clearedKeys,
+                    // Не очищаем общий error queue после одного из трёх режимов.
                     lessonIds: reinforcementLessonIds ?? (lessonId.isEmpty ? [] : [lessonId])
                 )
             }
@@ -629,7 +630,9 @@ struct AudioRecallGameView: View {
             TaikaVoice.shared.play(.success)
             scheduleAutoAdvance()
         } else {
-            failedTargetRUs.insert(currentTargetRU.lowercased())
+            let failedKey = AudioRecallModel.normalizePhrase(target).lowercased()
+            failedTargetRUs.insert(failedKey)
+            sessionFailedTargetRUs.insert(failedKey)
             mistakes += 1
             TaikaGameFeedbackHaptics.mismatch()
             TaikaVoice.shared.playMatchFail()
@@ -793,6 +796,8 @@ struct AudioRecallGameView: View {
         elapsedSeconds = 0
         score = 0
         mistakes = 0
+        failedTargetRUs = []
+        sessionFailedTargetRUs = []
         finished = false
         if !rounds.isEmpty {
             loadRound(at: 0)
@@ -937,7 +942,25 @@ struct AudioRecallGameView: View {
                 reloadSession()
                 GameHeaderStore.shared.config = headerConfig()
             },
-            errorCount: failedTargetRUs.count,
+            errorCount: sessionFailedTargetRUs.count,
+            onRepeatErrors: sessionFailedTargetRUs.isEmpty ? nil : {
+                let failed = rounds.filter {
+                    sessionFailedTargetRUs.contains(AudioRecallModel.normalizePhrase($0.targetRU).lowercased())
+                }
+                guard !failed.isEmpty else { return }
+                rounds = AudioRecallModel.buildRounds(
+                    from: failed.map { (item: $0.item, lessonId: $0.lessonId) },
+                    shuffleOrder: true
+                )
+                roundIndex = 0
+                elapsedSeconds = 0
+                score = 0
+                mistakes = 0
+                failedTargetRUs = []
+                sessionFailedTargetRUs = []
+                finished = false
+                loadRound(at: 0)
+            },
             onNextGame: onNextGame.map { next in
                 {
                     StepAudio.shared.stop()

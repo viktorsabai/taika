@@ -2050,13 +2050,23 @@ public struct LSCompletedLessonList: View {
             if !weakIds.isEmpty, let onTrainWeak {
                 Button(action: onTrainWeak) {
                     HStack(alignment: .center, spacing: 11) {
-                        Circle()
-                            .fill(diagnosticSignal.opacity(0.82))
-                            .frame(width: 7, height: 7)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Начать с ошибок")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(PD.ColorToken.text)
+                        ZStack {
+                            Circle()
+                                .fill(accentFill.opacity(0.18))
+                                .frame(width: 26, height: 26)
+                            Circle()
+                                .fill(accentFill)
+                                .frame(width: 7, height: 7)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(spacing: 7) {
+                                Text("Начать с ошибок")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(PD.ColorToken.text)
+                                Text("\(weakCardCount) карточки")
+                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(AnyShapeStyle(accentFill))
+                            }
                             Text(weakFocusDetail)
                                 .font(.system(size: 12, weight: .regular))
                                 .foregroundStyle(PD.ColorToken.textSecondary)
@@ -2067,7 +2077,16 @@ public struct LSCompletedLessonList: View {
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(AnyShapeStyle(accentFill))
                     }
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 11)
+                    .padding(.horizontal, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(accentFill.opacity(0.07))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(accentFill.opacity(0.24), lineWidth: 1)
+                    )
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -2131,7 +2150,11 @@ public struct LSCompletedLessonList: View {
 
     /// A quiet diagnostic marker; the course dashboard should not look like an incident tracker.
     private var diagnosticSignal: Color {
-        PD.ColorToken.textSecondary.opacity(0.78)
+        accentFill
+    }
+
+    private var weakCardCount: Int {
+        max(1, weakIds.count)
     }
 
     private var diagnosticsSummary: String {
@@ -2143,7 +2166,7 @@ public struct LSCompletedLessonList: View {
 
     private var weakFocusDetail: String {
         let lessonWord = weakIds.count == 1 ? "урок" : "урока"
-        return "\(weakIds.count) \(lessonWord) требуют внимания · остальные можно оставить на потом"
+        return "\(weakIds.count) \(lessonWord) требуют точечного повторения"
     }
 
     private func statusText(for id: String, weak: Bool) -> String {

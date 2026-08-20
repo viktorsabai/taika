@@ -1,3 +1,13 @@
+# Error queue runtime — partial game completion и заметный UI
+
+| Задача | Статус |
+|---|---|
+| Проверить, почему ошибка исчезает после одной игры из трёх режимов | Не начато |
+| Разделить cleared keys по game mode и не очищать общий error queue преждевременно | Не начато |
+| Передавать session failed keys в Repeat Errors вместо полного исходного scope | Не начато |
+| Сделать error row заметным, но нативным для Taika, без Jira-плашки | Не начато |
+| Проверить AudioRecall, Match, Recall, Speaker и partial completion | Не начато |
+
 # AudioRecall compile fix — round tuple и canonical key strings
 
 | Задача | Статус |

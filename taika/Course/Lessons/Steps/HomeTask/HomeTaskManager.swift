@@ -724,9 +724,17 @@ public final class HomeTaskManager: ObservableObject {
     @Published public private(set) var builderQueue: [LearnedTriple] = []
     @Published public private(set) var builderIndex: Int = 0
     @Published public private(set) var builderScore: Int = 0
+    /// Ошибочные карточки только текущей builder-сессии; не смешивать с persisted course queue.
+    @Published public private(set) var builderSessionFailedKeys: Set<String> = []
 
     public var builderTotalRounds: Int {
         builderQueue.count
+    }
+
+    public static func builderCardKey(_ triple: LearnedTriple) -> String {
+        let lesson = (triple.lessonId ?? "").trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "_", with: "-").lowercased()
+        let phrase = triple.ru.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return "\(lesson)|\(phrase)"
     }
 
     /// Display info for each round (for carousel). Question, phonetic target, thai.
@@ -789,6 +797,7 @@ public final class HomeTaskManager: ObservableObject {
         builderScore = 0
         builderAttemptCount = 0
         builderMistakeCount = 0
+        builderSessionFailedKeys = []
         assembledBuilder = []
         builderState = .idle
 
@@ -869,6 +878,9 @@ public final class HomeTaskManager: ObservableObject {
         } else {
             builderState = .wrong
             builderMistakeCount += 1
+            if let triple = builderQueue.indices.contains(builderIndex) ? Optional(builderQueue[builderIndex]) : nil {
+                builderSessionFailedKeys.insert(Self.builderCardKey(triple))
+            }
             // keep assembled pieces so UI can highlight mismatch,
             // reset will be handled explicitly by UI or next attempt
         }
