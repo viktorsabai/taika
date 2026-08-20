@@ -173,6 +173,12 @@ struct StepView: View {
 
     // Helper: are we in overlay mode?
     private var isOverlay: Bool { scope == .overlay }
+    /// A lesson opened explicitly from LessonsView must remain in the learning surface.
+    /// This guard is intentionally at render level because persisted progress can emit
+    /// completion state again while StepView hydrates its cards.
+    private var shouldRenderLessonSummary: Bool {
+        showLessonSummary && !suppressInitialCompletionSummary
+    }
 
     // Compact (progress-only) projections
     private var learnedForProgress: Set<Int> {
@@ -1323,7 +1329,7 @@ struct StepView: View {
 
         stack
             .animation(.easeInOut(duration: 0.18), value: showLessonSummary)
-            .allowsHitTesting(isOverlay ? true : !showLessonSummary)
+            .allowsHitTesting(isOverlay ? true : !shouldRenderLessonSummary)
     }
 
     var body: some View {
@@ -1334,7 +1340,7 @@ struct StepView: View {
                         .ignoresSafeArea()
                 }
                 stepMainContent(proxy)
-                if showLessonSummary {
+                if shouldRenderLessonSummary {
                     summaryOverlayView()
                 }
             }

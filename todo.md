@@ -1,3 +1,12 @@
+# Fix — trace actual completed lesson arrow callback
+
+| Задача | Статус |
+|---|---|
+| Найти фактический callback стрелки в `LSLessonCardV`/`LSLessonReels` | Не начато |
+| Проверить, не открывает ли стрелка completion route или `showLessonSummary` напрямую | Не начато |
+| Исправить фактический route/state path и проверить все callbacks | Не начато |
+| Закоммитить и запушить runtime fix | Не начато |
+
 # Fix — completed lesson opens completion screen from list
 
 | Задача | Статус |

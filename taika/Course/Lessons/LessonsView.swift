@@ -158,7 +158,7 @@ private extension LessonsView {
     private func openCompletedLesson(_ lessonId: String) {
         guard openLessonIfAllowed(lessonId), let cid = currentCourse?.courseID else { return }
         selectedLessonId = lessonId
-        nav.go(.lesson(courseId: cid, lessonId: lessonId, presentation: .canonical))
+        nav.go(.lesson(courseId: cid, lessonId: lessonId, presentation: .directStart))
     }
 
     private var reinforcementLessonScores: [String: Int] {
