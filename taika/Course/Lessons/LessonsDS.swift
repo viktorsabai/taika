@@ -1765,6 +1765,8 @@ public struct LSCompletedTrainingHero: View {
     public let onGamePark: (() -> Void)?
     public let onGameMode: ((String) -> Void)?
     public let onProLocked: (() -> Void)?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var didReveal = false
 
     public init(
         stats: LSCourseStats,
@@ -1808,35 +1810,41 @@ public struct LSCompletedTrainingHero: View {
                 .kerning(0.8)
                 .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
 
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Результат закрепления")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.text)
-                    Text(recommendation)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .lineLimit(2)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(scoreText + (stats.reinforcementScore == nil ? "" : "%"))
+                            .font(.system(size: 36, weight: .bold, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(PD.ColorToken.text)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.78)
+                        Text("эффективность")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                    .frame(width: 88, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Результат закрепления")
+                            .font(.system(size: 19, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.text)
+                        Text(recommendation)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .lineLimit(2)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                Spacer(minLength: 8)
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(scoreText + (stats.reinforcementScore == nil ? "" : "%"))
-                        .font(.system(size: 28, weight: .semibold, design: .monospaced))
-                        .monospacedDigit()
-                        .foregroundStyle(PD.ColorToken.text)
-                    Text("эффективность")
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
+                HStack(alignment: .top, spacing: 0) {
+                    metric(value: "\(stats.gameCoveredCards)", label: "карточки")
+                    metric(value: "\(stats.gameSessions)", label: "игровые сессии")
+                    metric(value: "\(selectedCount)/\(totalLessons)", label: "выбрано")
                 }
+                .foregroundStyle(PD.ColorToken.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-
-            HStack(alignment: .top, spacing: 0) {
-                metric(value: "\(stats.gameCoveredCards)", label: "карточки")
-                metric(value: "\(stats.gameSessions)", label: "игровые сессии")
-                metric(value: "\(selectedCount)/\(totalLessons)", label: "выбрано")
-            }
-            .foregroundStyle(PD.ColorToken.text)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .opacity(didReveal ? 1 : 0)
+            .offset(y: didReveal ? 0 : 5)
 
             VStack(alignment: .leading, spacing: 0) {
                 Text("ПРЕДМЕТЫ ЗАЧЁТКИ")
@@ -1851,8 +1859,23 @@ public struct LSCompletedTrainingHero: View {
         }
         .padding(14)
         .background {
-            LSCompletedJungleWaves()
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            ZStack {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color.white.opacity(0.035))
+                LSCompletedJungleWaves()
+                    .opacity(0.42)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            }
+        }
+        .onAppear {
+            guard !didReveal else { return }
+            if reduceMotion {
+                didReveal = true
+            } else {
+                withAnimation(.easeOut(duration: 0.32)) {
+                    didReveal = true
+                }
+            }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Главный блок тренировки курса")
@@ -1872,7 +1895,7 @@ public struct LSCompletedTrainingHero: View {
         let content = HStack(alignment: .center, spacing: 10) {
             Image(systemName: skill.icon)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.55)))
+                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(0.82)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.55)))
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 3) {
                 Text(skill.title)
@@ -1892,7 +1915,7 @@ public struct LSCompletedTrainingHero: View {
                 if skill.isProLocked {
                     Image(systemName: "crown.fill")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(0.86)))
                     Text(result)
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .foregroundStyle(PD.ColorToken.textSecondary)
@@ -1914,7 +1937,7 @@ public struct LSCompletedTrainingHero: View {
                 }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4)))
+                    .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(0.82)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4)))
             }
             .frame(width: 92, alignment: .trailing)
         }
@@ -1924,13 +1947,18 @@ public struct LSCompletedTrainingHero: View {
     }
 
     private func metric(value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             Text(value)
-                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .font(.system(size: 22, weight: .bold, design: .monospaced))
                 .monospacedDigit()
+                .foregroundStyle(PD.ColorToken.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
             Text(label.uppercased())
                 .font(.system(size: 9, weight: .semibold, design: .monospaced))
                 .foregroundStyle(PD.ColorToken.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.trailing, 8)

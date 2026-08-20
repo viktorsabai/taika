@@ -1471,3 +1471,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Перенести back-face actions вниз, left-align, в outline-only Warmup-style controls.
 - [ ] Увеличить action text readability без filled green/black button blocks.
 - [ ] Проверить completed face/back и in-progress card states статически.
+
+# Completed LessonsView grade-sheet refinement
+
+- [ ] Снизить насыщенность green/wave background так, чтобы он не конкурировал с результатами.
+- [ ] Свести главный score и три achievement metrics в одну ровную композицию с одинаковыми колонками.
+- [ ] Добавить restrained appear animation для score/metrics с prefers-reduced-motion guard.
+- [ ] Вернуть стрелке в lesson row открытие самого урока.
+- [ ] Оставить отдельный явный selection control для сбора уроков в reinforcement.

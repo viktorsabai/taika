@@ -1487,49 +1487,25 @@ extension LessonsView {
                     }
                 }
             },
-            onTapAccessory: isTheoryBonusCourse || isCompletedCourse ? nil : { item in
+            onTapAccessory: isTheoryBonusCourse ? nil : { item in
                 let arr = lessonsSorted
                 guard item.index >= 0 && item.index < arr.count else { return }
-
                 let lid = arr[item.index].lessonID
-
-                guard let cid = currentCourse?.courseID,
-                      let progress = lessonsManager.lessonProgress(courseId: cid, lessonId: lid)
-                else { return }
-
-                let percent = progress.percent
-
-                // 1️⃣ Completed → show game picker
-                if percent >= 1.0 {
-                    guard openLessonIfAllowed(lid) else { return }
-
-                    selectedGameLessonId = lid
-                    selectedGameType = .match
-
-                    frozenSnapshot = captureWindowSnapshot()
-
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                        showGameOverlay = true
-                        showGameModePicker = true
-                    }
-
-                }
-                // 2️⃣ In progress → redirect user back to lesson (clean UX, no modal spam)
-                else if percent > 0 {
-                    guard openLessonIfAllowed(lid) else { return }
-
-                    selectedLessonId = lid
-                    nav.go(.lesson(
-                        courseId: currentCourse?.courseID ?? "",
-                        lessonId: lid,
-                        presentation: .canonical
-                    ))
-
-                }
-                // 3️⃣ Not started / locked → subtle feedback only
-                else {
+                guard openLessonIfAllowed(lid) else {
                     UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    return
                 }
+                LSLessonActivity.mark(lid)
+                if let cid = currentCourse?.courseID {
+                    UserSession.shared.markActive(courseId: cid, lessonId: lid)
+                    CarouselScrollPersistence.setLessonReelIndex(courseId: cid, index: item.index)
+                }
+                selectedLessonId = lid
+                nav.go(.lesson(
+                    courseId: currentCourse?.courseID ?? "",
+                    lessonId: lid,
+                    presentation: .canonical
+                ))
             },
             onSpeaker: isTheoryBonusCourse || isCompletedCourse ? nil : { item in
                 guard let cid = currentCourse?.courseID else { return }
