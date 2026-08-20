@@ -1,3 +1,11 @@
+# Compile fix — remove stale statusText reference
+
+| Задача | Статус |
+|---|---|
+| Удалить устаревший локальный вызов `statusText` после перехода на lesson metrics | Не начато |
+| Проверить остальные `statusText` references и diff | Не начато |
+| Собрать и отправить compile fix | Не начато |
+
 # LessonsView — старт урока и читаемая статистика строки
 
 | Задача | Статус |

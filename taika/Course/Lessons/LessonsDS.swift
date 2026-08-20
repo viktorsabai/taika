@@ -2109,7 +2109,6 @@ public struct LSCompletedLessonList: View {
                 ForEach(items) { item in
                     let selected = selectedIds.contains(item.id)
                     let weak = weakIds.contains(item.id)
-                    let lessonStatus = statusText(for: item.id, weak: weak)
                     HStack(spacing: 11) {
                         Button { onToggle(item.id) } label: {
                             HStack(spacing: 11) {
