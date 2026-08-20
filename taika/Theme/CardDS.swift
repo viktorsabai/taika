@@ -3226,16 +3226,19 @@ public struct CourseLessonCard: View {
             switch backFaceKind {
             case .lessonCompletion:
                 VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
-                        Text(reinforcementScore != nil && pronunciationPercent != nil ? "зачёт получен" : "урок выучен")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(Color.white.opacity(0.96))
+                            .font(.system(size: 13, weight: .bold))
+                        Text("УРОК ПРОЙДЕН")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .kerning(0.35)
                     }
+                    .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(Capsule(style: .continuous).fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient)))
 
-                    Text("Зачёт по уроку")
+                    Text("ЗАЧЁТ ПО УРОКУ")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(Color.white.opacity(0.70))
                         .textCase(.uppercase)
@@ -3291,17 +3294,19 @@ public struct CourseLessonCard: View {
 
             case .courseGradeSheet:
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 7) {
+                    HStack(spacing: 6) {
                         Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
-                        Text("ЗАЧЁТ ПО КУРСУ")
-                            .font(.system(size: 14, weight: .bold, design: .monospaced))
-                            .kerning(0.4)
-                            .foregroundStyle(Color.white.opacity(0.98))
+                            .font(.system(size: 13, weight: .bold))
+                        Text("КУРС ПРОЙДЕН")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .kerning(0.35)
                     }
+                    .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(Capsule(style: .continuous).fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient)))
 
-                    Text("Результат уже есть. Закрепи его, чтобы навык не ушёл из памяти.")
+                    Text("ЗАЧЁТ ПО КУРСУ · результат уже есть. Закрепи его, чтобы навык не ушёл из памяти.")
                         .font(.system(size: 11, weight: .regular))
                         .foregroundStyle(Color.white.opacity(0.62))
                         .lineSpacing(1)

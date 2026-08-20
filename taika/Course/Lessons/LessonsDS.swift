@@ -1688,6 +1688,203 @@ public struct LSCompletedLessonOption: Identifiable, Hashable {
     }
 }
 
+/// The completed-course hero: reinforcement is the primary task, not the lesson catalog.
+public struct LSCompletedTrainingHero: View {
+    public let stats: LSCourseStats
+    public let selectedCount: Int
+    public let totalLessons: Int
+    public let weakCount: Int
+    public let onSpeaker: (() -> Void)?
+    public let onGamePark: (() -> Void)?
+
+    public init(
+        stats: LSCourseStats,
+        selectedCount: Int,
+        totalLessons: Int,
+        weakCount: Int,
+        onSpeaker: (() -> Void)? = nil,
+        onGamePark: (() -> Void)? = nil
+    ) {
+        self.stats = stats
+        self.selectedCount = selectedCount
+        self.totalLessons = totalLessons
+        self.weakCount = weakCount
+        self.onSpeaker = onSpeaker
+        self.onGamePark = onGamePark
+    }
+
+    private var scoreText: String { stats.reinforcementScore.map(String.init) ?? "—" }
+    private var recommendation: String {
+        if selectedCount == 0 { return "Выбери уроки ниже, чтобы собрать следующую тренировку" }
+        if weakCount > 0 { return "Начни с ошибок — так закрепление будет эффективнее" }
+        return "Поддержи результат коротким повторением сегодня"
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 11, weight: .bold))
+                        Text("КУРС ПРОЙДЕН")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .kerning(0.35)
+                    }
+                    .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(Capsule(style: .continuous).fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient)))
+                    Text("ТРЕНИРОВКА КУРСА")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .kerning(0.8)
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
+                    Text("Закрепление навыка")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.text)
+                    Text(recommendation)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(2)
+                }
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(scoreText + (stats.reinforcementScore == nil ? "" : "%"))
+                        .font(.system(size: 30, weight: .semibold, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(PD.ColorToken.text)
+                    Text("эффективность")
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+            }
+
+            HStack(spacing: 0) {
+                metric(value: "\(stats.gameCoveredCards)", label: "карточек")
+                Divider().frame(height: 28).opacity(0.35)
+                metric(value: "\(stats.gameSessions)", label: "игр")
+                Divider().frame(height: 28).opacity(0.35)
+                metric(value: "\(selectedCount)/\(totalLessons)", label: "выбрано")
+            }
+            .foregroundStyle(PD.ColorToken.text)
+
+            VStack(spacing: 0) {
+                actionRow(icon: "mic.fill", title: "Закрепить в Спикере", detail: "Произношение выбранных уроков", enabled: onSpeaker != nil && selectedCount > 0, action: onSpeaker)
+                actionRow(icon: "gamecontroller.fill", title: "Повторить в игре", detail: "Проверка памяти по этому же набору", enabled: onGamePark != nil && selectedCount > 0, action: onGamePark)
+            }
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.30)))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(TaikaMasteryTokens.greenGlow.opacity(0.55), lineWidth: 1)
+                )
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Главный блок тренировки курса")
+    }
+
+    private func metric(value: String, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.system(size: 16, weight: .semibold, design: .monospaced))
+                .monospacedDigit()
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func actionRow(icon: String, title: String, detail: String, enabled: Bool, action: (() -> Void)?) -> some View {
+        let content = HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
+                .frame(width: 22, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(enabled ? PD.ColorToken.text : PD.ColorToken.textSecondary.opacity(0.55))
+                Text(detail)
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(enabled ? 0.82 : 0.45))
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.42)))
+        }
+        .padding(.vertical, 11)
+        .overlay(alignment: .bottom) { Rectangle().fill(PD.ColorToken.stroke.opacity(0.35)).frame(height: 1) }
+
+        if enabled, let action { Button(action: action) { content }.buttonStyle(.plain) } else { content }
+    }
+}
+
+/// Compact list used only after a course is fully completed.
+public struct LSCompletedLessonList: View {
+    public let items: [LS.Item]
+    public let selectedIds: Set<String>
+    public let weakIds: Set<String>
+    public let onToggle: (String) -> Void
+
+    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, onToggle: @escaping (String) -> Void) {
+        self.items = items
+        self.selectedIds = selectedIds
+        self.weakIds = weakIds
+        self.onToggle = onToggle
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("УРОКИ ДЛЯ ЗАКРЕПЛЕНИЯ")
+                    .taikaSectionTitleStyle()
+                Spacer(minLength: 8)
+                Text("\(selectedIds.count) выбрано")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
+            }
+
+            VStack(spacing: 0) {
+                ForEach(items) { item in
+                    let selected = selectedIds.contains(item.id)
+                    let weak = weakIds.contains(item.id)
+                    Button { onToggle(item.id) } label: {
+                        HStack(spacing: 11) {
+                            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 19, weight: .semibold))
+                                .foregroundStyle(selected ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(item.title)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(PD.ColorToken.text)
+                                    .lineLimit(1)
+                                Text(weak ? "Нужно повторить · ошибка в закреплении" : "Пройден · готов к тренировке")
+                                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(weak ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                            }
+                            Spacer(minLength: 6)
+                            Image(systemName: weak ? "waveform.path.ecg" : "checkmark")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(weak ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.vertical, 12)
+                    .overlay(alignment: .bottom) { Rectangle().fill(PD.ColorToken.stroke.opacity(0.32)).frame(height: 1) }
+                }
+            }
+        }
+        .padding(.top, 4)
+    }
+}
+
 /// Compact practice surface: completed scope first, Dictionary-style actions second.
 public struct LSCoursePracticeDock: View {
     public let stats: LSCourseStats
@@ -1843,15 +2040,7 @@ public struct LSCoursePracticeDock: View {
                 )
             }
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.16)))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(TaikaMasteryTokens.greenGlow.opacity(0.34), lineWidth: 1)
-                )
-        )
+        .padding(.top, 2)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Закрепление пройденных уроков")
     }

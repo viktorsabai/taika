@@ -14,6 +14,7 @@ public final class LessonsHeaderStore: ObservableObject {
     @Published public private(set) var resetRequested: Bool = false
     /// Инкремент при setActions/clearActions — чтобы AppShell пересобрал хедер с актуальными замыканиями.
     @Published public private(set) var actionsRevision: UInt = 0
+    @Published public private(set) var isCompletedCourse: Bool = false
 
     public var onSpeaker: (() -> Void)?
     public var onReinforce: (() -> Void)?
@@ -38,5 +39,10 @@ public final class LessonsHeaderStore: ObservableObject {
         onSpeaker = nil
         onReinforce = nil
         actionsRevision &+= 1
+    }
+
+    public func setCompletedCourse(_ completed: Bool) {
+        guard isCompletedCourse != completed else { return }
+        isCompletedCourse = completed
     }
 }

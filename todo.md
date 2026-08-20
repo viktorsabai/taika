@@ -1297,3 +1297,14 @@
 - [ ] Сделать нижнюю training panel главным героем: selected count, ошибки, Speaker и Game Park.
 - [ ] Проверить, что выбор нескольких уроков не выглядит как одиночный dropdown и handoff сохраняет набор.
 - [ ] Выполнить static validation и consolidated push.
+
+# Completed LessonsView dashboard redesign
+
+- [ ] В completed mode заменить lesson carousel на главный training dashboard.
+- [ ] Окрасить весь LessonsView content region от header до toolbar boundary в единый jungle-green surface.
+- [ ] Сделать один канонический achievement chip для front и back card faces.
+- [ ] Вынести reinforcement statistics и next-step recommendation в центральный hero block.
+- [ ] Перенести уроки вниз в компактный структурированный список с понятными selection states.
+- [ ] Сделать быстрые действия Speaker/Game Park частью главного training hero/dock, а не вторичным блоком.
+- [ ] Сохранить multi-select и одинаковый selected scope для обоих handoffs.
+- [ ] Выполнить static validation и consolidated push после полного dashboard pass.

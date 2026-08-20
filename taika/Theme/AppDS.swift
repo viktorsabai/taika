@@ -215,6 +215,7 @@ public struct AppHeader: View {
     @EnvironmentObject var theme: ThemeManager
     @ObservedObject private var favoritesFilter = FavoritesFilterState.shared
     @ObservedObject private var favoriteManager = FavoriteManager.shared
+    @ObservedObject private var lessonsHeaderStore = LessonsHeaderStore.shared
 
     public init(
         showSearch: Bool = true,
@@ -686,7 +687,12 @@ public struct AppHeader: View {
         // Continuous canvas: the header is a translucent field that fades into the body,
         // never a separate opaque strip with a visible horizontal seam.
         .background {
-            TaikaLiquidGlassHeaderBackdrop()
+            if lessonsHeaderStore.isCompletedCourse {
+                Rectangle()
+                    .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.18)))
+            } else {
+                TaikaLiquidGlassHeaderBackdrop()
+            }
         }
     }
 

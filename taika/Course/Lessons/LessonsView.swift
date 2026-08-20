@@ -205,6 +205,60 @@ private extension LessonsView {
         return (words, favs, Int(spent.rounded()))
     }
 
+    private var reinforcementCourseStats: LSCourseStats {
+        LSCourseStats(
+            completedLessons: headerProgress.completed,
+            totalLessons: headerProgress.total,
+            learnedWords: courseOverviewStats.learnedWords,
+            favorites: courseOverviewStats.favorites,
+            streakDays: 0,
+            timeMinutes: courseOverviewStats.spentMinutes,
+            gameCoveredCards: currentCourse.map { ReinforcementStore.shared.coveredCardCount(courseId: $0.courseID) } ?? 0,
+            gameSessions: currentCourse.map { ReinforcementStore.shared.gameSessions(courseId: $0.courseID) } ?? 0,
+            reinforcementScore: currentCourse.flatMap { ReinforcementStore.shared.overallScore(courseId: $0.courseID) }
+        )
+    }
+
+    private func launchSpeakerTraining() {
+        guard let cid = currentCourse?.courseID,
+              let firstID = effectiveReinforcementLessonIds.first else { return }
+        let ids = effectiveReinforcementLessonIds
+        SpeakerRequestedCourseId.shared.set(cid, lessonIds: ids)
+        UserSession.shared.markActive(courseId: cid, lessonId: firstID, stepIndex: 0)
+        NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
+        nav.requestTab(2)
+    }
+
+    private func launchGameTraining() {
+        guard !effectiveReinforcementLessonIds.isEmpty else { return }
+        selectedGameLessonId = effectiveReinforcementLessonIds.count == 1 ? effectiveReinforcementLessonIds.first : nil
+        if let cid = currentCourse?.courseID {
+            GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: effectiveReinforcementLessonIds)
+        }
+        lessonsHeaderStore.onReinforce?()
+    }
+
+    @ViewBuilder
+    private var completedTrainingDashboard: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            LSCompletedTrainingHero(
+                stats: reinforcementCourseStats,
+                selectedCount: effectiveReinforcementLessonIds.count,
+                totalLessons: completedLessonOptions.count,
+                weakCount: weakCompletedLessonIds.count,
+                onSpeaker: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { launchSpeakerTraining() },
+                onGamePark: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { launchGameTraining() }
+            )
+
+            LSCompletedLessonList(
+                items: lessonItems(),
+                selectedIds: Set(effectiveReinforcementLessonIds),
+                weakIds: weakCompletedLessonIds,
+                onToggle: toggleTrainingSelection
+            )
+        }
+    }
+
     /// Remaining estimated minutes to finish the whole course.
     private var remainingCourseMinutes: Int {
         guard let cid = currentCourse?.courseID else { return 0 }
@@ -495,7 +549,10 @@ public struct LessonsView: View {
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
 
                 if courseContentMode == .lessons {
-                    if !isCompletedCourse {
+                    if isCompletedCourse {
+                        completedTrainingDashboard
+                            .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    } else {
                         LSSectionTitle("ТАЙКА FM")
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
                             .padding(.top, Theme.Layout.sectionTop)
@@ -508,54 +565,33 @@ public struct LessonsView: View {
                         )
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
                         .padding(.top, Theme.Layout.sectionTitleToContent)
-                    }
 
-                    lessonsReelsSection
-                        .padding(.horizontal, Theme.Layout.pageHorizontal)
-
-                    if !isTheoryBonusCourse {
-                        lessonsTotalsSectionHeader
+                        lessonsReelsSection
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
-                            .padding(.top, Theme.Layout.sectionTop)
 
-                        LSCoursePracticeDock(
-                            stats: LSCourseStats(
-                                completedLessons: headerProgress.completed,
-                                totalLessons: headerProgress.total,
-                                learnedWords: courseOverviewStats.learnedWords,
-                                favorites: courseOverviewStats.favorites,
-                                streakDays: 0,
-                                timeMinutes: courseOverviewStats.spentMinutes,
-                                gameCoveredCards: currentCourse.map { ReinforcementStore.shared.coveredCardCount(courseId: $0.courseID) } ?? 0,
-                                gameSessions: currentCourse.map { ReinforcementStore.shared.gameSessions(courseId: $0.courseID) } ?? 0,
-                                reinforcementScore: currentCourse.flatMap { ReinforcementStore.shared.overallScore(courseId: $0.courseID) }
-                            ),
-                            currentLessonTitle: currentLesson.flatMap { lessonsManager.lessonTitle(for: $0.lessonID) },
+                        if !isTheoryBonusCourse {
+                            lessonsTotalsSectionHeader
+                                .padding(.horizontal, Theme.Layout.pageHorizontal)
+                                .padding(.top, Theme.Layout.sectionTop)
+
+                            LSCoursePracticeDock(
+                                stats: reinforcementCourseStats,
+                                currentLessonTitle: currentLesson.flatMap { lessonsManager.lessonTitle(for: $0.lessonID) },
                                 completedLessons: completedLessonOptions,
                                 weakLessonIds: weakCompletedLessonIds,
                                 selectedLessonIds: selectedReinforcementLessonIds,
-                            onSelectionChange: { ids in
-                                updateReinforcementSelection(ids)
-                            },
-                            onSpeaker: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : {
-                                guard let cid = currentCourse?.courseID else { return }
-                                let ids = effectiveReinforcementLessonIds
-                                guard let firstID = ids.first else { return }
-                                SpeakerRequestedCourseId.shared.set(cid, lessonIds: ids)
-                                UserSession.shared.markActive(courseId: cid, lessonId: firstID, stepIndex: 0)
-                                NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                                nav.requestTab(2)
-                            },
-                            onGamePark: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : {
-                                // The current Games route is course-scoped; preserve the selected scope for the next game launcher pass.
-                                selectedGameLessonId = effectiveReinforcementLessonIds.count == 1 ? effectiveReinforcementLessonIds.first : nil
-                                if let cid = currentCourse?.courseID {
-                                    GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: effectiveReinforcementLessonIds)
+                                onSelectionChange: { ids in
+                                    updateReinforcementSelection(ids)
+                                },
+                                onSpeaker: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : {
+                                    launchSpeakerTraining()
+                                },
+                                onGamePark: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : {
+                                    launchGameTraining()
                                 }
-                                lessonsHeaderStore.onReinforce?()
-                            }
-                        )
-                        .padding(.horizontal, Theme.Layout.pageHorizontal)
+                            )
+                            .padding(.horizontal, Theme.Layout.pageHorizontal)
+                        }
                     }
                 } else {
                     courseLifehacksReels
@@ -767,11 +803,14 @@ let withTasks = base
 
     }
 
-    .onChange(of: selectedLessonId) { _, _ in
+            .onChange(of: selectedLessonId) { _, _ in
 
-        itemsVersion = UUID()
+                itemsVersion = UUID()
 
-    }
+            }
+            .onChange(of: isCompletedCourse) { _, completed in
+                lessonsHeaderStore.setCompletedCourse(completed)
+            }
 
     .onReceive(lessonsManager.$progress) { _ in
 
@@ -847,6 +886,7 @@ let withTasks = base
             .toolbar(Visibility.hidden, for: ToolbarPlacement.navigationBar)
             .onAppear {
                 GameHeaderStore.shared.config = nil
+                lessonsHeaderStore.setCompletedCourse(isCompletedCourse)
                 // Resume the course context instead of resetting the carousel to lesson one.
                 if selectedLessonId == nil {
                     selectedLessonId = lessonId ?? smartResumeLessonId
@@ -883,6 +923,7 @@ let withTasks = base
             .onDisappear {
                 GameHeaderStore.shared.config = nil
                 lessonsHeaderStore.clearActions()
+                lessonsHeaderStore.setCompletedCourse(false)
             }
             .onChange(of: lessonsHeaderStore.resetRequested) { _, requested in
                 if requested {
@@ -963,7 +1004,7 @@ extension LessonsView {
                         if !nav.path.isEmpty { nav.path.removeLast() }
                     }
                 },
-                completionSummary: courseIsCompleted ? completedCourseSummary : courseGameSummary,
+                completionSummary: courseIsCompleted ? nil : courseGameSummary,
                 isCompletedCourse: courseIsCompleted,
                 // In completed mode the training dock owns material selection; avoid a second, oversized picker in the header card.
                 bottomAccessory: courseIsCompleted ? nil : AnyView(courseMaterialsPicker)
