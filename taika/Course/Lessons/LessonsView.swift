@@ -332,12 +332,12 @@ private extension LessonsView {
         ))
     }
 
-    /// Locked game access opens the shared Taika+ paywall, never the game-mode picker.
+    /// Locked game access is a local contextual sheet. The user stays in the course grade sheet
+    /// and can dismiss without losing lesson selection or the current reinforcement context.
     private func showGamesProSheet() {
-        OverlayPresenter.shared.presentPro(
-            reason: .games,
-            courseId: currentCourse?.courseID ?? ""
-        )
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+            showLocalGamesPaywall = true
+        }
     }
 
     @ViewBuilder
@@ -643,6 +643,9 @@ public struct LessonsView: View {
     @State private var showGameModePicker: Bool = false
     @State private var selectedGameType: GameModeType = .match
     @State private var showGameOverlay: Bool = false
+    /// Local paywall sheet for a locked game tapped from the course grade sheet.
+    /// It keeps the LessonsView context instead of presenting the global full-screen paywall.
+    @State private var showLocalGamesPaywall: Bool = false
     @State private var selectedGameLessonId: String? = nil
     /// Material scope currently owned by the game picker; it must survive mode selection.
     @State private var pendingGameLessonIds: [String] = []
@@ -879,7 +882,7 @@ public struct LessonsView: View {
                                         }
                                         frozenSnapshot = nil
                                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                            overlay.presentPro(reason: .games, courseId: cid)
+                                            showLocalGamesPaywall = true
                                         }
                                     } else {
 #if os(iOS)
@@ -1102,13 +1105,30 @@ let withTasks = base
                 lessonsHeaderStore.clearActions()
                 lessonsHeaderStore.setCompletedCourse(false)
             }
-            .onChange(of: lessonsHeaderStore.resetRequested) { _, requested in
+                        .onChange(of: lessonsHeaderStore.resetRequested) { _, requested in
                 if requested {
                     lessonsHeaderStore.clearResetRequest()
                     presentCourseResetOverlay()
                 }
             }
-
+            .sheet(isPresented: $showLocalGamesPaywall) {
+                TaikaPlusPaywallView(
+                    courseId: currentCourse?.courseID,
+                    reason: .games,
+                    onClose: {
+                        showLocalGamesPaywall = false
+                    }
+                )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+                .presentationBackground {
+                    ZStack {
+                        Rectangle().fill(.ultraThinMaterial)
+                        PD.ColorToken.background.opacity(0.92)
+                    }
+                }
+            }
         return withChrome
 }
 }

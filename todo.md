@@ -1,3 +1,12 @@
+# Fix — native Taika+ sheet for locked lesson game
+
+| Задача | Статус |
+|---|---|
+| Найти текущий locked-game flow и каноничный локальный paywall sheet | Не начато |
+| Подключить sheet к игре из зачётки без общего paywall route | Не начато |
+| Проверить закрытие, переход в Taika+ и сохранение LessonsView context | Не начато |
+| Закоммитить и запушить исправление | Не начато |
+
 # Fix — trace actual completed lesson arrow callback
 
 | Задача | Статус |
