@@ -1618,3 +1618,10 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Сделать weak lessons и отсутствие диагностики различимыми в списке.
 - [x] Убрать лишние иконки у предметов «Вспоминание» и «На слух», сохранив строгую зачётку.
 - [x] Определить, нужен ли reset прогресса, выполнить static validation и подготовить commit/push.
+
+# Speaker E2E flow cleanup
+
+- [x] Найти idle/listening/recognition/result states и все дублирующие CTA.
+- [x] Зафиксировать единый главный сценарий и иерархию экранных сообщений.
+- [x] Убрать дубли статуса, mode chips и нижних кнопок без layout jumps.
+- [x] Выполнить static validation и подготовить commit/push.

@@ -1020,7 +1020,11 @@ public struct SpeakerDSRoot: View {
                 .frame(height: 84, alignment: .center)
                 .padding(.horizontal, 8)
 
-            conversationLiveStatusChip
+            // Idle has one clear instruction: tap the sphere. Status and pipeline
+            // become useful only after the user starts a voice action.
+            if isRec || isBusy || conversationIsPracticeFlow {
+                conversationLiveStatusChip
+            }
 
             if isBusy {
                 ConversationLiveProcessTicks()
@@ -1028,8 +1032,10 @@ public struct SpeakerDSRoot: View {
                     .transition(.opacity)
             }
 
-            conversationLivePipelineHint
-                .padding(.top, 2)
+            if isRec || isBusy || conversationIsPracticeFlow {
+                conversationLivePipelineHint
+                    .padding(.top, 2)
+            }
         }
         .frame(maxWidth: .infinity)
     }
@@ -2010,32 +2016,40 @@ public struct SpeakerDSRoot: View {
         conversationUnifiedInputBar
     }
 
-    /// Одна полоса: голос (основное) + клавиатура (раскрывает окно ввода). Ширина = капсула тулбара.
-    @ViewBuilder private var conversationUnifiedInputBar: some View {
-        HStack(spacing: 10) {
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
-                    conversationTextComposerExpanded = true
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                    conversationComposeFocused = true
-                }
-            } label: {
-                Image(systemName: "keyboard")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.text)
-                    .frame(width: 48, height: 48)
-                    .background(Circle().fill(PD.ColorToken.chip.opacity(0.95)))
-                    .overlay(
-                        Circle()
-                            .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                    )
+    private var conversationTextEntryButton: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+                conversationTextComposerExpanded = true
             }
-            .buttonStyle(PressDownStyle(scale: 0.94, fade: 0.96))
-            .accessibilityLabel("Написать фразу")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                conversationComposeFocused = true
+            }
+        } label: {
+            Image(systemName: "keyboard")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.text)
+                .frame(width: 48, height: 48)
+                .background(Circle().fill(PD.ColorToken.chip.opacity(0.95)))
+                .overlay(
+                    Circle()
+                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+                )
+        }
+        .buttonStyle(PressDownStyle(scale: 0.94, fade: 0.96))
+        .accessibilityLabel("Написать фразу")
+    }
 
-            conversationStickyMicBar
+    /// Idle: the sphere is the only voice CTA. The large bottom CTA appears
+    /// only in recovery/practice/result-adjacent states where it has context.
+    @ViewBuilder private var conversationUnifiedInputBar: some View {
+        if phase == .idle && !conversationHasResult && !conversationIsPracticeFlow {
+            conversationTextEntryButton
+        } else {
+            HStack(spacing: 10) {
+                conversationTextEntryButton
+                conversationStickyMicBar
+            }
         }
     }
 
