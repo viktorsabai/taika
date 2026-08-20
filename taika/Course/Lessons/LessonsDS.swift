@@ -2043,7 +2043,7 @@ public struct LSCompletedLessonList: View {
 
     private var completedBody: some View {
         let visibleItems = showingErrorsOnly ? items.filter { weakIds.contains($0.id) } : items
-        let diagnosticColor = ThemeManager.shared.currentAccentTintColor
+        let diagnosticFill = AnyShapeStyle(ThemeManager.shared.currentAccentFill)
         let hasErrors = !weakIds.isEmpty
         let selectedCount = selectedIds.intersection(Set(visibleItems.map(\.id))).count
 
@@ -2061,7 +2061,7 @@ public struct LSCompletedLessonList: View {
                         .padding(.bottom, 8)
                         .overlay(alignment: .bottom) {
                             Rectangle()
-                                .fill(showingErrorsOnly ? Color.clear : diagnosticColor)
+                                .fill(showingErrorsOnly ? AnyShapeStyle(Color.clear) : diagnosticFill)
                                 .frame(height: 2)
                         }
                 }
@@ -2076,7 +2076,7 @@ public struct LSCompletedLessonList: View {
                         .padding(.bottom, 8)
                         .overlay(alignment: .bottom) {
                             Rectangle()
-                                .fill(showingErrorsOnly ? diagnosticColor : Color.clear)
+                                .fill(showingErrorsOnly ? diagnosticFill : AnyShapeStyle(Color.clear))
                                 .frame(height: 2)
                         }
                 }
@@ -2126,7 +2126,7 @@ public struct LSCompletedLessonList: View {
                             Button { onToggle(item.id) } label: {
                                 HStack(spacing: 12) {
                                     Rectangle()
-                                        .fill(selected ? diagnosticColor : Color.clear)
+                                        .fill(selected ? diagnosticFill : AnyShapeStyle(Color.clear))
                                         .frame(width: 2)
                                     Text(String(format: "%02d", item.index + 1))
                                         .font(.system(size: 13, weight: .medium, design: .monospaced))
@@ -2139,7 +2139,7 @@ public struct LSCompletedLessonList: View {
                                             .lineLimit(1)
                                         Text(item.errorCardCount > 0 ? "ошибки \(item.errorCardCount)" : "без ошибок")
                                             .font(.system(size: 13, weight: .regular))
-                                            .foregroundStyle(item.errorCardCount > 0 ? diagnosticColor : PD.ColorToken.textSecondary)
+                                            .foregroundStyle(item.errorCardCount > 0 ? diagnosticFill : AnyShapeStyle(PD.ColorToken.textSecondary))
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 }
@@ -2180,7 +2180,7 @@ public struct LSCompletedLessonList: View {
                         Spacer(minLength: 8)
                         Image(systemName: "chevron.right")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(diagnosticColor)
+                            .foregroundStyle(diagnosticFill)
                     }
                     .padding(.vertical, 14)
                     .contentShape(Rectangle())

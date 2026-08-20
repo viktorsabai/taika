@@ -1,3 +1,12 @@
+# Follow-up — canonical gradient color correction
+
+| Задача | Статус |
+|---|---|
+| Найти flat-pink accents в completed hero/list | Сделано |
+| Перевести заголовок, score, underline и selected rail на canonical gradient | Сделано |
+| Оставить горизонтальные divider lines нейтральными graphite | Сделано |
+| Проверить disabled states и запушить color fix | В работе |
+
 # Follow-up — 1/1 completed grade sheet reference pass
 
 | Задача | Статус |
