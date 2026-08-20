@@ -15,6 +15,8 @@ public struct HomeTaskView: View {
     public let lessonId: String
     /// Optional multi-lesson scope for course reinforcement training.
     public let lessonIds: [String]?
+    /// Explicit origin marker: scoped course reinforcement is not a Step completion.
+    public let isCourseReinforcement: Bool
     public let embedBackground: Bool
     public let onClose: (() -> Void)?
     public let onNextGame: (() -> Void)?
@@ -65,6 +67,7 @@ public struct HomeTaskView: View {
     public init(courseId: String,
                 lessonId: String,
                 lessonIds: [String]? = nil,
+                isCourseReinforcement: Bool = false,
                 embedBackground: Bool = false,
                 store: HomeTaskManager? = nil,
                 onClose: (() -> Void)? = nil,
@@ -79,6 +82,7 @@ public struct HomeTaskView: View {
         self.courseId = courseId
         self.lessonId = lessonId
         self.lessonIds = lessonIds
+        self.isCourseReinforcement = isCourseReinforcement
         self.embedBackground = embedBackground
         self.onClose = onClose
         self.onNextGame = onNextGame
@@ -281,7 +285,7 @@ public struct HomeTaskView: View {
     }
 
     private var completionOverlayTitle: String {
-        if lessonId.isEmpty && !(lessonIds ?? []).isEmpty { return "закрепление курса" }
+        if isCourseReinforcement { return "закрепление курса" }
         if isFromLessonStep { return "урок закреплён" }
         return "закрепление завершено"
     }
@@ -318,7 +322,7 @@ public struct HomeTaskView: View {
                 }
             }
 
-            if lessonId.isEmpty && !(lessonIds ?? []).isEmpty {
+            if isCourseReinforcement {
                 Text(courseCompletionHint)
                     .font(CD.FontToken.body(13, weight: .regular))
                     .foregroundStyle(CD.ColorToken.textSecondary)
@@ -329,7 +333,7 @@ public struct HomeTaskView: View {
             VStack(spacing: 12) {
                     GameCompletionActions(
                         isFromLessonStep: isFromLessonStep,
-                        isCourseReinforcement: lessonId.isEmpty && !(lessonIds ?? []).isEmpty,
+                        isCourseReinforcement: isCourseReinforcement,
                         isProUser: isProUser,
                     continueLearningTitle: resolvedContinueTitle,
                     nextGameTitle: nextGameTitle,
@@ -380,6 +384,8 @@ public struct HomeTaskView: View {
             AudioRecallGameView(
                 courseId: courseId,
                 lessonId: lid,
+                reinforcementLessonIds: lessonIds,
+                isCourseReinforcement: isCourseReinforcement,
                 sourceTitle: title,
                 sourceContextTitle: courseTitleForSection(),
                 onClose: {
@@ -406,6 +412,8 @@ public struct HomeTaskView: View {
             GrandDialogueGameView(
                 courseId: courseId,
                 courseTitle: courseTitleForSection(),
+                reinforcementLessonIds: lessonIds,
+                isCourseReinforcement: isCourseReinforcement,
                 onClose: {
                     if let performClose = optionalClose {
                         performClose()
@@ -686,7 +694,7 @@ public struct HomeTaskView: View {
 
                     GameCompletionActions(
                         isFromLessonStep: isFromLessonStep,
-                        isCourseReinforcement: lessonId.isEmpty && !(lessonIds ?? []).isEmpty,
+                        isCourseReinforcement: isCourseReinforcement,
                         isProUser: isProUser,
                         continueLearningTitle: resolvedContinueTitle,
                         nextGameTitle: nextGameTitle,

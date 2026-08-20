@@ -8,6 +8,8 @@ struct GrandDialogueGameView: View {
 
     let courseId: String
     let courseTitle: String
+    let reinforcementLessonIds: [String]?
+    let isCourseReinforcement: Bool
     let onClose: () -> Void
     let onNextGame: (() -> Void)?
     let nextGameTitle: String?
@@ -151,7 +153,8 @@ struct GrandDialogueGameView: View {
                 ReinforcementStore.shared.recordSession(
                     courseId: courseId,
                     gameType: "grandDialogue",
-                    score: percent
+                    score: percent,
+                    lessonIds: reinforcementLessonIds ?? []
                 )
             }
             GameHeaderStore.shared.config = headerConfig()
@@ -771,9 +774,10 @@ struct GrandDialogueGameView: View {
                             .foregroundStyle(CD.ColorToken.text)
                     }
 
-                    GameCompletionActions(
-                        isFromLessonStep: false,
-                        isProUser: isProUser,
+            GameCompletionActions(
+                isFromLessonStep: false,
+                isCourseReinforcement: isCourseReinforcement,
+                isProUser: isProUser,
                         continueLearningTitle: continueLearningTitle,
                         nextGameTitle: nextGameTitle,
                         onRepeat: {

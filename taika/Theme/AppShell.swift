@@ -644,8 +644,13 @@ private struct GameView: View {
 
     private var resolvedLessonId: String { lessonId ?? "" }
 
+    private var isCourseReinforcement: Bool {
+        guard let lessonIds, !lessonIds.isEmpty else { return false }
+        return true
+    }
+
     private var isFromLessonStep: Bool {
-        HomeTaskView.isLessonStepOrigin(courseId: courseId, lessonId: resolvedLessonId)
+        !isCourseReinforcement && HomeTaskView.isLessonStepOrigin(courseId: courseId, lessonId: resolvedLessonId)
     }
 
     /// Страховка: навигация напрямую в `.game` без пикера не должна открывать PRO-режим бесплатным юзерам.
@@ -678,6 +683,7 @@ private struct GameView: View {
                     courseId: courseId,
                     lessonId: resolvedLessonId,
                     lessonIds: lessonIds,
+                    isCourseReinforcement: isCourseReinforcement,
                     embedBackground: false,
                     onClose: { dismiss() },
                     onNextGame: isFromLessonStep ? nil : {

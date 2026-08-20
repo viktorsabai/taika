@@ -60,6 +60,8 @@ struct AudioRecallGameView: View {
     /// Как у «Найди пару» / recall: прогресс привязан к паре courseId + lessonId.
     let courseId: String
     let lessonId: String
+    let reinforcementLessonIds: [String]?
+    let isCourseReinforcement: Bool
     let sourceTitle: String
     let sourceContextTitle: String
     let onClose: () -> Void
@@ -228,7 +230,7 @@ struct AudioRecallGameView: View {
                     courseId: courseId,
                     gameType: "audioRecall",
                     score: percent,
-                    lessonIds: [lessonId]
+                    lessonIds: reinforcementLessonIds ?? (lessonId.isEmpty ? [] : [lessonId])
                 )
             }
             GameHeaderStore.shared.config = headerConfig()
@@ -891,7 +893,8 @@ struct AudioRecallGameView: View {
 
     private var completionOverlayActionButtons: some View {
         GameCompletionActions(
-            isFromLessonStep: HomeTaskView.isLessonStepOrigin(courseId: courseId, lessonId: lessonId),
+            isFromLessonStep: !isCourseReinforcement && HomeTaskView.isLessonStepOrigin(courseId: courseId, lessonId: lessonId),
+            isCourseReinforcement: isCourseReinforcement,
             isProUser: isProUser,
             continueLearningTitle: continueLearningTitle
                 ?? HomeTaskView.continueLearningTitle(courseId: courseId, lessonId: lessonId),
