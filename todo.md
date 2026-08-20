@@ -1,3 +1,14 @@
+# Card-level error queue — targeted practice
+
+| Задача | Статус |
+|---|---|
+| Аудировать игровые модели раундов и источники конкретных ошибочных карточек | Не начато |
+| Добавить persisted failedCardKeys с canonical course/lesson/card identity | Не начато |
+| Передавать error-card scope через GameRequestedCourseScope и picker | Не начато |
+| Фильтровать Memory/Recall/Audio/Speaker только по error queue | Не начато |
+| Удалять карточку из error queue после успешного повторного закрепления | Не начато |
+| Проверить пустой режим, Pro gate и обратную совместимость с обычным закреплением | Не начато |
+
 # Начатый курс — разделить обучение и закрепление
 
 | Задача | Статус |

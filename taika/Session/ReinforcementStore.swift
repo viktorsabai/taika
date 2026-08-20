@@ -24,12 +24,30 @@ public final class ReinforcementStore: ObservableObject {
     public struct LessonMetrics: Codable, Equatable {
         public var sessions: Int
         public var coveredCardKeys: Set<String>
+        /// Canonical lesson|card keys that still need targeted practice.
+        public var failedCardKeys: Set<String>
         public var lastScore: Int?
 
-        public init(sessions: Int = 0, coveredCardKeys: Set<String> = [], lastScore: Int? = nil) {
+        public init(sessions: Int = 0, coveredCardKeys: Set<String> = [], failedCardKeys: Set<String> = [], lastScore: Int? = nil) {
             self.sessions = sessions
             self.coveredCardKeys = coveredCardKeys
+            self.failedCardKeys = failedCardKeys
             self.lastScore = lastScore
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case sessions
+            case coveredCardKeys
+            case failedCardKeys
+            case lastScore
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            sessions = try container.decodeIfPresent(Int.self, forKey: .sessions) ?? 0
+            coveredCardKeys = try container.decodeIfPresent(Set<String>.self, forKey: .coveredCardKeys) ?? []
+            failedCardKeys = try container.decodeIfPresent(Set<String>.self, forKey: .failedCardKeys) ?? []
+            lastScore = try container.decodeIfPresent(Int.self, forKey: .lastScore)
         }
     }
 
@@ -66,6 +84,8 @@ public final class ReinforcementStore: ObservableObject {
         gameType: String,
         score: Int? = nil,
         sourceCardKeys: [String] = [],
+        failedCardKeys: [String] = [],
+        clearedCardKeys: [String] = [],
         lessonIds: [String] = [],
         playedAt: Date = Date()
     ) {
@@ -93,6 +113,8 @@ public final class ReinforcementStore: ObservableObject {
         cm.byMode[mode] = mm
 
         let normalizedKeys = Set(sourceCardKeys.compactMap { normalizeSourceCardKey($0) })
+        let normalizedFailedKeys = Set(failedCardKeys.compactMap { normalizeSourceCardKey($0) })
+        let normalizedClearedKeys = Set(clearedCardKeys.compactMap { normalizeSourceCardKey($0) })
         if !normalizedKeys.isEmpty {
             let grouped = Dictionary(grouping: normalizedKeys) { key in
                 key.split(separator: "|", maxSplits: 1).first.map(String.init) ?? ""
@@ -102,6 +124,8 @@ public final class ReinforcementStore: ObservableObject {
                 var lesson = cm.byLesson[lid] ?? LessonMetrics()
                 lesson.sessions += 1
                 lesson.coveredCardKeys.formUnion(keys)
+                lesson.failedCardKeys.formUnion(normalizedFailedKeys.filter { $0.hasPrefix("\(rawLessonId)|") })
+                lesson.failedCardKeys.subtract(normalizedClearedKeys.filter { $0.hasPrefix("\(rawLessonId)|") })
                 lesson.lastScore = score.map { max(0, min(100, $0)) }
                 cm.byLesson[lid] = lesson
             }
@@ -114,6 +138,8 @@ public final class ReinforcementStore: ObservableObject {
             })
             for lid in scopedLessonIds {
                 var lesson = cm.byLesson[lid] ?? LessonMetrics()
+                lesson.failedCardKeys.subtract(normalizedClearedKeys.filter { $0.hasPrefix("\(lid)|") })
+                lesson.failedCardKeys.formUnion(normalizedFailedKeys.filter { $0.hasPrefix("\(lid)|") })
                 lesson.sessions += 1
                 lesson.lastScore = score.map { max(0, min(100, $0)) }
                 cm.byLesson[lid] = lesson
@@ -138,6 +164,14 @@ public final class ReinforcementStore: ObservableObject {
     /// Uses available mode averages; if none exist, returns nil.
     public func coveredCardCount(courseId: String) -> Int {
         metrics(courseId: courseId)?.byLesson.values.reduce(0) { $0 + $1.coveredCardKeys.count } ?? 0
+    }
+
+    public func failedCardKeys(courseId: String, lessonIds: [String] = []) -> Set<String> {
+        guard let cm = metrics(courseId: courseId) else { return [] }
+        let selected = Set(lessonIds.map(canonicalizeLessonId))
+        return cm.byLesson.filter { selected.isEmpty || selected.contains($0.key) }.reduce(into: Set<String>()) { result, entry in
+            result.formUnion(entry.value.failedCardKeys)
+        }
     }
 
     public func coveredCardCount(courseId: String, lessonId: String) -> Int {
@@ -216,16 +250,19 @@ public final class GameRequestedCourseScope: ObservableObject {
     public static let shared = GameRequestedCourseScope()
     @Published public private(set) var courseId: String?
     @Published public private(set) var lessonIds: [String]?
+    @Published public private(set) var cardKeys: [String]?
 
     private init() {}
 
-    public func set(courseId: String, lessonIds: [String]) {
+    public func set(courseId: String, lessonIds: [String], cardKeys: [String]? = nil) {
         self.courseId = courseId
         self.lessonIds = lessonIds
+        self.cardKeys = cardKeys
     }
 
     public func clear() {
         courseId = nil
         lessonIds = nil
+        cardKeys = nil
     }
 }

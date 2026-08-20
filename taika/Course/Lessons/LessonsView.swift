@@ -170,8 +170,13 @@ private extension LessonsView {
     }
 
     private var weakCompletedLessonIds: Set<String> {
-        Set(reinforcementLessonScores.compactMap { key, score in
-            score < 70 ? key : nil
+        guard let cid = currentCourse?.courseID else { return [] }
+        let failedKeys = ReinforcementStore.shared.failedCardKeys(
+            courseId: cid,
+            lessonIds: completedLessonOptions.map(\.id)
+        )
+        return Set(failedKeys.compactMap { key in
+            key.split(separator: "|", maxSplits: 1).first.map(String.init)
         })
     }
 
@@ -285,12 +290,13 @@ private extension LessonsView {
         nav.requestTab(2)
     }
 
-    private func presentGameModePicker(for scopedLessonIds: [String]? = nil, preselected mode: GameModeType? = nil) {
+    private func presentGameModePicker(for scopedLessonIds: [String]? = nil, cardKeys: [String]? = nil, preselected mode: GameModeType? = nil) {
         guard let cid = currentCourse?.courseID else { return }
         let ids = scopedLessonIds ?? effectiveReinforcementLessonIds
         guard !ids.isEmpty else { return }
         pendingGameLessonIds = ids
-        GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: ids)
+        pendingGameCardKeys = cardKeys
+        GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: ids, cardKeys: cardKeys)
         selectedGameLessonId = ids.count == 1 ? ids.first : nil
         if let mode { selectedGameType = mode }
         frozenSnapshot = captureWindowSnapshot()
@@ -300,11 +306,11 @@ private extension LessonsView {
         }
     }
 
-    private func launchGameTraining(for scopedLessonIds: [String]? = nil) {
+    private func launchGameTraining(for scopedLessonIds: [String]? = nil, cardKeys: [String]? = nil) {
         if let scopedLessonIds, !scopedLessonIds.isEmpty {
-            presentGameModePicker(for: scopedLessonIds)
+            presentGameModePicker(for: scopedLessonIds, cardKeys: cardKeys)
         } else {
-            presentGameModePicker()
+            presentGameModePicker(cardKeys: cardKeys)
         }
     }
 
@@ -405,8 +411,12 @@ private extension LessonsView {
                 },
                 onTrainWeak: weakCompletedLessonIds.isEmpty ? nil : {
                     let ids = Array(weakCompletedLessonIds).sorted()
+                    let keys = ReinforcementStore.shared.failedCardKeys(
+                        courseId: currentCourse?.courseID ?? "",
+                        lessonIds: ids
+                    )
                     updateReinforcementSelection(weakCompletedLessonIds)
-                    launchGameTraining(for: ids)
+                    launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
                 },
                 accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
                 accentColor: TaikaMasteryTokens.greenGlow
@@ -630,6 +640,8 @@ public struct LessonsView: View {
     @State private var selectedGameLessonId: String? = nil
     /// Material scope currently owned by the game picker; it must survive mode selection.
     @State private var pendingGameLessonIds: [String] = []
+    /// nil = normal reinforcement; non-nil = explicit targeted error-card scope.
+    @State private var pendingGameCardKeys: [String]? = nil
     @State private var selectedLessonId: String? = nil
     /// Reinforcement queue selection is independent from the visible carousel focus.
     /// nil means all completed lessons; a non-nil set is the explicit multi-select scope.
@@ -742,8 +754,12 @@ public struct LessonsView: View {
                                 },
                                 onTrainWeak: weakCompletedLessonIds.isEmpty ? nil : {
                                     let ids = Array(weakCompletedLessonIds).sorted()
+                                    let keys = ReinforcementStore.shared.failedCardKeys(
+                                        courseId: currentCourse?.courseID ?? "",
+                                        lessonIds: ids
+                                    )
                                     updateReinforcementSelection(weakCompletedLessonIds)
-                                    launchGameTraining(for: ids)
+                                    launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
                                 },
                                 accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
                                 accentColor: ThemeManager.shared.currentAccentTintColor
@@ -825,12 +841,14 @@ public struct LessonsView: View {
                                     guard !scopedIds.isEmpty else { return }
                                     GameRequestedCourseScope.shared.set(
                                         courseId: cid,
-                                        lessonIds: scopedIds
+                                        lessonIds: scopedIds,
+                                        cardKeys: pendingGameCardKeys
                                     )
                                     showGameModePicker = false
                                     showGameOverlay = false
                                     frozenSnapshot = nil
                                     pendingGameLessonIds = []
+                                    pendingGameCardKeys = nil
                                     nav.go(.game(
                                         courseId: cid,
                                         lessonId: selectedGameLessonId,
@@ -844,6 +862,7 @@ public struct LessonsView: View {
                                     }
                                     frozenSnapshot = nil
                                     pendingGameLessonIds = []
+                                    pendingGameCardKeys = nil
                                 },
                                 onLockedTap: { mode in
                                     if mode.isPro && !ProManager.shared.isPro {

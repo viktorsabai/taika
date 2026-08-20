@@ -61,6 +61,8 @@ struct AudioRecallGameView: View {
     let courseId: String
     let lessonId: String
     let reinforcementLessonIds: [String]?
+    /// Explicit failed-card scope for targeted practice; nil keeps the normal learned pool.
+    let errorCardKeys: [String]?
     let isCourseReinforcement: Bool
     let sourceTitle: String
     let sourceContextTitle: String
@@ -79,6 +81,7 @@ struct AudioRecallGameView: View {
     @State private var elapsedSeconds: Int = 0
     @State private var score: Int = 0
     @State private var mistakes: Int = 0
+    @State private var failedTargetRUs: Set<String> = []
     @State private var finished: Bool = false
     @State private var shuffleLessonOrder: Bool = false
     @State private var didLoadSession: Bool = false
@@ -230,6 +233,14 @@ struct AudioRecallGameView: View {
                     courseId: courseId,
                     gameType: "audioRecall",
                     score: percent,
+                    failedCardKeys: errorCardKeys?.filter { key in
+                        guard let phrase = key.split(separator: "|", maxSplits: 1).last else { return false }
+                        return failedTargetRUs.contains(String(phrase).lowercased())
+                    } ?? [],
+                    clearedCardKeys: errorCardKeys?.filter { key in
+                        guard let phrase = key.split(separator: "|", maxSplits: 1).last else { return false }
+                        return !failedTargetRUs.contains(String(phrase).lowercased())
+                    } ?? [],
                     lessonIds: reinforcementLessonIds ?? (lessonId.isEmpty ? [] : [lessonId])
                 )
             }
@@ -613,6 +624,7 @@ struct AudioRecallGameView: View {
             TaikaVoice.shared.play(.success)
             scheduleAutoAdvance()
         } else {
+            failedTargetRUs.insert(currentTargetRU.lowercased())
             mistakes += 1
             TaikaGameFeedbackHaptics.mismatch()
             TaikaVoice.shared.playMatchFail()
@@ -742,13 +754,23 @@ struct AudioRecallGameView: View {
             for lid in lessonIds {
                 let steps = StepData.shared.items(for: lid)
                 let learnedIdx = ProgressManager.shared.learnedSet(courseId: courseId, lessonId: lid)
-                raw.append(contentsOf: steps.filter { learnedIdx.contains($0.order) })
+                raw.append(contentsOf: steps.filter {
+                    guard learnedIdx.contains($0.order) else { return false }
+                    guard let errorCardKeys else { return true }
+                    let key = Self.normalizedCardKey("\(lid)|\($0.ru ?? "")")
+                    return errorCardKeys.map(Self.normalizedCardKey).contains(key)
+                })
             }
         } else {
             // Lesson-mode: собираем learned-steps только из заданного урока.
             let steps = StepData.shared.items(for: trimmedLessonId)
             let learnedIdx = ProgressManager.shared.learnedSet(courseId: courseId, lessonId: trimmedLessonId)
-            raw = steps.filter { learnedIdx.contains($0.order) }
+            raw = steps.filter {
+                guard learnedIdx.contains($0.order) else { return false }
+                guard let errorCardKeys else { return true }
+                let key = Self.normalizedCardKey("\(trimmedLessonId)|\($0.ru ?? "")")
+                return errorCardKeys.map(Self.normalizedCardKey).contains(key)
+            }
         }
 
         // Unify reinforcement pool with match/recall: dedupe by RU (case-insensitive).
@@ -770,6 +792,12 @@ struct AudioRecallGameView: View {
         if !rounds.isEmpty {
             loadRound(at: 0)
         }
+    }
+
+    private static func normalizedCardKey(_ raw: String) -> String {
+        let parts = raw.split(separator: "|", maxSplits: 1).map(String.init)
+        guard parts.count == 2 else { return raw.lowercased() }
+        return "\(parts[0].lowercased().replacingOccurrences(of: "_", with: "-"))|\(parts[1].trimmingCharacters(in: .whitespacesAndNewlines).lowercased())"
     }
 
     private var emptyLessonState: some View {

@@ -393,6 +393,7 @@ struct AppShell: View {
                             courseId: courseId,
                             lessonId: lessonId,
                             lessonIds: GameRequestedCourseScope.shared.courseId == courseId ? GameRequestedCourseScope.shared.lessonIds : nil,
+                            cardKeys: GameRequestedCourseScope.shared.courseId == courseId ? GameRequestedCourseScope.shared.cardKeys : nil,
                             gameType: gameType
                         )
 
@@ -630,6 +631,7 @@ private struct GameView: View {
     /// nil = course-level (learned cards from entire course); non-nil = lesson-level
     let lessonId: String?
     let lessonIds: [String]?
+    let cardKeys: [String]?
     let gameType: String
 
     private var displayTitle: String? {
@@ -683,6 +685,7 @@ private struct GameView: View {
                     courseId: courseId,
                     lessonId: resolvedLessonId,
                     lessonIds: lessonIds,
+                    cardKeys: cardKeys,
                     isCourseReinforcement: isCourseReinforcement,
                     embedBackground: false,
                     onClose: { dismiss() },

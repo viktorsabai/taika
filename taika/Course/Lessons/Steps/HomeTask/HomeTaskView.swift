@@ -15,6 +15,8 @@ public struct HomeTaskView: View {
     public let lessonId: String
     /// Optional multi-lesson scope for course reinforcement training.
     public let lessonIds: [String]?
+    /// Optional card-level scope used by targeted error practice.
+    public let cardKeys: [String]?
     /// Explicit origin marker: scoped course reinforcement is not a Step completion.
     public let isCourseReinforcement: Bool
     public let embedBackground: Bool
@@ -39,6 +41,8 @@ public struct HomeTaskView: View {
     @State private var selectedLeft: Int? = nil
     @State private var selectedRight: Int? = nil
     @State private var matchedPairIds: Set<String> = []
+    /// Pair IDs that were the target of a wrong match in this session.
+    @State private var failedPairIds: Set<String> = []
     @State private var tries: Int = 0
     // Summary overlay visibility (separate from computed isFinished)
     @State private var showSummary: Bool = false
@@ -67,6 +71,7 @@ public struct HomeTaskView: View {
     public init(courseId: String,
                 lessonId: String,
                 lessonIds: [String]? = nil,
+                cardKeys: [String]? = nil,
                 isCourseReinforcement: Bool = false,
                 embedBackground: Bool = false,
                 store: HomeTaskManager? = nil,
@@ -82,6 +87,7 @@ public struct HomeTaskView: View {
         self.courseId = courseId
         self.lessonId = lessonId
         self.lessonIds = lessonIds
+        self.cardKeys = cardKeys
         self.isCourseReinforcement = isCourseReinforcement
         self.embedBackground = embedBackground
         self.onClose = onClose
@@ -385,6 +391,7 @@ public struct HomeTaskView: View {
                 courseId: courseId,
                 lessonId: lid,
                 reinforcementLessonIds: lessonIds,
+                errorCardKeys: cardKeys,
                 isCourseReinforcement: isCourseReinforcement,
                 sourceTitle: title,
                 sourceContextTitle: courseTitleForSection(),
@@ -889,6 +896,7 @@ public struct HomeTaskView: View {
         let accuracy = Double(total) / Double(attempts)
         let percent = max(0, min(100, Int((accuracy * 100).rounded())))
         let matched = allTriples.filter { matchedPairIds.contains("\($0.ru)|\($0.ph)") }
+        let failed = allTriples.filter { failedPairIds.contains("\($0.ru)|\($0.ph)") }
         if matched.isEmpty {
             let scope = reinforcementLessonScope
             guard !scope.isEmpty else { return }
@@ -896,6 +904,8 @@ public struct HomeTaskView: View {
                 courseId: courseId,
                 gameType: "match",
                 score: percent,
+                failedCardKeys: failed.compactMap(Self.cardKey),
+                clearedCardKeys: matched.compactMap(Self.cardKey),
                 lessonIds: scope
             )
             return
@@ -917,9 +927,27 @@ public struct HomeTaskView: View {
                 gameType: "match",
                 score: percent,
                 sourceCardKeys: sourceKeys,
+                failedCardKeys: failed.filter { ($0.courseId ?? courseId) == sourceCourseId }.compactMap(Self.cardKey),
+                clearedCardKeys: triples.compactMap(Self.cardKey),
                 lessonIds: reinforcementLessonScope
             )
         }
+    }
+
+    private static func normalizedCardKey(_ raw: String) -> String {
+        let parts = raw.split(separator: "|", maxSplits: 1).map(String.init)
+        guard parts.count == 2 else { return raw.lowercased() }
+        return "\(parts[0].lowercased().replacingOccurrences(of: "_", with: "-"))|\(parts[1].trimmingCharacters(in: .whitespacesAndNewlines).lowercased())"
+    }
+
+    private static func cardKey(for triple: HomeTaskManager.LearnedTriple) -> String {
+        let lesson = triple.lessonId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return normalizedCardKey("\(lesson)|\(triple.ru)")
+    }
+
+    private static func cardKey(_ triple: HomeTaskManager.LearnedTriple) -> String? {
+        guard !(triple.lessonId ?? "").isEmpty, !triple.ru.isEmpty else { return nil }
+        return cardKey(for: triple)
     }
 
     /// Lessons catalog for course-level mode (lessonId == "").
@@ -981,12 +1009,17 @@ public struct HomeTaskView: View {
         }
         if triples.isEmpty && isPreview { triples = demoTriples() }
         triples = triples.filter { !$0.ru.isEmpty && !$0.ph.isEmpty }
+        if let cardKeys {
+            let wanted = Set(cardKeys.map(Self.normalizedCardKey))
+            triples = triples.filter { wanted.contains(Self.cardKey(for: $0)) }
+        }
         guard !triples.isEmpty else { leftItems = []; rightItems = []; totalPairsCount = 0; return }
 
         // Reset all state
         allTriples = triples.shuffled()
         totalPairsCount = allTriples.count
         matchedPairIds = []
+        failedPairIds = []
         tries = 0
         gameElapsedSeconds = 0
         didRecordReinforcementSession = false
@@ -1131,6 +1164,7 @@ public struct HomeTaskView: View {
                 showSummary = true
             }
         } else {
+            failedPairIds.insert(L.pairId)
             TaikaGameFeedbackHaptics.mismatch()
             // brief wrong pulse + случайно: оой или match_fail.mp3
             if Bool.random() {
