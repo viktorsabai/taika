@@ -1345,3 +1345,13 @@
 - [ ] Перевести Speaker/Game Park CTA в знакомый Taika line-style и усилить reinforcement result hierarchy.
 - [ ] Проверить disabled state, selected scope, empty state, list mode и lifehacks mode.
 - [ ] Выполнить static validation и consolidated push.
+
+# Final course grade-sheet UX pass
+
+- [ ] Убрать зелёную горизонтальную линию между FM/materials и зачёткой курса.
+- [ ] Убрать повторы `закрепление`, `тренировка курса`, `закрепление навыка` и оставить одну ясную формулировку результата.
+- [ ] Перестроить hero как зачётку: итог, интерпретация результата, evidence и следующий шаг.
+- [ ] Сохранить только необходимые метрики и сделать их визуально и методически объяснимыми.
+- [ ] Сохранить Speaker/Game Park и лайфхаки, но не давать им конкурировать с результатом.
+- [ ] Проверить no-diagnostics, errors, selected scope и compact density.
+- [ ] Выполнить static validation и consolidated push.

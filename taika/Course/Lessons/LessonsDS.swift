@@ -1722,6 +1722,7 @@ public struct LSCompletedTrainingHero: View {
     private var scoreText: String { stats.reinforcementScore.map(String.init) ?? "—" }
     private var recommendation: String {
         if selectedCount == 0 { return "Выбери уроки ниже, чтобы собрать следующую тренировку" }
+        if stats.reinforcementScore == nil { return "Проведи первую игровую проверку, чтобы увидеть результат закрепления" }
         if weakCount > 0 { return "Начни с ошибок — так закрепление будет эффективнее" }
         return "Поддержи результат коротким повторением сегодня"
     }
@@ -1744,18 +1745,15 @@ public struct LSCompletedTrainingHero: View {
                 .foregroundStyle(PD.ColorToken.text)
                 .lineLimit(2)
 
+            Text("ЗАЧЁТКА КУРСА")
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .kerning(0.8)
+                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
+
             HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("ЗАКРЕПЛЕНИЕ")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .kerning(0.8)
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
-                    Text("ТРЕНИРОВКА КУРСА")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .kerning(0.8)
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
-                    Text("Закрепление навыка")
-                        .font(.system(size: 19, weight: .semibold))
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Результат закрепления")
+                        .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(PD.ColorToken.text)
                     Text(recommendation)
                         .font(.system(size: 12, weight: .medium))
@@ -1765,7 +1763,7 @@ public struct LSCompletedTrainingHero: View {
                 Spacer(minLength: 8)
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(scoreText + (stats.reinforcementScore == nil ? "" : "%"))
-                        .font(.system(size: 25, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 28, weight: .semibold, design: .monospaced))
                         .monospacedDigit()
                         .foregroundStyle(PD.ColorToken.text)
                     Text("эффективность")
@@ -1774,11 +1772,9 @@ public struct LSCompletedTrainingHero: View {
                 }
             }
 
-            HStack(spacing: 0) {
-                metric(value: "\(stats.gameCoveredCards)", label: "карточек")
-                Divider().frame(height: 28).opacity(0.35)
-                metric(value: "\(stats.gameSessions)", label: "игр")
-                Divider().frame(height: 28).opacity(0.35)
+            HStack(spacing: 18) {
+                metric(value: "\(stats.gameCoveredCards)", label: "карточки")
+                metric(value: "\(stats.gameSessions)", label: "игровые сессии")
                 metric(value: "\(selectedCount)/\(totalLessons)", label: "выбрано")
             }
             .foregroundStyle(PD.ColorToken.text)
@@ -1797,11 +1793,6 @@ public struct LSCompletedTrainingHero: View {
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.15)))
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(TaikaMasteryTokens.greenGlow.opacity(0.48))
-                        .frame(height: 1)
-                }
         )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Главный блок тренировки курса")
