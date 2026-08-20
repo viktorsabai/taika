@@ -283,36 +283,33 @@ private extension LessonsView {
         nav.requestTab(2)
     }
 
-    private func launchGameTraining() {
-        guard !effectiveReinforcementLessonIds.isEmpty else { return }
-        selectedGameLessonId = effectiveReinforcementLessonIds.count == 1 ? effectiveReinforcementLessonIds.first : nil
-        if let cid = currentCourse?.courseID {
-            GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: effectiveReinforcementLessonIds)
-        }
-        lessonsHeaderStore.onReinforce?()
-    }
-
-    /// Hero rows already classify the game mode, so tapping one must skip the picker.
-    private func launchClassifiedGame(modeRawValue: String) {
-        guard let mode = GameModeType(rawValue: modeRawValue),
-              let cid = currentCourse?.courseID,
+    private func presentGameModePicker(preselected mode: GameModeType? = nil) {
+        guard let cid = currentCourse?.courseID,
               !effectiveReinforcementLessonIds.isEmpty else { return }
-        guard !mode.isPro || pro.isPro else {
-            overlay.presentPro(reason: .games)
-            return
-        }
         let ids = effectiveReinforcementLessonIds
         GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: ids)
         selectedGameLessonId = ids.count == 1 ? ids.first : nil
-        selectedGameType = mode
-        showGameModePicker = false
-        showGameOverlay = false
-        frozenSnapshot = nil
-        nav.go(.game(courseId: cid, lessonId: selectedGameLessonId, gameType: mode.rawValue))
+        if let mode { selectedGameType = mode }
+        frozenSnapshot = captureWindowSnapshot()
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+            showGameOverlay = true
+            showGameModePicker = true
+        }
     }
 
+    private func launchGameTraining() {
+        presentGameModePicker()
+    }
+
+    /// Every game entry point uses the same picker; the row only preselects a mode.
+    private func launchClassifiedGame(modeRawValue: String) {
+        guard let mode = GameModeType(rawValue: modeRawValue) else { return }
+        presentGameModePicker(preselected: mode)
+    }
+
+    /// Pro access is surfaced by the shared picker, not by a second standalone paywall.
     private func showGamesProSheet() {
-        overlay.presentPro(reason: .games)
+        presentGameModePicker()
     }
 
     @ViewBuilder
@@ -778,13 +775,21 @@ public struct LessonsView: View {
                                     set: { selectedGameType = $0 }
                                 ),
                                 isProUser: ProManager.shared.isPro,
-                                onStart: { _ in
+                                onStart: { mode in
+                                    let cid = currentCourse?.courseID ?? ""
+                                    if !effectiveReinforcementLessonIds.isEmpty {
+                                        GameRequestedCourseScope.shared.set(
+                                            courseId: cid,
+                                            lessonIds: effectiveReinforcementLessonIds
+                                        )
+                                    }
                                     showGameModePicker = false
                                     showGameOverlay = false
+                                    frozenSnapshot = nil
                                     nav.go(.game(
-                                        courseId: currentCourse?.courseID ?? "",
+                                        courseId: cid,
                                         lessonId: selectedGameLessonId,
-                                        gameType: selectedGameType.rawValue
+                                        gameType: mode.rawValue
                                     ))
                                 },
                                 onClose: {
@@ -1031,14 +1036,7 @@ let withTasks = base
                             nav.requestTab(2)
                         },
                         onReinforce: {
-                            guard currentCourse?.courseID != nil else { return }
-                            selectedGameLessonId = nil
-                            selectedGameType = .match
-                            frozenSnapshot = captureWindowSnapshot()
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                                showGameOverlay = true
-                                showGameModePicker = true
-                            }
+                            launchGameTraining()
                         }
                     )
                 }

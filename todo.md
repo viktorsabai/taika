@@ -1634,3 +1634,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Проверить методическую последовательность, связность русского/тайского материала и покрытие практикой.
 - [x] Сверить completed/in-progress/locked states, диагностику ошибок и синхронизацию прогресса.
 - [x] Исправить подтверждённые проблемы, провести static validation и подготовить один финальный push.
+
+# Game Park navigation and paywall consistency
+
+- [x] Аудировать входы в Game Park из header, CourseView, LessonsView и lesson cards.
+- [x] Зафиксировать один canonical game mode picker и единый route state.
+- [x] Убрать промежуточный непонятный экран и повторный Pro paywall.
+- [x] Проверить возврат из игр, locked modes и выбранный lesson/course scope.
+- [x] Выполнить static validation и подготовить один финальный push.
