@@ -1335,3 +1335,13 @@
 - [ ] Перенести stats и Speaker/Game Park CTA в единый понятный reinforcement section.
 - [ ] Вернуть global header background к нейтральному liquid-glass фону; зелёными оставить только header controls в completed mode.
 - [ ] Проверить вертикальную плотность, hierarchy и static compile surface перед push.
+
+# Final LessonsView retention loop pass
+
+- [ ] Вернуть переключение `Уроки / Лайфхаки` внутри курса для completed и обычного статуса.
+- [ ] Показывать лайфхаки курса в существующем carousel/reels представлении без новой архитектуры.
+- [ ] Добавить per-lesson error count или понятный no-diagnostics state в strict lesson list.
+- [ ] Развести старые курсы без reinforcement history и новые курсы с реальными ошибками.
+- [ ] Перевести Speaker/Game Park CTA в знакомый Taika line-style и усилить reinforcement result hierarchy.
+- [ ] Проверить disabled state, selected scope, empty state, list mode и lifehacks mode.
+- [ ] Выполнить static validation и consolidated push.

@@ -1783,7 +1783,12 @@ public struct LSCompletedTrainingHero: View {
             }
             .foregroundStyle(PD.ColorToken.text)
 
-            VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("СЛЕДУЮЩИЙ ШАГ")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .kerning(0.7)
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .padding(.bottom, 2)
                 actionRow(icon: "mic.fill", title: "Закрепить в Спикере", detail: "Произношение выбранных уроков", enabled: onSpeaker != nil && selectedCount > 0, action: onSpeaker)
                 actionRow(icon: "gamecontroller.fill", title: "Повторить в игре", detail: "Проверка памяти по этому же набору", enabled: onGamePark != nil && selectedCount > 0, action: onGamePark)
             }
@@ -1846,12 +1851,14 @@ public struct LSCompletedLessonList: View {
     public let items: [LS.Item]
     public let selectedIds: Set<String>
     public let weakIds: Set<String>
+    public let scores: [String: Int]
     public let onToggle: (String) -> Void
 
-    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, onToggle: @escaping (String) -> Void) {
+    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], onToggle: @escaping (String) -> Void) {
         self.items = items
         self.selectedIds = selectedIds
         self.weakIds = weakIds
+        self.scores = scores
         self.onToggle = onToggle
     }
 
@@ -1861,6 +1868,15 @@ public struct LSCompletedLessonList: View {
                 Text("УРОКИ ДЛЯ ЗАКРЕПЛЕНИЯ")
                     .taikaSectionTitleStyle()
                 Spacer(minLength: 8)
+                if weakIds.isEmpty {
+                    Text(scores.isEmpty ? "нет диагностики" : "ошибок нет")
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(AnyShapeStyle(PD.ColorToken.textSecondary))
+                } else {
+                    Text("\(weakIds.count) ошибок")
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(AnyShapeStyle(Color.red.opacity(0.92)))
+                }
                 Text("\(selectedIds.count) выбрано")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
@@ -1880,9 +1896,11 @@ public struct LSCompletedLessonList: View {
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(PD.ColorToken.text)
                                     .lineLimit(1)
-                                Text(weak ? "Нужно повторить · ошибка в закреплении" : "Пройден · готов к тренировке")
+                                Text(weak
+                                     ? "Ошибка · \(scores[item.id, default: 0])% — нужно повторить"
+                                     : (scores[item.id].map { "Закреплено · \($0)%" } ?? "Пройден · ждёт новой диагностики"))
                                     .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(weak ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                                    .foregroundStyle(weak ? AnyShapeStyle(Color.red.opacity(0.92)) : AnyShapeStyle(PD.ColorToken.textSecondary))
                             }
                             Spacer(minLength: 6)
                             Image(systemName: weak ? "waveform.path.ecg" : "chevron.right")

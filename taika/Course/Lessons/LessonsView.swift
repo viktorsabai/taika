@@ -147,12 +147,18 @@ private extension LessonsView {
         updateReinforcementSelection(updated)
     }
 
-    private var weakCompletedLessonIds: Set<String> {
+    private var reinforcementLessonScores: [String: Int] {
         guard let cid = currentCourse?.courseID,
-              let metrics = ReinforcementStore.shared.metrics(courseId: cid) else { return [] }
-        return Set(completedLessonOptions.compactMap { option in
-            guard let score = metrics.byLesson[option.id]?.lastScore, score < 70 else { return nil }
-            return option.id
+              let metrics = ReinforcementStore.shared.metrics(courseId: cid) else { return [:] }
+        return Dictionary(uniqueKeysWithValues: completedLessonOptions.compactMap { option in
+            guard let score = metrics.byLesson[option.id]?.lastScore else { return nil }
+            return (option.id, score)
+        })
+    }
+
+    private var weakCompletedLessonIds: Set<String> {
+        Set(reinforcementLessonScores.compactMap { key, score in
+            score < 70 ? key : nil
         })
     }
 
@@ -262,6 +268,7 @@ private extension LessonsView {
     private var completedTrainingDashboard: some View {
         VStack(alignment: .leading, spacing: 18) {
             completedTaikaFMSection
+            courseMaterialsPicker
             LSCompletedTrainingHero(
                 courseTitle: headerTitle,
                 onBack: {
@@ -281,6 +288,7 @@ private extension LessonsView {
                 items: lessonItems(),
                 selectedIds: Set(effectiveReinforcementLessonIds),
                 weakIds: weakCompletedLessonIds,
+                scores: reinforcementLessonScores,
                 onToggle: toggleTrainingSelection
             )
         }
@@ -621,8 +629,17 @@ public struct LessonsView: View {
                         }
                     }
                 } else {
-                    courseLifehacksReels
+                    if isCompletedCourse {
+                        VStack(alignment: .leading, spacing: 18) {
+                            completedTaikaFMSection
+                            courseMaterialsPicker
+                            courseLifehacksReels
+                        }
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    } else {
+                        courseLifehacksReels
+                            .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    }
                 }
 
                 if currentCourse == nil {
