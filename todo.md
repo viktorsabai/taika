@@ -1674,3 +1674,12 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Добавить pink-gradient halo для completed favorite card только при active favorite.
 - [x] Выделить одно главное achievement number в grade sheet и проверить motion/contrast.
 - [x] Выполнить static validation и подготовить один финальный push.
+
+# Smart Speaker E2E state-machine cleanup
+
+- [x] Аудировать idle, recording, processing, no-input, error и result states.
+- [x] Зафиксировать единый graphite surface и стабильную hero composition.
+- [x] Убрать scene-level background changes и повторяющиеся status/CTA layers.
+- [x] Сделать no-input/error states с одним понятным next action.
+- [x] Проверить result/retry/keyboard fallback flow и отсутствие layout jumps.
+- [x] Выполнить static validation и подготовить один финальный push.

@@ -918,13 +918,17 @@ public struct SpeakerDSRoot: View {
                             .padding(.top, 4)
                             .padding(.bottom, ToolBar.recommendedBottomInset + 12)
                     } else if phase == .hint, !taikaHints.isEmpty {
-                        Spacer(minLength: 8)
+                        // No-input recovery keeps the same sphere and vertical composition;
+                        // only the feedback and one next action change.
+                        Spacer(minLength: 4)
+                        conversationLiveStage
+                            .padding(.horizontal, padH)
+                        Spacer(minLength: 6)
                         conversationWidgetErrorCenter
                             .padding(.horizontal, padH)
                         Spacer(minLength: 8)
-                        conversationUnifiedInputBar
+                        conversationErrorActionBar
                             .padding(.horizontal, padH)
-                            .padding(.top, 8)
                             .padding(.bottom, ToolBar.recommendedBottomInset + 12)
                     } else {
                         Spacer(minLength: 4)
@@ -948,26 +952,16 @@ public struct SpeakerDSRoot: View {
     }
 
     @ViewBuilder private var conversationFocusGlassBackdrop: some View {
-            ZStack {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.24)
-                Color.black.opacity(0.42)
-                LinearGradient(
-                colors: [
-                    Color.white.opacity(0.08),
-                    Color.white.opacity(0.02),
-                    Color.clear,
-                    Color.black.opacity(0.08)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .opacity(0.82)
+        ZStack {
+            // Keep the same graphite plane through every Smart Speaker state.
+            // Focus may dim the history, but must not create a second grey scene.
+            PD.ColorToken.background
+                .opacity(0.985)
             ConversationLiveAmbientGlow(
                 accent: ThemeManager.shared.currentAccentTintColor,
                 intense: conversationIsRecording
             )
+            .opacity(0.72)
         }
     }
 
@@ -1022,7 +1016,7 @@ public struct SpeakerDSRoot: View {
 
             // Idle has one clear instruction: tap the sphere. Status and pipeline
             // become useful only after the user starts a voice action.
-            if isRec || isBusy || conversationIsPracticeFlow {
+            if isRec || isBusy || conversationIsPracticeFlow || phase == .hint {
                 conversationLiveStatusChip
             }
 
@@ -1046,6 +1040,9 @@ public struct SpeakerDSRoot: View {
             ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
             : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.86))
         let label: String = {
+            if phase == .hint {
+                return "не услышала"
+            }
             if conversationIsPracticeFlow {
                 if isRec { return "говори по-тайски" }
                 return "сравниваю"
@@ -1085,8 +1082,36 @@ public struct SpeakerDSRoot: View {
         .accessibilityLabel(isRec ? "Идёт запись, \(label)" : label)
     }
 
+    private var conversationErrorActionBar: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            external?.onConversationRepeat()
+        } label: {
+            Label("Сказать ещё раз", systemImage: "arrow.clockwise")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.text)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(PD.ColorToken.chip.opacity(0.92))
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(ThemeManager.shared.currentAccentFill.opacity(0.58), lineWidth: 1)
+                        )
+                )
+        }
+        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+        .accessibilityLabel("Сказать ещё раз")
+    }
+
     @ViewBuilder private var conversationLiveHeroText: some View {
-        if conversationIsPracticeFlow {
+        if phase == .hint {
+            Text("попробуем ещё раз?")
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .frame(maxWidth: .infinity)
+        } else if conversationIsPracticeFlow {
             conversationWidgetPhoneticStack(
                 russian: nil,
                 phonetic: (external?.conversationExpectedTranslitForFeedback ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
@@ -1771,19 +1796,8 @@ public struct SpeakerDSRoot: View {
     }
 
     @ViewBuilder private var conversationWidgetErrorCenter: some View {
-        // System recovery state: content-only status, no framed card competing with the Speaker canvas.
+        // One concise recovery hint; the hero already communicates the state.
         VStack(spacing: 10) {
-            Image(systemName: "ear.trianglebadge.exclamationmark")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(ThemeManager.shared.currentAccentFill)
-
-            if let ru = external?.heardRU?.trimmingCharacters(in: .whitespacesAndNewlines), !ru.isEmpty {
-                Text(ru)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(3)
-            }
             Text(taikaHints.joined(separator: " "))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.text)
