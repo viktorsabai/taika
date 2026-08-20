@@ -1,3 +1,11 @@
+# Compile fix — GameCompletionActions argument order
+
+| Задача | Статус |
+|---|---|
+| Переставить `onRepeat` перед `errorCount` в GameCompletionActions call site | Не начато |
+| Проверить все вызовы GameCompletionActions после сигнатурного расширения | Не начато |
+| Собрать и отправить точечный compile fix | Не начато |
+
 # Diagnostics persistence — ошибки не доходят до grade sheet
 
 | Задача | Статус |

@@ -346,14 +346,14 @@ public struct HomeTaskView: View {
                         isProUser: isProUser,
                     continueLearningTitle: resolvedContinueTitle,
                     nextGameTitle: nextGameTitle,
-                        errorCount: failedPairIds.count,
-                        onRepeatErrors: {
-                            activeCardKeys = failedCardKeysForCurrentSession
+                        onRepeat: {
+                            activeCardKeys = cardKeys
                             withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
                             buildRound(force: true)
                         },
-                        onRepeat: {
-                            activeCardKeys = cardKeys
+                        errorCount: failedPairIds.count,
+                        onRepeatErrors: {
+                            activeCardKeys = failedCardKeysForCurrentSession
                             withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
                             buildRound(force: true)
                         },
