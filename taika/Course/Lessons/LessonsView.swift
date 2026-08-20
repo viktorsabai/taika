@@ -289,6 +289,7 @@ private extension LessonsView {
         guard let cid = currentCourse?.courseID else { return }
         let ids = scopedLessonIds ?? effectiveReinforcementLessonIds
         guard !ids.isEmpty else { return }
+        pendingGameLessonIds = ids
         GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: ids)
         selectedGameLessonId = ids.count == 1 ? ids.first : nil
         if let mode { selectedGameType = mode }
@@ -627,6 +628,8 @@ public struct LessonsView: View {
     @State private var selectedGameType: GameModeType = .match
     @State private var showGameOverlay: Bool = false
     @State private var selectedGameLessonId: String? = nil
+    /// Material scope currently owned by the game picker; it must survive mode selection.
+    @State private var pendingGameLessonIds: [String] = []
     @State private var selectedLessonId: String? = nil
     /// Reinforcement queue selection is independent from the visible carousel focus.
     /// nil means all completed lessons; a non-nil set is the explicit multi-select scope.
@@ -816,15 +819,18 @@ public struct LessonsView: View {
                                 isProUser: ProManager.shared.isPro,
                                 onStart: { mode in
                                     let cid = currentCourse?.courseID ?? ""
-                                    if !effectiveReinforcementLessonIds.isEmpty {
-                                        GameRequestedCourseScope.shared.set(
-                                            courseId: cid,
-                                            lessonIds: effectiveReinforcementLessonIds
-                                        )
-                                    }
+                                    let scopedIds = pendingGameLessonIds.isEmpty
+                                        ? effectiveReinforcementLessonIds
+                                        : pendingGameLessonIds
+                                    guard !scopedIds.isEmpty else { return }
+                                    GameRequestedCourseScope.shared.set(
+                                        courseId: cid,
+                                        lessonIds: scopedIds
+                                    )
                                     showGameModePicker = false
                                     showGameOverlay = false
                                     frozenSnapshot = nil
+                                    pendingGameLessonIds = []
                                     nav.go(.game(
                                         courseId: cid,
                                         lessonId: selectedGameLessonId,
@@ -837,6 +843,7 @@ public struct LessonsView: View {
                                         showGameOverlay = false
                                     }
                                     frozenSnapshot = nil
+                                    pendingGameLessonIds = []
                                 },
                                 onLockedTap: { mode in
                                     if mode.isPro && !ProManager.shared.isPro {

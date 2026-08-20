@@ -2129,8 +2129,9 @@ public struct LSCompletedLessonList: View {
         return "\(selectedIds.count) выбрано"
     }
 
+    /// A quiet diagnostic marker; the course dashboard should not look like an incident tracker.
     private var diagnosticSignal: Color {
-        Color(red: 0.94, green: 0.24, blue: 0.56)
+        PD.ColorToken.textSecondary.opacity(0.78)
     }
 
     private var diagnosticsSummary: String {
