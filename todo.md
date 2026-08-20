@@ -1,3 +1,13 @@
+# Diagnostics persistence — ошибки не доходят до grade sheet
+
+| Задача | Статус |
+|---|---|
+| Проверить, что симулятор запускает актуальный commit и не показывает старый persisted snapshot | Не начато |
+| Проследить failed-card запись из Match/Recall/Audio до ReinforcementStore | Не начато |
+| Сверить canonical course/lesson/card keys между store и LessonsView | Не начато |
+| Проверить notification refresh и cache invalidation после save | Не начато |
+| Добавить исправление для race/identity/fallback и проверить fresh-progress сценарий | Не начато |
+
 # Post-game reinforcement — один следующий шаг и единый card scope
 
 | Задача | Статус |

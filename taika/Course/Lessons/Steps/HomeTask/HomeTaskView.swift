@@ -1158,7 +1158,6 @@ public struct HomeTaskView: View {
         let L = leftItems[li]; let R = rightItems[ri]
         if L.pairId == R.pairId {
             matchedPairIds.insert(L.pairId)
-            failedPairIds.remove(L.pairId)
             // mark matched visually
             leftItems[li].state = .matched
             rightItems[ri].state = .matched
