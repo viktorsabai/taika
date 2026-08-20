@@ -1690,6 +1690,8 @@ public struct LSCompletedLessonOption: Identifiable, Hashable {
 
 /// The completed-course hero: reinforcement is the primary task, not the lesson catalog.
 public struct LSCompletedTrainingHero: View {
+    public let courseTitle: String
+    public let onBack: () -> Void
     public let stats: LSCourseStats
     public let selectedCount: Int
     public let totalLessons: Int
@@ -1698,6 +1700,8 @@ public struct LSCompletedTrainingHero: View {
     public let onGamePark: (() -> Void)?
 
     public init(
+        courseTitle: String,
+        onBack: @escaping () -> Void,
         stats: LSCourseStats,
         selectedCount: Int,
         totalLessons: Int,
@@ -1705,6 +1709,8 @@ public struct LSCompletedTrainingHero: View {
         onSpeaker: (() -> Void)? = nil,
         onGamePark: (() -> Void)? = nil
     ) {
+        self.courseTitle = courseTitle
+        self.onBack = onBack
         self.stats = stats
         self.selectedCount = selectedCount
         self.totalLessons = totalLessons
@@ -1722,19 +1728,28 @@ public struct LSCompletedTrainingHero: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            Button(action: onBack) {
+                HStack(spacing: 5) {
+                    Image(systemName: "chevron.left")
+                    Text("В КУРСЫ")
+                }
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .kerning(0.55)
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            }
+            .buttonStyle(.plain)
+
+            Text(courseTitle)
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.text)
+                .lineLimit(2)
+
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 11, weight: .bold))
-                        Text("КУРС ПРОЙДЕН")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .kerning(0.35)
-                    }
-                    .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 6)
-                    .background(Capsule(style: .continuous).fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient)))
+                    Text("ЗАКРЕПЛЕНИЕ")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .kerning(0.8)
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
                     Text("ТРЕНИРОВКА КУРСА")
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
                         .kerning(0.8)

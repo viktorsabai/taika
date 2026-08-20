@@ -304,7 +304,7 @@ public struct AppHeader: View {
                 .foregroundColor(CD.ColorToken.text)
             Text("kAAA")
                 .font(.custom("Onmark Trial", size: size))
-                .foregroundStyle(theme.currentAccentFill)
+                .foregroundStyle(lessonsHeaderStore.isCompletedCourse ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(theme.currentAccentFill))
         }
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityLabel("taikAAA")
@@ -341,7 +341,10 @@ public struct AppHeader: View {
     }
 
     private func headerIconForeground(accent: Bool) -> AnyShapeStyle {
-        accent ? AnyShapeStyle(theme.currentAccentFill) : headerIconForeground
+        if lessonsHeaderStore.isCompletedCourse {
+            return AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(accent ? 1.0 : 0.86))
+        }
+        return accent ? AnyShapeStyle(theme.currentAccentFill) : headerIconForeground
     }
 
     // MARK: Header controls — glass orbs + единый hit target (все вкладки / push)
@@ -687,12 +690,7 @@ public struct AppHeader: View {
         // Continuous canvas: the header is a translucent field that fades into the body,
         // never a separate opaque strip with a visible horizontal seam.
         .background {
-            if lessonsHeaderStore.isCompletedCourse {
-                Rectangle()
-                    .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.18)))
-            } else {
-                TaikaLiquidGlassHeaderBackdrop()
-            }
+            TaikaLiquidGlassHeaderBackdrop()
         }
     }
 

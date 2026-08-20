@@ -263,6 +263,12 @@ private extension LessonsView {
         VStack(alignment: .leading, spacing: 18) {
             completedTaikaFMSection
             LSCompletedTrainingHero(
+                courseTitle: headerTitle,
+                onBack: {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                        if !nav.path.isEmpty { nav.path.removeLast() }
+                    }
+                },
                 stats: reinforcementCourseStats,
                 selectedCount: effectiveReinforcementLessonIds.count,
                 totalLessons: completedLessonOptions.count,
@@ -995,7 +1001,8 @@ extension LessonsView {
         let courseIsCompleted = isCompletedCourse
         let subtitleResolved = headerSubtitleResolved.isEmpty ? headerSubtitle : headerSubtitleResolved
         return VStack(spacing: 10) {
-            LSLessonHeader(
+            if !courseIsCompleted {
+                LSLessonHeader(
                 title: headerTitle,
                 subtitle: courseIsCompleted ? "" : subtitleResolved,
                 progressSlots: courseIsCompleted ? nil : slotsResolved,
@@ -1028,11 +1035,11 @@ extension LessonsView {
                 completionSummary: courseIsCompleted ? nil : courseGameSummary,
                 isCompletedCourse: courseIsCompleted,
                 // In completed mode the training dock owns material selection; avoid a second, oversized picker in the header card.
-                bottomAccessory: courseIsCompleted ? nil : AnyView(courseMaterialsPicker)
-            )
+                                bottomAccessory: courseIsCompleted ? nil : AnyView(courseMaterialsPicker)
+                )
+            }
         }
     }
-
     private var completedCourseSummary: AnyView? {
         guard let cid = currentCourse?.courseID else { return nil }
         let metrics = ReinforcementStore.shared.metrics(courseId: cid)

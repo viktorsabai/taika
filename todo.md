@@ -1326,3 +1326,12 @@
 - [ ] Передавать courseId и выбранные lessonIds в Speaker reinforcement carousel.
 - [ ] Проверить возврат из Speaker и сохранение source context.
 - [ ] Выполнить static validation и push routing fix.
+
+# Unified completed course training block
+
+- [ ] Объединить course title/header и reinforcement dashboard в одну completed-training surface.
+- [ ] Убрать повторяющийся `КУРС ПРОЙДЕН` badge из dashboard; статус выражается зелёным active state и copy закрепления.
+- [ ] Оставить один компактный Taika FM context внутри объединённого блока.
+- [ ] Перенести stats и Speaker/Game Park CTA в единый понятный reinforcement section.
+- [ ] Вернуть global header background к нейтральному liquid-glass фону; зелёными оставить только header controls в completed mode.
+- [ ] Проверить вертикальную плотность, hierarchy и static compile surface перед push.
