@@ -15,6 +15,9 @@ public enum LS {
         public let progress: Double?
         public let cardCount: Int?
         public let favoriteCount: Int
+        public let learnedCardCount: Int
+        public let errorCardCount: Int
+        public let reinforcementScore: Int?
         public init(id: String = UUID().uuidString,
                     index: Int,
                     title: String,
@@ -25,7 +28,10 @@ public enum LS {
                     tags: [String] = [],
                     progress: Double? = nil,
                     cardCount: Int? = nil,
-                    favoriteCount: Int = 0) {
+                    favoriteCount: Int = 0,
+                    learnedCardCount: Int = 0,
+                    errorCardCount: Int = 0,
+                    reinforcementScore: Int? = nil) {
             self.id = id
             self.index = index
             self.title = title
@@ -37,6 +43,9 @@ public enum LS {
             self.progress = progress
             self.cardCount = cardCount
             self.favoriteCount = favoriteCount
+            self.learnedCardCount = max(0, learnedCardCount)
+            self.errorCardCount = max(0, errorCardCount)
+            self.reinforcementScore = reinforcementScore
         }
     }
 
@@ -2107,15 +2116,28 @@ public struct LSCompletedLessonList: View {
                                 Image(systemName: selected ? "checkmark" : "circle")
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundStyle(selected ? accentFill : AnyShapeStyle(PD.ColorToken.textSecondary))
-                                VStack(alignment: .leading, spacing: 3) {
+                                VStack(alignment: .leading, spacing: 6) {
                                     Text(item.title)
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .font(.system(size: 15, weight: .semibold))
                                         .foregroundStyle(PD.ColorToken.text)
                                         .lineLimit(1)
-                                    Text(lessonStatus)
-                                        .font(.system(size: 12, weight: .regular))
-                                        .foregroundStyle(weak ? diagnosticSignal : AnyShapeStyle(PD.ColorToken.textSecondary))
-                                        .lineLimit(1)
+                                    HStack(spacing: 12) {
+                                        lessonMetric(label: "выучено", value: "\(item.learnedCardCount)/\(item.cardCount ?? 0)", style: AnyShapeStyle(PD.ColorToken.textSecondary))
+                                        if item.errorCardCount > 0 {
+                                            lessonMetric(label: "ошибки", value: "\(item.errorCardCount)", style: diagnosticSignal)
+                                        }
+                                        if let reinforcementScore = item.reinforcementScore {
+                                            lessonMetric(label: "закрепление", value: "\(reinforcementScore)%", style: AnyShapeStyle(accentFill))
+                                        } else if item.status == .locked {
+                                            Text("закрыт")
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundStyle(PD.ColorToken.textSecondary)
+                                        } else if item.learnedCardCount == 0 {
+                                            Text("ещё не начат")
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundStyle(PD.ColorToken.textSecondary)
+                                        }
+                                    }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -2169,11 +2191,16 @@ public struct LSCompletedLessonList: View {
         return "\(weakIds.count) \(lessonWord) требуют точечного повторения"
     }
 
-    private func statusText(for id: String, weak: Bool) -> String {
-        if weak { return "Фокус · \(scores[id, default: 0])%" }
-        if let score = scores[id] { return "Закреплено · \(score)%" }
-        if courseSessionCount > 0 { return "Ещё не проверен" }
-        return "Готов к первой игре"
+    @ViewBuilder
+    private func lessonMetric(label: String, value: String, style: AnyShapeStyle) -> some View {
+        HStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .foregroundStyle(style)
+            Text(label)
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+        }
     }
 }
 

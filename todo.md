@@ -1,3 +1,12 @@
+# LessonsView — старт урока и читаемая статистика строки
+
+| Задача | Статус |
+|---|---|
+| Стрелка урока должна открывать стартовый lesson flow, а не последний completion message | Не начато |
+| Проверить route/presentation для onOpen lesson item | Не начато |
+| Вынести readable metrics: выучено, ошибки, reinforcement score | Не начато |
+| Сохранить direct actions и completed/in-progress различия | Не начато |
+
 # Compile fix — LessonsDS Color vs AnyShapeStyle
 
 | Задача | Статус |

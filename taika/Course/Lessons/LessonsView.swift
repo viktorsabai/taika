@@ -500,6 +500,9 @@ private extension LessonsView {
                     let counts = StepData.shared.progressCounts(for: l.lessonID)
                     return counts.learnable > 0 ? counts.learnable : l.cardCount
                 }()
+                let learnedCardCount = min(learnableCount, max(0, Int((clamped * Double(max(1, learnableCount))).rounded())))
+                let errorCardCount = ReinforcementStore.shared.failedCardKeys(courseId: cid, lessonIds: [l.lessonID]).count
+                let reinforcementScore = ReinforcementStore.shared.lessonScore(courseId: cid, lessonId: l.lessonID)
                 return LS.Item(
                     id: l.lessonID,
                     index: i,
@@ -511,7 +514,10 @@ private extension LessonsView {
                     tags: l.tags,
                     progress: progressValue,
                     cardCount: learnableCount,
-                    favoriteCount: FavoriteManager.shared.countCardsForLesson(courseId: cid, lessonId: l.lessonID)
+                    favoriteCount: FavoriteManager.shared.countCardsForLesson(courseId: cid, lessonId: l.lessonID),
+                    learnedCardCount: learnedCardCount,
+                    errorCardCount: errorCardCount,
+                    reinforcementScore: reinforcementScore
                 )
             }()
         }
@@ -1158,7 +1164,7 @@ extension LessonsView {
                     guard openLessonIfAllowed(lid) else { return }
                     LSLessonActivity.mark(lid)
                     if let cid = currentCourse?.courseID {
-                        UserSession.shared.markActive(courseId: cid, lessonId: lid)
+                        UserSession.shared.markActive(courseId: cid, lessonId: lid, stepIndex: 0)
                         CarouselScrollPersistence.setLessonReelIndex(courseId: cid, index: idx)
                     }
                     DispatchQueue.main.async {
@@ -1553,7 +1559,7 @@ extension LessonsView {
                     guard openLessonIfAllowed(lid) else { return }
                     LSLessonActivity.mark(lid)
                     if let cid = currentCourse?.courseID {
-                        UserSession.shared.markActive(courseId: cid, lessonId: lid)
+                        UserSession.shared.markActive(courseId: cid, lessonId: lid, stepIndex: 0)
                         CarouselScrollPersistence.setLessonReelIndex(courseId: cid, index: item.index)
                     }
                     DispatchQueue.main.async {
@@ -1580,7 +1586,7 @@ extension LessonsView {
                 }
                 LSLessonActivity.mark(lid)
                 if let cid = currentCourse?.courseID {
-                    UserSession.shared.markActive(courseId: cid, lessonId: lid)
+                    UserSession.shared.markActive(courseId: cid, lessonId: lid, stepIndex: 0)
                     CarouselScrollPersistence.setLessonReelIndex(courseId: cid, index: item.index)
                 }
                 selectedLessonId = lid
