@@ -606,7 +606,7 @@ struct AudioRecallGameView: View {
         var ch = r.choices
         ch.shuffle()
         var next = rounds
-        next[roundIndex] = (item: r.item, targetRU: r.targetRU, choices: ch)
+        next[roundIndex] = (item: r.item, targetRU: r.targetRU, choices: ch, lessonId: r.lessonId)
         rounds = next
     }
 
@@ -762,7 +762,7 @@ struct AudioRecallGameView: View {
                 raw.append(contentsOf: steps.filter {
                     guard learnedIdx.contains($0.order) else { return false }
                     guard let errorCardKeys else { return true }
-                    let key = Self.normalizedCardKey("\(lid)|\($0.ru ?? \"\")")
+                    let key = Self.normalizedCardKey("\(lid)|\($0.ru ?? "")")
                     return errorCardKeys.map(Self.normalizedCardKey).contains(key)
                 }.map { (item: $0, lessonId: lid) })
             }
@@ -773,7 +773,7 @@ struct AudioRecallGameView: View {
             raw = steps.filter {
                 guard learnedIdx.contains($0.order) else { return false }
                 guard let errorCardKeys else { return true }
-                let key = Self.normalizedCardKey("\(trimmedLessonId)|\($0.ru ?? \"\")")
+                let key = Self.normalizedCardKey("\(trimmedLessonId)|\($0.ru ?? "")")
                 return errorCardKeys.map(Self.normalizedCardKey).contains(key)
             }.map { (item: $0, lessonId: trimmedLessonId) }
         }

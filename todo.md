@@ -1,3 +1,11 @@
+# AudioRecall compile fix — round tuple и canonical key strings
+
+| Задача | Статус |
+|---|---|
+| Добавить `lessonId` во все AudioRecallRound tuple assignments | Не начато |
+| Исправить две незакрытые interpolated строки `normalizedCardKey` | Не начато |
+| Проверить все AudioRecallRound references и diff | Не начато |
+
 # Game 2 — свободная сборка слогов и корректное завершение раунда
 
 | Задача | Статус |
