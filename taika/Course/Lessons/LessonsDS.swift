@@ -2044,7 +2044,7 @@ public struct LSCompletedLessonList: View {
 
     private var completedBody: some View {
         let visibleItems = showingErrorsOnly ? items.filter { weakIds.contains($0.id) } : items
-        let diagnosticFill = AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+        let diagnosticFill = AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.82))
         let hasErrors = !weakIds.isEmpty
         let selectedCount = selectedIds.intersection(Set(visibleItems.map(\.id))).count
 

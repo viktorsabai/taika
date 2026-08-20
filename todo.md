@@ -1,3 +1,12 @@
+# Follow-up — neutral diagnostic selection controls
+
+| Задача | Статус |
+|---|---|
+| Убрать gradient с active underline `УРОКИ / ОШИБКИ` | Сделано |
+| Убрать gradient с selected lesson vertical rail | Сделано |
+| Оставить gradient только у numeric mastery values и subject scores | Сделано |
+| Проверить error text и CTA hierarchy, затем push | В работе |
+
 # Follow-up — numeric and neutral navigation color correction
 
 | Задача | Статус |
