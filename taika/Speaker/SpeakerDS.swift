@@ -980,11 +980,13 @@ public struct SpeakerDSRoot: View {
     @ViewBuilder private var conversationLiveStage: some View {
         let isRec = conversationIsRecording
         let isBusy = phase == .analyzing
-        let sphereSize: CGFloat = 156
         VStack(spacing: 14) {
             ZStack {
+                SpeakerLiveStateHalo(isRecording: isRec, isProcessing: isBusy)
+                    .frame(width: 240, height: 240)
+
                 MDVoiceSphere(
-                    symbol: isBusy ? "ellipsis" : (isRec ? "stop.fill" : "mic.fill"),
+                    symbol: isBusy ? "waveform.path.ecg" : (isRec ? "stop.fill" : "mic.fill"),
                     accessibilityLabel: isBusy ? "Обработка" : (isRec ? "Стоп" : "Микрофон"),
                     meter: isRec ? recordingMeter : 0
                 ) {
@@ -1007,7 +1009,7 @@ public struct SpeakerDSRoot: View {
                         .accessibilityLabel("Обработка")
                 }
             }
-            .frame(width: sphereSize, height: sphereSize)
+            .frame(width: 240, height: 240)
 
             conversationLiveHeroText
                 .frame(height: 84, alignment: .center)
@@ -1025,10 +1027,8 @@ public struct SpeakerDSRoot: View {
                     .transition(.opacity)
             }
 
-            if isRec || isBusy || conversationIsPracticeFlow {
-                conversationLivePipelineHint
-                    .padding(.top, 2)
-            }
+            // The state chip is the single status affordance. The old speech/text/translation
+            // pipeline duplicated it and made later Speaker screens feel assembled.
         }
         .frame(maxWidth: .infinity)
     }
@@ -1050,7 +1050,7 @@ public struct SpeakerDSRoot: View {
             if (external?.heardRU?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false) {
                 return "перевожу"
             }
-            return "готов слушать"
+            return "готова слушать"
         }()
         HStack(spacing: 8) {
             if isRec {
@@ -1149,10 +1149,8 @@ public struct SpeakerDSRoot: View {
             }
             .frame(maxWidth: .infinity)
         } else {
-            Text("готов слушать")
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-                .frame(maxWidth: .infinity)
+            // Idle is intentionally wordless: the orb is the invitation to speak.
+            EmptyView()
         }
     }
 
@@ -7000,6 +6998,38 @@ private struct ConversationLiveWaveRibbon: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
         .accessibilityHidden(true)
+    }
+}
+
+private struct SpeakerLiveStateHalo: View {
+    let isRecording: Bool
+    let isProcessing: Bool
+
+    var body: some View {
+        if isRecording || isProcessing {
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+                let phase = timeline.date.timeIntervalSinceReferenceDate
+                let speed = isRecording ? 1.0 : 0.62
+                let pulse = 0.5 + 0.5 * sin(phase * speed * .pi * 2)
+                let accent = ThemeManager.shared.currentAccentTintColor
+                ZStack {
+                    Circle()
+                        .fill(accent.opacity(isRecording ? 0.12 + pulse * 0.08 : 0.08 + pulse * 0.05))
+                        .blur(radius: isRecording ? 20 : 28)
+                        .scaleEffect(isRecording ? 0.92 + pulse * 0.14 : 0.96 + pulse * 0.08)
+
+                    Circle()
+                        .stroke(accent.opacity(isRecording ? 0.22 + pulse * 0.18 : 0.16 + pulse * 0.10), lineWidth: 1.2)
+                        .scaleEffect(isRecording ? 0.82 + pulse * 0.18 : 0.88 + pulse * 0.10)
+
+                    Circle()
+                        .stroke(Color.white.opacity(isProcessing ? 0.10 + pulse * 0.08 : 0.08 + pulse * 0.06), lineWidth: 1)
+                        .scaleEffect(isRecording ? 0.68 + pulse * 0.12 : 0.74 + pulse * 0.08)
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
     }
 }
 

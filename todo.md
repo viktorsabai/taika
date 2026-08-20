@@ -1,3 +1,13 @@
+# Speaker — instant translation motion-first redesign
+
+| Задача | Статус |
+|---|---|
+| Аудировать idle/recording/processing/result branches и дублирующий copy | Сделано |
+| Убрать стартовый `готов слушать` и повторяющиеся status labels | Сделано |
+| Сделать единый reactive orb для recording/processing wow-state | Сделано |
+| Сохранить result card/actions и проверить женский copy | Сделано |
+| Закоммитить и запушить Speaker flow redesign | В работе |
+
 # Feature — course favorites filter and card-only Favorites
 
 | Задача | Статус |
