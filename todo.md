@@ -1365,3 +1365,12 @@
 - [ ] Убрать лишние labels и дубли, оставить один главный next step по каждой skill row.
 - [ ] Сохранить лайфхаки, ошибки, selected scope и disabled states.
 - [ ] Выполнить static validation и consolidated push.
+
+# CourseView status-pill final audit
+
+- [ ] Найти текущий `КУРС ПРОЙДЕН` front badge и back-face status treatment.
+- [ ] Сверить geometry/gradient/typography с `Начать` pill.
+- [ ] Сделать front status `КУРС ПРОЙДЕН`, back status `ЗАКРЕПЛЕНИЕ` в одном каноническом component style.
+- [ ] Проверить state-dependent arrows, play/game/speaker actions и application line.
+- [ ] Убедиться, что незавершённые карточки не получают completed green affordances.
+- [ ] Выполнить static validation, commit и push.

@@ -2690,6 +2690,33 @@ fileprivate struct CDOrganicLearnedTreatment: View {
     }
 }
 
+private struct CDCourseStatusPill: View {
+    let title: String
+    let icon: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .bold))
+            Text(title)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .kerning(0.35)
+        }
+        .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
+        .padding(.horizontal, 13)
+        .padding(.vertical, 8)
+        .background(
+            Capsule(style: .continuous)
+                .fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color.white.opacity(0.72), lineWidth: 1)
+        )
+        .shadow(color: TaikaMasteryTokens.green.opacity(0.22), radius: 8, y: 3)
+    }
+}
+
 public struct CourseLessonCard: View {
     // Content
     public let title: String
@@ -2981,7 +3008,7 @@ public struct CourseLessonCard: View {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
-                                AppStatusChip(kind: statusKind, title: statusChipTitle ?? title.lowercased())
+                                CDCourseStatusPill(title: "ЗАКРЕПЛЕНИЕ", icon: "waveform.path.ecg")
                             }
                         }
                         .buttonStyle(.plain)
@@ -3022,18 +3049,7 @@ public struct CourseLessonCard: View {
                             } label: {
                                 HStack(spacing: 6) {
                                     if statusKind == .completed {
-                                        HStack(spacing: 5) {
-                                            Image(systemName: "checkmark.seal.fill")
-                                                .font(.system(size: 13, weight: .bold))
-                                            Text("КУРС ПРОЙДЕН")
-                                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                                .kerning(0.35)
-                                        }
-                                        .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 7)
-                                        .background(Capsule(style: .continuous).fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient)))
-                                        .overlay(Capsule(style: .continuous).stroke(Color.white.opacity(0.72), lineWidth: 1))
+                                        CDCourseStatusPill(title: "КУРС ПРОЙДЕН", icon: "checkmark.seal.fill")
                                     } else {
                                         AppStatusChip(kind: statusKind, title: statusChipTitle)
                                     }
@@ -3294,18 +3310,6 @@ public struct CourseLessonCard: View {
 
             case .courseGradeSheet:
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 13, weight: .bold))
-                        Text("КУРС ПРОЙДЕН")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .kerning(0.35)
-                    }
-                    .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 6)
-                    .background(Capsule(style: .continuous).fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient)))
-
                     Text("ЗАЧЁТ ПО КУРСУ · результат уже есть. Закрепи его, чтобы навык не ушёл из памяти.")
                         .font(.system(size: 11, weight: .regular))
                         .foregroundStyle(Color.white.opacity(0.62))
