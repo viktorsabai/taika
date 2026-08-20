@@ -1487,3 +1487,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Увеличить secondary copy до минимум 13 pt и обеспечить lineLimit/lineSpacing без обрезки.
 - [ ] Сделать CTA outline-контрастными: зелёный текст/иконка на прозрачной поверхности, без чёрного текста на тёмном фоне.
 - [ ] Проверить back face на первом взгляде и push после diff validation.
+
+# Completed lesson selection vs navigation
+
+- [ ] Разделить tap по checkbox/левому содержимому и trailing chevron.
+- [ ] Checkbox/left tap только toggles lesson selection.
+- [ ] Trailing chevron только открывает canonical lesson.
+- [ ] Добавить `Выбрать все` и `Снять все` для completed lesson selection.
+- [ ] Сохранить selectedIds и scope для Speaker/Game reinforcement.

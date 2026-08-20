@@ -147,6 +147,20 @@ private extension LessonsView {
         updateReinforcementSelection(updated)
     }
 
+    private func selectAllTrainingLessons() {
+        updateReinforcementSelection(Set(completedLessonOptions.map(\.id)))
+    }
+
+    private func clearAllTrainingLessons() {
+        updateReinforcementSelection([])
+    }
+
+    private func openCompletedLesson(_ lessonId: String) {
+        guard openLessonIfAllowed(lessonId), let cid = currentCourse?.courseID else { return }
+        selectedLessonId = lessonId
+        nav.go(.lesson(courseId: cid, lessonId: lessonId, presentation: .canonical))
+    }
+
     private var reinforcementLessonScores: [String: Int] {
         guard let cid = currentCourse?.courseID,
               let metrics = ReinforcementStore.shared.metrics(courseId: cid) else { return [:] }
@@ -360,7 +374,10 @@ private extension LessonsView {
                 selectedIds: Set(effectiveReinforcementLessonIds),
                 weakIds: weakCompletedLessonIds,
                 scores: reinforcementLessonScores,
-                onToggle: toggleTrainingSelection
+                onToggle: toggleTrainingSelection,
+                onOpen: openCompletedLesson,
+                onSelectAll: selectAllTrainingLessons,
+                onClearAll: clearAllTrainingLessons
             )
         }
     }

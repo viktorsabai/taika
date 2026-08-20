@@ -1992,19 +1992,39 @@ public struct LSCompletedTrainingHero: View {
 }
 
 /// Compact list used only after a course is fully completed.
+private struct LSSelectionActionButtonStyle: ButtonStyle {
+    let isActive: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(isActive ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .background(Capsule(style: .continuous).fill(Color.clear))
+            .overlay(Capsule(style: .continuous).stroke(isActive ? TaikaMasteryTokens.greenGlow.opacity(0.55) : PD.ColorToken.stroke.opacity(0.25), lineWidth: 1))
+            .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
 public struct LSCompletedLessonList: View {
     public let items: [LS.Item]
     public let selectedIds: Set<String>
     public let weakIds: Set<String>
     public let scores: [String: Int]
     public let onToggle: (String) -> Void
+    public let onOpen: ((String) -> Void)?
+    public let onSelectAll: (() -> Void)?
+    public let onClearAll: (() -> Void)?
 
-    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], onToggle: @escaping (String) -> Void) {
+    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil) {
         self.items = items
         self.selectedIds = selectedIds
         self.weakIds = weakIds
         self.scores = scores
         self.onToggle = onToggle
+        self.onOpen = onOpen
+        self.onSelectAll = onSelectAll
+        self.onClearAll = onClearAll
     }
 
     public var body: some View {
@@ -2023,38 +2043,59 @@ public struct LSCompletedLessonList: View {
                         .foregroundStyle(AnyShapeStyle(Color.red.opacity(0.92)))
                 }
                 Text("\(selectedIds.count) выбрано")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
+            }
+            HStack(spacing: 8) {
+                if let onSelectAll {
+                    Button("Выбрать все", action: onSelectAll)
+                        .buttonStyle(LSSelectionActionButtonStyle(isActive: selectedIds.count < items.count))
+                }
+                if let onClearAll {
+                    Button("Снять все", action: onClearAll)
+                        .buttonStyle(LSSelectionActionButtonStyle(isActive: !selectedIds.isEmpty))
+                }
             }
 
             VStack(spacing: 0) {
                 ForEach(items) { item in
                     let selected = selectedIds.contains(item.id)
                     let weak = weakIds.contains(item.id)
-                    Button { onToggle(item.id) } label: {
-                        HStack(spacing: 11) {
-                            Image(systemName: selected ? "checkmark" : "circle")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(selected ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary))
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(item.title)
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(PD.ColorToken.text)
-                                    .lineLimit(1)
-                                Text(weak
-                                     ? "Ошибка · \(scores[item.id, default: 0])% — нужно повторить"
-                                     : (scores[item.id].map { "Закреплено · \($0)%" } ?? "Пройден · ждёт новой диагностики"))
-                                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(weak ? AnyShapeStyle(Color.red.opacity(0.92)) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                    HStack(spacing: 11) {
+                        Button { onToggle(item.id) } label: {
+                            HStack(spacing: 11) {
+                                Image(systemName: selected ? "checkmark" : "circle")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(selected ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(item.title)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(PD.ColorToken.text)
+                                        .lineLimit(1)
+                                    Text(weak
+                                         ? "Ошибка · \(scores[item.id, default: 0])% — нужно повторить"
+                                         : (scores[item.id].map { "Закреплено · \($0)%" } ?? "Пройден · ждёт новой диагностики"))
+                                        .font(.system(size: 12, weight: .regular))
+                                        .foregroundStyle(weak ? AnyShapeStyle(Color.red.opacity(0.92)) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                                        .lineLimit(1)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            Spacer(minLength: 6)
-                            Image(systemName: weak ? "waveform.path.ecg" : "chevron.right")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(weak ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.65)))
+                            .contentShape(Rectangle())
                         }
-                        .contentShape(Rectangle())
+                        .buttonStyle(.plain)
+                        if let onOpen {
+                            Button { onOpen(item.id) } label: {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.78)))
+                                    .frame(width: 36, height: 36)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Открыть урок")
+                        }
                     }
-                    .buttonStyle(.plain)
                     .padding(.vertical, 12)
                     .overlay(alignment: .bottom) { Rectangle().fill(PD.ColorToken.stroke.opacity(0.32)).frame(height: 1) }
                 }
