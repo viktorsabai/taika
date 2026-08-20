@@ -1550,3 +1550,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Собрать Выбрать все/Снять все в отдельную ровную action bar.
 - [ ] Добавить bottom spacing, чтобы controls не попадали под home indicator.
 - [ ] Проверить small-screen clipping и запушить layout fix.
+
+# Final two-day integration audit
+
+- [x] Сверить историю последних двух дней и фактический diff относительно origin/2026-01-21-k7hb-d2004.
+- [x] Проверить CourseView completed face/back, exact status capsule и reinforcement routes.
+- [x] Проверить LessonsView completed/in-progress state axes, grade sheet, waves, selection/navigation и bulk actions.
+- [x] Проверить StepView completion screen-fit, safe area и centered metadata chips.
+- [x] Проверить Speaker reinforcement entry и Game Park mode/PRO routing.
+- [x] Проверить regular SplashView visual polish и AppShell handoff.
+- [x] Найти и исправить regressions/contradictory states.
+- [x] Выполнить static validation и собрать один consolidated production push.
