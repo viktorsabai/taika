@@ -1642,3 +1642,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Убрать промежуточный непонятный экран и повторный Pro paywall.
 - [x] Проверить возврат из игр, locked modes и выбранный lesson/course scope.
 - [x] Выполнить static validation и подготовить один финальный push.
+
+# LessonsView grade sheet redesign
+
+- [x] Аудировать смысл каждого блока зачётки и diagnostics copy.
+- [x] Убрать лишний Speaker icon и разделить предметы строгими rows/dividers.
+- [x] Сделать системные metric numbers с единым reveal motion без layout jumps.
+- [x] Перепроектировать нижний diagnostics/lesson selection block с одним ясным CTA.
+- [x] Выполнить static validation и подготовить один финальный push.

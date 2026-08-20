@@ -1841,9 +1841,9 @@ public struct LSCompletedTrainingHero: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 HStack(alignment: .top, spacing: 0) {
-                    metric(value: "\(stats.gameCoveredCards)", label: "карточки")
+                    metric(value: "\(stats.gameCoveredCards)", label: "карточки в игре")
                     metric(value: "\(stats.gameSessions)", label: "игровые сессии")
-                    metric(value: "\(selectedCount)/\(totalLessons)", label: "выбрано")
+                    metric(value: "\(selectedCount)/\(totalLessons)", label: "уроки выбраны")
                 }
                 .foregroundStyle(PD.ColorToken.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1867,7 +1867,7 @@ public struct LSCompletedTrainingHero: View {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(Color.white.opacity(0.035))
                 LSCompletedJungleWaves()
-                    .opacity(0.42)
+                    .opacity(0.16)
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
         }
@@ -1896,13 +1896,7 @@ public struct LSCompletedTrainingHero: View {
         let enabled = action != nil && selectedCount > 0
         let result = skill.isProLocked ? "Taika Pro" : (skill.score.map { "\($0)%" } ?? (skill.sessions > 0 ? "есть данные" : "нет результата"))
         let detail = skill.sessions > 0 ? "\(skill.sessions) сессии" : "первая тренировка впереди"
-        let content = HStack(alignment: .center, spacing: 10) {
-            if skill.isSpeaker {
-                Image(systemName: skill.icon)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(0.82)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.55)))
-                    .frame(width: 24)
-            }
+        let content = HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(skill.title)
                     .font(.system(size: 15, weight: .semibold))
@@ -1928,11 +1922,13 @@ public struct LSCompletedTrainingHero: View {
                         .lineLimit(1)
                 } else {
                     Text(skill.score.map { "\($0)%" } ?? "—")
-                        .font(.system(size: 20, weight: .bold, design: .monospaced))
+                        .font(.system(size: 21, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(skill.score == nil ? AnyShapeStyle(PD.ColorToken.textSecondary) : AnyShapeStyle(PD.ColorToken.text))
                         .lineLimit(1)
                         .minimumScaleFactor(0.78)
+                        .contentTransition(.numericText())
+                        .animation(.easeOut(duration: 0.28), value: skill.score)
                     if skill.score == nil {
                         Text(skill.sessions > 0 ? "есть данные" : "нет результата")
                             .font(.system(size: 11, weight: .medium))
@@ -1949,18 +1945,21 @@ public struct LSCompletedTrainingHero: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 12)
-        .overlay(alignment: .bottom) { Rectangle().fill(PD.ColorToken.stroke.opacity(0.28)).frame(height: 1) }
+        .padding(.horizontal, 8)
+        .overlay(alignment: .bottom) { Rectangle().fill(PD.ColorToken.stroke.opacity(0.42)).frame(height: 1) }
         if enabled, let action { Button(action: action) { content }.buttonStyle(.plain) } else { content }
     }
 
     private func metric(value: String, label: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(value)
-                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                .font(.system(size: 23, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(PD.ColorToken.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.78)
+                .contentTransition(.numericText())
+                .animation(.easeOut(duration: 0.28), value: value)
             Text(label.uppercased())
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.textSecondary)
@@ -2050,22 +2049,19 @@ public struct LSCompletedLessonList: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("УРОКИ ДЛЯ ЗАКРЕПЛЕНИЯ")
-                    .taikaSectionTitleStyle()
-                Spacer(minLength: 8)
-                if weakIds.isEmpty {
-                    Text(scores.isEmpty && courseSessionCount > 0 ? "игра есть · нужна диагностика" : (scores.isEmpty ? "нет диагностики" : "ошибок нет"))
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(AnyShapeStyle(PD.ColorToken.textSecondary))
-                } else {
-                    Text("\(weakIds.count) ошибок")
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(AnyShapeStyle(Color.red.opacity(0.92)))
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("СЛЕДУЮЩЕЕ ЗАКРЕПЛЕНИЕ")
+                        .taikaSectionTitleStyle()
+                    Spacer(minLength: 8)
+                    Text("\(selectedIds.count) из \(items.count) уроков")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(accentFill)
                 }
-                Text("\(selectedIds.count) выбрано")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(accentFill)
+                Text(diagnosticsSummary)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(diagnosticsColor)
+                    .lineLimit(2)
             }
             HStack(spacing: 8) {
                 if let onSelectAll {
@@ -2087,6 +2083,7 @@ public struct LSCompletedLessonList: View {
                 ForEach(items) { item in
                     let selected = selectedIds.contains(item.id)
                     let weak = weakIds.contains(item.id)
+                    let lessonStatus = statusText(for: item.id, weak: weak)
                     HStack(spacing: 11) {
                         Button { onToggle(item.id) } label: {
                             HStack(spacing: 11) {
@@ -2098,9 +2095,7 @@ public struct LSCompletedLessonList: View {
                                         .font(.system(size: 14, weight: .semibold))
                                         .foregroundStyle(PD.ColorToken.text)
                                         .lineLimit(1)
-                                    Text(weak
-                                         ? "Ошибка · \(scores[item.id, default: 0])% — нужно повторить"
-                                         : (scores[item.id].map { "Закреплено · \($0)%" } ?? (courseSessionCount > 0 ? "Игра пройдена · повтори для диагностики" : "Пройден · ждёт новой диагностики")))
+                                    Text(lessonStatus)
                                         .font(.system(size: 12, weight: .regular))
                                         .foregroundStyle(weak ? AnyShapeStyle(Color.red.opacity(0.92)) : AnyShapeStyle(PD.ColorToken.textSecondary))
                                         .lineLimit(1)
@@ -2128,6 +2123,26 @@ public struct LSCompletedLessonList: View {
             }
         }
         .padding(.top, 4)
+    }
+
+    private var diagnosticsSummary: String {
+        if !weakIds.isEmpty { return "Есть ошибки в \(weakIds.count) уроках — начни с них" }
+        if !scores.isEmpty { return "Диагностика готова — выбери уроки для следующего подхода" }
+        if courseSessionCount > 0 { return "Игра пройдена, но уроки ещё не диагностированы" }
+        return "Выбери пройденные уроки, чтобы собрать первую игру"
+    }
+
+    private var diagnosticsColor: AnyShapeStyle {
+        if !weakIds.isEmpty { return AnyShapeStyle(Color.red.opacity(0.92)) }
+        if !scores.isEmpty { return accentFill }
+        return AnyShapeStyle(PD.ColorToken.textSecondary)
+    }
+
+    private func statusText(for id: String, weak: Bool) -> String {
+        if weak { return "Ошибка · \(scores[id, default: 0])% — повторить" }
+        if let score = scores[id] { return "Результат закрепления · \(score)%" }
+        if courseSessionCount > 0 { return "Игра есть · нужна диагностика" }
+        return "Готов к первой игре"
     }
 }
 
