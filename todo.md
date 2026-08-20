@@ -1463,3 +1463,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Разместить status capsule в верхней строке на его месте, не увеличивая capsule.
 - [ ] Использовать Start metrics: system 13 bold, spacing 6, padding 14/8, arrow 11 bold.
 - [ ] Проверить face `КУРС ПРОЙДЕН` и back `ЗАКРЕПЛЕНИЕ` на одинаковую ширину/читабельность.
+
+# Card UI refinement: status, progress, back actions
+
+- [ ] Сделать completed status capsule визуально не выше canonical Start и без лишней ширины от icon/text layout.
+- [ ] Для in-progress course/lesson progress использовать currentAccentFill/currentAccentTintColor, не mastery green.
+- [ ] Перенести back-face actions вниз, left-align, в outline-only Warmup-style controls.
+- [ ] Увеличить action text readability без filled green/black button blocks.
+- [ ] Проверить completed face/back и in-progress card states статически.

@@ -2565,27 +2565,26 @@ private struct CourseProAnimatedCrown: View {
 private struct CardBackActionButtonStyle: ButtonStyle {
     let isPrimary: Bool
     var isMastery: Bool = false
-
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 13, weight: .bold))
-            .foregroundStyle(isPrimary ? Color.black.opacity(0.92) : Color.white.opacity(0.88))
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(isMastery ? AnyShapeStyle(TaikaMasteryTokens.green) : AnyShapeStyle(Color.white.opacity(0.86)))
             .lineLimit(1)
-            .minimumScaleFactor(0.82)
+            .minimumScaleFactor(0.78)
             .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 Capsule(style: .continuous)
-                    .fill(isMastery ? AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient) : AnyShapeStyle(Color.black.opacity(0.78)))
+                    .fill(Color.clear)
             )
             .overlay(
                 Capsule(style: .continuous)
-                    .stroke(Color.white.opacity(isPrimary ? 0.42 : 0.16), lineWidth: 1)
+                    .stroke(isMastery ? TaikaMasteryTokens.green.opacity(0.72) : Color.white.opacity(0.28), lineWidth: 1)
             )
-            .opacity(configuration.isPressed ? 0.76 : 1)
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .shadow(color: isMastery ? TaikaMasteryTokens.green.opacity(0.20) : Color.black.opacity(0.20), radius: 7, y: 2)
+            .contentShape(Capsule(style: .continuous))
+            .opacity(configuration.isPressed ? 0.68 : 1)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
     }
 }
 
@@ -2695,8 +2694,10 @@ private struct CDCourseStatusPill: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 13, weight: .bold))
+            if !icon.isEmpty {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .bold))
+            }
             Text(title)
                 .font(.system(size: 13, weight: .bold))
                 .lineLimit(1)
@@ -3009,7 +3010,7 @@ public struct CourseLessonCard: View {
                     if statusKind == .completed && backFaceKind == .courseGradeSheet {
                         CDCourseStatusPill(
                             title: isBack ? "ЗАКРЕПЛЕНИЕ" : "КУРС ПРОЙДЕН",
-                            icon: isBack ? "waveform.path.ecg" : "checkmark.seal.fill",
+                            icon: "",
                             trailingIcon: isBack ? "arrow.left" : "arrow.right"
                         )
                     } else if statusKind == .completed {
@@ -3327,6 +3328,7 @@ public struct CourseLessonCard: View {
 
             case .courseGradeSheet:
                 VStack(alignment: .leading, spacing: 9) {
+                    Spacer(minLength: 16)
                     Text("ЗАКРЕПИ ПРОЙДЕННЫЙ КУРС")
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.white.opacity(0.92))
@@ -3352,16 +3354,18 @@ public struct CourseLessonCard: View {
                         .kerning(0.7)
                         .padding(.top, 2)
 
+                    Spacer(minLength: 10)
                     if let action = onBackSelectGameMode {
                         Button {
                             action("match")
                         } label: {
-                            HStack(spacing: 7) {
+                            HStack(spacing: 9) {
                                 Image(systemName: "gamecontroller.fill")
                                 Text("Закрепить в игре")
                                 Spacer(minLength: 0)
                                 Image(systemName: "arrow.right")
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.90)))
                         }
                         .buttonStyle(CardBackActionButtonStyle(isPrimary: true, isMastery: true))
@@ -3371,12 +3375,13 @@ public struct CourseLessonCard: View {
                         Button {
                             action()
                         } label: {
-                            HStack(spacing: 7) {
+                            HStack(spacing: 9) {
                                 Image(systemName: "mic.fill")
                                 Text("Тренировать в Спикере")
                                 Spacer(minLength: 0)
                                 Image(systemName: "arrow.right")
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .foregroundStyle(AnyShapeStyle(Color.white.opacity(0.90)))
                         }
                         .buttonStyle(CardBackActionButtonStyle(isPrimary: false, isMastery: false))
@@ -3420,9 +3425,7 @@ public struct CourseLessonCard: View {
                          secondaryText: isLearned
                              ? "выучено · закрепление доступно"
                              : (showPlanHint ? "закрепление доступно" : nil),
-                         progressColor: isLearned
-                             ? Color(red: 0.25, green: 0.78, blue: 0.48)
-                             : ThemeManager.shared.currentAccentTintColor
+                             progressColor: ThemeManager.shared.currentAccentTintColor
                      )
                 }
             }
