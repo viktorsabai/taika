@@ -1,3 +1,13 @@
+# Feature — course favorites filter and card-only Favorites
+
+| Задача | Статус |
+|---|---|
+| Аудировать course filters и источник favorite card counts | Сделано |
+| Добавить динамический фильтр `Избранное` при наличии favorite cards | Сделано |
+| Убрать курсы из общего Favorites list, оставить card favorites | Сделано |
+| Проверить ordering, empty states и navigation handoff | Сделано |
+| Закоммитить и запушить сквозной feature | В работе |
+
 # Fix — completed error diagnostics hierarchy
 
 | Задача | Статус |

@@ -712,6 +712,8 @@ public enum CourseScreenTab: String, CaseIterable, Identifiable {
     case resume
     /// Только полностью пройденные курсы.
     case completed
+    /// Курсы, в которых пользователь сохранил хотя бы одну учебную карточку.
+    case favorites
     /// Курсы «База от Тайки».
     case base
     /// Тематические курсы (жизнь, душа, волна).
@@ -727,6 +729,7 @@ public enum CourseScreenTab: String, CaseIterable, Identifiable {
         switch self {
         case .resume: return "Продолжить"
         case .completed: return "Пройденные"
+        case .favorites: return "Избранное"
         case .base: return "База"
         case .scenarios: return "Сценарии"
         case .dictionary: return "Словарь"
@@ -739,6 +742,7 @@ public enum CourseScreenTab: String, CaseIterable, Identifiable {
         switch self {
         case .resume: return .resume
         case .completed: return .resume
+        case .favorites: return .fav
         case .base: return .course
         case .scenarios: return .scenarios
         case .dictionary: return .dictionary

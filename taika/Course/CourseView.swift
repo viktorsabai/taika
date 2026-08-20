@@ -43,15 +43,6 @@ struct CourseView: View {
     private let lessonsManager = LessonsManager.shared
     private let pro = ProManager.shared
 
-    private func isFavorite(_ c: Course) -> Bool {
-        favs.items.contains { $0.id == "course:\(c.id)" }
-    }
-    private func toggleFavorite(_ c: Course) {
-        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-            FavoriteManager.shared.toggle(item: c)
-        }
-    }
-
     private func handleTapCourse(_ c: Course, persistCarousel: PersistedCourseCarousel = .none) {
         // debug: trace taps / routing
         #if DEBUG
@@ -292,15 +283,37 @@ struct CourseView: View {
         return total > 0 && done >= total
     }
 
-    /// Только начатые или добавленные в избранное, но ещё не полностью завершённые курсы.
+    /// Только начатые и ещё не полностью завершённые курсы.
+    /// Course favorites больше не смешиваются с «Продолжить»: для них есть отдельный tab «Избранное».
     private func inProgressCourses(in pool: [Course]) -> [Course] {
         let started = pool.filter { c in
             guard !isCourseCompleted(c) else { return false }
-            if isFavorite(c) { return true }
             let (done, _) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
             return done > 0
         }
         return deduplicateByText(started)
+    }
+
+    /// Курсы, в которых сохранена хотя бы одна учебная карточка/лайфхак.
+    private func favoriteCardCourses(in pool: [Course]) -> [Course] {
+        let favoriteCourseIds = Set(
+            favs.items.compactMap { item -> String? in
+                let id = item.id.lowercased()
+                guard !id.hasPrefix("course:") else { return nil }
+
+                let storedCourseId = item.courseId.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !storedCourseId.isEmpty {
+                    let canonical = ProgressManager.shared.canonicalize(storedCourseId)
+                    return canonical.isEmpty ? nil : canonical
+                }
+
+                // Старые favorites могли не иметь courseId, но route всё ещё содержит курс.
+                guard let route = StepManager.shared.resolveRoute(fromFavoriteId: item.id) else { return nil }
+                let canonical = ProgressManager.shared.canonicalize(route.courseId)
+                return canonical.isEmpty ? nil : canonical
+            }
+        )
+        return deduplicateByText(pool.filter { favoriteCourseIds.contains(ProgressManager.shared.canonicalize($0.id)) })
     }
 
     /// Курсы с закрытыми всеми уроками — отдельный achievement/library scope.
@@ -388,8 +401,8 @@ struct CourseView: View {
                 homeworkDone: done,
                 isActive: false,
                 onTap: { handleTapCourse(c, persistCarousel: persistCarousel) },
-                isFavorite: isFavorite(c),
-                onToggleFavorite: { toggleFavorite(c) },
+                isFavorite: false,
+                onToggleFavorite: nil,
                 onTapConsole: isTheoryBonus ? nil : {
                     let cards = CourseManager.shared.cardsForGame(courseId: c.id)
                     guard !cards.isEmpty else {
@@ -419,14 +432,19 @@ struct CourseView: View {
         }
     }
 
-    /// Dynamic tabs: completed courses are an achievement scope, never part of «Продолжить».
+    /// Dynamic tabs: completed and favorite-card courses are separate scopes.
     private var visibleCourseTabs: [CourseScreenTab] {
         var tabs = CourseScreenTab.mvpTabs.filter { tab in
             tab != .resume || !allCatalogInProgress.isEmpty
         }
-        guard !allCatalogCompleted.isEmpty else { return tabs }
-        let insertIndex = tabs.firstIndex(of: .base) ?? tabs.endIndex
-        tabs.insert(.completed, at: insertIndex)
+        if !allCatalogCompleted.isEmpty {
+            let insertIndex = tabs.firstIndex(of: .base) ?? tabs.endIndex
+            tabs.insert(.completed, at: insertIndex)
+        }
+        if !allCatalogFavoriteCards.isEmpty {
+            let insertIndex = tabs.firstIndex(of: .base) ?? tabs.endIndex
+            tabs.insert(.favorites, at: insertIndex)
+        }
         return tabs
     }
 
@@ -451,6 +469,8 @@ struct CourseView: View {
             resumeTabContentView()
         case .completed:
             completedTabContentView()
+        case .favorites:
+            favoritesTabContentView()
         case .base:
             baseTabContentView()
         case .scenarios:
@@ -466,6 +486,9 @@ struct CourseView: View {
     }
     private var allCatalogCompleted: [Course] {
         completedCourses(in: deduplicateByID(basa + other))
+    }
+    private var allCatalogFavoriteCards: [Course] {
+        favoriteCardCourses(in: deduplicateByID(basa + other))
     }
     private func resumeTabContentView() -> some View {
         let courses = allCatalogInProgress
@@ -501,6 +524,27 @@ struct CourseView: View {
             }
         }
     }
+    private func favoritesTabContentView() -> some View {
+        let items = mapCourseItems(from: allCatalogFavoriteCards)
+        return Group {
+            if items.isEmpty {
+                courseEmptyState(
+                    title: "Пока нет избранных карточек",
+                    subtitle: "Добавляй фразы сердцем внутри урока — их курс появится здесь.",
+                    actionTitle: "Открыть базу",
+                    action: { selectedCourseTab = .base }
+                )
+                .onAppear { ensureValidCourseTabSelection() }
+            } else {
+                CDAllCoursesSection(
+                    title: "Избранное",
+                    items: items,
+                    initialCarouselIndex: 0
+                )
+            }
+        }
+    }
+
     private func baseTabContentView() -> some View {
         baseSectionView()
     }
@@ -648,6 +692,8 @@ struct CourseView: View {
             return Set(allCatalogInProgress.map(\.id))
         case .completed:
             return Set(allCatalogCompleted.map(\.id))
+        case .favorites:
+            return Set(allCatalogFavoriteCards.map(\.id))
         case .base:
             return Set(filteredBasa.map(\.id))
         case .scenarios:
@@ -785,6 +831,12 @@ struct CourseView: View {
                 "Твои закрытые курсы — как библиотека достижений",
                 "Открой курс, чтобы продолжить закрепление",
                 "Повторяй уроки и возвращайся к слабым местам"
+            ]
+        case .favorites:
+            return [
+                "Курсы с сохранёнными карточками — в одном месте",
+                "Открой курс, чтобы повторить любимые фразы",
+                "Избранное собирается прямо внутри уроков"
             ]
         case .base:
             return [
@@ -1188,6 +1240,9 @@ struct CourseView: View {
                         ensureValidCourseTabSelection()
                     }
                     .onChange(of: allCatalogCompleted.count) { _, _ in
+                        ensureValidCourseTabSelection()
+                    }
+                    .onChange(of: allCatalogFavoriteCards.count) { _, _ in
                         ensureValidCourseTabSelection()
                     }
                     .onChange(of: scrollToCategory) { _, target in

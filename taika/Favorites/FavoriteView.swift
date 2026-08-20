@@ -180,14 +180,14 @@ struct FavoriteView: View {
             .padding(.top, Theme.Layout.rootHeaderClearance)
         }
         .onAppear {
-            if favFilter.selectedTab == .dictionary {
+            if favFilter.selectedTab == .dictionary || favFilter.selectedTab == .courses {
                 favFilter.selectedTab = .cards
             }
             selectedTab = favFilter.selectedTab
             StepData.shared.preload()
         }
         .onChange(of: selectedTab) { _, newValue in
-            let normalized = newValue == .dictionary ? .cards : newValue
+            let normalized: FavoriteScreenTab = (newValue == .dictionary || newValue == .courses) ? .cards : newValue
             if selectedTab != normalized {
                 selectedTab = normalized
                 return
@@ -197,7 +197,7 @@ struct FavoriteView: View {
             }
         }
         .onChange(of: favFilter.selectedTab) { _, newValue in
-            let normalized = newValue == .dictionary ? .cards : newValue
+            let normalized: FavoriteScreenTab = (newValue == .dictionary || newValue == .courses) ? .cards : newValue
             if selectedTab != normalized {
                 selectedTab = normalized
             }

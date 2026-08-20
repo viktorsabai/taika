@@ -97,9 +97,8 @@ struct AllFavoritesView: View {
         (initialFilter == .all || initialFilter == .hacks) ? filteredHacksAll : []
     }
 
-    private var filteredCourses: [FDCourseDTO] {
-        (initialFilter == .all || initialFilter == .courses) ? filteredCoursesAll : []
-    }
+    /// Course favorites are represented by Courses → Избранное, never as rows in Favorites.
+    private var filteredCourses: [FDCourseDTO] { [] }
 
     private var shownCount: Int {
         filteredCards.count + filteredHacks.count + filteredCourses.count
