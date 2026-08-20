@@ -532,7 +532,7 @@ public struct LSProgressSlotsStrip: View {
 
     private var accentFill: AnyShapeStyle {
         if isCompletedCourse {
-            return AnyShapeStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+            return AnyShapeStyle(TaikaMasteryTokens.greenGradient)
         }
         return AnyShapeStyle(ThemeManager.shared.currentAccentFill)
     }
@@ -1736,13 +1736,13 @@ private struct LSCompletedJungleWaves: View {
                     path.addCurve(to: CGPoint(x: w * 0.46, y: h * 0.57), control1: CGPoint(x: w * 0.14, y: h * 0.52), control2: CGPoint(x: w * 0.28, y: h * 0.84))
                     path.addCurve(to: CGPoint(x: w + 12, y: h * 0.42), control1: CGPoint(x: w * 0.67, y: h * 0.33), control2: CGPoint(x: w * 0.82, y: h * 0.54))
                 }
-                .stroke(Color(red: 0.72, green: 0.95, blue: 0.90).opacity(0.19), lineWidth: 1.0)
+                .stroke(Color(red: 0x36 / 255.0, green: 0xF5 / 255.0, blue: 0xB0 / 255.0).opacity(0.19), lineWidth: 1.0)
                 Path { path in
                     path.move(to: CGPoint(x: -12, y: h * 0.87))
                     path.addCurve(to: CGPoint(x: w * 0.42, y: h * 0.68), control1: CGPoint(x: w * 0.10, y: h * 0.74), control2: CGPoint(x: w * 0.28, y: h * 0.94))
                     path.addCurve(to: CGPoint(x: w + 12, y: h * 0.52), control1: CGPoint(x: w * 0.62, y: h * 0.40), control2: CGPoint(x: w * 0.82, y: h * 0.66))
                 }
-                .stroke(Color(red: 0.36, green: 0.82, blue: 0.68).opacity(0.12), lineWidth: 0.8)
+                .stroke(Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0).opacity(0.12), lineWidth: 0.8)
                 Path { path in
                     path.move(to: CGPoint(x: -12, y: h * 0.62))
                     path.addCurve(to: CGPoint(x: w * 0.55, y: h * 0.46), control1: CGPoint(x: w * 0.18, y: h * 0.38), control2: CGPoint(x: w * 0.31, y: h * 0.72))

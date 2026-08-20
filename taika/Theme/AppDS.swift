@@ -10,7 +10,8 @@ import UIKit
 
 /// Shared semantic color for completed/mastery surfaces; accessible across design-system files.
 public enum TaikaMasteryTokens {
-    public static let green = Color(red: 0.20, green: 0.72, blue: 0.38)
+    /// Solid companion for places that cannot render a gradient; use the darker gradient stop.
+    public static let green = Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0)
 
     /// Exact completed/mastery accent: #36F5B0 → #19CFA0, left to right.
     /// Use only for completed/learned states; neutral and in-progress cards keep their own accent.
@@ -23,7 +24,7 @@ public enum TaikaMasteryTokens {
         endPoint: .trailing
     )
 
-    public static let greenGlow = Color(red: 0.26, green: 0.84, blue: 0.48)
+    public static let greenGlow = Color(red: 0x36 / 255.0, green: 0xF5 / 255.0, blue: 0xB0 / 255.0)
 
     /// Same exact mastery accent for compact status badges.
     public static let greenBadgeGradient = LinearGradient(

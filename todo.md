@@ -1583,3 +1583,10 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Сверить их с утверждённым основным gradient token.
 - [ ] Синхронизировать прогресс CourseView и карточек уроков LessonsView.
 - [ ] Выполнить static validation и подготовить commit/push.
+
+# Completed green treatment audit
+
+- [x] Аудировать все старые green Color usages в CourseView, LessonsView и CardDS.
+- [x] Сверить фон, progress, status chip и completed accent с #36F5B0 → #19CFA0.
+- [x] Исправить оставшиеся старые treatments, сохранив новый status chip.
+- [x] Выполнить static validation и подготовить commit/push.

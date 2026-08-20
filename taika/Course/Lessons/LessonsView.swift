@@ -1231,7 +1231,7 @@ extension LessonsView {
                 HStack(spacing: 8) {
                     Image(systemName: legacyRecord ? "arrow.triangle.2.circlepath" : "checkmark.seal.fill")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+                        .foregroundStyle(TaikaMasteryTokens.green)
                     Text(legacyRecord ? "Тренировка курса" : "Курс готов к закреплению")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white.opacity(0.92))
@@ -1272,7 +1272,7 @@ extension LessonsView {
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 10, weight: .bold))
                         }
-                        .foregroundStyle(Color(red: 0.20, green: 0.72, blue: 0.38))
+                        .foregroundStyle(TaikaMasteryTokens.green)
                     }
                     .buttonStyle(.plain)
                 }
