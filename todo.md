@@ -1355,3 +1355,13 @@
 - [ ] Сохранить Speaker/Game Park и лайфхаки, но не давать им конкурировать с результатом.
 - [ ] Проверить no-diagnostics, errors, selected scope и compact density.
 - [ ] Выполнить static validation и consolidated push.
+
+# Skill grade sheet visual refinement
+
+- [ ] Вынести название курса из completed hero в page subtitle под header.
+- [ ] Представить закрепление как ведомость навыков: Speaker pronunciation/tones и игровые режимы с отдельными результатами.
+- [ ] Не показывать придуманные цифры: использовать реальные byMode averageScore/sessions, а при отсутствии — понятный pending state.
+- [ ] Заменить flat green surface на jungle wave lines, deep green base и soft celestial/mint highlight.
+- [ ] Убрать лишние labels и дубли, оставить один главный next step по каждой skill row.
+- [ ] Сохранить лайфхаки, ошибки, selected scope и disabled states.
+- [ ] Выполнить static validation и consolidated push.

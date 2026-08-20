@@ -1605,6 +1605,26 @@ public struct LSLessonReels: View {
 }
 
 // MARK: - Course Stats (model)
+public struct LSReinforcementSkill: Identifiable, Hashable {
+    public let id: String
+    public let title: String
+    public let subtitle: String
+    public let icon: String
+    public let score: Int?
+    public let sessions: Int
+    public let isSpeaker: Bool
+
+    public init(id: String, title: String, subtitle: String, icon: String, score: Int? = nil, sessions: Int = 0, isSpeaker: Bool = false) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.icon = icon
+        self.score = score
+        self.sessions = max(0, sessions)
+        self.isSpeaker = isSpeaker
+    }
+}
+
 public struct LSCourseStats: Hashable {
     public let completedLessons: Int
     public let totalLessons: Int
@@ -1615,6 +1635,7 @@ public struct LSCourseStats: Hashable {
     public let gameCoveredCards: Int
     public let gameSessions: Int
     public let reinforcementScore: Int?
+    public let reinforcementSkills: [LSReinforcementSkill]
 
     public init(
         completedLessons: Int,
@@ -1625,7 +1646,8 @@ public struct LSCourseStats: Hashable {
         timeMinutes: Int,
         gameCoveredCards: Int = 0,
         gameSessions: Int = 0,
-        reinforcementScore: Int? = nil
+        reinforcementScore: Int? = nil,
+        reinforcementSkills: [LSReinforcementSkill] = []
     ) {
         self.completedLessons = max(0, completedLessons)
         self.totalLessons = max(1, totalLessons)
@@ -1636,6 +1658,7 @@ public struct LSCourseStats: Hashable {
         self.gameCoveredCards = max(0, gameCoveredCards)
         self.gameSessions = max(0, gameSessions)
         self.reinforcementScore = reinforcementScore.map { max(0, min(100, $0)) }
+        self.reinforcementSkills = reinforcementSkills
     }
 }
 
@@ -1688,10 +1711,53 @@ public struct LSCompletedLessonOption: Identifiable, Hashable {
     }
 }
 
+private struct LSCompletedJungleWaves: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let w = proxy.size.width
+            let h = proxy.size.height
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.015, green: 0.075, blue: 0.055),
+                        Color(red: 0.025, green: 0.17, blue: 0.12),
+                        Color(red: 0.08, green: 0.28, blue: 0.22)
+                    ],
+                    startPoint: .bottomLeading,
+                    endPoint: .topTrailing
+                )
+                RadialGradient(
+                    colors: [Color(red: 0.68, green: 0.90, blue: 0.86).opacity(0.20), .clear],
+                    center: .topTrailing,
+                    startRadius: 4,
+                    endRadius: max(w, h) * 0.78
+                )
+                Path { path in
+                    path.move(to: CGPoint(x: -12, y: h * 0.76))
+                    path.addCurve(to: CGPoint(x: w * 0.46, y: h * 0.57), control1: CGPoint(x: w * 0.14, y: h * 0.52), control2: CGPoint(x: w * 0.28, y: h * 0.84))
+                    path.addCurve(to: CGPoint(x: w + 12, y: h * 0.42), control1: CGPoint(x: w * 0.67, y: h * 0.33), control2: CGPoint(x: w * 0.82, y: h * 0.54))
+                }
+                .stroke(Color(red: 0.72, green: 0.95, blue: 0.90).opacity(0.46), lineWidth: 1.2)
+                Path { path in
+                    path.move(to: CGPoint(x: -12, y: h * 0.87))
+                    path.addCurve(to: CGPoint(x: w * 0.42, y: h * 0.68), control1: CGPoint(x: w * 0.10, y: h * 0.74), control2: CGPoint(x: w * 0.28, y: h * 0.94))
+                    path.addCurve(to: CGPoint(x: w + 12, y: h * 0.52), control1: CGPoint(x: w * 0.62, y: h * 0.40), control2: CGPoint(x: w * 0.82, y: h * 0.66))
+                }
+                .stroke(Color(red: 0.24, green: 0.82, blue: 0.62).opacity(0.34), lineWidth: 0.9)
+                Path { path in
+                    path.move(to: CGPoint(x: -12, y: h * 0.62))
+                    path.addCurve(to: CGPoint(x: w * 0.55, y: h * 0.46), control1: CGPoint(x: w * 0.18, y: h * 0.38), control2: CGPoint(x: w * 0.31, y: h * 0.72))
+                    path.addCurve(to: CGPoint(x: w + 12, y: h * 0.30), control1: CGPoint(x: w * 0.72, y: h * 0.23), control2: CGPoint(x: w * 0.86, y: h * 0.39))
+                }
+                .stroke(Color.white.opacity(0.10), lineWidth: 0.8)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 /// The completed-course hero: reinforcement is the primary task, not the lesson catalog.
 public struct LSCompletedTrainingHero: View {
-    public let courseTitle: String
-    public let onBack: () -> Void
     public let stats: LSCourseStats
     public let selectedCount: Int
     public let totalLessons: Int
@@ -1700,8 +1766,6 @@ public struct LSCompletedTrainingHero: View {
     public let onGamePark: (() -> Void)?
 
     public init(
-        courseTitle: String,
-        onBack: @escaping () -> Void,
         stats: LSCourseStats,
         selectedCount: Int,
         totalLessons: Int,
@@ -1709,8 +1773,6 @@ public struct LSCompletedTrainingHero: View {
         onSpeaker: (() -> Void)? = nil,
         onGamePark: (() -> Void)? = nil
     ) {
-        self.courseTitle = courseTitle
-        self.onBack = onBack
         self.stats = stats
         self.selectedCount = selectedCount
         self.totalLessons = totalLessons
@@ -1720,6 +1782,13 @@ public struct LSCompletedTrainingHero: View {
     }
 
     private var scoreText: String { stats.reinforcementScore.map(String.init) ?? "—" }
+    private var skillRows: [LSReinforcementSkill] {
+        if !stats.reinforcementSkills.isEmpty { return stats.reinforcementSkills }
+        return [
+            LSReinforcementSkill(id: "speaker", title: "Спикер", subtitle: "Произношение и тоны", icon: "mic.fill", isSpeaker: true),
+            LSReinforcementSkill(id: "game", title: "Игра", subtitle: "Закрепление карточек", icon: "gamecontroller.fill")
+        ]
+    }
     private var recommendation: String {
         if selectedCount == 0 { return "Выбери уроки ниже, чтобы собрать следующую тренировку" }
         if stats.reinforcementScore == nil { return "Проведи первую игровую проверку, чтобы увидеть результат закрепления" }
@@ -1729,22 +1798,6 @@ public struct LSCompletedTrainingHero: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Button(action: onBack) {
-                HStack(spacing: 5) {
-                    Image(systemName: "chevron.left")
-                    Text("В КУРСЫ")
-                }
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .kerning(0.55)
-                .foregroundStyle(PD.ColorToken.textSecondary)
-            }
-            .buttonStyle(.plain)
-
-            Text(courseTitle)
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(PD.ColorToken.text)
-                .lineLimit(2)
-
             Text("ЗАЧЁТКА КУРСА")
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .kerning(0.8)
@@ -1780,22 +1833,56 @@ public struct LSCompletedTrainingHero: View {
             .foregroundStyle(PD.ColorToken.text)
 
             VStack(alignment: .leading, spacing: 0) {
-                Text("СЛЕДУЮЩИЙ ШАГ")
+                Text("ПРЕДМЕТЫ ЗАЧЁТКИ")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .kerning(0.7)
                     .foregroundStyle(PD.ColorToken.textSecondary)
                     .padding(.bottom, 2)
-                actionRow(icon: "mic.fill", title: "Закрепить в Спикере", detail: "Произношение выбранных уроков", enabled: onSpeaker != nil && selectedCount > 0, action: onSpeaker)
-                actionRow(icon: "gamecontroller.fill", title: "Повторить в игре", detail: "Проверка памяти по этому же набору", enabled: onGamePark != nil && selectedCount > 0, action: onGamePark)
+                ForEach(skillRows) { skill in
+                    skillRow(skill)
+                }
             }
         }
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.15)))
-        )
+        .background {
+            LSCompletedJungleWaves()
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Главный блок тренировки курса")
+    }
+
+    @ViewBuilder
+    private func skillRow(_ skill: LSReinforcementSkill) -> some View {
+        let action = skill.isSpeaker ? onSpeaker : onGamePark
+        let enabled = action != nil && selectedCount > 0
+        let result = skill.score.map { "\($0)%" } ?? (skill.sessions > 0 ? "есть данные" : "нет результата")
+        let detail = skill.sessions > 0 ? "\(skill.sessions) сесс. · \(result)" : "\(skill.subtitle) · первая тренировка впереди"
+        let content = HStack(spacing: 10) {
+            Image(systemName: skill.icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.55)))
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(skill.title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                Text(detail)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 6)
+            Text(result)
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(skill.score == nil ? AnyShapeStyle(PD.ColorToken.textSecondary) : AnyShapeStyle(PD.ColorToken.text))
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4)))
+        }
+        .padding(.vertical, 11)
+        .overlay(alignment: .bottom) { Rectangle().fill(PD.ColorToken.stroke.opacity(0.28)).frame(height: 1) }
+        if enabled, let action { Button(action: action) { content }.buttonStyle(.plain) } else { content }
     }
 
     private func metric(value: String, label: String) -> some View {

@@ -211,6 +211,36 @@ private extension LessonsView {
         return (words, favs, Int(spent.rounded()))
     }
 
+    private var reinforcementSkills: [LSReinforcementSkill] {
+        guard let cid = currentCourse?.courseID,
+              let metrics = ReinforcementStore.shared.metrics(courseId: cid) else {
+            return [
+                LSReinforcementSkill(id: "speaker", title: "Спикер", subtitle: "Произношение и тоны", icon: "mic.fill", isSpeaker: true),
+                LSReinforcementSkill(id: "match", title: "Память", subtitle: "Найди пару", icon: "gamecontroller.fill"),
+                LSReinforcementSkill(id: "recall", title: "Вспоминание", subtitle: "Вспомни перевод", icon: "sparkles"),
+                LSReinforcementSkill(id: "audioRecall", title: "На слух", subtitle: "Распознай фразу", icon: "waveform")
+            ]
+        }
+        let definitions: [(String, String, String, String, Bool)] = [
+            ("speaker", "Спикер", "Произношение и тоны", "mic.fill", true),
+            ("match", "Память", "Найди пару", "gamecontroller.fill", false),
+            ("recall", "Вспоминание", "Вспомни перевод", "sparkles", false),
+            ("audioRecall", "На слух", "Распознай фразу", "waveform", false)
+        ]
+        return definitions.map { id, title, subtitle, icon, isSpeaker in
+            let mode = metrics.byMode[id]
+            return LSReinforcementSkill(
+                id: id,
+                title: title,
+                subtitle: subtitle,
+                icon: icon,
+                score: mode?.averageScore,
+                sessions: mode?.sessions ?? 0,
+                isSpeaker: isSpeaker
+            )
+        }
+    }
+
     private var reinforcementCourseStats: LSCourseStats {
         LSCourseStats(
             completedLessons: headerProgress.completed,
@@ -221,7 +251,8 @@ private extension LessonsView {
             timeMinutes: courseOverviewStats.spentMinutes,
             gameCoveredCards: currentCourse.map { ReinforcementStore.shared.coveredCardCount(courseId: $0.courseID) } ?? 0,
             gameSessions: currentCourse.map { ReinforcementStore.shared.gameSessions(courseId: $0.courseID) } ?? 0,
-            reinforcementScore: currentCourse.flatMap { ReinforcementStore.shared.overallScore(courseId: $0.courseID) }
+            reinforcementScore: currentCourse.flatMap { ReinforcementStore.shared.overallScore(courseId: $0.courseID) },
+            reinforcementSkills: reinforcementSkills
         )
     }
 
@@ -267,15 +298,25 @@ private extension LessonsView {
     @ViewBuilder
     private var completedTrainingDashboard: some View {
         VStack(alignment: .leading, spacing: 18) {
-            completedTaikaFMSection
-            courseMaterialsPicker
-            LSCompletedTrainingHero(
-                courseTitle: headerTitle,
-                onBack: {
+            HStack(spacing: 7) {
+                Button {
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
                         if !nav.path.isEmpty { nav.path.removeLast() }
                     }
-                },
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                Text(headerTitle)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .lineLimit(2)
+            }
+            completedTaikaFMSection
+            courseMaterialsPicker
+            LSCompletedTrainingHero(
                 stats: reinforcementCourseStats,
                 selectedCount: effectiveReinforcementLessonIds.count,
                 totalLessons: completedLessonOptions.count,
