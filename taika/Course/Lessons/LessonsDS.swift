@@ -1939,8 +1939,9 @@ public struct LSCompletedTrainingHero: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(0.82)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4)))
             }
-            .frame(width: 92, alignment: .trailing)
+            .frame(width: 100, alignment: .trailing)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 12)
         .overlay(alignment: .bottom) { Rectangle().fill(PD.ColorToken.stroke.opacity(0.28)).frame(height: 1) }
         if enabled, let action { Button(action: action) { content }.buttonStyle(.plain) } else { content }
@@ -1996,10 +1997,11 @@ private struct LSSelectionActionButtonStyle: ButtonStyle {
     let isActive: Bool
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 12, weight: .semibold))
+            .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(isActive ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
-            .padding(.horizontal, 11)
-            .padding(.vertical, 7)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, minHeight: 34)
             .background(Capsule(style: .continuous).fill(Color.clear))
             .overlay(Capsule(style: .continuous).stroke(isActive ? TaikaMasteryTokens.greenGlow.opacity(0.55) : PD.ColorToken.stroke.opacity(0.25), lineWidth: 1))
             .opacity(configuration.isPressed ? 0.7 : 1)
@@ -2050,12 +2052,17 @@ public struct LSCompletedLessonList: View {
                 if let onSelectAll {
                     Button("Выбрать все", action: onSelectAll)
                         .buttonStyle(LSSelectionActionButtonStyle(isActive: selectedIds.count < items.count))
+                        .frame(maxWidth: .infinity)
                 }
                 if let onClearAll {
                     Button("Снять все", action: onClearAll)
                         .buttonStyle(LSSelectionActionButtonStyle(isActive: !selectedIds.isEmpty))
+                        .frame(maxWidth: .infinity)
                 }
             }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 2)
+            .padding(.bottom, 6)
 
             VStack(spacing: 0) {
                 ForEach(items) { item in

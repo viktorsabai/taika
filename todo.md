@@ -1542,3 +1542,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Подключить его только к completed/mastery accents.
 - [ ] Проверить, что in-progress и PRO colors не изменились.
 - [ ] Закоммитить и запушить color fix.
+
+# Grade sheet and selection action bar layout
+
+- [ ] Выровнять единый horizontal inset внутри completed hero.
+- [ ] Зафиксировать skill row result column и chevron у правого края.
+- [ ] Собрать Выбрать все/Снять все в отдельную ровную action bar.
+- [ ] Добавить bottom spacing, чтобы controls не попадали под home indicator.
+- [ ] Проверить small-screen clipping и запушить layout fix.
