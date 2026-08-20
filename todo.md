@@ -1597,3 +1597,10 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Вернуть graphite base background и оставить зелёный только локальным accent treatment.
 - [x] Проверить header, FM block, grade sheet и нижнюю навигацию на отсутствие зелёной заливки.
 - [x] Выполнить static validation и подготовить commit/push.
+
+# In-progress LessonsView treatment regression
+
+- [x] Найти state gate, который преждевременно включает completed green treatment.
+- [x] Оставить зелёный только на реально завершённых карточках уроков.
+- [x] Привести выбор уроков in-progress курса к списочному UX completed-сценария.
+- [x] Выполнить static validation и подготовить commit/push.

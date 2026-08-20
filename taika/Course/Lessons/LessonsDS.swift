@@ -1995,15 +1995,22 @@ public struct LSCompletedTrainingHero: View {
 /// Compact list used only after a course is fully completed.
 private struct LSSelectionActionButtonStyle: ButtonStyle {
     let isActive: Bool
+    let accentColor: Color
+
+    init(isActive: Bool, accentColor: Color = TaikaMasteryTokens.greenGlow) {
+        self.isActive = isActive
+        self.accentColor = accentColor
+    }
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(isActive ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
+            .foregroundStyle(isActive ? AnyShapeStyle(accentColor) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, minHeight: 34)
             .background(Capsule(style: .continuous).fill(Color.clear))
-            .overlay(Capsule(style: .continuous).stroke(isActive ? TaikaMasteryTokens.greenGlow.opacity(0.55) : PD.ColorToken.stroke.opacity(0.25), lineWidth: 1))
+            .overlay(Capsule(style: .continuous).stroke(isActive ? accentColor.opacity(0.55) : PD.ColorToken.stroke.opacity(0.25), lineWidth: 1))
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }
@@ -2017,8 +2024,10 @@ public struct LSCompletedLessonList: View {
     public let onOpen: ((String) -> Void)?
     public let onSelectAll: (() -> Void)?
     public let onClearAll: (() -> Void)?
+    public let accentFill: AnyShapeStyle
+    public let accentColor: Color
 
-    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil) {
+    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGlow), accentColor: Color = TaikaMasteryTokens.greenGlow) {
         self.items = items
         self.selectedIds = selectedIds
         self.weakIds = weakIds
@@ -2027,6 +2036,8 @@ public struct LSCompletedLessonList: View {
         self.onOpen = onOpen
         self.onSelectAll = onSelectAll
         self.onClearAll = onClearAll
+        self.accentFill = accentFill
+        self.accentColor = accentColor
     }
 
     public var body: some View {
@@ -2046,17 +2057,17 @@ public struct LSCompletedLessonList: View {
                 }
                 Text("\(selectedIds.count) выбрано")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
+                    .foregroundStyle(accentFill)
             }
             HStack(spacing: 8) {
                 if let onSelectAll {
                     Button("Выбрать все", action: onSelectAll)
-                        .buttonStyle(LSSelectionActionButtonStyle(isActive: selectedIds.count < items.count))
+                        .buttonStyle(LSSelectionActionButtonStyle(isActive: selectedIds.count < items.count, accentColor: accentColor))
                         .frame(maxWidth: .infinity)
                 }
                 if let onClearAll {
                     Button("Снять все", action: onClearAll)
-                        .buttonStyle(LSSelectionActionButtonStyle(isActive: !selectedIds.isEmpty))
+                        .buttonStyle(LSSelectionActionButtonStyle(isActive: !selectedIds.isEmpty, accentColor: accentColor))
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -2073,7 +2084,7 @@ public struct LSCompletedLessonList: View {
                             HStack(spacing: 11) {
                                 Image(systemName: selected ? "checkmark" : "circle")
                                     .font(.system(size: 16, weight: .semibold))
-                                    .foregroundStyle(selected ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                                    .foregroundStyle(selected ? accentFill : AnyShapeStyle(PD.ColorToken.textSecondary))
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(item.title)
                                         .font(.system(size: 14, weight: .semibold))
