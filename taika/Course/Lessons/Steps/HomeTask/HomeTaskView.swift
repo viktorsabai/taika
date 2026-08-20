@@ -65,6 +65,8 @@ public struct HomeTaskView: View {
     // Staged pool logic
     @State private var allTriples: [HomeTaskManager.LearnedTriple] = []
     @State private var remainingTriples: [HomeTaskManager.LearnedTriple] = []
+    /// Mutable session scope used when the completion overlay starts an error-only retry.
+    @State private var activeCardKeys: [String]?
     @State private var totalPairsCount: Int = 0
     private let visiblePairsTarget: Int = 6
 
@@ -100,6 +102,7 @@ public struct HomeTaskView: View {
         self.onContinueLearning = onContinueLearning
         self.continueLearningTitle = continueLearningTitle
         _store = StateObject(wrappedValue: store ?? HomeTaskManager())
+        _activeCardKeys = State(initialValue: cardKeys)
     }
 
     private var isFromLessonStep: Bool {
@@ -343,11 +346,18 @@ public struct HomeTaskView: View {
                         isProUser: isProUser,
                     continueLearningTitle: resolvedContinueTitle,
                     nextGameTitle: nextGameTitle,
-                    onRepeat: {
-                        withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
-                        buildRound(force: true)
-                    },
-                    onNextGame: onNextGame,
+                        errorCount: failedPairIds.count,
+                        onRepeatErrors: {
+                            activeCardKeys = failedCardKeysForCurrentSession
+                            withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
+                            buildRound(force: true)
+                        },
+                        onRepeat: {
+                            activeCardKeys = cardKeys
+                            withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
+                            buildRound(force: true)
+                        },
+                        onNextGame: onNextGame,
                     onSpeakerPractice: onSpeakerPractice,
                     onContinueLearning: onContinueLearning,
                     onClose: {
@@ -754,6 +764,13 @@ public struct HomeTaskView: View {
     // MARK: - Logic
     private var isFinished: Bool { totalPairsCount > 0 && matchedPairIds.count >= totalPairsCount }
 
+    private var failedCardKeysForCurrentSession: [String] {
+        allTriples
+            .filter { failedPairIds.contains("\($0.ru)|\($0.ph)") }
+            .compactMap(Self.cardKey)
+            .sorted()
+    }
+
     private func titleForLesson() -> String {
         if let t = displayTitle, !t.isEmpty { return t }
         let title = resolvedLessonTitle()
@@ -1009,7 +1026,7 @@ public struct HomeTaskView: View {
         }
         if triples.isEmpty && isPreview { triples = demoTriples() }
         triples = triples.filter { !$0.ru.isEmpty && !$0.ph.isEmpty }
-        if let cardKeys {
+        if let cardKeys = activeCardKeys {
             let wanted = Set(cardKeys.map(Self.normalizedCardKey))
             triples = triples.filter { wanted.contains(Self.cardKey(for: $0)) }
         }
@@ -1141,6 +1158,7 @@ public struct HomeTaskView: View {
         let L = leftItems[li]; let R = rightItems[ri]
         if L.pairId == R.pairId {
             matchedPairIds.insert(L.pairId)
+            failedPairIds.remove(L.pairId)
             // mark matched visually
             leftItems[li].state = .matched
             rightItems[ri].state = .matched

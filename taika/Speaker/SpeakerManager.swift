@@ -963,7 +963,7 @@ public final class SpeakerManager: ObservableObject {
     /// Спец. id: `__favorites__` — всё избранное; `__dictionary__` — только словарь умного спикера.
     /// `lessonId` — опционально сузить до одного урока.
     /// `lessonIds` — multi-select scope из LessonsView; в него попадают только выбранные уроки.
-    func loadQueueForCourse(_ courseId: String, lessonId: String? = nil, lessonIds: [String]? = nil) {
+    func loadQueueForCourse(_ courseId: String, lessonId: String? = nil, lessonIds: [String]? = nil, cardKeys: [String]? = nil) {
         if courseId == "__favorites__" || courseId == "__dictionary__" {
             speakerContextCourseId = courseId
             activeFilterId = SpeakerMode.favoritesMode.id
@@ -1023,7 +1023,7 @@ public final class SpeakerManager: ObservableObject {
             }
         )
 
-        let filtered: [StepData.SpeakerResolved] = {
+        let lessonFiltered: [StepData.SpeakerResolved] = {
             if !selectedLessonSet.isEmpty {
                 return byCourse.filter { selectedLessonSet.contains($0.lessonId.lowercased()) }
             }
@@ -1031,6 +1031,13 @@ public final class SpeakerManager: ObservableObject {
             let byLesson = byCourse.filter { $0.lessonId.lowercased() == preferredLower }
             // Если в этом уроке ещё нет выученных — не молчим: весь курс, но старт с предпочитаемого места.
             return byLesson.isEmpty ? byCourse : byLesson
+        }()
+        let filtered: [StepData.SpeakerResolved] = {
+            guard let cardKeys else { return lessonFiltered }
+            let wanted = Set(cardKeys.map(Self.normalizedCardKey))
+            return lessonFiltered.filter {
+                wanted.contains(Self.normalizedCardKey("\($0.lessonId)|\($0.face.titleRU)"))
+            }
         }()
         speakerContextCourseId = courseId
         activeFilterId = SpeakerMode.learned.id
@@ -1253,6 +1260,12 @@ public final class SpeakerManager: ObservableObject {
     }
 
     /// Set second-level filter for "выученные": nil or "" = "Все", otherwise only steps from that lessonId.
+    private static func normalizedCardKey(_ raw: String) -> String {
+        let parts = raw.split(separator: "|", maxSplits: 1).map(String.init)
+        guard parts.count == 2 else { return raw.lowercased() }
+        return "\(parts[0].lowercased().replacingOccurrences(of: "_", with: "-"))|\(parts[1].trimmingCharacters(in: .whitespacesAndNewlines).lowercased())"
+    }
+
     func setLearnedLessonFilter(_ lessonId: String?) {
         let normalized = lessonId?.trimmingCharacters(in: .whitespacesAndNewlines)
         let value = (normalized?.isEmpty == false) ? normalized : nil

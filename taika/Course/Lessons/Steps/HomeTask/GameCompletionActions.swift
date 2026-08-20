@@ -11,6 +11,9 @@ struct GameCompletionActions: View {
     var continueLearningTitle: String? = nil
     var nextGameTitle: String? = nil
     var onRepeat: () -> Void
+    /// Number of concrete failed cards from the just-finished session.
+    var errorCount: Int = 0
+    var onRepeatErrors: (() -> Void)? = nil
     var onNextGame: (() -> Void)? = nil
     var onSpeakerPractice: (() -> Void)? = nil
     var onContinueLearning: (() -> Void)? = nil
@@ -20,7 +23,9 @@ struct GameCompletionActions: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            if isCourseReinforcement {
+            if errorCount > 0 {
+                errorFollowUpButtons
+            } else if isCourseReinforcement {
                 reinforcementFollowUpButtons
             } else {
                 primaryButton(title: "Повторить", action: onRepeat)
@@ -41,6 +46,21 @@ struct GameCompletionActions: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var errorFollowUpButtons: some View {
+        primaryButton(
+            title: "Повторить ошибки · \(errorCount)",
+            action: onRepeatErrors ?? onRepeat
+        )
+        if let onSpeakerPractice {
+            outlineButton(
+                title: "Продолжить в Спикере",
+                systemImage: "mic.fill",
+                action: onSpeakerPractice
+            )
         }
     }
 

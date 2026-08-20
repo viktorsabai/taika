@@ -329,22 +329,27 @@ public final class SpeakerRequestedCourseId: ObservableObject {
     @Published public var lessonId: String?
     /// Optional multi-lesson scope used by course reinforcement selection.
     @Published public var lessonIds: [String]?
+    /// Exact lesson|RU keys for post-game targeted Speaker practice.
+    @Published public var cardKeys: [String]?
     private init() {}
 
-    public func set(_ id: String?, lessonId: String? = nil, lessonIds: [String]? = nil) {
+    public func set(_ id: String?, lessonId: String? = nil, lessonIds: [String]? = nil, cardKeys: [String]? = nil) {
         courseId = id
         self.lessonId = lessonId
         self.lessonIds = lessonIds
+        self.cardKeys = cardKeys
     }
 
-    public func consume() -> (courseId: String, lessonId: String?, lessonIds: [String]?)? {
+    public func consume() -> (courseId: String, lessonId: String?, lessonIds: [String]?, cardKeys: [String]?)? {
         guard let cid = courseId else { return nil }
         let lid = lessonId
         let lids = lessonIds
+        let keys = cardKeys
         courseId = nil
         lessonId = nil
         lessonIds = nil
-        return (cid, lid, lids)
+        cardKeys = nil
+        return (cid, lid, lids, keys)
     }
 }
 

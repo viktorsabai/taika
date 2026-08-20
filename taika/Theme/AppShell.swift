@@ -718,7 +718,12 @@ private struct GameView: View {
         NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
         SpeakerManager.shared.rebuildQueue()
         SpeakerManager.shared.setSpeakerUIMode(.training)
-        SpeakerRequestedCourseId.shared.set(courseId, lessonId: lid)
+        SpeakerRequestedCourseId.shared.set(
+            courseId,
+            lessonId: lid,
+            lessonIds: lessonIds,
+            cardKeys: cardKeys
+        )
         dismiss()
         nav.requestTab(2)
     }

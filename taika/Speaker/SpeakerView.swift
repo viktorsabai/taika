@@ -336,7 +336,7 @@ struct SpeakerView: View {
         }
         .onChange(of: pendingCourseId) { _, newValue in
             if let cid = newValue {
-                speaker.loadQueueForCourse(cid, lessonId: pendingLessonId, lessonIds: pendingLessonIds)
+                speaker.loadQueueForCourse(cid, lessonId: pendingLessonId, lessonIds: pendingLessonIds, cardKeys: nil)
                 pendingCourseId = nil
                 pendingLessonId = nil
                 pendingLessonIds = nil
@@ -344,11 +344,11 @@ struct SpeakerView: View {
         }
         .onAppear {
             // Контекст из Step/курса → одна очередь; multi-select lessons остаётся единым scope.
-            let pending = pendingCourseId.map { ($0, pendingLessonId, pendingLessonIds) }
-                ?? SpeakerRequestedCourseId.shared.consume().map { ($0.courseId, $0.lessonId, $0.lessonIds) }
-            if let (cid, lid, lids) = pending {
+            let pending = pendingCourseId.map { ($0, pendingLessonId, pendingLessonIds, nil as [String]?) }
+                ?? SpeakerRequestedCourseId.shared.consume().map { ($0.courseId, $0.lessonId, $0.lessonIds, $0.cardKeys) }
+            if let (cid, lid, lids, keys) = pending {
                 speaker.prepareTrainingPoolIfNeeded()
-                speaker.loadQueueForCourse(cid, lessonId: lid, lessonIds: lids)
+                speaker.loadQueueForCourse(cid, lessonId: lid, lessonIds: lids, cardKeys: keys)
                 pendingCourseId = nil
                 pendingLessonId = nil
                 pendingLessonIds = nil
