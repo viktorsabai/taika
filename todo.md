@@ -1518,3 +1518,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Перенести wave layer внутрь той же clipped face/back surface.
 - [ ] Сохранить face/back readability и не допустить bleed за границы карточки.
 - [ ] Проверить 3D flip visually/static и запушить fix.
+
+# StepView completion header polish
+
+- [ ] Добавить безопасный top inset под app header.
+- [ ] Уменьшить success icon/title vertical footprint.
+- [ ] Сделать lesson/status chips компактными, одинаковыми и центрированными.
+- [ ] Проверить, что CTA/game rows не потеряли доступную высоту.
+- [ ] Закоммитить и запушить polish.

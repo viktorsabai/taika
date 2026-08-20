@@ -2555,7 +2555,7 @@ public struct LessonSummaryOverlay: View {
     private func approvedCompletionMetaRibbon() -> some View {
         let duration = approvedMetaValue(lessonDurationText)
         let progress = approvedMetaValue(overallProgressText)
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             approvedMetaChip(
                 approvedIsFinalState ? "курс закрыт" : "урок закрыт",
                 system: approvedIsFinalState ? "checkmark.seal.fill" : "sparkles"
@@ -2567,22 +2567,22 @@ public struct LessonSummaryOverlay: View {
                 approvedMetaChip(duration, system: "clock")
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     @ViewBuilder
     private func approvedMetaChip(_ text: String, system: String) -> some View {
         HStack(spacing: 6) {
             Image(systemName: system)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
             Text(text)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.78)
         }
         .foregroundStyle(CD.ColorToken.textSecondary)
-        .padding(.horizontal, 12)
-        .frame(minHeight: 36)
+        .padding(.horizontal, 10)
+        .frame(minHeight: 30)
         .background(Capsule(style: .continuous).fill(CD.ColorToken.card.opacity(0.55)))
         .overlay(Capsule(style: .continuous).stroke(Theme.Strokes.strokeSubtle, lineWidth: 1))
     }
@@ -3034,15 +3034,15 @@ public struct LessonSummaryOverlay: View {
                             ZStack {
                                 Circle()
                                     .fill(ThemeManager.shared.currentAccentTintColor.opacity(0.18))
-                                    .frame(width: 88, height: 88)
+                                    .frame(width: 76, height: 76)
                                     .scaleEffect(checkBurst ? 1.18 : 0.7)
                                     .opacity(checkBurst ? 0.9 : 0)
                                 Circle()
                                     .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 2.4)
-                                    .frame(width: 72, height: 72)
+                                    .frame(width: 62, height: 62)
                                     .shadow(color: ThemeManager.shared.currentAccentTintColor.opacity(0.55), radius: 16)
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 30, weight: .bold))
+                                    .font(.system(size: 26, weight: .bold))
                                     .foregroundStyle(ThemeManager.shared.currentAccentFill)
                             }
                             .scaleEffect(animateIntro ? 1 : 0.78)
@@ -3050,12 +3050,12 @@ public struct LessonSummaryOverlay: View {
 
                             VStack(alignment: .center, spacing: 8) {
                                 Text(title)
-                                    .font(.system(size: 29, weight: .bold, design: .rounded))
+                                    .font(.system(size: 26, weight: .bold, design: .rounded))
                                     .foregroundStyle(CD.ColorToken.text)
                                     .multilineTextAlignment(.center)
                                     .frame(maxWidth: .infinity)
                                 Text(subtitle)
-                                    .font(.system(size: 15, weight: .regular))
+                                    .font(.system(size: 14, weight: .regular))
                                     .foregroundStyle(CD.ColorToken.textSecondary)
                                     .multilineTextAlignment(.center)
                                     .lineLimit(3)
@@ -3083,7 +3083,7 @@ public struct LessonSummaryOverlay: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 20)
-                    .padding(.top, max(proxy.safeAreaInsets.top, 10) + 6)
+                    .padding(.top, max(proxy.safeAreaInsets.top, 10) + 48)
                     .padding(.bottom, max(proxy.safeAreaInsets.bottom, 24) + 18)
                 }
 
