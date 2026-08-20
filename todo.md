@@ -1658,3 +1658,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Синхронизировать chips, progress, grade sheet, lines и completed rows.
 - [x] Проверить контраст, локальность акцентов и отсутствие full-screen green overlay.
 - [x] Выполнить static validation и подготовить один финальный push.
+
+# Mastery gradient correction pass
+
+- [x] Аудировать роли lime/pink/jungle и solid fallback по скриншотным состояниям.
+- [x] Пересобрать controlled pink-to-jungle gradient без жёлтого доминирования.
+- [x] Синхронизировать chips, wordmark accents, waves, crowns и grade sheet.
+- [x] Убрать смешение legacy solid/gradient treatments.
+- [x] Выполнить static validation и подготовить один финальный push.

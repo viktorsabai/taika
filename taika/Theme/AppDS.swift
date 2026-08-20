@@ -13,12 +13,12 @@ public enum TaikaMasteryTokens {
     /// Solid companion for non-gradient surfaces: the readable jungle mid-tone of the leaf palette.
     public static let green = Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0)
 
-    /// Natural completed/mastery accent: pink leaf core → variegated lime → jungle green edge.
+    /// Natural completed/mastery accent: pink leaf core → soft mint variegation → jungle green edge.
     /// It is intentionally a continuation of Taika pink, not a flat status green.
     public static let greenGradient = LinearGradient(
         colors: [
-            Color(red: 0xFF / 255.0, green: 0x8B / 255.0, blue: 0xCB / 255.0),
-            Color(red: 0xD4 / 255.0, green: 0xF2 / 255.0, blue: 0x63 / 255.0),
+            Color(red: 0xFF / 255.0, green: 0x92 / 255.0, blue: 0xC9 / 255.0),
+            Color(red: 0x9F / 255.0, green: 0xE5 / 255.0, blue: 0xB5 / 255.0),
             Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0),
             Color(red: 0x0B / 255.0, green: 0x8F / 255.0, blue: 0x68 / 255.0)
         ],
@@ -26,14 +26,14 @@ public enum TaikaMasteryTokens {
         endPoint: .trailing
     )
 
-    /// Bright lime-pink highlight used for readable completed strokes and counters.
-    public static let greenGlow = Color(red: 0xD4 / 255.0, green: 0xF2 / 255.0, blue: 0x63 / 255.0)
+    /// Bright mint-leaf highlight used for readable completed strokes and counters.
+    public static let greenGlow = Color(red: 0x9F / 255.0, green: 0xE5 / 255.0, blue: 0xB5 / 255.0)
 
     /// Same natural leaf family for compact status badges and completion chips.
     public static let greenBadgeGradient = LinearGradient(
         colors: [
-            Color(red: 0xFF / 255.0, green: 0xA6 / 255.0, blue: 0xD5 / 255.0),
-            Color(red: 0xD4 / 255.0, green: 0xF2 / 255.0, blue: 0x63 / 255.0),
+            Color(red: 0xFF / 255.0, green: 0xB0 / 255.0, blue: 0xD8 / 255.0),
+            Color(red: 0x9F / 255.0, green: 0xE5 / 255.0, blue: 0xB5 / 255.0),
             Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0)
         ],
         startPoint: .leading,
@@ -307,7 +307,7 @@ public struct AppHeader: View {
                 .foregroundColor(CD.ColorToken.text)
             Text("kAAA")
                 .font(.custom("Onmark Trial", size: size))
-                .foregroundStyle(lessonsHeaderStore.isCompletedCourse ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(theme.currentAccentFill))
+                .foregroundStyle(lessonsHeaderStore.isCompletedCourse ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(theme.currentAccentFill))
         }
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityLabel("taikAAA")
@@ -345,7 +345,7 @@ public struct AppHeader: View {
 
     private func headerIconForeground(accent: Bool) -> AnyShapeStyle {
         if lessonsHeaderStore.isCompletedCourse {
-            return AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(accent ? 1.0 : 0.86))
+            return AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(accent ? 1.0 : 0.86))
         }
         return accent ? AnyShapeStyle(theme.currentAccentFill) : headerIconForeground
     }

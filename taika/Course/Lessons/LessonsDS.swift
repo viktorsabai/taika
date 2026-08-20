@@ -1488,7 +1488,7 @@ public struct LSLessonCardV: View {
                     Text("ВЫБРАН")
                 }
                 .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
+                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
                 .padding(.top, 14)
                 .padding(.trailing, 16)
                 .allowsHitTesting(false)
@@ -1812,7 +1812,7 @@ public struct LSCompletedTrainingHero: View {
             Text("ЗАЧЁТКА КУРСА")
                 .font(.system(size: 12, weight: .bold))
                 .kerning(0.4)
-                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow))
+                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 14) {
@@ -1915,7 +1915,7 @@ public struct LSCompletedTrainingHero: View {
                 if skill.isProLocked {
                     Image(systemName: "crown.fill")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(0.86)))
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.86)))
                     Text(result)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(PD.ColorToken.textSecondary)
@@ -1939,7 +1939,7 @@ public struct LSCompletedTrainingHero: View {
                 }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow.opacity(0.82)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4)))
+                    .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.82)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4)))
             }
             .frame(width: 100, alignment: .trailing)
         }
@@ -1988,7 +1988,7 @@ public struct LSCompletedTrainingHero: View {
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.42)))
+                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.42)))
         }
         .padding(.vertical, 11)
         .overlay(alignment: .bottom) { Rectangle().fill(PD.ColorToken.stroke.opacity(0.35)).frame(height: 1) }
@@ -2033,7 +2033,7 @@ public struct LSCompletedLessonList: View {
     public let accentFill: AnyShapeStyle
     public let accentColor: Color
 
-    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], courseSessionCount: Int = 0, onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGlow), accentColor: Color = TaikaMasteryTokens.greenGlow) {
+    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], courseSessionCount: Int = 0, onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGradient), accentColor: Color = TaikaMasteryTokens.greenGlow) {
         self.items = items
         self.selectedIds = selectedIds
         self.weakIds = weakIds
