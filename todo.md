@@ -1,3 +1,13 @@
+# Follow-up — 1/1 completed grade sheet reference pass
+
+| Задача | Статус |
+|---|---|
+| Сверить hero с референсом: размеры, rule hierarchy и spacing | Сделано |
+| Зафиксировать нейтральные иконки Speaker/Memory/Recall/Audio | Сделано |
+| Исправить subject subtitles, right scores, locks и chevrons | Сделано |
+| Сохранить утверждённый lesson list без regressions | Сделано |
+| Закоммитить и запушить верхний redesign | В работе |
+
 # Full completed LessonsView redesign — approved scope
 
 | Задача | Статус |

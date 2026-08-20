@@ -1824,14 +1824,14 @@ public struct LSCompletedTrainingHero: View {
             Text("ЗАЧЁТКА КУРСА")
                 .font(.system(size: 12, weight: .bold))
                 .kerning(0.4)
-                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 14) {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(stats.reinforcementScore == nil ? "—" : "\(displayedScore)%")
                             .font(Theme.Fonts.metric(48))
-                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                            .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
                             .monospacedDigit()
                             .lineLimit(1)
                             .minimumScaleFactor(0.68)
@@ -1906,6 +1906,11 @@ public struct LSCompletedTrainingHero: View {
         }()
         let enabled = action != nil && selectedCount > 0
         let content = HStack(alignment: .center, spacing: 12) {
+            Image(systemName: skill.icon)
+                .font(.system(size: 24, weight: .regular))
+                .foregroundStyle(PD.ColorToken.text)
+                .frame(width: 28, alignment: .leading)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(skill.title)
                     .font(.system(size: 15, weight: .semibold))
@@ -1919,9 +1924,12 @@ public struct LSCompletedTrainingHero: View {
             HStack(alignment: .center, spacing: 8) {
                 if skill.isProLocked {
                     Image(systemName: "lock.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13, weight: .regular))
                         .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
                         .accessibilityLabel("Недоступно")
+                    Text("Taika+")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
                 } else {
                     Text(skill.score.map { "\($0)%" } ?? "—")
                         .font(Theme.Fonts.metric(21))
@@ -1933,7 +1941,7 @@ public struct LSCompletedTrainingHero: View {
                 }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(skill.isProLocked ? AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.56)) : (enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.82)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4))))
+                    .foregroundStyle(AnyShapeStyle(PD.ColorToken.textSecondary.opacity(skill.isProLocked ? 0.56 : 0.82)))
             }
             .frame(minWidth: 88, alignment: .trailing)
         }

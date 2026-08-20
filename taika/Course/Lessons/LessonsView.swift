@@ -233,17 +233,17 @@ private extension LessonsView {
         guard let cid = currentCourse?.courseID,
               let metrics = ReinforcementStore.shared.metrics(courseId: cid) else {
             return [
-                LSReinforcementSkill(id: "speaker", title: "Спикер", subtitle: "Произношение и тоны", icon: "mic.fill", isSpeaker: true),
-                LSReinforcementSkill(id: "match", title: "Память", subtitle: "Найди пару", icon: "gamecontroller.fill", modeRawValue: GameModeType.match.rawValue),
-                LSReinforcementSkill(id: "recall", title: "Вспоминание", subtitle: "Собери по слогам", icon: "sparkles", modeRawValue: GameModeType.recall.rawValue, isProLocked: !pro.isPro),
-                LSReinforcementSkill(id: "audioRecall", title: "На слух", subtitle: "Распознай фразу", icon: "waveform", modeRawValue: GameModeType.audioRecall.rawValue, isProLocked: !pro.isPro)
+                LSReinforcementSkill(id: "speaker", title: "Спикер", subtitle: "Произношение и тоны", icon: "speaker.wave.2.fill", isSpeaker: true),
+                LSReinforcementSkill(id: "match", title: "Память", subtitle: "Найди пару", icon: "brain.head.profile", modeRawValue: GameModeType.match.rawValue),
+                LSReinforcementSkill(id: "recall", title: "Вспоминание", subtitle: "Собери по слогам", icon: "book", modeRawValue: GameModeType.recall.rawValue, isProLocked: !pro.isPro),
+                LSReinforcementSkill(id: "audioRecall", title: "На слух", subtitle: "Распознай фразу", icon: "ear", modeRawValue: GameModeType.audioRecall.rawValue, isProLocked: !pro.isPro)
             ]
         }
         let definitions: [(String, String, String, String, Bool)] = [
-            ("speaker", "Спикер", "Произношение и тоны", "mic.fill", true),
-            ("match", "Память", "Найди пару", "gamecontroller.fill", false),
-            ("recall", "Вспоминание", "Вспомни перевод", "sparkles", false),
-            ("audioRecall", "На слух", "Распознай фразу", "waveform", false)
+            ("speaker", "Спикер", "Произношение и тоны", "speaker.wave.2.fill", true),
+            ("match", "Память", "Найди пару", "brain.head.profile", false),
+            ("recall", "Вспоминание", "Собери по слогам", "book", false),
+            ("audioRecall", "На слух", "Распознай фразу", "ear", false)
         ]
         return definitions.map { id, title, subtitle, icon, isSpeaker in
             let mode = metrics.byMode[id]
