@@ -307,6 +307,13 @@ struct CourseView: View {
         from courses: [Course],
         persistCarousel: PersistedCourseCarousel = .none
     ) -> [CDCourseItem] {
+        func completedLessonIds(for courseId: String) -> [String] {
+            LessonsManager.shared.progress[courseId, default: [:]]
+                .compactMap { lessonId, progress in
+                    progress.status == .completed ? lessonId : nil
+                }
+                .sorted()
+        }
         let speakerAttemptsAll = speakerAttemptsSnapshot
         let pronunciation = pronunciationMaps(from: speakerAttemptsAll, includeAdvanced: pro.isPro)
         return courses.map { c in
@@ -353,8 +360,15 @@ struct CourseView: View {
                 reinforcementCoveredCards: reinforcementCoveredCards,
                 isProUser: pro.isPro,
                 flipEnabled: courseCompleted && !isTheoryBonus,
-                onBackSelectGameMode: (courseCompleted && !isTheoryBonus) ? { gameType in
-                    nav.go(.game(courseId: c.id, lessonId: nil, gameType: gameType))
+                onBackSelectGameMode: (courseCompleted && !isTheoryBonus) ? { _ in
+                    let lessonIds = completedLessonIds(for: c.id)
+                    guard !lessonIds.isEmpty else { return }
+                    GameRequestedCourseScope.shared.set(courseId: c.id, lessonIds: lessonIds)
+                    selectedGameMode = .match
+                    pendingGameCourseId = c.id
+                    withAnimation(.spring(response: 0.36, dampingFraction: 0.92)) {
+                        showGameModePicker = true
+                    }
                 } : nil,
                 homeworkTotal: total,
                 homeworkDone: done,
@@ -377,9 +391,12 @@ struct CourseView: View {
                     }
                 },
                 onTapSpeaker: isTheoryBonus ? nil : {
-                    UserSession.shared.markActive(courseId: c.id)
+                    let lessonIds = completedLessonIds(for: c.id)
+                    guard let firstLessonId = lessonIds.first else { return }
+                    SpeakerManager.shared.setSpeakerUIMode(.training)
+                    SpeakerRequestedCourseId.shared.set(c.id, lessonIds: lessonIds)
+                    UserSession.shared.markActive(courseId: c.id, lessonId: firstLessonId, stepIndex: 0)
                     NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
-                    SpeakerRequestedCourseId.shared.set(c.id)
                     nav.requestTab(2)
                 },
                 onTapInfo: { overlay.present(.courseInfoPreview(courseId: c.id)) },

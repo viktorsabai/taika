@@ -1409,3 +1409,12 @@
 - [ ] Сохранить только заменяемые content-параметры: icon, title и direction arrow.
 - [ ] Применить одинаковую capsule на лицевой стороне «КУРС ПРОЙДЕН» и на обороте «ЗАКРЕПЛЕНИЕ».
 - [ ] Проверить exact font, padding, fill, shadow и PressDownStyle against Start button.
+
+# Completed course back flow: Speaker + three game modes
+
+- [ ] Передать из CourseView отдельный reinforcement Speaker entry point, а не обычный Speaker/Instant Translation route.
+- [ ] Сохранить courseId и selected lesson scope при входе в Speaker reinforcement.
+- [ ] Заменить прямой запуск match из course card back на native dock с match, recall и audioRecall.
+- [ ] Free match должен запускаться direct; paid modes должны показывать crown и «Открыть Taika Pro».
+- [ ] Не показывать повторный общий picker после выбора режима в dock.
+- [ ] Проверить закрытие dock, gameType и lesson scope на всех трех режимах.
