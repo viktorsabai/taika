@@ -1,3 +1,12 @@
+# App-wide portrait-only orientation
+
+| Задача | Статус |
+|---|---|
+| Аудировать Info.plist, project settings и App/SceneDelegate orientation masks | Сделано |
+| Выбрать единый portrait-only enforcement layer | Сделано |
+| Убрать конфликтующие screen-level orientation overrides | Сделано; overrides не найдены |
+| Проверить target settings и push orientation fix | В работе |
+
 # LessonsView — in-progress lesson list parity fix
 
 | Задача | Статус |
