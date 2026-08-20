@@ -1590,3 +1590,10 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Сверить фон, progress, status chip и completed accent с #36F5B0 → #19CFA0.
 - [x] Исправить оставшиеся старые treatments, сохранив новый status chip.
 - [x] Выполнить static validation и подготовить commit/push.
+
+# Completed LessonsView background regression
+
+- [x] Найти root background/overlay, который заливает весь completed LessonsView зелёным.
+- [x] Вернуть graphite base background и оставить зелёный только локальным accent treatment.
+- [x] Проверить header, FM block, grade sheet и нижнюю навигацию на отсутствие зелёной заливки.
+- [x] Выполнить static validation и подготовить commit/push.

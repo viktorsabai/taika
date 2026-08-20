@@ -751,14 +751,9 @@ public struct LessonsView: View {
     @ViewBuilder
     private var overlayStackView: some View {
         ZStack(alignment: .bottom) {
-            if isCompletedCourse {
-                Rectangle()
-                    .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.14)))
-                    .ignoresSafeArea()
-            } else {
-                PD.ColorToken.background
-                    .ignoresSafeArea()
-            }
+            // Completed state uses local mastery accents only; the screen plane stays graphite.
+            PD.ColorToken.background
+                .ignoresSafeArea()
 
             mainContent
 
