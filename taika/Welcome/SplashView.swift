@@ -73,7 +73,7 @@ struct SplashTaikaView: View {
             .allowsHitTesting(false)
 
             VStack(spacing: 0) {
-                Spacer(minLength: 120)
+                Spacer(minLength: 88)
 
                 HStack(spacing: 6) {
                     Text("tai")
@@ -87,25 +87,26 @@ struct SplashTaikaView: View {
 
                 ZStack {
                     SplashVoiceWave(phase: wavePhase, amplitude: waveAmplitude)
-                        .stroke(theme.currentAccentFill.opacity(0.92), style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
+                        .stroke(PD.ColorToken.text.opacity(0.92), style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
                         .frame(width: 230, height: 44)
 
                     SplashVoiceWave(phase: wavePhase + 1.1, amplitude: waveAmplitude * 0.58)
-                        .stroke(theme.currentAccentTintColor.opacity(0.48), style: StrokeStyle(lineWidth: 1.1, lineCap: .round, lineJoin: .round))
+                        .stroke(theme.currentAccentTintColor.opacity(0.56), style: StrokeStyle(lineWidth: 1.1, lineCap: .round, lineJoin: .round))
                         .frame(width: 230, height: 44)
                         .offset(y: 9)
                 }
                 .padding(.top, 28)
                 .accessibilityLabel("Живая линия голоса Taika")
 
-                Text("Кун Кру · собираю твою практику")
+                Text("Кун Кру готовит практику")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(PD.ColorToken.textSecondary)
                     .padding(.top, 20)
 
-                Spacer(minLength: 120)
+                Spacer(minLength: 88)
             }
             .opacity(contentVisible && !fadeOut ? 1 : 0)
+            .offset(y: -28)
             .animation(.easeOut(duration: 0.28), value: fadeOut)
         }
         .onAppear {

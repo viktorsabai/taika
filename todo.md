@@ -1526,3 +1526,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Сделать lesson/status chips компактными, одинаковыми и центрированными.
 - [ ] Проверить, что CTA/game rows не потеряли доступную высоту.
 - [ ] Закоммитить и запушить polish.
+
+# Splash final polish
+
+- [ ] Поднять центральную splash composition.
+- [ ] Сделать главную wave белой, оставить тонкий accent highlight.
+- [ ] Сократить подпись до короткого branded cue.
+- [ ] Проверить обычную и reduced-motion анимацию.
+- [ ] Закоммитить и запушить polish.
