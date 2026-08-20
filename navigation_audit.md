@@ -95,3 +95,59 @@ The main architectural risk is not persistence corruption but **scope translatio
 When `gameParkFromDictionary` was added, AppShell's global `TaikaLiquidGlassHeaderBackdrop` exclusion list still contained only `gamePark` and `gameParkFromFavorites`. This would leave the app header transition layer visible above the Dictionary Game Park overlay, unlike the other Game Park entry points.
 
 **Fix applied:** `gameParkFromDictionary` now uses the same AppShell chrome exclusion contract.
+
+## Release-readiness finding R-001 — Sync merge is monotonic and has no deletion/tombstone semantics
+
+`SyncManager.mergeSnapshots` unions started/completed lessons, learned steps, favorites, day plans and other set-like fields. It merges `last*` pointers only when the local value is nil and prefers `isProUser` with logical OR. This is safe for additive offline progress, but it does not represent deletions, unfavorites, course reset, sign-out cleanup or a newer remote removal. A local or remote reset can therefore be reintroduced on the next merge.
+
+**Release impact:** this is not a navigation crash, but it is a user-session integrity risk. Before production sync is considered authoritative, the snapshot model needs per-field version/timestamp or tombstone semantics, plus an explicit account/session reset contract. For internal/beta, treat this as a known high-priority persistence limitation and test sign-out/sign-in with two devices before enabling broad rollout.
+
+## Release-readiness finding R-002 — Token drift remains in non-critical UI branches
+
+The production source still contains direct system colors and hardcoded RGB values in several UI branches, including Speaker diagnostic rows and legacy/secondary surfaces. Some are intentional semantic states, but they bypass the canonical Taika token layer and can diverge between accents/themes. This is not a route blocker, but it means the visual system is not yet fully single-source-of-truth.
+
+**Recommendation:** allow semantic state tokens (`error`, `warning`, `success`, `locked`) to own these values in `ThemeDesign`, then replace direct `Color.red/orange/green` and ad-hoc RGB values incrementally. Do not bulk-replace before Simulator visual review.
+
+## Release-readiness finding R-003 — Legacy fallback paths are still active
+
+`LessonsView` still contains explicit fallback builders for placeholder homework/task content, legacy notifications, and legacy record branches. These paths are useful for resilience, but some can render a structurally valid UI with incomplete diagnostics instead of failing loudly. The audit should keep them behind explicit logging/telemetry and verify that real course data always wins before beta.
+
+The legacy Favorites enum cases (`all`, `hacks`, `courses`) are normalized to the two active collections, which is safe for old navigation payloads. The remaining legacy course/task fallbacks should be treated as compatibility code, not as the primary product path.
+
+## Release-readiness finding R-004 — Sign-out does not isolate local user-scoped state
+
+`AuthService.signOut()` clears Firebase auth and display name, while the profile callback resets `ProManager`. It does not reset or namespace `UserSession`, `ProgressManager`, `FavoriteManager`, `ReinforcementStore`, `SpeakerRequestedCourseId`, `DictionarySessionSelection` or other local user-scoped state. Because the next login calls `SyncManager.onUserDidLogin` against the existing local snapshot, a second account can inherit the previous account's local progress/favorites before cloud merge.
+
+**Severity:** production-blocking for multi-account privacy/data integrity. This needs an explicit product decision and implementation: either namespace all persisted stores by auth uid, or define a safe sign-out migration/reset coordinator that snapshots/syncs the outgoing account and loads a clean store for the incoming account. Do not silently wipe anonymous progress without agreeing on the product contract.
+
+## Final release-readiness assessment
+
+### What still needs to be checked before rollout
+
+| Gate | Current status | Release consequence |
+|---|---|---|
+| Xcode 96 yellow diagnostics | Not classifiable from sandbox; no `.xcactivitylog` or warning snapshot is present | Must export the Xcode Issue Navigator/build log and classify each warning as compiler, concurrency, deprecation, unused code, or harmless preview noise |
+| Clean Xcode build | Not executed here; `swiftc` and Xcode are unavailable in sandbox | Required before any device/beta build |
+| Sign-out → second account isolation | Failing by architecture review until a user-scoped reset/namespace contract is implemented | Production blocker; high-priority beta test |
+| Cloud sync deletion/reset semantics | Additive merge only; no tombstones/versioning | Production blocker for resets, unfavorites and multi-device correctness |
+| Dictionary/Favorites/Game Park scope | Code fix applied; Simulator verification required | Beta gate |
+| GrandDialogue card diagnostics | Code fix applied; Simulator verification required | Beta gate |
+| Portrait-only target | Code-level setting applied previously | Verify on physical iPhone/iPad and every sheet/overlay |
+| Token/legacy cleanup | Partially complete; direct system colors and compatibility fallbacks remain | Not a beta blocker, but blocks “fully canonical” production claim |
+
+### Score
+
+The score is intentionally separated by release stage rather than presented as one inflated number.
+
+| Release stage | Score | Interpretation |
+|---|---:|---|
+| Internal developer test after Xcode build | **78/100** | Reasonable once the current branch builds cleanly; the highest-value navigation/scope fixes are in place, but session switching and sync semantics must be explicitly tested. |
+| Closed beta with single account/device | **72/100** | Possible only with known-risk tracking and a focused QA matrix for games, Dictionary, Speaker, errors and paywalls. |
+| Multi-account / multi-device beta | **58/100** | Not recommended until R-004 sign-out isolation and R-001 sync deletion semantics are addressed. |
+| Production rollout | **46/100** | Not ready. The blockers are data ownership and persistence integrity, not visual polish. |
+
+> **Final verdict:** the app is approaching a credible internal test build, but it is not yet production-ready. The remaining risk is concentrated in account/session isolation, cloud merge semantics, unclassified Xcode diagnostics and missing device-level validation. The UI/navigation architecture is substantially more coherent after the current fixes, but those improvements must not be mistaken for release readiness until user data boundaries are proven.
+
+### Recommended release order
+
+First, obtain the actual Xcode warning export and a clean build. Second, decide and implement the account isolation contract. Third, test cloud sync with two accounts and two devices, including unfavorite, course reset, lesson reset and sign-out/sign-in. Fourth, run the full single-device scenario matrix: onboarding, course start/resume, completed grade sheet, error loop, all game modes, Speaker return, Favorites/Dictionary, locked Taika+ mode and profile. Only after those gates pass should the score be revised upward for a beta or production decision.

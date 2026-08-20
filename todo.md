@@ -1,3 +1,14 @@
+# Final release-readiness audit
+
+| Область | Статус |
+|---|---|
+| Инвентаризировать 96 yellow diagnostics и классифицировать риски | Ограничено: Xcode export отсутствует; классификация ожидает Issue Navigator/log |
+| Проверить UserSession, auth, persistence и session reset boundaries | Сделано; R-004 production blocker найден |
+| Проверить managers и source-of-truth synchronization | Сделано; R-001 sync limitation найден |
+| Проверить design tokens, legacy fallbacks и hardcoded/costyl paths | Сделано; residual cleanup documented |
+| Прогнать cross-flow readiness matrix по всем основным сценариям | Статически сделано; Simulator/Xcode E2E ожидает проверки |
+| Применить release-blocking fixes и подготовить final readiness score | Report сделан; R-001/R-004 требуют product/architecture fix |
+
 # Cross-app navigation and state audit
 
 | Область | Статус |
