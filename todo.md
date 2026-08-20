@@ -1495,3 +1495,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Trailing chevron только открывает canonical lesson.
 - [ ] Добавить `Выбрать все` и `Снять все` для completed lesson selection.
 - [ ] Сохранить selectedIds и scope для Speaker/Game reinforcement.
+
+# StepView completion screen-fit
+
+- [ ] Сохранить success hero, основной CTA и следующий урок в safe-area пределах.
+- [ ] Сжать secondary chips/section spacing на малых экранах.
+- [ ] Сделать game recommendation rows компактными и не обрезать locked states.
+- [ ] Добавить scroll-safe fallback для completion content, если высоты экрана недостаточно.
+- [ ] Проверить визуальный порядок и push после static validation.

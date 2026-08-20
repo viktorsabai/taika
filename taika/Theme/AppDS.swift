@@ -2589,8 +2589,8 @@ public struct LessonSummaryOverlay: View {
 
     @ViewBuilder
     private func approvedCompletionFooter() -> some View {
-        VStack(alignment: .leading, spacing: 22) {
-            VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 7) {
                 TaikaSectionLabel(title: "ДАЛЬШЕ")
                 Button(action: {
                     runApprovedAction {
@@ -2624,7 +2624,7 @@ public struct LessonSummaryOverlay: View {
             }
 
             if let onSpeakerPractice {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 7) {
                     TaikaSectionLabel(title: approvedIsFinalState ? "ЗАКРЕПИТЬ" : "КУН КРУ СОВЕТУЕТ")
                     Button(action: {
                         runApprovedAction {
@@ -2634,11 +2634,11 @@ public struct LessonSummaryOverlay: View {
                     }) {
                         HStack(spacing: 14) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .fill(ThemeManager.shared.currentAccentFill.opacity(0.18))
-                                    .frame(width: 48, height: 48)
+                                    .frame(width: 40, height: 40)
                                 Image(systemName: "mic.fill")
-                                    .font(.system(size: 20, weight: .semibold))
+                                    .font(.system(size: 18, weight: .semibold))
                                     .foregroundStyle(ThemeManager.shared.currentAccentFill)
                             }
                             VStack(alignment: .leading, spacing: 3) {
@@ -2658,8 +2658,8 @@ public struct LessonSummaryOverlay: View {
                                 .foregroundStyle(ThemeManager.shared.currentAccentFill)
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
                         .background(
                             RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .fill(CD.ColorToken.card.opacity(0.52))
@@ -2674,13 +2674,13 @@ public struct LessonSummaryOverlay: View {
             }
 
             if showGameReinforce, let onSelectGameMode {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 7) {
                     TaikaSectionHeaderRow("ИЛИ ИГРА") {
                         Text("откроется сразу")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
                     }
-                    VStack(spacing: 8) {
+                    VStack(spacing: 6) {
                         ForEach(GameModeType.modesLessonAndPark, id: \.rawValue) { mode in
                             approvedGameChip(mode, selected: selectedGameMode == mode, onSelect: onSelectGameMode)
                         }
@@ -2721,15 +2721,15 @@ public struct LessonSummaryOverlay: View {
         }) {
             HStack(spacing: 14) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(
                             locked
                             ? AnyShapeStyle(CD.ColorToken.card.opacity(0.7))
                             : AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(selected ? 0.28 : 0.16))
                         )
-                        .frame(width: 48, height: 48)
+                        .frame(width: 40, height: 40)
                     Image(systemName: approvedGameIcon(mode))
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(
                             locked
                             ? AnyShapeStyle(CD.ColorToken.textSecondary)
@@ -2738,11 +2738,11 @@ public struct LessonSummaryOverlay: View {
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(approvedGameTitle(mode))
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(locked ? CD.ColorToken.textSecondary : CD.ColorToken.text)
                         .lineLimit(1)
                     Text(locked ? "Taika+ · \(approvedGameHint(mode))" : approvedGameHint(mode))
-                        .font(.system(size: 13, weight: .regular))
+                        .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(CD.ColorToken.textSecondary)
                         .lineLimit(1)
                 }
@@ -2761,10 +2761,10 @@ public struct LessonSummaryOverlay: View {
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(
                         selected && !locked
                         ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.14))
@@ -3022,7 +3022,7 @@ public struct LessonSummaryOverlay: View {
                     .allowsHitTesting(false)
 
                 TaikaRootVerticalScroll {
-                    VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 14) {
                         HStack {
                             Text("taikA")
                                 .font(.taikaLogo(18))
@@ -3030,19 +3030,19 @@ public struct LessonSummaryOverlay: View {
                             Spacer(minLength: 44)
                         }
 
-                        VStack(spacing: 16) {
+                        VStack(spacing: 10) {
                             ZStack {
                                 Circle()
                                     .fill(ThemeManager.shared.currentAccentTintColor.opacity(0.18))
-                                    .frame(width: 108, height: 108)
+                                    .frame(width: 88, height: 88)
                                     .scaleEffect(checkBurst ? 1.18 : 0.7)
                                     .opacity(checkBurst ? 0.9 : 0)
                                 Circle()
-                                    .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 2.6)
-                                    .frame(width: 88, height: 88)
+                                    .stroke(ThemeManager.shared.currentAccentFill, lineWidth: 2.4)
+                                    .frame(width: 72, height: 72)
                                     .shadow(color: ThemeManager.shared.currentAccentTintColor.opacity(0.55), radius: 16)
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 36, weight: .bold))
+                                    .font(.system(size: 30, weight: .bold))
                                     .foregroundStyle(ThemeManager.shared.currentAccentFill)
                             }
                             .scaleEffect(animateIntro ? 1 : 0.78)
@@ -3050,12 +3050,12 @@ public struct LessonSummaryOverlay: View {
 
                             VStack(alignment: .center, spacing: 8) {
                                 Text(title)
-                                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                                    .font(.system(size: 29, weight: .bold, design: .rounded))
                                     .foregroundStyle(CD.ColorToken.text)
                                     .multilineTextAlignment(.center)
                                     .frame(maxWidth: .infinity)
                                 Text(subtitle)
-                                    .font(.system(size: 17, weight: .regular))
+                                    .font(.system(size: 15, weight: .regular))
                                     .foregroundStyle(CD.ColorToken.textSecondary)
                                     .multilineTextAlignment(.center)
                                     .lineLimit(3)
@@ -3084,7 +3084,7 @@ public struct LessonSummaryOverlay: View {
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 20)
                     .padding(.top, max(proxy.safeAreaInsets.top, 10) + 6)
-                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 16) + 12)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 24) + 18)
                 }
 
                 Button(action: { onClose() }) {
