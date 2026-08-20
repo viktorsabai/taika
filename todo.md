@@ -1383,3 +1383,12 @@
 - [ ] Перестроить skill rows в читаемую двухзонную структуру: название/назначение слева, score/status/action справа.
 - [ ] Убрать truncation и диагональное визуальное смещение в результатах.
 - [ ] Проверить density, action affordances и static compile surface перед push.
+
+# CourseView completed card follow-up
+
+- [ ] Проверить, где CourseView собирает лицевую и оборотную стороны completed course card.
+- [ ] Найти существующий Start/status pill primitive и использовать одну и ту же визуальную грамматику для «КУРС ПРОЙДЕН» и «ЗАКРЕПЛЕНИЕ».
+- [ ] Убрать из completed face вторичные цифры и перегруз, оставить achievement, title и понятные быстрые действия.
+- [ ] Пересобрать back как короткую follow-up карточку: результат, следующая цель, CTA в Speaker/Game Park или LessonsView.
+- [ ] Устранить lineLimit/truncation в ключевых status, score и CTA текстах.
+- [ ] Проверить CourseView ↔ LessonsView navigation scope и выполнить static validation перед push.

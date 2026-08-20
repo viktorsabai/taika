@@ -2568,32 +2568,24 @@ private struct CardBackActionButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
-            .foregroundStyle(isPrimary ? Color.black.opacity(0.9) : Color.white.opacity(0.86))
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(isPrimary ? Color.black.opacity(0.92) : Color.white.opacity(0.88))
             .lineLimit(1)
-            .minimumScaleFactor(0.78)
-            .padding(.horizontal, 10)
+            .minimumScaleFactor(0.82)
+            .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(isMastery ? AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient) : AnyShapeStyle(Color.black.opacity(isPrimary ? 0.78 : 0.62)))
-                    .overlay(
-                        LinearGradient(
-                            colors: isMastery ? [Color.white.opacity(0.20), Color.clear, Color.black.opacity(0.12)] : [Color.white.opacity(isPrimary ? 0.10 : 0.06), Color.clear, Color.black.opacity(0.16)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-                    )
+                Capsule(style: .continuous)
+                    .fill(isMastery ? AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient) : AnyShapeStyle(Color.black.opacity(0.78)))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .stroke(Color.white.opacity(isPrimary ? 0.18 : 0.13), lineWidth: 1)
+                Capsule(style: .continuous)
+                    .stroke(Color.white.opacity(isPrimary ? 0.42 : 0.16), lineWidth: 1)
             )
-            .opacity(configuration.isPressed ? 0.72 : 1)
+            .opacity(configuration.isPressed ? 0.76 : 1)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .shadow(color: Color.black.opacity(0.24), radius: 8, y: 4)
+            .shadow(color: isMastery ? TaikaMasteryTokens.green.opacity(0.20) : Color.black.opacity(0.20), radius: 7, y: 2)
     }
 }
 
@@ -2693,17 +2685,27 @@ fileprivate struct CDOrganicLearnedTreatment: View {
 private struct CDCourseStatusPill: View {
     let title: String
     let icon: String
+    let trailingIcon: String
+
+    init(title: String, icon: String, trailingIcon: String = "arrow.right") {
+        self.title = title
+        self.icon = icon
+        self.trailingIcon = trailingIcon
+    }
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 7) {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .bold))
             Text(title)
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .kerning(0.35)
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .kerning(0.32)
+                .lineLimit(1)
+            Image(systemName: trailingIcon)
+                .font(.system(size: 11, weight: .bold))
         }
-        .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
-        .padding(.horizontal, 13)
+        .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.88)))
+        .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(
             Capsule(style: .continuous)
@@ -2711,9 +2713,9 @@ private struct CDCourseStatusPill: View {
         )
         .overlay(
             Capsule(style: .continuous)
-                .stroke(Color.white.opacity(0.72), lineWidth: 1)
+                .stroke(Color.white.opacity(0.48), lineWidth: 1)
         )
-        .shadow(color: TaikaMasteryTokens.green.opacity(0.22), radius: 8, y: 3)
+        .shadow(color: TaikaMasteryTokens.green.opacity(0.20), radius: 7, y: 2)
     }
 }
 
@@ -3004,12 +3006,7 @@ public struct CourseLessonCard: View {
                                 }
                             }
                         } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
-                                CDCourseStatusPill(title: "ЗАКРЕПЛЕНИЕ", icon: "waveform.path.ecg")
-                            }
+                            CDCourseStatusPill(title: "ЗАКРЕПЛЕНИЕ", icon: "waveform.path.ecg", trailingIcon: "arrow.left")
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Вернуться к карточке курса")
@@ -3047,15 +3044,10 @@ public struct CourseLessonCard: View {
                                     }
                                 }
                             } label: {
-                                HStack(spacing: 6) {
-                                    if statusKind == .completed {
-                                        CDCourseStatusPill(title: "КУРС ПРОЙДЕН", icon: "checkmark.seal.fill")
-                                    } else {
-                                        AppStatusChip(kind: statusKind, title: statusChipTitle)
-                                    }
-                                    Image(systemName: isFlipped ? "chevron.up" : "chevron.right")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(statusKind == .completed ? AnyShapeStyle(TaikaMasteryTokens.greenGlow) : AnyShapeStyle(ThemeManager.shared.currentAccentTintColor.opacity(0.78)))
+                                if statusKind == .completed {
+                                    CDCourseStatusPill(title: "КУРС ПРОЙДЕН", icon: "checkmark.seal.fill", trailingIcon: isFlipped ? "arrow.left" : "arrow.right")
+                                } else {
+                                    AppStatusChip(kind: statusKind, title: statusChipTitle)
                                 }
                             }
                             .buttonStyle(.plain)
@@ -3210,6 +3202,22 @@ public struct CourseLessonCard: View {
             .accessibilityLabel(title)
         }
 
+        func gradeMetric(value: String, label: String) -> some View {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(value)
+                    .font(.system(size: 17, weight: .bold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.white.opacity(0.96))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+                Text(label.uppercased())
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.50))
+                    .kerning(0.45)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
         func gradeRow(title: String, value: String?) -> some View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(title.uppercased())
@@ -3309,74 +3317,61 @@ public struct CourseLessonCard: View {
                 }
 
             case .courseGradeSheet:
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("ЗАЧЁТ ПО КУРСУ · результат уже есть. Закрепи его, чтобы навык не ушёл из памяти.")
+                VStack(alignment: .leading, spacing: 9) {
+                    Text("ЗАКРЕПИ ПРОЙДЕННЫЙ КУРС")
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.92))
+                        .kerning(0.45)
+                        .lineLimit(1)
+
+                    Text(reinforcementScore == nil ? "Результат курса готов. Теперь удержи навык практикой." : "Курс пройден. Подними результат коротким повторением.")
                         .font(.system(size: 11, weight: .regular))
                         .foregroundStyle(Color.white.opacity(0.62))
                         .lineSpacing(1)
-                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                    let reinforcementValue: String = {
-                        if let score = reinforcementScore {
-                            return reinforcementSessions > 0 ? "\(score)% · \(reinforcementSessions) игр" : "\(score)%"
-                        }
-                        return reinforcementSessions > 0 ? "\(reinforcementSessions) игр" : "ещё нет"
-                    }()
-
-                    gradeRow(title: "Закрепление", value: reinforcementValue)
-                    gradeRow(
-                        title: "Карточки в игре",
-                        value: reinforcementCoveredCards > 0 ? "\(reinforcementCoveredCards)" : "ещё нет"
-                    )
-                    gradeRow(
-                        title: "Произношение",
-                        value: pronunciationPercent.map { "\($0)%" } ?? "ещё нет"
-                    )
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(reinforcementScore == nil ? "Результат уже есть — теперь его важно удержать" : "Закрепление превращает пройденный курс в устойчивый навык")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.white.opacity(0.84))
-                            .lineLimit(2)
-                        Text("Выбери сложные уроки и потренируй их в Спикере или игре")
-                            .font(.system(size: 10, weight: .regular))
-                            .foregroundStyle(Color.white.opacity(0.58))
-                            .lineLimit(2)
+                    HStack(spacing: 8) {
+                        gradeMetric(value: reinforcementScore.map { "\($0)%" } ?? "—", label: "игры")
+                        gradeMetric(value: pronunciationPercent.map { "\($0)%" } ?? "—", label: "голос")
+                        gradeMetric(value: reinforcementCoveredCards > 0 ? "\(reinforcementCoveredCards)" : "—", label: "карточки")
                     }
-                    .padding(.top, 4)
+                    .padding(.top, 2)
 
-                    if let title = backPrimaryActionTitle, let action = onBackPrimaryAction {
-                        Button {
-                            action()
-                        } label: {
-                            HStack(spacing: 6) {
-                                Text(title)
-                                    .font(.system(size: 12, weight: .semibold))
-                                Image(systemName: "arrow.up.right")
-                                    .font(.system(size: 11, weight: .semibold))
-                            }
-                            .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
-                        }
-                        .buttonStyle(CardBackActionButtonStyle(isPrimary: true, isMastery: true))
-                        .padding(.top, 4)
-                    } else if let action = onBackSelectGameMode {
+                    Text("СЛЕДУЮЩИЙ ШАГ")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.48))
+                        .kerning(0.7)
+                        .padding(.top, 2)
+
+                    if let action = onBackSelectGameMode {
                         Button {
                             action("match")
                         } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "waveform.path.ecg")
-                                Text("Закрепить сейчас")
-                                    .font(.system(size: 12, weight: .semibold))
+                            HStack(spacing: 7) {
+                                Image(systemName: "gamecontroller.fill")
+                                Text("Закрепить в игре")
                                 Spacer(minLength: 0)
-                                Image(systemName: "arrow.up.right")
-                                    .font(.system(size: 11, weight: .semibold))
+                                Image(systemName: "arrow.right")
                             }
-                            .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.86)))
+                            .foregroundStyle(AnyShapeStyle(Color.black.opacity(0.90)))
                         }
                         .buttonStyle(CardBackActionButtonStyle(isPrimary: true, isMastery: true))
-                        .padding(.top, 4)
                     }
 
+                    if let action = onSpeakerTap {
+                        Button {
+                            action()
+                        } label: {
+                            HStack(spacing: 7) {
+                                Image(systemName: "mic.fill")
+                                Text("Тренировать в Спикере")
+                                Spacer(minLength: 0)
+                                Image(systemName: "arrow.right")
+                            }
+                            .foregroundStyle(AnyShapeStyle(Color.white.opacity(0.90)))
+                        }
+                        .buttonStyle(CardBackActionButtonStyle(isPrimary: false, isMastery: false))
+                    }
                 }
             }
         }
