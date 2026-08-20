@@ -6,7 +6,7 @@
 | Убрать лайфхаки из Favorites navigation и source arrays | Сделано |
 | Развести Favorites как очередь повторения и Dictionary как архив/поиск | Сделано |
 | Выбрать представление карточек и native переключение режимов | Сделано |
-| Проверить empty states, actions и push финального Favorites flow | В работе |
+| Проверить empty states, actions и push финального Favorites flow | Push сделан; Simulator E2E ожидает проверки |
 
 # Speaker — pronunciation result and breakdown polish
 
