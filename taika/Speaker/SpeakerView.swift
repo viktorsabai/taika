@@ -153,19 +153,11 @@ struct SpeakerView: View {
         return t.isEmpty ? nil : t
     }
 
-    /// Main → «Скажи сам»: если пришли с микрофона/чипа, сразу стартуем запись.
-    private func maybeStartPendingConversationRecording() {
+    /// Консьюмим legacy auto-record intent, но не начинаем запись без явного tap.
+    /// Speaker всегда открывается в ready/idle состоянии; live listening начинается только через main CTA.
+    private func clearPendingConversationAutoRecord() {
         guard speaker.speakerUIMode == .conversation else { return }
-        guard speaker.consumePendingConversationAutoRecord() else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            guard speaker.speakerUIMode == .conversation else { return }
-            switch speaker.phase {
-            case .idle, .hint, .feedback:
-                speaker.startConversationRecording()
-            default:
-                break
-            }
-        }
+        _ = speaker.consumePendingConversationAutoRecord()
     }
 
     var body: some View {
@@ -369,7 +361,7 @@ struct SpeakerView: View {
             // и сбрасывал бы только что распознанную фразу. Сброс — при смене режима (`setSpeakerUIMode`).
             speaker.sanitizeConversationHistory()
 
-            maybeStartPendingConversationRecording()
+            clearPendingConversationAutoRecord()
 
             UserSession.shared.logActivity(
                 .speakerOpened,
@@ -378,9 +370,6 @@ struct SpeakerView: View {
                 stepIndex: speaker.current?.index,
                 refId: "speaker:mvp"
             )
-        }
-        .onChange(of: speaker.pendingConversationAutoRecord) { _, pending in
-            if pending { maybeStartPendingConversationRecording() }
         }
     }
 

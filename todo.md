@@ -1561,3 +1561,11 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [x] Проверить regular SplashView visual polish и AppShell handoff.
 - [x] Найти и исправить regressions/contradictory states.
 - [x] Выполнить static validation и собрать один consolidated production push.
+
+# Speaker coherent state flow
+
+- [x] Проверить стартовый idle/ready state без ложного live listening.
+- [x] Развести explicit CTA tap и active recording/listening state.
+- [x] Зафиксировать одну геометрию сферы/микрофона между idle, listening и processing.
+- [x] Проверить CTA transitions, processing и result handoff.
+- [x] Выполнить static validation и запушить Speaker flow fix.

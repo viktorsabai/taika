@@ -1017,8 +1017,7 @@ public struct SpeakerDSRoot: View {
             .frame(width: sphereSize, height: sphereSize)
 
             conversationLiveHeroText
-                .frame(minHeight: 56)
-                .frame(maxHeight: 128)
+                .frame(height: 84, alignment: .center)
                 .padding(.horizontal, 8)
 
             conversationLiveStatusChip
@@ -1046,7 +1045,7 @@ public struct SpeakerDSRoot: View {
             if (external?.heardRU?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false) {
                 return "перевожу"
             }
-            return "распознаю"
+            return "готов слушать"
         }()
         HStack(spacing: 8) {
             if isRec {
@@ -1056,10 +1055,10 @@ public struct SpeakerDSRoot: View {
                     .shadow(color: Color.red.opacity(0.65), radius: 4)
                     .accessibilityHidden(true)
             }
-            Text(label.uppercased())
-                .font(.system(size: 11, weight: .bold))
-                .tracking(1.4)
-                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                Text(label.uppercased())
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(1.4)
+                    .foregroundStyle(isRec ? ThemeManager.shared.currentAccentFill : PD.ColorToken.textSecondary.opacity(0.86))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -1117,7 +1116,7 @@ public struct SpeakerDSRoot: View {
             }
             .frame(maxWidth: .infinity)
         } else {
-            Text("ловлю речь…")
+            Text("готов слушать")
                 .font(.system(size: 20, weight: .semibold, design: .rounded))
                 .foregroundStyle(PD.ColorToken.textSecondary)
                 .frame(maxWidth: .infinity)
