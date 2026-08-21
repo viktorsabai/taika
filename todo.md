@@ -3133,3 +3133,12 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Add short phrase-bank scenarios with existing JSON fields | [x] — native-language QA still pending |
 | Validate JSON, progress denominator, Speaker and overlap | [x] — JSON/refs/orders validated; device flow pending |
 | Commit and push to 2026-01-21-k7hb-d2004 | [x] |
+
+# Police course survival phrase-bank redesign
+
+| Task | Status |
+|---|---|
+| Audit current police lessons and steps | [x] |
+| Replace complex legal phrasing with short survival phrases | [x] |
+| Define safe course promise: calm, respectful and clear interaction | [x] |
+| Validate JSON/progress/Speaker compatibility and push | [x] |
