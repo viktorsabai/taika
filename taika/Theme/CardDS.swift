@@ -3439,6 +3439,10 @@ public struct CourseLessonCard: View {
                             .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
                     } else {
                         frontCard
+                            .contentShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
+                            .onTapGesture {
+                                onPrimaryTap?()
+                            }
                     }
                 }
                 // Internal card treatment belongs to the same rotating surface as the face.
@@ -3452,6 +3456,10 @@ public struct CourseLessonCard: View {
                 .animation(.spring(response: 0.55, dampingFraction: 0.82), value: isFlipped)
             } else {
                 frontCard
+                    .contentShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
+                    .onTapGesture {
+                        onPrimaryTap?()
+                    }
                     .overlay { accentTreatmentOverlay }
                     .overlay { courseProWashOverlay }
             }

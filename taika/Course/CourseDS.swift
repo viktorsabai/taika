@@ -712,7 +712,8 @@ public enum CourseScreenTab: String, CaseIterable, Identifiable {
     case resume
     /// Только полностью пройденные курсы.
     case completed
-    /// Курсы, в которых пользователь сохранил хотя бы одну учебную карточку.
+    /// Курсы, которые пользователь явно добавил в избранное сердечком.
+    /// Избранные карточки живут в отдельном Favorites cards flow.
     case favorites
     /// Курсы «База от Тайки».
     case base
