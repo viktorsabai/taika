@@ -285,7 +285,8 @@ struct FavoriteView: View {
         case .cards:
             FDFavCardsTabList(
                 cards: cardsList,
-                onUnfavorite: { manager.remove(id: $0.sourceId) }
+                onUnfavorite: { manager.remove(id: $0.sourceId) },
+                onOpenCourse: { openFavoriteCourse(courseId: $0) }
             )
         case .dictionary:
             FDFavDictionaryTabList(
@@ -301,6 +302,17 @@ struct FavoriteView: View {
         case .hacks, .courses:
             EmptyView()
         }
+    }
+
+    private func openFavoriteCourse(courseId: String) {
+        let id = courseId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !id.isEmpty, id != "other" else { return }
+        if let c = CourseData.shared.course(with: id), c.isPro, !pro.isPro {
+            overlay.presentPro(reason: .lockedCourse, courseId: id)
+            return
+        }
+        CourseAnimation.markLastOpened(id)
+        nav.go(.lessons(courseId: id))
     }
 
     private func openCourse(_ course: FDCourseDTO) {

@@ -2616,3 +2616,12 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Inspect exact expression and surrounding result builder | [ ] |
 | Break heavy conditional expression into explicit typed locals | [ ] |
 | Run source check and push Speaker type-check fix | [ ] |
+
+
+# Bug — Favorites course rows do not tap
+
+| Task | Status |
+|---|---|
+| Trace course row, favorite manager, and navigation callback for all course states | [ ] |
+| Restore canonical tap target and destination routing | [ ] |
+| Validate new, in-progress, and completed course rows and push fix | [ ] |

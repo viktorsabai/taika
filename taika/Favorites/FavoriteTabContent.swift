@@ -1050,6 +1050,7 @@ private struct FDFavPhraseListRow: View {
 struct FDFavCardsTabList: View {
     let cards: [FDCardDTO]
     var onUnfavorite: (FDCardDTO) -> Void
+    var onOpenCourse: (String) -> Void = { _ in }
 
     @AppStorage("taika.fav.cards.viewMode") private var viewModeRaw: String = FavCardsViewMode.list.rawValue
     @State private var collapsedCourseIds: Set<String> = []
@@ -1138,7 +1139,8 @@ struct FDFavCardsTabList: View {
                 isCollapsed: isCollapsed,
                 isFocused: isFocused,
                 isDragging: draggingCourseId == course.id,
-                onToggle: { toggleCourse(course.id) }
+                onToggle: { toggleCourse(course.id) },
+                onOpenCourse: { onOpenCourse(course.id) }
             ) {
                 if !isCollapsed {
                     FavCardsCourseRows(
@@ -1363,52 +1365,62 @@ private struct FavCourseBlock<Content: View>: View {
     let isFocused: Bool
     var isDragging: Bool = false
     let onToggle: () -> Void
+    var onOpenCourse: () -> Void = {}
     @ViewBuilder var content: Content
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: FDFavListChrome.rowCorner, style: .continuous)
         VStack(spacing: 0) {
-            Button(action: onToggle) {
-                HStack(spacing: 10) {
-                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                        .fill(ThemeManager.shared.currentAccentFill.opacity(isFocused ? 1 : 0.85))
-                        .frame(width: isFocused ? 4 : 3, height: 16)
+            HStack(spacing: 0) {
+                Button(action: onOpenCourse) {
+                    HStack(spacing: 10) {
+                        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                            .fill(ThemeManager.shared.currentAccentFill.opacity(isFocused ? 1 : 0.85))
+                            .frame(width: isFocused ? 4 : 3, height: 16)
 
-                    Text(title.uppercased())
-                        .font(.system(size: 11, weight: .bold))
-                        .tracking(0.55)
-                        .foregroundStyle(
-                            isFocused
-                            ? AnyShapeStyle(PD.ColorToken.text)
-                            : AnyShapeStyle(PD.ColorToken.textSecondary)
-                        )
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
+                        Text(title.uppercased())
+                            .font(.system(size: 11, weight: .bold))
+                            .tracking(0.55)
+                            .foregroundStyle(
+                                isFocused
+                                ? AnyShapeStyle(PD.ColorToken.text)
+                                : AnyShapeStyle(PD.ColorToken.textSecondary)
+                            )
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
 
-                    Spacer(minLength: 8)
+                        Spacer(minLength: 8)
 
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.45))
-                        .accessibilityHidden(true)
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.45))
+                            .accessibilityHidden(true)
 
-                    Text("\(phraseCount)")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.8))
-                        .monospacedDigit()
+                        Text("\(phraseCount)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.8))
+                            .monospacedDigit()
+                    }
+                    .padding(.leading, FDFavListChrome.rowHPad)
+                    .padding(.vertical, 11)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Открыть курс \(title), \(phraseCount) карточек")
+                .accessibilityHint("Открыть курс и продолжить обучение")
 
+                Button(action: onToggle) {
                     Image(systemName: "chevron.down")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.65))
                         .rotationEffect(.degrees(isCollapsed ? -90 : 0))
+                        .frame(width: 42, height: 42)
+                        .contentShape(Rectangle())
                 }
-                .padding(.horizontal, FDFavListChrome.rowHPad)
-                .padding(.vertical, 11)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityLabel(isCollapsed ? "Развернуть карточки курса" : "Свернуть карточки курса")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(title), \(phraseCount)")
-            .accessibilityHint(isCollapsed ? "Развернуть. Зажми и перетащи, чтобы поменять порядок курсов." : "Свернуть. Зажми и перетащи, чтобы поменять порядок курсов.")
+            .padding(.trailing, 4)
 
             if !isCollapsed {
                 Rectangle()
