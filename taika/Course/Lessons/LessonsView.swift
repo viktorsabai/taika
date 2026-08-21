@@ -196,6 +196,10 @@ private extension LessonsView {
         return Array(selected.intersection(available)).sorted()
     }
 
+    private var showsCompletedTrainingBar: Bool {
+        isCompletedCourse && courseContentMode == .lessons && !isTheoryBonusCourse && !effectiveReinforcementLessonIds.isEmpty && !showGameOverlay
+    }
+
     private func updateReinforcementSelection(_ ids: Set<String>?) {
         let available = Set(completedLessonOptions.map(\.id))
         guard let ids else {
@@ -659,6 +663,7 @@ public struct LessonsView: View {
     /// Local paywall sheet for a locked game tapped from the course grade sheet.
     /// It keeps the LessonsView context instead of presenting the global full-screen paywall.
     @State private var showLocalGamesPaywall: Bool = false
+    @State private var showCompletedTrainingPicker: Bool = false
     @State private var selectedGameLessonId: String? = nil
     /// Material scope currently owned by the game picker; it must survive mode selection.
     @State private var pendingGameLessonIds: [String] = []
@@ -815,13 +820,44 @@ public struct LessonsView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .top)
-            .padding(.bottom, Theme.Layout.pageBottomSafeGap)
+            .padding(.bottom, showsCompletedTrainingBar ? ToolBar.recommendedBottomInset + 104 : Theme.Layout.pageBottomSafeGap)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
     }
 
     public var body: some View {
         buildBody()
+    }
+
+    private func completedTrainingFloatingCTA() -> some View {
+        let count = effectiveReinforcementLessonIds.count
+        return Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            showCompletedTrainingPicker = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                Text("Начать закрепление · \(count)")
+                    .font(.system(size: 17, weight: .semibold))
+                Spacer(minLength: 0)
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 15, weight: .bold))
+            }
+            .foregroundStyle(PD.ColorToken.text)
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(PD.ColorToken.card.opacity(0.86))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(PD.ColorToken.stroke.opacity(0.8), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
+        .accessibilityLabel("Начать закрепление, \(count) уроков")
     }
 
     @ViewBuilder
@@ -832,6 +868,21 @@ public struct LessonsView: View {
                 .ignoresSafeArea()
 
             mainContent
+
+            if showsCompletedTrainingBar {
+                completedTrainingFloatingCTA()
+                    .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    .padding(.bottom, ToolBar.recommendedBottomInset + 10)
+                    .padding(.top, 12)
+                    .background(
+                        LinearGradient(
+                            colors: [PD.ColorToken.background.opacity(0), PD.ColorToken.background.opacity(0.96)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .ignoresSafeArea(edges: .bottom)
+                    )
+            }
 
             if showGameOverlay {
                 GeometryReader { geo in
@@ -914,6 +965,27 @@ public struct LessonsView: View {
                     .ignoresSafeArea(edges: .all)
                 }
             }
+        }
+        .confirmationDialog(
+            "Начать закрепление курса",
+            isPresented: $showCompletedTrainingPicker,
+            titleVisibility: .visible
+        ) {
+            Button("Спикер") {
+                launchSpeakerTraining(for: effectiveReinforcementLessonIds)
+            }
+            Button("Игры") {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                launchGameTraining(for: effectiveReinforcementLessonIds)
+            }
+            if !Set(effectiveReinforcementLessonIds).intersection(weakCompletedLessonIds).isEmpty {
+                Button("Повторить ошибки") {
+                    launchSelectedErrorFocus()
+                }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Выбрано \(effectiveReinforcementLessonIds.count) уроков курса")
         }
     }
 

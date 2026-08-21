@@ -1900,41 +1900,8 @@ public struct LSCompletedTrainingHero: View {
                     skillRow(skill)
                 }
 
-                Rectangle()
-                    .fill(PD.ColorToken.stroke.opacity(0.55))
-                    .frame(height: 1)
-                    .padding(.top, 14)
-                    .padding(.bottom, 11)
-
-                Text("СЛЕДУЮЩИЙ ШАГ")
-                    .font(.system(size: 12, weight: .bold))
-                    .kerning(0.4)
-                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
-                    .padding(.bottom, 2)
-
-                actionRow(
-                    icon: "person.wave.2.fill",
-                    title: "Продолжить в Спикере",
-                    detail: selectedCount > 0 ? "Произношение выбранных уроков" : "Сначала выбери уроки ниже",
-                    enabled: onSpeaker != nil && selectedCount > 0,
-                    action: onSpeaker
-                )
-                actionRow(
-                    icon: "gamecontroller.fill",
-                    title: "Продолжить в Играх",
-                    detail: selectedCount > 0 ? "Память и закрепление выбранных уроков" : "Сначала выбери уроки ниже",
-                    enabled: onGamePark != nil && selectedCount > 0,
-                    action: onGamePark
-                )
-                actionRow(
-                    icon: "scope",
-                    title: "Начать с фокуса",
-                    detail: selectedWeakCount > 0
-                        ? "\(selectedWeakCount) уроков с ошибками"
-                        : "Выбери урок с ошибками ниже",
-                    enabled: onFocus != nil && selectedWeakCount > 0,
-                    action: onFocus
-                )
+                // Reinforcement is surfaced once as a contextual floating action at screen level.
+                // Keeping the grade sheet focused on the result and the lesson scope avoids a second CTA stack here.
             }
         }
         .padding(14)
@@ -2090,48 +2057,6 @@ public struct LSCompletedTrainingHero: View {
         .padding(.horizontal, 4)
     }
 
-    @ViewBuilder
-    private func actionRow(icon: String, title: String, detail: String, enabled: Bool, action: (() -> Void)?) -> some View {
-        let content = HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(enabled ? AnyShapeStyle(PD.ColorToken.text) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
-                .frame(width: 24, alignment: .leading)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(enabled ? PD.ColorToken.text : PD.ColorToken.textSecondary.opacity(0.55))
-                Text(detail)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(enabled ? 0.82 : 0.45))
-                    .lineLimit(2)
-            }
-            Spacer(minLength: 0)
-            Image(systemName: "arrow.up.right")
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(PD.ColorToken.textSecondary.opacity(enabled ? 0.9 : 0.42))
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 13)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(enabled ? Color.white.opacity(0.045) : Color.white.opacity(0.018))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(enabled ? PD.ColorToken.stroke.opacity(0.8) : PD.ColorToken.stroke.opacity(0.28), lineWidth: 1)
-        )
-        .padding(.bottom, 8)
-
-        if enabled, let action {
-            Button(action: action) {
-                content
-            }
-            .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.98, useBouncySpring: false))
-        } else {
-            content
-        }
-    }
 }
 
 public struct LSCompletedLessonList: View {

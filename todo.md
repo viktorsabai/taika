@@ -2432,3 +2432,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Move listen/favorite to quiet secondary controls with stable tap states | Done — icon/text controls without shells |
 | Validate learned/favorite/listen transitions and accessibility labels | Done — callbacks and labels preserved |
 | Run source check and push the action-surface redesign | In progress |
+
+
+# LessonsView — Favorites-style floating reinforcement action
+
+| Task | Status |
+|---|---|
+| Audit current grade-sheet CTA block against Favorites/Dictionary floating action | Done |
+| Define contextual label/count for selected course and error scope | Done — selected lesson count plus conditional error action |
+| Replace three CTA rows with one floating native training button | Done — Favorites-style bottom dock |
+| Preserve Speaker/Games routing and disabled/empty states through the action | Done — course scope preserved; error scope stays card-aware |
+| Run source check and push unified LessonsView CTA | In progress |
