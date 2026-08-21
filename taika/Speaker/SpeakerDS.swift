@@ -225,6 +225,7 @@ public struct SpeakerDSRoot: View {
     @State private var conversationComposeText = ""
     @State private var conversationEditRU = ""
     @State private var conversationTextComposerExpanded = false
+    @Namespace private var speakerModeSwitchNamespace
     @FocusState private var conversationComposeFocused: Bool
     @FocusState private var conversationEditFocused: Bool
 
@@ -2159,26 +2160,12 @@ public struct SpeakerDSRoot: View {
 
         }
         .padding(4)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
+        .background { TaikaLiquidGlassCapsule() }
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.16),
-                            PD.ColorToken.stroke.opacity(0.56),
-                            ThemeManager.shared.currentAccentTintColor.opacity(0.18)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
+            Capsule(style: .continuous)
+                .stroke(Color.white.opacity(0.10), lineWidth: 0.8)
         )
-        .shadow(color: Color.black.opacity(0.22), radius: 18, y: 8)
+        .shadow(color: Color.black.opacity(0.24), radius: 16, y: 7)
         .frame(maxWidth: 248)
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
@@ -2201,22 +2188,26 @@ public struct SpeakerDSRoot: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.84)
             }
-            .foregroundStyle(selected ? AnyShapeStyle(Color.black.opacity(0.90)) : AnyShapeStyle(PD.ColorToken.textSecondary))
+            .foregroundStyle(
+                selected
+                    ? AnyShapeStyle(PD.ColorToken.text)
+                    : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.72))
+            )
             .frame(maxWidth: .infinity, minHeight: 40)
             .background {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        selected
-                            ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
-                            : AnyShapeStyle(Color.clear)
-                    )
-                    .overlay {
-                        if selected {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.white.opacity(0.22), lineWidth: 0.8)
-                        }
-                    }
+                if selected {
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .fill(Color.white.opacity(0.11))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.34), lineWidth: 0.8)
+                        )
+                        .shadow(color: Color.black.opacity(0.18), radius: 7, y: 3)
+                        .matchedGeometryEffect(id: "speaker-mode-thumb", in: speakerModeSwitchNamespace)
+                }
             }
+            .contentTransition(.symbolEffect(.replace))
+            .animation(.spring(response: 0.34, dampingFraction: 0.80), value: selected)
         }
         .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
         .accessibilityLabel(accessibility)

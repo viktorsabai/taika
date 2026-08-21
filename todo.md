@@ -2920,7 +2920,17 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect onboarding sphere and current Speaker sphere variants | [ ] |
-| Build compact sphere with state-driven internals | [ ] |
-| Reserve stable sphere/chip/result slots | [ ] |
+| Inspect onboarding sphere and current Speaker sphere variants | [x] — reused MDVoiceSphere |
+| Build compact sphere with state-driven internals | [x] — scaled mini variant |
+| Reserve stable sphere/chip/result slots | [x] — fixed 220 sphere, 96 hero, 32 status, 28 processing slots |
+| Run checks, commit, push, and provide device handoff | [x] — 5101daba02d7288a5e6605f8ddfdbcac930599fa |
+
+
+# Speaker second-level toolbar refinement
+
+| Task | Status |
+|---|---|
+| Inspect active rail and bottom toolbar materials | [ ] |
+| Remove green active fill and match liquid-glass toolbar | [ ] |
+| Add modern animated Voice/Text thumb transition | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |
