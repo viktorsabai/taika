@@ -3034,7 +3034,7 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect diagnostic data and current insight UI | [ ] |
-| Define readable strength/growth hierarchy | [ ] |
-| Implement expanded actionable panel | [ ] |
-| Run checks, commit, push, and provide device handoff | [ ] |
+| Inspect diagnostic data and current insight UI | [x] |
+| Define readable strength/growth hierarchy | [x] — strong side / next focus / maintain |
+| Implement expanded actionable panel | [x] — real skill score/error data |
+| Run checks, commit, push, and provide device handoff | [x] — 6268d81af71717109a5a121ca6594f8dbf3d3eff |
