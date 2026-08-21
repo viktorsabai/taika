@@ -1877,14 +1877,6 @@ public struct LSCompletedTrainingHero: View {
                 .offset(y: didReveal ? 0 : 5)
             }
 
-            HStack(alignment: .top, spacing: 0) {
-                metric(value: "\(stats.gameCoveredCards)", label: "карточки в игре")
-                metric(value: "\(stats.gameSessions)", label: "игровые сессии")
-                metric(value: "\(weakCount)", label: "в фокусе")
-            }
-            .padding(.top, 2)
-            .opacity(didReveal ? 1 : 0)
-
             HStack(spacing: 8) {
                 conclusionTag(title: "Сильные стороны", value: strengthTag)
                 conclusionTag(title: "Зона роста", value: growthTag)
@@ -2042,25 +2034,30 @@ public struct LSCompletedTrainingHero: View {
         if enabled, let action { Button(action: action) { content }.buttonStyle(.plain) } else { content }
     }
 
-    private func metric(value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(value)
-                .font(Theme.Fonts.metric(27))
-                .monospacedDigit()
-                .foregroundStyle(PD.ColorToken.text)
+    private func lessonMetaLine(item: LS.Item, errorFill: AnyShapeStyle, accentFill: AnyShapeStyle) -> some View {
+        HStack(spacing: 7) {
+            let reinforcementLabel = item.reinforcementSessionCount == 0 && item.speakerScore == nil
+                ? "не закреплён"
+                : (item.errorCardCount > 0 ? "ошибки \(item.errorCardCount)" : "без ошибок")
+            Text(reinforcementLabel)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(item.errorCardCount > 0 ? errorFill : AnyShapeStyle(PD.ColorToken.textSecondary))
                 .lineLimit(1)
-                .minimumScaleFactor(0.78)
-                .contentTransition(.numericText())
-                .animation(.easeOut(duration: 0.28), value: value)
-            Text(label.uppercased())
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
+
+            if let speakerScore = item.speakerScore {
+                Text("·")
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.45))
+                HStack(spacing: 3) {
+                    Image(systemName: "waveform")
+                        .font(.system(size: 8, weight: .bold))
+                    Text("Speaker \(speakerScore)")
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                }
+                .foregroundStyle(accentFill)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, 4)
+        .lineLimit(1)
+        .minimumScaleFactor(0.78)
     }
 
 }
@@ -2210,54 +2207,7 @@ public struct LSCompletedLessonList: View {
                                             .foregroundStyle(PD.ColorToken.text)
                                             .lineLimit(1)
                                             .minimumScaleFactor(0.82)
-                                        if item.errorCardCount > 0 {
-                                            HStack(spacing: 4) {
-                                                Image(systemName: "exclamationmark")
-                                                    .font(.system(size: 8, weight: .bold))
-                                                Text("ошибки \(item.errorCardCount)")
-                                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                                            }
-                                            .foregroundStyle(errorFill)
-                                            .padding(.horizontal, 7)
-                                            .padding(.vertical, 4)
-                                            .background(
-                                                Capsule(style: .continuous)
-                                                    .fill(LSGradeSheetTokens.error.opacity(0.12))
-                                                    .overlay(
-                                                        Capsule(style: .continuous)
-                                                            .stroke(LSGradeSheetTokens.error.opacity(0.38), lineWidth: 1)
-                                                    )
-                                            )
-                                        } else if item.reinforcementSessionCount == 0 && item.speakerScore == nil {
-                                            Text("не закреплён")
-                                                .font(.system(size: 11, weight: .regular))
-                                                .foregroundStyle(PD.ColorToken.textSecondary)
-                                                .lineLimit(1)
-                                        } else {
-                                            Text("без ошибок")
-                                                .font(.system(size: 11, weight: .regular))
-                                                .foregroundStyle(PD.ColorToken.textSecondary)
-                                                .lineLimit(1)
-                                        }
-                                        if let speakerScore = item.speakerScore {
-                                            HStack(spacing: 4) {
-                                                Image(systemName: "waveform")
-                                                    .font(.system(size: 8, weight: .bold))
-                                                Text("Speaker · \(speakerScore)")
-                                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                            }
-                                            .foregroundStyle(accentFill)
-                                            .padding(.horizontal, 7)
-                                            .padding(.vertical, 4)
-                                            .background(
-                                                Capsule(style: .continuous)
-                                                    .fill(accentColor.opacity(0.10))
-                                                    .overlay(
-                                                        Capsule(style: .continuous)
-                                                            .stroke(accentColor.opacity(0.30), lineWidth: 1)
-                                                    )
-                                            )
-                                        }
+                                        lessonMetaLine(item: item, errorFill: errorFill, accentFill: accentFill)
                                         Spacer(minLength: 0)
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -2395,20 +2345,11 @@ public struct LSCompletedLessonList: View {
                                     Text(item.title)
                                         .font(.system(size: 15, weight: .semibold))
                                         .foregroundStyle(PD.ColorToken.text)
-                                    HStack(spacing: 6) {
-                                        Text(
-                                            item.errorCardCount > 0
-                                                ? "ошибки \(item.errorCardCount)"
-                                                : (item.reinforcementSessionCount == 0 && item.speakerScore == nil ? "не закреплён" : "без ошибок")
-                                        )
-                                        .font(.system(size: 12, weight: .regular))
-                                        .foregroundStyle(item.errorCardCount > 0 ? AnyShapeStyle(accentColor) : AnyShapeStyle(PD.ColorToken.textSecondary))
-                                        if let speakerScore = item.speakerScore {
-                                            Text("Speaker · \(speakerScore)")
-                                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                                                .foregroundStyle(AnyShapeStyle(accentColor))
-                                        }
-                                    }
+                                    lessonMetaLine(
+                                        item: item,
+                                        errorFill: AnyShapeStyle(accentColor),
+                                        accentFill: AnyShapeStyle(accentColor)
+                                    )
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }

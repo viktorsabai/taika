@@ -2650,7 +2650,18 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Audit idle, recording, analyzing, result states and current result/panel components | [ ] |
-| Define fixed canvas zones and one canonical result hierarchy | [ ] |
-| Replace jumping orb and legacy framed/chip result treatment | [ ] |
-| Run source checks, preserve callbacks/limits, and push redesign | [ ] |
+| Audit idle, recording, analyzing, result states and current result/panel components | [x] |
+| Define fixed canvas zones and one canonical result hierarchy | [x] |
+| Replace jumping orb and legacy framed/chip result treatment | [x] |
+| Run source checks, preserve callbacks/limits, and push redesign | [x] — source validation; device matrix pending |
+
+
+# Final pass — Lessons gradebook and game handoff
+
+| Task | Status |
+|---|---|
+| Audit gradebook metrics, lesson rows, system alert, and GameModePicker routing | [ ] |
+| Remove redundant top counters and retain one strong overall course effectiveness visualization | [ ] |
+| Add compact lesson-level reinforcement, error, and Speaker metadata affordances | [ ] |
+| Remove duplicate system-message and in-app GameModePicker action | [ ] |
+| Run source checks and push final Lessons/Course pass | [ ] |

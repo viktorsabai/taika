@@ -678,7 +678,6 @@ public struct LessonsView: View {
     /// Local paywall sheet for a locked game tapped from the course grade sheet.
     /// It keeps the LessonsView context instead of presenting the global full-screen paywall.
     @State private var showLocalGamesPaywall: Bool = false
-    @State private var showCompletedTrainingPicker: Bool = false
     @State private var selectedGameLessonId: String? = nil
     /// Material scope currently owned by the game picker; it must survive mode selection.
     @State private var pendingGameLessonIds: [String] = []
@@ -848,7 +847,7 @@ public struct LessonsView: View {
         let count = effectiveReinforcementLessonIds.count
         return Button {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            showCompletedTrainingPicker = true
+            presentGameModePicker(for: effectiveReinforcementLessonIds)
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "mic.fill")
@@ -980,27 +979,6 @@ public struct LessonsView: View {
                     .ignoresSafeArea(edges: .all)
                 }
             }
-        }
-        .confirmationDialog(
-            "Начать закрепление курса",
-            isPresented: $showCompletedTrainingPicker,
-            titleVisibility: .visible
-        ) {
-            Button("Спикер") {
-                launchSpeakerTraining(for: effectiveReinforcementLessonIds)
-            }
-            Button("Игры") {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                launchGameTraining(for: effectiveReinforcementLessonIds)
-            }
-            if !Set(effectiveReinforcementLessonIds).intersection(weakCompletedLessonIds).isEmpty {
-                Button("Повторить ошибки") {
-                    launchSelectedErrorFocus()
-                }
-            }
-            Button("Отмена", role: .cancel) {}
-        } message: {
-            Text("Выбрано \(effectiveReinforcementLessonIds.count) уроков курса")
         }
     }
 
