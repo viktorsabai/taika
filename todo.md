@@ -2607,3 +2607,12 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Inspect exact LinearGradient expression at LessonsDS.swift:2329 | [ ] |
 | Replace gradient-in-Color-array with explicit Color stops | [ ] |
 | Run source check and push LessonsDS compile fix | [ ] |
+
+
+# Fix — SpeakerDS type-check timeout at line 5509
+
+| Task | Status |
+|---|---|
+| Inspect exact expression and surrounding result builder | [ ] |
+| Break heavy conditional expression into explicit typed locals | [ ] |
+| Run source check and push Speaker type-check fix | [ ] |

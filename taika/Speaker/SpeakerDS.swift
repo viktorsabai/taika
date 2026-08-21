@@ -5520,11 +5520,20 @@ public struct SpeakerDSRoot: View {
             return external?.lastAttempt != nil
         }()
         let canPlayAttempt = hasAttempt
-        let trainingMode = external?.speakerUIMode == .training
-        let trainingRemaining = max(0, external?.trainingRemainingToday ?? 0)
-        let trainingLimitExhausted = trainingMode && external?.isProUser != true && !(external?.trainingCanRecord ?? false)
-        let controlDisabled = isAnalyzing || trainingLimitExhausted
-        let railFill = PD.ColorToken.card.opacity(0.82)
+        let trainingMode: Bool = external?.speakerUIMode == .training
+        let trainingRemaining: Int = max(0, external?.trainingRemainingToday ?? 0)
+        let trainingLimitExhausted: Bool = trainingMode && external?.isProUser != true && !(external?.trainingCanRecord ?? false)
+        let controlDisabled: Bool = isAnalyzing || trainingLimitExhausted
+        let railFill: Color = PD.ColorToken.card.opacity(0.82)
+        let micIcon: String = isRecording ? "stop.fill" : (isFeedback ? "arrow.clockwise" : "mic.fill")
+        let micTitle: String = isRecording ? "Стоп" : (isFeedback ? "Ещё раз" : "Записать")
+        let micAccessibilityLabel: String = isRecording ? "Остановить запись" : (isFeedback ? "Записать ещё раз" : "Записать фразу")
+        let micFill: AnyShapeStyle = controlDisabled
+            ? AnyShapeStyle(PD.ColorToken.chip.opacity(0.36))
+            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+        let micForeground: Color = controlDisabled
+            ? PD.ColorToken.textSecondary.opacity(0.38)
+            : PD.ColorToken.text
 
         VStack(spacing: 10) {
             HStack(spacing: 0) {
@@ -5536,31 +5545,29 @@ public struct SpeakerDSRoot: View {
                 }
 
                 Button {
-                    if isRecording {
-                        external?.onMicTap()
-                    } else if isFeedback {
+                    if isFeedback && !isRecording {
                         external?.onRepeat()
                     } else {
                         external?.onMicTap()
                     }
                 } label: {
                     HStack(spacing: 8) {
-                        Image(systemName: isRecording ? "stop.fill" : (isFeedback ? "arrow.clockwise" : "mic.fill"))
+                        Image(systemName: micIcon)
                             .font(.system(size: 17, weight: .bold))
-                        Text(isRecording ? "Стоп" : (isFeedback ? "Ещё раз" : "Записать"))
+                        Text(micTitle)
                             .font(.system(size: 12, weight: .semibold))
                             .lineLimit(1)
                     }
-                    .foregroundStyle(controlDisabled ? PD.ColorToken.textSecondary.opacity(0.38) : PD.ColorToken.text)
+                    .foregroundStyle(micForeground)
                     .frame(maxWidth: .infinity, minHeight: 46)
                     .background(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(controlDisabled ? PD.ColorToken.chip.opacity(0.36) : ThemeManager.shared.currentAccentFill)
+                            .fill(micFill)
                     )
                 }
                 .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.94, useBouncySpring: false, flashOpacity: 0.04))
                 .disabled(controlDisabled)
-                .accessibilityLabel(isRecording ? "Остановить запись" : (isFeedback ? "Записать ещё раз" : "Записать фразу"))
+                .accessibilityLabel(micAccessibilityLabel)
 
                 speakerRailButton(icon: "waveform", title: "Моя запись", isEnabled: canPlayAttempt, isAccent: true) {
                     external?.onPlayAttempt()
@@ -5617,7 +5624,10 @@ public struct SpeakerDSRoot: View {
                     RoundedRectangle(cornerRadius: 2, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [ThemeManager.shared.currentAccentTintColor, ThemeManager.shared.currentAccentFill],
+                                colors: [
+                                    ThemeManager.shared.currentAccentTintColor,
+                                    ThemeManager.shared.currentAccentTintColor.opacity(0.68)
+                                ],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
