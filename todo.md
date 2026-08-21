@@ -2537,3 +2537,12 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Persist favorite course and publish immediate filled-heart state | Done — reads `favs.items`, manager publishes changes |
 | Verify course appears in Favorites after toggle | Done by source trace — canonical `course:<id>` favoritable path |
 | Run source check and push favorite-toggle fix | In progress |
+
+
+# Fix — GameModePicker gradient type mismatch
+
+| Task | Status |
+|---|---|
+| Inspect failing rail expression at GameModePickerDS.swift:206 | Done — LinearGradient received a LinearGradient as a Color stop |
+| Replace gradient-in-Color-array with shape-style-compatible fill | Done — Color-only tint stops retained |
+| Run source check and push compile correction | In progress |

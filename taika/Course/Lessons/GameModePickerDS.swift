@@ -203,7 +203,10 @@ public struct GameModePickerDS: View {
                         ? AnyShapeStyle(PD.ColorToken.stroke.opacity(0.42))
                         : AnyShapeStyle(
                             LinearGradient(
-                                colors: [ThemeManager.shared.currentAccentTintColor, ThemeManager.shared.currentAccentFill],
+                                colors: [
+                                    ThemeManager.shared.currentAccentTintColor,
+                                    ThemeManager.shared.currentAccentTintColor.opacity(0.68)
+                                ],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
