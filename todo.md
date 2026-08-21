@@ -2851,6 +2851,16 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Verify current branch and remote | [ ] |
-| Confirm Profile banner changes are on the existing branch worktree | [ ] |
-| Create testable commit and provide exact handoff command | [ ] |
+| Verify current branch and remote | [x] — 2026-01-21-k7hb-d2004 / origin |
+| Confirm Profile banner changes are on the existing branch worktree | [x] |
+| Create testable commit and provide exact handoff command | [x] — 1af76847e514a271edcdd035d0fb4d5458a4bc5b |
+
+
+# Speaker breakdown readability and syllable navigation pass
+
+| Task | Status |
+|---|---|
+| Inspect score/result and syllable breakdown implementation | [ ] |
+| Increase result readability and restore canonical score typography | [ ] |
+| Restore syllable navigation and tone feedback | [ ] |
+| Run checks, commit, push, and provide device handoff | [ ] |

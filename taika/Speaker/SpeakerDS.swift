@@ -193,6 +193,7 @@ public struct SpeakerDSRoot: View {
     // local fallback selection for DS (used when external.selectedId is not wired yet)
     @State private var localSelectedId: UUID? = nil
     @State private var isBreakdownExpanded: Bool = false
+    @State private var selectedBreakdownSyllableIndex: Int = 0
 
     @State private var showAnalysis: Bool = false
     @State private var showBreakdownOverlayLocal: Bool = false
@@ -3374,12 +3375,12 @@ public struct SpeakerDSRoot: View {
                 VStack(spacing: 8) {
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
                         Text("\(score)")
-                            .font(.system(size: 40, weight: .bold, design: .rounded))
-                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                            .font(Theme.Fonts.metric(46))
+                            .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
                             .monospacedDigit()
                         Text("%")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .foregroundStyle(ThemeManager.shared.currentAccentFill.opacity(0.85))
+                            .font(Theme.Fonts.metric(18))
+                            .foregroundStyle(ThemeManager.shared.currentAccentTintColor.opacity(0.85))
                     }
                     .accessibilityLabel("\(score) процентов")
 
@@ -3885,37 +3886,97 @@ public struct SpeakerDSRoot: View {
     ) -> some View {
         let chunks = Self.translitChunksForSyllables(expected)
         let accent = ThemeManager.shared.currentAccentTintColor
-        VStack(alignment: .leading, spacing: 10) {
-            Text("По слогам")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(PD.ColorToken.textSecondary)
+        let count = max(chunks.count, syllableFeedback.count)
+        let index = count == 0 ? 0 : min(max(0, selectedBreakdownSyllableIndex), count - 1)
 
-            VStack(spacing: 10) {
-                if chunks.isEmpty {
-                    ForEach(Array(syllableFeedback.enumerated()), id: \.offset) { _, item in
-                        breakdownHumanSyllableRow(
-                            label: Self.syllableLabelWithoutArrows(item.syllable),
-                            score: item.score,
-                            toneExpected: item.toneExpected,
-                            toneActual: item.toneActual,
-                            accent: accent
-                        )
-                    }
-                } else {
-                    ForEach(Array(chunks.enumerated()), id: \.offset) { index, rawChunk in
-                        let label = Self.syllableLabelWithoutArrows(rawChunk)
-                        let item = index < syllableFeedback.count ? syllableFeedback[index] : nil
-                        breakdownHumanSyllableRow(
-                            label: label,
-                            score: item?.score,
-                            toneExpected: item?.toneExpected ?? Self.toneNameFromTranslitChunk(rawChunk),
-                            toneActual: item?.toneActual,
-                            accent: accent,
-                            isPlaceholder: item == nil
-                        )
-                    }
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("По слогам")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(PD.ColorToken.text)
+                Spacer(minLength: 0)
+                if count > 1 {
+                    Text("\(index + 1) из \(count)")
+                        .font(Theme.Fonts.metric(12))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
                 }
             }
+
+            if count > 1 {
+                HStack(spacing: 8) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedBreakdownSyllableIndex = max(0, index - 1)
+                        }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 13, weight: .bold))
+                            .frame(width: 34, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(index > 0 ? AnyShapeStyle(PD.ColorToken.text) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35)))
+                    .disabled(index == 0)
+
+                    HStack(spacing: 5) {
+                        ForEach(0..<count, id: \.self) { itemIndex in
+                            Capsule(style: .continuous)
+                                .fill(itemIndex == index ? AnyShapeStyle(accent) : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.72)))
+                                .frame(width: itemIndex == index ? 22 : 7, height: 5)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        selectedBreakdownSyllableIndex = itemIndex
+                                    }
+                                }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedBreakdownSyllableIndex = min(count - 1, index + 1)
+                        }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .bold))
+                            .frame(width: 34, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(index < count - 1 ? AnyShapeStyle(PD.ColorToken.text) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35)))
+                    .disabled(index == count - 1)
+                }
+                .padding(.vertical, 2)
+            }
+
+            if count > 0 {
+                if chunks.isEmpty, index < syllableFeedback.count {
+                    let item = syllableFeedback[index]
+                    breakdownHumanSyllableRow(
+                        label: Self.syllableLabelWithoutArrows(item.syllable),
+                        score: item.score,
+                        toneExpected: item.toneExpected,
+                        toneActual: item.toneActual,
+                        accent: accent
+                    )
+                } else if !chunks.isEmpty, index < chunks.count {
+                    let rawChunk = chunks[index]
+                    let item = index < syllableFeedback.count ? syllableFeedback[index] : nil
+                    breakdownHumanSyllableRow(
+                        label: Self.syllableLabelWithoutArrows(rawChunk),
+                        score: item?.score,
+                        toneExpected: item?.toneExpected ?? Self.toneNameFromTranslitChunk(rawChunk),
+                        toneActual: item?.toneActual,
+                        accent: accent,
+                        isPlaceholder: item == nil
+                    )
+                }
+            }
+        }
+        .onAppear {
+            selectedBreakdownSyllableIndex = min(selectedBreakdownSyllableIndex, max(0, count - 1))
+        }
+        .onChange(of: count) { _, newCount in
+            selectedBreakdownSyllableIndex = min(selectedBreakdownSyllableIndex, max(0, newCount - 1))
         }
     }
 
@@ -3967,10 +4028,9 @@ public struct SpeakerDSRoot: View {
                 Spacer(minLength: 8)
 
                 if let scoreValue {
-                    // SF system digits — not Taika display/stat font.
                     HStack(alignment: .firstTextBaseline, spacing: 1) {
                         Text("\(scoreValue)")
-                            .font(.system(size: 22, weight: .semibold))
+                            .font(Theme.Fonts.metric(22))
                             .monospacedDigit()
                             .foregroundStyle(PD.ColorToken.text)
                         Text("%")
@@ -4133,6 +4193,7 @@ public struct SpeakerDSRoot: View {
         .background(Theme.Surfaces.blackGlassScrim.ignoresSafeArea())
         .onAppear {
             external?.onBreakdownAppear?()
+            selectedBreakdownSyllableIndex = 0
             if breakdownSnapshotExpected.isEmpty && !liveTranslit.isEmpty {
                 breakdownSnapshotExpected = liveTranslit
                 breakdownSnapshotPhraseLabel = livePhrase
@@ -4436,7 +4497,7 @@ public struct SpeakerDSRoot: View {
                                             .foregroundStyle(PD.ColorToken.textSecondary)
                                         SpeakerCountingScore(
                                             value: displayScore,
-                                            font: Theme.Fonts.metric(48),
+                                            font: Theme.Fonts.metric(56),
                                             color: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
                                             suffix: "%"
                                         )
@@ -4465,12 +4526,12 @@ public struct SpeakerDSRoot: View {
                                 VStack(alignment: .leading, spacing: 5) {
                                     if !phraseLabel.isEmpty {
                                         Text(phraseLabel)
-                                            .font(.system(size: 17, weight: .semibold))
+                                            .font(.system(size: 20, weight: .semibold))
                                             .foregroundStyle(PD.ColorToken.text)
                                     }
                                     if !expected.isEmpty {
                                         Text(Self.phoneticDisplayWithoutHyphens(expected))
-                                            .font(.system(size: 16, weight: .medium))
+                                            .font(.system(size: 18, weight: .medium))
                                             .foregroundStyle(PD.ColorToken.textSecondary)
                                             .lineLimit(3)
                                             .fixedSize(horizontal: false, vertical: true)
@@ -4478,10 +4539,10 @@ public struct SpeakerDSRoot: View {
                                     if !userText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                         HStack(spacing: 6) {
                                             Text("ты сказала")
-                                                .font(.system(size: 11, weight: .semibold))
+                                                .font(.system(size: 12, weight: .semibold))
                                                 .foregroundStyle(PD.ColorToken.textSecondary)
                                             Text(userText)
-                                                .font(.system(size: 14, weight: .medium))
+                                                .font(.system(size: 16, weight: .medium))
                                                 .foregroundStyle(PD.ColorToken.text)
                                                 .lineLimit(2)
                                         }
