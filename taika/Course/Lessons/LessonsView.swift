@@ -407,13 +407,14 @@ private extension LessonsView {
                 onSelectWeak: weakCompletedLessonIds.isEmpty ? nil : {
                     updateReinforcementSelection(weakCompletedLessonIds)
                 },
-                onTrainWeak: weakCompletedLessonIds.isEmpty ? nil : {
-                    let ids = Array(weakCompletedLessonIds).sorted()
+                onTrainWeak: weakCompletedLessonIds.isEmpty ? nil : { selectedIds in
+                    let ids = Array(selectedIds.intersection(weakCompletedLessonIds)).sorted()
+                    guard !ids.isEmpty else { return }
                     let keys = ReinforcementStore.shared.failedCardKeys(
                         courseId: currentCourse?.courseID ?? "",
                         lessonIds: ids
                     )
-                    updateReinforcementSelection(weakCompletedLessonIds)
+                    updateReinforcementSelection(Set(ids))
                     launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
                 },
                 accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
@@ -759,13 +760,14 @@ public struct LessonsView: View {
                                 onSelectWeak: weakCompletedLessonIds.isEmpty ? nil : {
                                     updateReinforcementSelection(weakCompletedLessonIds)
                                 },
-                                onTrainWeak: weakCompletedLessonIds.isEmpty ? nil : {
-                                    let ids = Array(weakCompletedLessonIds).sorted()
+                                onTrainWeak: weakCompletedLessonIds.isEmpty ? nil : { selectedIds in
+                                    let ids = Array(selectedIds.intersection(weakCompletedLessonIds)).sorted()
+                                    guard !ids.isEmpty else { return }
                                     let keys = ReinforcementStore.shared.failedCardKeys(
                                         courseId: currentCourse?.courseID ?? "",
                                         lessonIds: ids
                                     )
-                                    updateReinforcementSelection(weakCompletedLessonIds)
+                                    updateReinforcementSelection(Set(ids))
                                     launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
                                 },
                                 accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),

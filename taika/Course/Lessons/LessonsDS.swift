@@ -1802,7 +1802,6 @@ public struct LSCompletedTrainingHero: View {
         self.onProLocked = onProLocked
     }
 
-    private var scoreText: String { stats.reinforcementScore.map { "\($0)%" } ?? "—" }
     private var scoreValue: Int { stats.reinforcementScore ?? 0 }
     private var skillRows: [LSReinforcementSkill] {
         if !stats.reinforcementSkills.isEmpty { return stats.reinforcementSkills }
@@ -1811,61 +1810,83 @@ public struct LSCompletedTrainingHero: View {
             LSReinforcementSkill(id: "game", title: "Игра", subtitle: "Закрепление карточек", icon: "gamecontroller.fill")
         ]
     }
-    private var recommendation: String {
-        if selectedCount == 0 { return "Выбери уроки ниже, чтобы собрать следующую тренировку" }
-        if stats.reinforcementScore == nil { return "Проведи первую игровую проверку, чтобы увидеть результат закрепления" }
-        if weakCount > 0 { return "Начни с ошибок — так закрепление будет эффективнее" }
-        return "Поддержи результат коротким повторением сегодня"
-    }
-
     public var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("ЗАЧЁТКА КУРСА")
-                .font(.system(size: 12, weight: .bold))
-                .kerning(0.4)
-                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("ЗАЧЁТКА КУРСА")
+                    .font(.system(size: 12, weight: .bold))
+                    .kerning(0.5)
+                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
+                Spacer(minLength: 0)
+                Text(selectedCount == 0 ? "выбери уроки ниже" : "\(selectedCount) уроков в фокусе")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            }
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .center, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .center, spacing: 18) {
+                ZStack {
+                    Circle()
+                        .stroke(PD.ColorToken.stroke.opacity(0.78), lineWidth: 10)
+                    Circle()
+                        .trim(from: 0, to: max(0.02, CGFloat(scoreValue) / 100))
+                        .stroke(
+                            TaikaMasteryTokens.greenGradient,
+                            style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeOut(duration: 0.55), value: displayedScore)
+                    VStack(spacing: 0) {
                         Text(stats.reinforcementScore == nil ? "—" : "\(displayedScore)%")
-                            .font(Theme.Fonts.metric(48))
+                            .font(Theme.Fonts.metric(32))
                             .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
                             .monospacedDigit()
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.68)
                             .contentTransition(.numericText())
-                            .animation(.easeOut(duration: 0.32), value: scoreText)
-                    }
-                    .frame(width: 88, alignment: .leading)
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text(recommendation)
-                            .font(.system(size: 13, weight: .regular))
-                            .lineSpacing(2)
+                        Text("ЭФФЕКТИВНОСТЬ")
+                            .font(.system(size: 8, weight: .bold))
+                            .kerning(0.35)
                             .foregroundStyle(PD.ColorToken.textSecondary)
-                            .multilineTextAlignment(.trailing)
-                            .lineLimit(3)
                     }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-                HStack(alignment: .top, spacing: 0) {
-                    metric(value: "\(stats.gameCoveredCards)", label: "карточки в игре")
-                    metric(value: "\(stats.gameSessions)", label: "игровые сессии")
-                    metric(value: "\(weakCount)", label: "в фокусе")
+                .frame(width: 116, height: 116)
+                .opacity(didReveal ? 1 : 0)
+                .scaleEffect(didReveal || reduceMotion ? 1 : 0.94)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(statusTitle)
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.text)
+                        .lineLimit(2)
+                    Text(statusSubtitle)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .foregroundStyle(PD.ColorToken.text)
-                .frame(maxWidth: .infinity, alignment: .center)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .opacity(didReveal ? 1 : 0)
+                .offset(y: didReveal ? 0 : 5)
+            }
+
+            HStack(alignment: .top, spacing: 0) {
+                metric(value: "\(stats.gameCoveredCards)", label: "карточки в игре")
+                metric(value: "\(stats.gameSessions)", label: "игровые сессии")
+                metric(value: "\(weakCount)", label: "в фокусе")
+            }
+            .padding(.top, 2)
+            .opacity(didReveal ? 1 : 0)
+
+            HStack(spacing: 8) {
+                conclusionTag(title: "Сильные стороны", value: strengthTag)
+                conclusionTag(title: "Зона роста", value: growthTag)
             }
             .opacity(didReveal ? 1 : 0)
-            .offset(y: didReveal ? 0 : 5)
+
+            Rectangle()
+                .fill(PD.ColorToken.stroke.opacity(0.55))
+                .frame(height: 1)
+                .padding(.top, 2)
 
             VStack(alignment: .leading, spacing: 0) {
-                Rectangle()
-                    .fill(PD.ColorToken.stroke.opacity(0.55))
-                    .frame(height: 1)
-                    .padding(.top, 4)
-                    .padding(.bottom, 12)
-
                 Text("ПРЕДМЕТЫ ЗАЧЁТКИ")
                     .font(.system(size: 12, weight: .bold))
                     .kerning(0.4)
@@ -1890,14 +1911,14 @@ public struct LSCompletedTrainingHero: View {
                 actionRow(
                     icon: "person.wave.2.fill",
                     title: "Продолжить в Спикере",
-                    detail: selectedCount > 0 ? "Произношение выбранных уроков" : "Выбери уроки ниже",
+                    detail: selectedCount > 0 ? "Произношение выбранных уроков" : "Сначала выбери уроки ниже",
                     enabled: onSpeaker != nil && selectedCount > 0,
                     action: onSpeaker
                 )
                 actionRow(
                     icon: "gamecontroller.fill",
                     title: "Продолжить в Играх",
-                    detail: selectedCount > 0 ? "Память и закрепление выбранных уроков" : "Выбери уроки ниже",
+                    detail: selectedCount > 0 ? "Память и закрепление выбранных уроков" : "Сначала выбери уроки ниже",
                     enabled: onGamePark != nil && selectedCount > 0,
                     action: onGamePark
                 )
@@ -1927,6 +1948,56 @@ public struct LSCompletedTrainingHero: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Главный блок тренировки курса")
+    }
+
+    private var statusTitle: String {
+        guard let score = stats.reinforcementScore else { return "Закрепление начинается" }
+        if score >= 85 { return "Отличный результат!" }
+        if score >= 65 { return "Хорошая база для речи" }
+        return "Есть что усилить"
+    }
+
+    private var statusSubtitle: String {
+        if stats.reinforcementScore == nil { return "Пройди первую тренировку, чтобы увидеть эффективность курса." }
+        if weakCount > 0 { return "Продолжай закреплять — сначала то, что ещё просит внимания." }
+        return "Продолжай закреплять — ты почти всё запомнил(а)."
+    }
+
+    private var strengthTag: String {
+        let scored = skillRows.compactMap { skill -> (String, Int)? in
+            guard let score = skill.score else { return nil }
+            return (skill.title, score)
+        }
+        return scored.max(by: { $0.1 < $1.1 })?.0 ?? "память"
+    }
+
+    private var growthTag: String {
+        if weakCount > 0 {
+            let scored = skillRows.compactMap { skill -> (String, Int)? in
+                guard let score = skill.score else { return nil }
+                return (skill.title, score)
+            }
+            return scored.min(by: { $0.1 < $1.1 })?.0 ?? "на слух"
+        }
+        return "поддержать"
+    }
+
+    private func conclusionTag(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(.system(size: 9, weight: .bold))
+                .kerning(0.25)
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            Text(value)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.04)))
     }
 
     @ViewBuilder
@@ -2026,8 +2097,17 @@ public struct LSCompletedTrainingHero: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.42)))
         }
+        .padding(.horizontal, 11)
         .padding(.vertical, 11)
-        .overlay(alignment: .bottom) { Rectangle().fill(PD.ColorToken.stroke.opacity(0.35)).frame(height: 1) }
+        .background(
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(enabled ? Color.white.opacity(0.045) : Color.white.opacity(0.018))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .stroke(enabled ? PD.ColorToken.stroke.opacity(0.68) : PD.ColorToken.stroke.opacity(0.24), lineWidth: 1)
+        )
+        .padding(.bottom, 8)
 
         if enabled, let action { Button(action: action) { content }.buttonStyle(.plain) } else { content }
     }
@@ -2044,14 +2124,14 @@ public struct LSCompletedLessonList: View {
     public let onSelectAll: (() -> Void)?
     public let onClearAll: (() -> Void)?
     public let onSelectWeak: (() -> Void)?
-    public let onTrainWeak: (() -> Void)?
+    public let onTrainWeak: ((Set<String>) -> Void)?
     public let accentFill: AnyShapeStyle
     public let accentColor: Color
     public let isCompletedPresentation: Bool
     public let sectionTitle: String
     @State private var showingErrorsOnly: Bool = false
 
-    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], courseSessionCount: Int = 0, onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, onSelectWeak: (() -> Void)? = nil, onTrainWeak: (() -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGradient), accentColor: Color = TaikaMasteryTokens.greenGlow, isCompletedPresentation: Bool = true, sectionTitle: String = "ФОКУС НА СЕГОДНЯ") {
+    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], courseSessionCount: Int = 0, onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, onSelectWeak: (() -> Void)? = nil, onTrainWeak: ((Set<String>) -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGradient), accentColor: Color = TaikaMasteryTokens.greenGlow, isCompletedPresentation: Bool = true, sectionTitle: String = "ФОКУС НА СЕГОДНЯ") {
         self.items = items
         self.selectedIds = selectedIds
         self.weakIds = weakIds
@@ -2083,6 +2163,8 @@ public struct LSCompletedLessonList: View {
         let errorFill = AnyShapeStyle(LSGradeSheetTokens.error)
         let hasErrors = !weakIds.isEmpty
         let selectedCount = selectedIds.intersection(Set(visibleItems.map(\.id))).count
+        let selectedFocusIds = selectedIds.intersection(weakIds)
+        let canStartFocus = !selectedFocusIds.isEmpty && onTrainWeak != nil
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 20) {
@@ -2117,7 +2199,7 @@ public struct LSCompletedLessonList: View {
                         }
                 }
                 .buttonStyle(.plain)
-                .disabled(false)
+                .disabled(!hasErrors)
             }
             .overlay(alignment: .bottom) {
                 Rectangle().fill(PD.ColorToken.stroke.opacity(0.55)).frame(height: 1)
@@ -2168,34 +2250,37 @@ public struct LSCompletedLessonList: View {
                                         .font(.system(size: 13, weight: .medium, design: .monospaced))
                                         .foregroundStyle(PD.ColorToken.textSecondary)
                                         .frame(width: 26, alignment: .leading)
-                                    VStack(alignment: .leading, spacing: 4) {
+                                    HStack(spacing: 8) {
                                         Text(item.title)
                                             .font(.system(size: 16, weight: .semibold))
                                             .foregroundStyle(PD.ColorToken.text)
                                             .lineLimit(1)
+                                            .minimumScaleFactor(0.82)
                                         if item.errorCardCount > 0 {
-                                            HStack(spacing: 5) {
+                                            HStack(spacing: 4) {
                                                 Image(systemName: "exclamationmark")
-                                                    .font(.system(size: 9, weight: .bold))
+                                                    .font(.system(size: 8, weight: .bold))
                                                 Text("ошибки \(item.errorCardCount)")
-                                                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
                                             }
                                             .foregroundStyle(errorFill)
                                             .padding(.horizontal, 7)
                                             .padding(.vertical, 4)
                                             .background(
-                                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                                        .fill(LSGradeSheetTokens.error.opacity(0.11))
+                                                Capsule(style: .continuous)
+                                                    .fill(LSGradeSheetTokens.error.opacity(0.12))
                                                     .overlay(
-                                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                                            .stroke(LSGradeSheetTokens.error.opacity(0.42), lineWidth: 1)
+                                                        Capsule(style: .continuous)
+                                                            .stroke(LSGradeSheetTokens.error.opacity(0.38), lineWidth: 1)
                                                     )
                                             )
                                         } else {
                                             Text("без ошибок")
-                                                .font(.system(size: 13, weight: .regular))
+                                                .font(.system(size: 11, weight: .regular))
                                                 .foregroundStyle(PD.ColorToken.textSecondary)
+                                                .lineLimit(1)
                                         }
+                                        Spacer(minLength: 0)
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 }
@@ -2222,31 +2307,49 @@ public struct LSCompletedLessonList: View {
                 }
             }
 
-            if hasErrors, let onTrainWeak {
-                Button(action: onTrainWeak) {
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Начать с фокуса")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(PD.ColorToken.text)
-                            Text("\(weakCardCount) карточки требуют внимания")
-                                .font(.system(size: 13, weight: .regular))
-                                .foregroundStyle(PD.ColorToken.textSecondary)
-                        }
-                        Spacer(minLength: 8)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(selectedFill)
+            let focusTitle = canStartFocus ? "Начать с фокуса" : "Фокус пока недоступен"
+            let focusDetail: String = {
+                if !hasErrors { return "После игры здесь появятся карточки для повторения" }
+                if selectedFocusIds.isEmpty { return "Выбери урок с ошибками выше" }
+                return "\(selectedFocusIds.count) уроков · \(weakCardCount) карточки требуют внимания"
+            }()
+            Button {
+                onTrainWeak?(selectedFocusIds)
+            } label: {
+                HStack(spacing: 11) {
+                    Image(systemName: canStartFocus ? "scope" : "scope")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(canStartFocus ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.42)))
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(focusTitle)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(canStartFocus ? PD.ColorToken.text : PD.ColorToken.textSecondary.opacity(0.55))
+                        Text(focusDetail)
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(canStartFocus ? 0.86 : 0.48))
+                            .lineLimit(2)
                     }
-                    .padding(.vertical, 14)
-                    .contentShape(Rectangle())
+                    Spacer(minLength: 8)
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(canStartFocus ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.38)))
                 }
-                .buttonStyle(.plain)
-                .overlay(alignment: .top) {
-                    Rectangle().fill(PD.ColorToken.stroke.opacity(0.55)).frame(height: 1)
-                }
-                .accessibilityLabel("Начать закрепление с ошибочных карточек")
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(canStartFocus ? Color.white.opacity(0.055) : Color.white.opacity(0.018))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(canStartFocus ? PD.ColorToken.stroke.opacity(0.72) : PD.ColorToken.stroke.opacity(0.28), lineWidth: 1)
+                )
             }
+            .buttonStyle(.plain)
+            .disabled(!canStartFocus)
+            .padding(.top, 12)
+            .accessibilityLabel(canStartFocus ? "Начать закрепление с выбранных ошибок" : focusDetail)
         }
         .padding(.top, 4)
     }
