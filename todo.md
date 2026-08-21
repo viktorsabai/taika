@@ -2701,6 +2701,15 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect both lesson row call sites and nearby helpers | [ ] |
-| Restore one shared compile-safe lessonMetaLine implementation | [ ] |
-| Run source checks and push helper fix | [ ] |
+| Inspect both lesson row call sites and nearby helpers | [x] |
+| Restore one shared compile-safe lessonMetaLine implementation | [x] |
+| Run source checks and push helper fix | [x] |
+
+
+# Fix — Speaker conversationLiveStage frame overload
+
+| Task | Status |
+|---|---|
+| Inspect unsupported frame expression and nearby modifiers | [ ] |
+| Replace with compatible fixed-height expression | [ ] |
+| Run source checks and push Speaker frame fix | [ ] |

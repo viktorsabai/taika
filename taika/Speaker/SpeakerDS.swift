@@ -1052,7 +1052,7 @@ public struct SpeakerDSRoot: View {
             // The state chip is the single status affordance. The old speech/text/translation
             // pipeline duplicated it and made later Speaker screens feel assembled.
         }
-        .frame(maxWidth: .infinity, height: 350, alignment: .center)
+        .frame(maxWidth: .infinity, minHeight: 350, maxHeight: 350, alignment: .center)
         .animation(.spring(response: 0.42, dampingFraction: 0.86), value: phase)
         .animation(.easeInOut(duration: 0.24), value: recordingPartialRU)
     }
