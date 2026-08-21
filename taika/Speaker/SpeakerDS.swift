@@ -2182,7 +2182,10 @@ public struct SpeakerDSRoot: View {
 
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                Text("Напиши по-русски")
+                Image(systemName: "keyboard.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                Text("Текст")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(PD.ColorToken.text)
                 Spacer(minLength: 0)
@@ -2190,14 +2193,26 @@ public struct SpeakerDSRoot: View {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     collapseConversationTextComposer(clearText: true)
                 } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .frame(width: 32, height: 32)
-                        .background(Circle().fill(Color.white.opacity(0.08)))
+                    HStack(spacing: 6) {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("Голос")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(PD.ColorToken.text)
+                    .padding(.horizontal, 11)
+                    .frame(height: 32)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.white.opacity(0.08))
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.34), lineWidth: 1)
+                            )
+                    )
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Закрыть")
+                .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+                .accessibilityLabel("Переключить на голосовой режим")
             }
 
             TextField("Любая фраза…", text: $conversationComposeText, axis: .vertical)
@@ -2211,54 +2226,31 @@ public struct SpeakerDSRoot: View {
                 .padding(.horizontal, 4)
                 .frame(minHeight: 88, alignment: .topLeading)
 
-            HStack(spacing: 10) {
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    collapseConversationTextComposer(clearText: true)
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "mic.fill")
-                            .font(.system(size: 13, weight: .bold))
-                        Text("Голосом")
-                            .font(.system(size: 14, weight: .semibold))
-                    }
-                    .foregroundStyle(PD.ColorToken.text)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Color.white.opacity(0.08))
-                    )
+            Button {
+                submitConversationCompose()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 13, weight: .bold))
+                    Text("Перевести")
+                        .font(.system(size: 16, weight: .bold))
                 }
-                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
-                .accessibilityLabel("Голосом")
-
-                Button {
-                    submitConversationCompose()
-                } label: {
-                    HStack(spacing: 8) {
-                        Text("Перевести")
-                            .font(.system(size: 16, weight: .bold))
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 13, weight: .bold))
-                    }
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(
-                                canSubmit
-                                ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                                : AnyShapeStyle(Color.white.opacity(0.14))
-                            )
-                    )
-                    .opacity(canSubmit ? 1 : 0.55)
-                }
-                .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
-                .disabled(!canSubmit)
-                .accessibilityLabel("Перевести")
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(
+                            canSubmit
+                            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                            : AnyShapeStyle(Color.white.opacity(0.14))
+                        )
+                )
+                .opacity(canSubmit ? 1 : 0.55)
             }
+            .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+            .disabled(!canSubmit)
+            .accessibilityLabel("Перевести")
         }
         .padding(18)
         .background(Theme.Surfaces.contextGlass(shape))

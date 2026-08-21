@@ -2889,7 +2889,17 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Trace tap → state → rendered composer path | [ ] |
-| Identify stale bottom-sheet/overlay implementation | [ ] |
-| Patch actual path and remove stale behavior | [ ] |
-| Verify branch alignment, checks, commit, push, handoff | [ ] |
+| Trace tap → state → rendered composer path | [x] |
+| Identify stale bottom-sheet/overlay implementation | [x] — Spacer-based bottom branch |
+| Patch actual path and remove stale behavior | [x] — centered sphere + composer group |
+| Verify branch alignment, checks, commit, push, handoff | [x] — fef83a4a1c29937b4a5280140176c3e6ac891d23 |
+
+
+# Speaker mutually exclusive Voice/Text mode
+
+| Task | Status |
+|---|---|
+| Trace current Voice/Text state and visible CTA composition | [ ] |
+| Ensure Voice shows only mic and Text shows only composer | [ ] |
+| Add fast icon/content transition between modes | [ ] |
+| Run checks, commit, push, and provide device handoff | [ ] |
