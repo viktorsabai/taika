@@ -1062,115 +1062,138 @@ public struct StepCardActionBar: View {
     }
 
     public var body: some View {
-        HStack(spacing: 0) {
-            if isTip {
-                actionPanelButton(
-                    systemName: "rectangle.expand.vertical",
-                    title: "ещё",
+        VStack(alignment: .leading, spacing: 10) {
+            if isTip && !tipShowsLearnSlot {
+                primaryActionButton(
+                    systemName: "arrow.up.right",
+                    title: "Открыть лайфхак",
                     isActive: false,
                     action: { onExpand?() }
                 )
-            } else if showsPlayAndFavorite {
-                actionPanelButton(
-                    systemName: "speaker.wave.2.fill",
-                    title: "слушать",
-                    isActive: false,
-                    playbackActive: isAudioPlaying,
-                    action: { onPlay?() }
-                )
-            } else {
-                Color.clear.frame(maxWidth: .infinity, minHeight: 54)
-            }
-
-            panelDivider()
-
-            if showsPlayAndFavorite {
-                actionPanelButton(
-                    systemName: isFavorite ? "heart.fill" : "heart",
-                    title: isFavorite ? "избранное" : "в избранное",
-                    isActive: isFavorite,
-                    action: onFavorite
-                )
-            } else {
-                Color.clear.frame(maxWidth: .infinity, minHeight: 54)
-            }
-
-            panelDivider()
-
-            if isTip && !tipShowsLearnSlot {
-                actionPanelButton(
-                    systemName: "chevron.right",
-                    title: "далее",
-                    isActive: false,
-                    action: { onNext?() }
-                )
             } else if miniLearnedCheckmarkOnly && isLearned {
-                actionPanelButton(
+                primaryActionButton(
                     systemName: "checkmark",
-                    title: "выучено",
+                    title: "Выучено",
                     isActive: true,
                     isEnabled: false,
                     action: {}
                 )
             } else {
-                actionPanelButton(
+                primaryActionButton(
                     systemName: "checkmark",
-                    title: isLearned ? "запомнил" : "запомнить",
+                    title: isLearned ? "Запомнено" : "Запомнить",
                     isActive: isLearned,
                     isEnabled: allowLearn,
                     action: onLearn
                 )
             }
+
+            HStack(spacing: 18) {
+                if !isTip && showsPlayAndFavorite {
+                    quietActionButton(
+                        systemName: "speaker.wave.2.fill",
+                        title: "Слушать",
+                        isActive: isAudioPlaying,
+                        action: { onPlay?() }
+                    )
+                }
+
+                if !isTip && showsPlayAndFavorite {
+                    quietActionButton(
+                        systemName: isFavorite ? "heart.fill" : "heart",
+                        title: isFavorite ? "В избранном" : "В избранное",
+                        isActive: isFavorite,
+                        action: onFavorite
+                    )
+                }
+
+                Spacer(minLength: 0)
+
+                if isTip && !tipShowsLearnSlot {
+                    quietActionButton(
+                        systemName: "arrow.right",
+                        title: "Далее",
+                        isActive: false,
+                        action: { onNext?() }
+                    )
+                }
+            }
+            .padding(.horizontal, 4)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(PD.ColorToken.card.opacity(0.92))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(PD.ColorToken.stroke.opacity(0.72), lineWidth: 1)
-        )
-        .frame(maxWidth: .infinity, minHeight: 66)
+        .padding(.horizontal, 6)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, minHeight: 90, alignment: .topLeading)
         .accessibilityElement(children: .contain)
     }
 
-    @ViewBuilder
-    private func actionPanelButton(
+    private func primaryActionButton(
         systemName: String,
         title: String,
         isActive: Bool,
         isEnabled: Bool = true,
-        playbackActive: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            HStack(spacing: 10) {
                 Image(systemName: systemName)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(isActive || playbackActive ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary))
-                    .modifier(StepSpeakerWaveSpeakingModifier(systemName: systemName, speaking: playbackActive))
-                    .frame(width: 30, height: 28)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(isActive ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.text))
+                    .frame(width: 20)
                 Text(title)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(isEnabled ? PD.ColorToken.textSecondary : PD.ColorToken.textSecondary.opacity(0.42))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(isEnabled ? PD.ColorToken.text : PD.ColorToken.textSecondary.opacity(0.45))
+                Spacer(minLength: 0)
+                Image(systemName: isActive ? "checkmark.circle.fill" : "sparkles")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(isEnabled ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(isActive ? 0.95 : 0.72)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35)))
             }
-            .frame(maxWidth: .infinity, minHeight: 52)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 42)
+            .background {
+                LinearGradient(
+                    colors: [
+                        ThemeManager.shared.currentAccentFill.opacity(isActive ? 0.18 : 0.07),
+                        PD.ColorToken.card.opacity(0.66)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            }
+            .overlay(alignment: .leading) {
+                Rectangle()
+                    .fill(ThemeManager.shared.currentAccentFill.opacity(isEnabled ? 0.92 : 0.22))
+                    .frame(width: 3)
+            }
             .contentShape(Rectangle())
         }
-        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.96, useBouncySpring: false, flashOpacity: 0.04))
+        .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.96, useBouncySpring: false, flashOpacity: 0.05))
         .disabled(!isEnabled)
         .accessibilityLabel(title)
     }
 
-    private func panelDivider() -> some View {
-        Rectangle()
-            .fill(PD.ColorToken.stroke.opacity(0.52))
-            .frame(width: 1, height: 34)
-            .accessibilityHidden(true)
+    private func quietActionButton(
+        systemName: String,
+        title: String,
+        isActive: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: systemName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(isActive ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                    .frame(width: 18, height: 18)
+                Text(title)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(isActive ? PD.ColorToken.text : PD.ColorToken.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.94, useBouncySpring: false, flashOpacity: 0.03))
+        .accessibilityLabel(title)
     }
 }
 // MARK: - StepCardBase (shared shell for step cards – layout only, no logic)

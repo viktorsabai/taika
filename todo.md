@@ -2421,3 +2421,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Remove heavy capsule borders and match grade-sheet subject rows | Done — quick actions use divider rows |
 | Add explicit canonical gradient treatment for active action | Done — gradient icon, subtle wash, and leading rail |
 | Run source check and push point fix | In progress — Xcode/Simulator pending |
+
+
+# Step card — modern AI action surface
+
+| Task | Status |
+|---|---|
+| Audit listen/favorite/learned semantics and current action bar | Done |
+| Replace three equal capsule buttons with one clear primary action | Done — single gradient rail action |
+| Move listen/favorite to quiet secondary controls with stable tap states | Done — icon/text controls without shells |
+| Validate learned/favorite/listen transitions and accessibility labels | Done — callbacks and labels preserved |
+| Run source check and push the action-surface redesign | In progress |
