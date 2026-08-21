@@ -639,7 +639,7 @@ public struct SpeakerDSRoot: View {
         case .idle: return .idle
         case .recording: return .recording(start: Date())
         case .analyzing: return .analyzing
-        case .analyzingTranslation: return .analyzing
+        case .analyzingTranslation: return .translating
         case .hint: return .hint
         case .feedback(let result): return .feedback(score: result.totalScore, hint: result.hint)
         }
@@ -825,7 +825,7 @@ public struct SpeakerDSRoot: View {
         if phase.isFeedback { return true }
         if conversationIsPracticeFlow { return true }
         if case .recording = phase { return true }
-        if phase == .analyzing { return true }
+        if phase.isProcessing { return true }
         // Активный перевод ещё не в ленте — держим фокус, иначе UI падает в idle/ленту.
         if conversationHasResult { return true }
         if phase == .hint, !taikaHints.isEmpty { return true }
@@ -880,7 +880,7 @@ public struct SpeakerDSRoot: View {
                     if conversationTextComposerExpanded,
                        !conversationHasResult,
                        !conversationIsRecording,
-                       phase != .analyzing,
+                       !phase.isProcessing,
                        !phase.isFeedback {
                         Spacer(minLength: 0)
                         conversationTextComposerPanel
@@ -913,7 +913,7 @@ public struct SpeakerDSRoot: View {
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         }
-                    } else if conversationIsRecording || phase == .analyzing {
+                    } else if conversationIsRecording || phase.isProcessing {
                         // Live всегда выше «результата»: иначе тренировка из карточки
                         // (heardThai уже есть) прячет орб и оставляет только кнопку Stop.
                         Spacer(minLength: 4)
@@ -1000,7 +1000,7 @@ public struct SpeakerDSRoot: View {
     /// Immersive live: одна компактная onboarding-style sphere остаётся в центре во всех voice states.
     @ViewBuilder private var conversationLiveStage: some View {
         let isRec = conversationIsRecording
-        let isBusy = phase == .analyzing
+        let isBusy = phase.isProcessing
         VStack(spacing: 14) {
             ZStack {
                 SpeakerLiveStateHalo(isRecording: isRec, isProcessing: isBusy)
@@ -1176,7 +1176,7 @@ public struct SpeakerDSRoot: View {
         let steps: [(String, Bool)] = {
             if conversationIsPracticeFlow {
                 let rec = conversationIsRecording
-                let busy = phase == .analyzing
+                let busy = phase.isProcessing
                 return [
                     ("фраза", true),
                     ("запись", rec || busy),
@@ -1185,7 +1185,7 @@ public struct SpeakerDSRoot: View {
             }
             let rec = conversationIsRecording
             let hasRU = !(external?.heardRU?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
-            let busy = phase == .analyzing
+            let busy = phase.isProcessing
             return [
                 ("речь", true),
                 ("текст", !rec),
@@ -1219,10 +1219,11 @@ public struct SpeakerDSRoot: View {
         if phase.isFeedback { return "feedback" }
         if conversationIsPracticeFlow {
             if case .recording = phase { return "practice-rec" }
-            if phase == .analyzing { return "practice-analyzing" }
+            if phase.isProcessing { return phase == .translating ? "practice-translating" : "practice-analyzing" }
         }
         if case .recording = phase { return "listening" }
         if phase == .analyzing { return "analyzing" }
+        if phase == .translating { return "translating" }
         if conversationHasResult { return "result" }
         if phase == .hint, !taikaHints.isEmpty { return "error" }
         return conversationEngine.conversationHistory.isEmpty ? "idle-empty" : "idle-ready"
@@ -1537,11 +1538,11 @@ public struct SpeakerDSRoot: View {
             conversationWidgetFeedbackCenter
         } else if conversationIsPracticeFlow, conversationIsRecording {
             conversationWidgetPracticeCenter
-        } else if conversationIsPracticeFlow, phase == .analyzing {
-            conversationWidgetAnalyzingCenter(label: "слушаю…")
+        } else if conversationIsPracticeFlow, phase.isProcessing {
+            conversationWidgetAnalyzingCenter(label: phase == .translating ? "перевожу…" : "распознаю…")
         } else if conversationIsRecording {
             conversationWidgetListeningCenter
-        } else if phase == .analyzing {
+        } else if phase.isProcessing {
             conversationWidgetAnalyzingCenter(label: {
                 if (external?.heardRU?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false) {
                     return "перевожу…"
@@ -1568,12 +1569,12 @@ public struct SpeakerDSRoot: View {
                 action: { external?.onMicTap() }
             )
             .frame(width: 156, height: 156)
-            Text("Готова слушать")
+            Text("Нажми на сферу")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.text)
                 .multilineTextAlignment(.center)
 
-            Text("Скажи фразу — Тайка услышит, переведёт и поможет потренировать произношение.")
+            Text("Скажи фразу — Тайка распознает её и покажет разбор.")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.85))
                 .multilineTextAlignment(.center)
@@ -1690,6 +1691,7 @@ public struct SpeakerDSRoot: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 18)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(minHeight: 176, alignment: .top)
         .onAppear {
             if conversationEditRU.isEmpty || conversationEditRU == heard || !conversationEditFocused {
                 conversationEditRU = heard
@@ -1724,29 +1726,67 @@ public struct SpeakerDSRoot: View {
         if case .feedback(let score, let hint) = phase {
             let scoreToShow = external?.displayScore ?? score
             let hintText = (hint ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let expectedThai = (external?.conversationExpectedThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let expectedPhonetic = (external?.conversationExpectedTranslitForFeedback ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let userText = conversationFeedbackUserText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            HStack(alignment: .center, spacing: 14) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Разбор произношения")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                    if !hintText.isEmpty {
-                        Text(hintText)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
-                            .lineLimit(2)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .center, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Разбор произношения")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                        if !hintText.isEmpty {
+                            Text(hintText)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
+                                .lineLimit(2)
+                        }
                     }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                SpeakerCountingScore(
-                    value: scoreToShow,
-                    font: .taikaStat(34),
-                    color: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
-                    suffix: "%"
-                )
+                    SpeakerCountingScore(
+                        value: scoreToShow,
+                        font: .taikaStat(34),
+                        color: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                        suffix: "%"
+                    )
+                }
+
+                if !expectedThai.isEmpty || !userText.isEmpty {
+                    VStack(alignment: .leading, spacing: 7) {
+                        if !userText.isEmpty {
+                            Text("ТЫ СКАЗАЛА")
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(0.6)
+                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.62))
+                            Text(userText)
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(PD.ColorToken.text)
+                                .lineLimit(2)
+                        }
+                        if !expectedThai.isEmpty {
+                            Text("ЭТАЛОН")
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(0.6)
+                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.62))
+                                .padding(.top, 2)
+                            Text(expectedThai)
+                                .font(.system(size: 21, weight: .semibold))
+                                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                .lineLimit(2)
+                            if !expectedPhonetic.isEmpty {
+                                Text(expectedPhonetic)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(PD.ColorToken.textSecondary)
+                                    .lineLimit(2)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
-            .frame(maxWidth: .infinity, minHeight: 54, alignment: .center)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .animation(.easeInOut(duration: 0.24), value: scoreToShow)
         }
     }
@@ -2116,7 +2156,7 @@ public struct SpeakerDSRoot: View {
     @ViewBuilder private var conversationTextComposerPanel: some View {
         let canSubmit = !conversationComposeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && (external?.conversationCanRecord ?? true)
-            && phase != .analyzing
+            && !phase.isProcessing
             && !conversationIsRecording
         let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
 
@@ -2232,7 +2272,7 @@ public struct SpeakerDSRoot: View {
     @ViewBuilder private var conversationStickyMicBar: some View {
         let canRecord = external?.conversationCanRecord ?? true
         let isRec = conversationIsRecording
-        let isBusy = phase == .analyzing
+        let isBusy = phase.isProcessing
         let isPro = external?.isProUser == true
         let remaining = max(0, external?.conversationRemainingToday ?? 0)
         let title: String = {
@@ -5541,7 +5581,7 @@ public struct SpeakerDSRoot: View {
             if case .recording = phase { return true }
             return false
         }()
-        let isAnalyzing = phase == .analyzing
+        let isAnalyzing = phase.isProcessing
         let isFeedback = phase.isFeedback
         let hasAttempt: Bool = {
 #if DEBUG
@@ -5906,7 +5946,7 @@ public struct SpeakerDSRoot: View {
                 DragGesture(minimumDistance: 24)
                     .onEnded { value in
                         // как у стрелок: во время анализа не листаем
-                        guard phase != .analyzing else { return }
+                        guard !phase.isProcessing else { return }
                         let dx = value.translation.width
                         let dy = value.translation.height
                         guard abs(dx) > 48, abs(dx) > abs(dy) * 1.15 else { return }
@@ -6339,7 +6379,7 @@ private struct SpeakerTopCard: View {
 
     private var isAnalyzingActive: Bool {
         guard isActive else { return false }
-        return phase == .analyzing
+        return phase.isProcessing
     }
 
     private var isResultActive: Bool {
@@ -6831,15 +6871,23 @@ enum SpeakerPhase: Equatable {
     case idle
     case recording(start: Date)
     case analyzing
+    case translating
     case hint
     case feedback(score: Int, hint: String?)
 
     var isFeedback: Bool { if case .feedback = self { return true } else { return false } }
+    var isProcessing: Bool {
+        switch self {
+        case .analyzing, .translating: return true
+        default: return false
+        }
+    }
     var label: String {
         switch self {
         case .idle: return "нажми и говори"
         case .recording: return "запись…"
-        case .analyzing: return "анализ…"
+        case .analyzing: return "распознаю…"
+        case .translating: return "перевожу…"
         case .hint: return "совет"
         case .feedback: return "результат"
         }

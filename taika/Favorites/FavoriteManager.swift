@@ -38,6 +38,20 @@ protocol Favoritable {
     var favoriteLessonId: String { get }
 }
 
+private struct CourseFavoritePayload: Favoritable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let meta: String
+
+    var favoriteId: String { "course:\(id)" }
+    var favoriteTitle: String { title }
+    var favoriteSubtitle: String { subtitle }
+    var favoriteMeta: String { meta }
+    var favoriteCourseId: String { id }
+    var favoriteLessonId: String { "" }
+}
+
 extension Favoritable {
     func asFavoriteItem() -> FavoriteItem {
         FavoriteItem(
@@ -962,6 +976,18 @@ final class FavoriteManager: ObservableObject {
     /// FavoriteManager is main-actor isolated, so mutations stay synchronous and ordered.
     private func applyFavoritesMutation(_ work: () -> Void) {
         work()
+    }
+
+    /// Toggle an explicit course favorite. Course favorites are intentionally separate
+    /// from favorite lesson cards and always use the course namespace.
+    public func toggleCourse(id: String, title: String, subtitle: String, meta: String) {
+        let payload = CourseFavoritePayload(
+            id: normalized(id),
+            title: title,
+            subtitle: subtitle,
+            meta: meta
+        )
+        toggle(item: payload)
     }
 
     /// Toggle a generic favoritable entity

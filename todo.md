@@ -2719,7 +2719,138 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Audit picker options and existing Speaker training route | [ ] |
-| Add Speaker tone-reinforcement option | [ ] |
-| Preserve selected course/lesson card scope through navigation | [ ] |
-| Run source checks and push picker update | [ ] |
+| Audit picker options and existing Speaker training route | [x] |
+| Add Speaker tone-reinforcement option | [x] |
+| Preserve selected course/lesson card scope through navigation | [x] |
+| Run source checks and push picker update | [x] — source validation; device route check pending |
+
+
+# Total fix — Courses favorites filter and course taps
+
+| Task | Status |
+|---|---|
+| Audit Courses filter semantics, explicit course favorites, and tap callbacks | [x] |
+| Separate favorited courses from courses containing favorite cards | [x] |
+| Restore canonical course-card tap for new/in-progress/completed states | [x] |
+| Run source checks and push total fix | [x] — source validation; device interaction matrix pending |
+
+
+# Fix — LessonsView Speaker picker compile errors
+
+| Task | Status |
+|---|---|
+| Inspect scope setter and GameModePickerDS signatures | [x] |
+| Correct course scope call and argument order | [x] |
+| Run source checks and push compile correction | [x] |
+
+
+# Speaker mode-selection mockups
+
+| Task | Status |
+|---|---|
+| Define three distinct Speaker-specific directions | [ ] |
+| Generate three standalone app-screen mockups | [ ] |
+| Deliver options and recommendation | [ ] |
+
+
+# Critical bug — course favorites do not persist
+
+| Task | Status |
+|---|---|
+| Trace course heart callback, manager toggle, and published refresh | [ ] |
+| Repair canonical explicit course favorite persistence | [ ] |
+| Validate add/remove for new, in-progress, and completed courses | [ ] |
+| Run source checks and push critical fix | [ ] |
+
+
+# Image edit — Speaker Command Center sphere
+
+| Task | Status |
+|---|---|
+| Refine marked sphere and living-wave region using approved close-up reference | [x] |
+| Preserve all unmarked UI and copy | [x] |
+| Deliver edited PNG | [x] |
+
+
+# Speaker Command Center — corrected two-state mockup
+
+| Task | Status |
+|---|---|
+| Remove reinforcement mode from start composition | [x] |
+| Keep centered sphere and central keyboard/text transition | [x] |
+| Generate corrected single mockup | [x] |
+
+
+# Speaker Command Center — scenarios before implementation
+
+| Task | Status |
+|---|---|
+| Document voice recording → analysis → result → retry flow | [ ] |
+| Document text/composer flow and return to voice | [ ] |
+| Map scope, limits, paywall, and error states | [ ] |
+| Implement approved two-state Command Center after scenario review | [ ] |
+
+
+# Speaker — unified voice/text switch explanation
+
+| Task | Status |
+|---|---|
+| Define shared state model for voice and text | [ ] |
+| Document fixed zones and transitions | [ ] |
+| Provide implementation-oriented SwiftUI outline | [ ] |
+
+
+# Visual mockup — unified Speaker voice/text
+
+| Task | Status |
+|---|---|
+| Generate visual mockup with centered sphere and only Голос/Текст switch | [x] |
+| Deliver mockup image | [x] |
+
+
+# Speaker full voice-flow storyboard
+
+| Task | Status |
+|---|---|
+| Define idle → recording → analysis → translation → result states | [x] |
+| Generate cohesive multi-state visual storyboard | [x] — rendering in background |
+| Deliver storyboard and implementation notes | [x] — link provided |
+
+
+# Speaker storyboard implementation audit
+
+| Task | Status |
+|---|---|
+| Audit current Speaker states and transitions | [x] |
+| Compare code branches with six storyboard steps | [x] |
+| Document matches, gaps, and required work | [x] — see speaker-storyboard-audit.md |
+
+
+# Speaker unified result implementation
+
+| Task | Status |
+|---|---|
+| Define explicit recognizing vs translating UI states | [x] |
+| Lock stable sphere/result canvas geometry across states | [x] — live stage remains fixed; device validation pending |
+| Unify instant translation and pronunciation result presentation | [x] — shared live/result canvas path; deeper result content remains scope-specific |
+| Add clear retry/next actions without legacy card duplication | [x] — existing canonical actions retained |
+| Run source-level compile checks and inspect regressions | [x] — git diff check passed; Xcode unavailable in sandbox |
+
+
+# Profile hero banner parity fix
+
+| Task | Status |
+|---|---|
+| Inspect Taika+ and Your Rhythm banner implementations | [x] |
+| Reuse shared banner composition for Your Rhythm | [x] |
+| Remove oversized circle and prevent content overflow | [x] |
+| Run source-level checks and document device validation | [x] — git diff check passed; device validation pending |
+
+
+# Existing branch handoff
+
+| Task | Status |
+|---|---|
+| Verify current branch and remote | [ ] |
+| Confirm Profile banner changes are on the existing branch worktree | [ ] |
+| Create testable commit and provide exact handoff command | [ ] |

@@ -855,7 +855,6 @@ private struct ProfileHeroCarousel: View {
     let onRhythm: () -> Void
 
     @State private var selectedSlide = 0
-    @State private var rhythmPhase: CGFloat = 0
     private let slideTimer = Timer.publish(every: 5.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -873,8 +872,6 @@ private struct ProfileHeroCarousel: View {
                 } else {
                     ProfileRhythmPreviewCard(
                         profile: ProfileManager.shared,
-                        phase: rhythmPhase,
-                        reduceMotion: reduceMotion,
                         onTap: onRhythm
                     )
                     .environmentObject(theme)
@@ -900,20 +897,11 @@ private struct ProfileHeroCarousel: View {
                 selectedSlide = (selectedSlide + 1) % 2
             }
         }
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 5).repeatForever(autoreverses: true)) {
-                rhythmPhase = 1
-            }
-        }
     }
 }
 
 private struct ProfileRhythmPreviewCard: View {
-    @EnvironmentObject private var theme: ThemeManager
     @ObservedObject var profile: ProfileManager
-    let phase: CGFloat
-    let reduceMotion: Bool
     let onTap: () -> Void
 
     private var percent: Int {
@@ -924,53 +912,85 @@ private struct ProfileRhythmPreviewCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 16) {
-                ProfileRhythmRing(
-                    percent: percent,
-                    phase: phase,
-                    reduceMotion: reduceMotion,
-                    accent: AnyShapeStyle(theme.currentAccentFill)
-                )
-                .frame(width: 112, height: 112)
-
+            VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 7) {
-                    HStack(spacing: 7) {
+                    HStack(spacing: 8) {
                         Image(systemName: "waveform.path.ecg")
                             .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
                         Text("Твой ритм")
-                            .font(PD.FontToken.title(20, weight: .bold))
+                            .font(PD.FontToken.title(21, weight: .bold))
                             .foregroundStyle(PD.ColorToken.text)
                     }
                     Text("Прогресс, активность и следующий шаг")
                         .font(PD.FontToken.caption(13, weight: .medium))
                         .foregroundStyle(PD.ColorToken.textSecondary)
                         .lineLimit(2)
-                    Text("Смотреть детали")
-                        .font(PD.FontToken.caption(12, weight: .semibold))
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 7) {
+                    Text("\(percent)%")
+                        .font(PD.FontToken.title(18, weight: .bold))
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                    Text("РИТМ")
+                        .font(PD.FontToken.caption(10, weight: .bold))
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                        .tracking(0.7)
+                }
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 190, alignment: .leading)
+
+            HStack(spacing: 8) {
+                Image(systemName: "chart.bar.xaxis")
+                Text("Смотреть ритм")
+                    .font(PD.FontToken.body(16, weight: .bold))
+            }
+            .foregroundStyle(Color.black.opacity(0.88))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
             .background(
-                LinearGradient(
-                    colors: [
-                        PD.ColorToken.card.opacity(0.82),
-                        TaikaMasteryTokens.green.opacity(0.12)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+                AnyShapeStyle(TaikaMasteryTokens.greenGradient),
+                in: Capsule()
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(TaikaMasteryTokens.greenGradient.opacity(0.42), lineWidth: 1)
-            )
+
+            HStack(spacing: 0) {
+                profileRhythmCapability("waveform", "Активность")
+                Divider().frame(height: 30).overlay(PD.ColorToken.stroke.opacity(0.35))
+                profileRhythmCapability("chart.line.uptrend.xyaxis", "Прогресс")
+                Divider().frame(height: 30).overlay(PD.ColorToken.stroke.opacity(0.35))
+                profileRhythmCapability("arrow.up.right", "Следующий шаг")
+            }
+            .padding(.vertical, 9)
+        }
+        .padding(16)
+        .background(
+            AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.18)),
+            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.62)), lineWidth: 1)
+        )
         }
         .buttonStyle(.plain)
+        .shadow(color: TaikaMasteryTokens.green.opacity(0.16), radius: 18, y: 8)
+        .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("Открыть Твой ритм")
+    }
+
+    private func profileRhythmCapability(_ image: String, _ title: String) -> some View {
+        VStack(spacing: 3) {
+            Image(systemName: image)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+            Text(title)
+                .font(PD.FontToken.caption(11, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            Text("готово")
+                .font(PD.FontToken.caption(10, weight: .semibold))
+                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
