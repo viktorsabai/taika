@@ -2870,7 +2870,16 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect mode rail and reinforcement references | [ ] |
-| Remove Reinforcement from the bottom control | [ ] |
-| Redesign Voice/Text as a modern two-state segmented control | [ ] |
+| Inspect mode rail and reinforcement references | [x] |
+| Remove Reinforcement from the bottom control | [x] |
+| Redesign Voice/Text as a modern two-state segmented control | [x] |
+| Run checks, commit, push, and provide device handoff | [x] — 3a12f48865e513675decb5b5b78b1aa86edd9212 |
+
+
+# Speaker text composer bottom positioning fix
+
+| Task | Status |
+|---|---|
+| Inspect composer presentation and bottom inset layout | [ ] |
+| Anchor composer above tab bar with stable transition | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |
