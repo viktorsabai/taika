@@ -2909,8 +2909,18 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Trace the actual on-device result branch | [ ] |
-| Route pronunciation results into complete breakdown | [ ] |
-| Replace stale score typography | [ ] |
-| Restore syllable navigation and tone breakdown | [ ] |
+| Trace the actual on-device result branch | [x] |
+| Route pronunciation results into complete breakdown | [x] — visible CTA calls existing tone API + breakdown sheet |
+| Replace stale score typography | [x] — Theme.Fonts.metric(48) |
+| Restore syllable navigation and tone breakdown | [x] — existing navigator is now reachable from result |
+| Run checks, commit, push, and provide device handoff | [x] — ed12d8e985cc26ae345d861a489f2f6c16e043c6 |
+
+
+# Speaker compact onboarding sphere
+
+| Task | Status |
+|---|---|
+| Inspect onboarding sphere and current Speaker sphere variants | [ ] |
+| Build compact sphere with state-driven internals | [ ] |
+| Reserve stable sphere/chip/result slots | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |

@@ -1023,6 +1023,7 @@ public struct SpeakerDSRoot: View {
                     }
                     external?.onMicTap()
                 }
+                .scaleEffect(0.86)
                 .disabled(isBusy)
 
                 if isBusy {
@@ -1037,21 +1038,32 @@ public struct SpeakerDSRoot: View {
             .frame(width: 220, height: 220)
 
             conversationLiveHeroText
-                .frame(minHeight: 84, maxHeight: 128, alignment: .center)
+                .frame(height: 96, alignment: .center)
                 .padding(.horizontal, 8)
                 .layoutPriority(1)
 
-            // Idle has one clear instruction: tap the sphere. Status and pipeline
-            // become useful only after the user starts a voice action.
-            if isRec || isBusy || conversationIsPracticeFlow || phase == .hint {
-                conversationLiveStatusChip
+            // Reserve the same status slot in every phase. Only its content changes;
+            // the sphere never moves when a chip appears or disappears.
+            Group {
+                if isRec || isBusy || conversationIsPracticeFlow || phase == .hint {
+                    conversationLiveStatusChip
+                } else {
+                    Color.clear
+                }
             }
+            .frame(height: 32)
 
-            if isBusy {
-                ConversationLiveProcessTicks()
-                    .frame(height: 28)
-                    .transition(.opacity)
+            // Reserve the processing slot even when idle so recognizing/translating
+            // cannot push the sphere or result copy vertically.
+            Group {
+                if isBusy {
+                    ConversationLiveProcessTicks()
+                        .transition(.opacity)
+                } else {
+                    Color.clear
+                }
             }
+            .frame(height: 28)
 
             // The state chip is the single status affordance. The old speech/text/translation
             // pipeline duplicated it and made later Speaker screens feel assembled.
