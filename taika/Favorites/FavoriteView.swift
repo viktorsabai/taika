@@ -31,6 +31,7 @@ struct FavoriteView: View {
 
     @State private var selectedTab: FavoriteScreenTab = .cards
     @State private var isEditing: Bool = false
+    @State private var isTrainingPickerPresented: Bool = false
 
     @AppStorage("taika.fav.cards.viewMode") private var cardsViewModeRaw: String = FavCardsViewMode.list.rawValue
     @AppStorage("taika.fav.dict.viewMode") private var dictViewModeRaw: String = FavCardsViewMode.list.rawValue
@@ -119,11 +120,16 @@ struct FavoriteView: View {
                 } else {
                     TaikaRootVerticalScroll {
                         VStack(spacing: 0) {
+                            favoritesCollectionSummary()
+                                .padding(.horizontal, CD.Spacing.screen)
+                                .padding(.top, 6)
+                                .padding(.bottom, 8)
+
                             favoritesTabContent()
                                 .frame(maxWidth: .infinity, alignment: .topLeading)
 
                             if showsBottomTrainingBar {
-                                favoritesPracticeSection()
+                                favoritesTrainingCTA()
                                     .padding(.horizontal, CD.Spacing.screen)
                                     .padding(.top, 18)
                                     .padding(.bottom, bottomContentInset)
@@ -137,6 +143,22 @@ struct FavoriteView: View {
                 }
             }
             .padding(.top, Theme.Layout.rootHeaderClearance)
+        }
+        .confirmationDialog(
+            selectedTab == .dictionary ? "Начать тренировку словаря" : "Начать тренировку избранного",
+            isPresented: $isTrainingPickerPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Спикер") {
+                trainCurrentTabInSpeaker()
+            }
+            Button("Игры") {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                overlay.present(selectedTab == .dictionary ? .gameParkFromDictionary : .gameParkFromFavorites)
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Выбери способ для сохранённых карточек")
         }
         .onAppear {
             if favFilter.selectedTab == .hacks || favFilter.selectedTab == .courses {
@@ -179,72 +201,50 @@ struct FavoriteView: View {
         .padding(.top, 4)
     }
 
-    /// Native practice rows: one hierarchy, one clear next action per row.
-    private func favoritesPracticeSection() -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(selectedTab == .dictionary ? "ПРАКТИКА СЛОВАРЯ" : "ПРАКТИКА ИЗБРАННОГО")
-                .taikaSectionTitleStyle()
-                .padding(.bottom, 4)
-
-            favoritesPracticeRow(
-                icon: "person.wave.2.fill",
-                title: "Спикер",
-                detail: selectedTab == .dictionary ? "Произношение карточек словаря" : "Произношение сохранённых карточек",
-                accessibilityLabel: selectedTab == .dictionary ? "Тренировать словарь в спикере" : "Тренировать избранное в спикере"
-            ) {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                trainCurrentTabInSpeaker()
-            }
-
-            favoritesPracticeRow(
-                icon: "gamecontroller.fill",
-                title: "Игры",
-                detail: selectedTab == .dictionary ? "Память и закрепление словаря" : "Память и закрепление избранного",
-                accessibilityLabel: selectedTab == .dictionary ? "Открыть игры для словаря" : "Открыть игры для избранного"
-            ) {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                overlay.present(selectedTab == .dictionary ? .gameParkFromDictionary : .gameParkFromFavorites)
-            }
+    private func favoritesCollectionSummary() -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(selectedTab == .dictionary ? "Сохранено в словаре" : "Сохранённые карточки")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            Text("·")
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.5))
+            Text("\(selectedTab == .dictionary ? dictionaryList.count : cardsList.count)")
+                .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                .foregroundStyle(PD.ColorToken.text)
+            Spacer(minLength: 0)
         }
+        .accessibilityElement(children: .combine)
     }
 
-    private func favoritesPracticeRow(
-        icon: String,
-        title: String,
-        detail: String,
-        accessibilityLabel: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
+    private func favoritesTrainingCTA() -> some View {
+        let count = selectedTab == .dictionary ? dictionaryList.count : cardsList.count
+        return Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            isTrainingPickerPresented = true
+        } label: {
             HStack(spacing: 12) {
-                Image(systemName: icon)
+                Image(systemName: "mic.fill")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                    .frame(width: 28, alignment: .leading)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.text)
-                    Text(detail)
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
+                Text("Начать тренировку · \(count)")
+                    .font(.system(size: 17, weight: .semibold))
+                Spacer(minLength: 0)
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 15, weight: .bold))
             }
-            .padding(.vertical, 13)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(PD.ColorToken.stroke.opacity(0.42))
-                    .frame(height: 1)
-            }
-            .contentShape(Rectangle())
+            .foregroundStyle(PD.ColorToken.text)
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(PD.ColorToken.card.opacity(0.86))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(PD.ColorToken.stroke.opacity(0.8), lineWidth: 1)
+            )
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(accessibilityLabel)
+        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
+        .accessibilityLabel("Начать тренировку, \(count) карточек")
     }
 
     private func trainCurrentTabInSpeaker() {

@@ -2330,3 +2330,15 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Preserve current course/lesson/error-card scope through the handoff | Done at source level |
 | Move next-course navigation to a secondary bottom action | Done |
 | Run source checks, commit, and push one testing commit | In progress — Xcode/Simulator pending |
+
+
+# Favorites — saved-card quick-action workspace
+
+| Task | Status |
+|---|---|
+| Audit current Favorites content, grouping, selection, and training routes | Done |
+| Make saved cards the primary content; keep course grouping quiet and contextual | Done — saved cards remain the content surface; course headers stay contextual |
+| Preserve Favorites/Dictionary context switch and list/grid presentation | Done |
+| Use one clear `Начать тренировку · N` CTA with selected-card scope | Done — CTA opens native Speaker/Games choice for current saved set |
+| Preserve Dictionary behavior and validate Speaker/Game navigation | Done at source level |
+| Run source checks, commit, and push for device testing | In progress — Xcode/Simulator pending |
