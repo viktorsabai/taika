@@ -2930,7 +2930,18 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect active rail and bottom toolbar materials | [ ] |
-| Remove green active fill and match liquid-glass toolbar | [ ] |
-| Add modern animated Voice/Text thumb transition | [ ] |
+| Inspect active rail and bottom toolbar materials | [x] |
+| Remove green active fill and match liquid-glass toolbar | [x] — TaikaLiquidGlassCapsule + neutral graphite thumb |
+| Add modern animated Voice/Text thumb transition | [x] — matchedGeometryEffect + symbol transition |
+| Run checks, commit, push, and provide device handoff | [x] — 4b0856bcbc736aedfe15bf80eaca47085f4f0f79 |
+
+
+# Speaker critical live-canvas regression
+
+| Task | Status |
+|---|---|
+| Trace idle/recording/processing/result live-stage branches | [ ] |
+| Unify fixed sphere, status/result, and mode-toolbar slots | [ ] |
+| Remove black-square recording artifact | [ ] |
+| Validate all four states and prevent sphere jumps | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |

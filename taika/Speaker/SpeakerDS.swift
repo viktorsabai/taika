@@ -861,8 +861,12 @@ public struct SpeakerDSRoot: View {
                         .padding(.top, 10)
                         .padding(.bottom, ToolBar.recommendedBottomInset + 12)
                 } else {
-                    Color.clear
-                        .frame(height: ToolBar.recommendedBottomInset + 100)
+                    VStack(spacing: 10) {
+                            conversationIdleModeRail
+                            Color.clear
+                                .frame(height: ToolBar.recommendedBottomInset + 52)
+                        }
+                        .padding(.horizontal, padH)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -914,18 +918,15 @@ public struct SpeakerDSRoot: View {
                                 conversationStickyMicBar
                                     .padding(.horizontal, padH)
                                     .padding(.top, 2)
-                                    .padding(.bottom, ToolBar.recommendedBottomInset + 12)
+                                    .padding(.bottom, 8)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         }
                     } else if conversationIsRecording || phase.isProcessing {
-                        // Live всегда выше «результата»: иначе тренировка из карточки
-                        // (heardThai уже есть) прячет орб и оставляет только кнопку Stop.
-                        Spacer(minLength: 4)
+                        // Keep the exact same stage slot while recording and processing.
                         conversationLiveStage
                             .padding(.horizontal, padH)
-                            .transition(.opacity.combined(with: .scale(scale: 0.97)))
-                        Spacer(minLength: 4)
+                            .transition(.opacity)
                         Color.clear
                             .frame(height: ToolBar.recommendedBottomInset + 8)
                     } else if conversationHasResult {
@@ -940,7 +941,7 @@ public struct SpeakerDSRoot: View {
                             conversationResultActions
                                 .padding(.horizontal, padH)
                                 .padding(.top, 2)
-                                .padding(.bottom, ToolBar.recommendedBottomInset + 12)
+                                .padding(.bottom, 8)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     } else if phase == .hint, !taikaHints.isEmpty {
@@ -957,16 +958,19 @@ public struct SpeakerDSRoot: View {
                             .padding(.horizontal, padH)
                             .padding(.bottom, ToolBar.recommendedBottomInset + 12)
                     } else {
-                        Spacer(minLength: 4)
                         conversationLiveStage
                             .padding(.horizontal, padH)
-                            .transition(.opacity.combined(with: .scale(scale: 0.97)))
-                        Spacer(minLength: 4)
+                            .transition(.opacity)
                         Color.clear
                             .frame(height: ToolBar.recommendedBottomInset + 8)
                     }
+
+                    // Second-level toolbar stays in the same overlay slot in every focused state.
+                    conversationIdleModeRail
+                        .padding(.horizontal, padH)
+                        .padding(.bottom, ToolBar.recommendedBottomInset + 12)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .transition(.opacity)
             }
         }
@@ -1012,7 +1016,7 @@ public struct SpeakerDSRoot: View {
                     .frame(width: 220, height: 220)
 
                 MDVoiceSphere(
-                    symbol: phase.isFeedback ? "waveform.path.ecg" : (isBusy ? "waveform.path.ecg" : (isRec ? "stop.fill" : "mic.fill")),
+                    symbol: "waveform.path.ecg",
                     accessibilityLabel: phase.isFeedback ? "Результат анализа" : (isBusy ? "Обработка" : (isRec ? "Стоп" : "Микрофон")),
                     meter: isRec ? recordingMeter : 0
                 ) {
@@ -2137,16 +2141,16 @@ public struct SpeakerDSRoot: View {
             conversationModeRailButton(
                 systemName: "mic.fill",
                 title: "Голос",
-                selected: true,
+                selected: !conversationTextComposerExpanded,
                 accessibility: "Голосовой режим"
             ) {
-                external?.onMicTap()
+                guard conversationTextComposerExpanded else { return }
+                collapseConversationTextComposer(clearText: true)
             }
-
             conversationModeRailButton(
                 systemName: "keyboard",
                 title: "Текст",
-                selected: false,
+                selected: conversationTextComposerExpanded,
                 accessibility: "Ввести текст"
             ) {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
