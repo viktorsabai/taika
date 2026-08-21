@@ -1091,6 +1091,19 @@ public final class SpeakerManager: ObservableObject {
 
     func applyFilter(_ id: UUID) {
         guard let mode = SpeakerMode(id: id) else { return }
+
+        // A course-scoped Speaker session must never fall back to the global learned pool.
+        // The filter strip can re-emit the active `.learned` id during onAppear; preserve
+        // the handoff from Step/Course and rebuild only that course's queue instead.
+        if mode == .learned,
+           let courseId = speakerContextCourseId,
+           courseId != "__favorites__",
+           courseId != "__dictionary__" {
+            activeFilterId = mode.id
+            loadQueueForCourse(courseId, lessonId: learnedLessonFilter)
+            return
+        }
+
         speakerContextCourseId = nil
         activeFilterId = mode.id
 

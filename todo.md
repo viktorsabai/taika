@@ -2504,3 +2504,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Correct `LinearGradient`/`Color` type mismatch in Dictionary | Done — gradient now receives only Color stops |
 | Replace ambiguous CardDS AnyView wrapper with a compile-safe explicit view contract | Done — outer AnyView removed; label remains explicitly type-erased |
 | Run source check and push compile-fix commit | In progress |
+
+
+# Fix — Step to Speaker course scope leakage
+
+| Task | Status |
+|---|---|
+| Trace Step-to-Speaker course/lesson/card scope handoff | Done — onAppear re-emits `.learned` and was clearing context |
+| Prevent global learned-lessons fallback for course-scoped Speaker | Done — `applyFilter(.learned)` reloads only current course |
+| Keep picker options limited to active/selected course | Done — course context and lesson filter preserved |
+| Verify selected lesson/card scope through Speaker start flow | Done by source trace — Step passes course/lesson IDs into `loadQueueForCourse` |
+| Run source check and push scope fix | In progress |
