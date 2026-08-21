@@ -2962,7 +2962,18 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Trace duplicate rail paths and overlay stacking | [ ] |
-| Keep exactly one Voice/Text rail in the rendered canvas | [ ] |
-| Re-anchor sphere below header within one stable stage | [ ] |
+| Trace duplicate rail paths and overlay stacking | [x] |
+| Keep exactly one Voice/Text rail in the rendered canvas | [x] |
+| Re-anchor sphere below header within one stable stage | [x] — focused overlay top inset 44pt |
+| Run checks, commit, push, and provide device handoff | [x] — 0599b9058c087c2aac775b901dfda889268c91be |
+
+
+# Speaker swipe scenes
+
+| Task | Status |
+|---|---|
+| Inspect current mode state, gestures, and composer path | [ ] |
+| Add Voice/Text swipe scene state and distinct sphere visuals | [ ] |
+| Move keyboard composer to centered Text scene | [ ] |
+| Remove bottom Voice/Text rail and prevent simultaneous mic | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |
