@@ -2402,3 +2402,12 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Remove «Как устроена Taika» from the main Profile flow | Done — route and dead helpers removed |
 | Preserve existing actions and bottom-sheet navigation | Done — statistics/support/legal use compact detents |
 | Run source checks and push one Profile redesign commit | In progress — Xcode/Simulator pending |
+
+
+# Speaker compile correction — result-builder tips helper
+
+| Task | Status |
+|---|---|
+| Inspect failing `breakdownPracticeTipsSection` statements | Done |
+| Move local calculations out of `@ViewBuilder` expression scope | Done — tip selection now uses a closure initializer |
+| Run diff/source validation and push corrective commit | In progress — Xcode validation pending |

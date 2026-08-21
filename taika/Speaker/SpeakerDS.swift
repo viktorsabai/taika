@@ -5027,16 +5027,17 @@ public struct SpeakerDSRoot: View {
         let weakest = weakestIndex < chunks.count
             ? Self.syllableLabelWithoutArrows(chunks[weakestIndex])
             : (syllableFeedback.first?.syllable ?? "этом слоге")
-        let tip: String
-        if let toneScore, toneScore + 8 < textScore {
-            tip = "Сначала повтори тон на «\(weakest)»: медленнее, с явным подъёмом или падением голоса."
-        } else if let toneScore, toneScore < 70 {
-            tip = "Сделай короткую паузу перед «\(weakest)» и повтори слог отдельно, затем собери всю фразу."
-        } else if textScore < 70 {
-            tip = "Скажи фразу медленнее и держи границы слогов — особенно на «\(weakest)»."
-        } else {
-            tip = "Повтори фразу ещё раз в том же темпе и сохрани точный тон на «\(weakest)»."
-        }
+        let tip: String = {
+            if let toneScore, toneScore + 8 < textScore {
+                return "Сначала повтори тон на «\(weakest)»: медленнее, с явным подъёмом или падением голоса."
+            } else if let toneScore, toneScore < 70 {
+                return "Сделай короткую паузу перед «\(weakest)» и повтори слог отдельно, затем собери всю фразу."
+            } else if textScore < 70 {
+                return "Скажи фразу медленнее и держи границы слогов — особенно на «\(weakest)»."
+            } else {
+                return "Повтори фразу ещё раз в том же темпе и сохрани точный тон на «\(weakest)»."
+            }
+        }()
 
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "lightbulb.fill")
