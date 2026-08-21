@@ -2326,7 +2326,10 @@ public struct LSCompletedLessonList: View {
                                         canStartFocus
                                             ? AnyShapeStyle(
                                                 LinearGradient(
-                                                    colors: [ThemeManager.shared.currentAccentTintColor, ThemeManager.shared.currentAccentFill],
+                                                    colors: [
+                                                        ThemeManager.shared.currentAccentTintColor,
+                                                        ThemeManager.shared.currentAccentTintColor.opacity(0.68)
+                                                    ],
                                                     startPoint: .top,
                                                     endPoint: .bottom
                                                 )

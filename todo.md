@@ -2598,3 +2598,12 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Inspect canonical SpeakerPhase cases and stale translation phase reference | Done — local `SpeakerPhase` has only `.analyzing`; Manager phase owns translation case |
 | Apply argument-order and enum-case corrections | Done |
 | Run source check and push Speaker compile fix | In progress |
+
+
+# Fix — LessonsDS gradient type mismatch
+
+| Task | Status |
+|---|---|
+| Inspect exact LinearGradient expression at LessonsDS.swift:2329 | [ ] |
+| Replace gradient-in-Color-array with explicit Color stops | [ ] |
+| Run source check and push LessonsDS compile fix | [ ] |
