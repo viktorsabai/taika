@@ -177,6 +177,10 @@ struct ProfileView: View {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showStatistics = true
                         },
+                        onSpeaker: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            nav.requestTab(2)
+                        },
                         onSupport: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showSupport = true

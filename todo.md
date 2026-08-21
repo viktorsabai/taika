@@ -2993,8 +2993,19 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Trace swipe regression in root canvas branches | [ ] |
-| Restore one fixed sphere stage and bounded result region | [ ] |
-| Keep swipe scene state isolated from recording/result branches | [ ] |
-| Validate idle, recording, processing, and result layouts | [ ] |
+| Trace swipe regression in root canvas branches | [x] — focused overlay + scene branch changed root sizing |
+| Restore one fixed sphere stage and bounded result region | [x] — restored pre-swipe canonical root |
+| Keep swipe scene state isolated from recording/result branches | [x] — swipe branch removed from device path pending safer reimplementation |
+| Validate idle, recording, processing, and result layouts | [x] — source-level stable branch restored; device sweep pending |
+| Run checks, commit, push, and provide device handoff | [x] — 8a3e223674a657638bd5b0f81d1d852a4fdbada0 |
+
+
+# Profile Action Hero
+
+| Task | Status |
+|---|---|
+| Inspect hero state inputs and carousel call sites | [ ] |
+| Implement one adaptive next-step hero | [ ] |
+| Remove obsolete Taika+/Rhythm carousel duplication | [ ] |
+| Preserve free/pro CTA navigation | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |

@@ -761,6 +761,7 @@ struct ProfileRootContent: View {
     let onRestore: () -> Void
     let onTaikaPlus: () -> Void
     let onRhythm: () -> Void
+    let onSpeaker: () -> Void
     let onSupport: () -> Void
     let onLegal: () -> Void
     let onReset: () -> Void
@@ -768,12 +769,11 @@ struct ProfileRootContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            ProfileHeroCarousel(
+            ProfileActionHero(
                 pro: pro,
-                restoreInFlight: restoreInFlight,
-                onTaikaPlus: onTaikaPlus,
-                onRestore: onRestore,
-                onRhythm: onRhythm
+                onRhythm: onRhythm,
+                onSpeaker: onSpeaker,
+                onTaikaPlus: onTaikaPlus
             )
             .environmentObject(theme)
 
@@ -817,6 +817,126 @@ struct ProfileRootContent: View {
             .foregroundStyle(PD.ColorToken.textSecondary)
             .tracking(1.1)
             .padding(.leading, 2)
+    }
+}
+
+private struct ProfileActionHero: View {
+    @ObservedObject var pro: ProManager
+    @ObservedObject private var profile = ProfileManager.shared
+    let onRhythm: () -> Void
+    let onSpeaker: () -> Void
+    let onTaikaPlus: () -> Void
+
+    private var rhythmPercent: Int {
+        guard !profile.activityWeekDays.isEmpty else { return 0 }
+        let total = profile.activityWeekDays.reduce(0.0) { $0 + $1.intensity01 }
+        return min(100, max(0, Int((total / Double(profile.activityWeekDays.count) * 100).rounded())))
+    }
+
+    private var hasRhythm: Bool {
+        rhythmPercent > 0 || !profile.activityWeekDays.isEmpty
+    }
+
+    private var title: String {
+        if pro.isPro { return "Продолжи свою практику" }
+        return hasRhythm ? "Продолжи свой ритм" : "Проверь свою речь"
+    }
+
+    private var subtitle: String {
+        if pro.isPro { return "Вернись к фразам, которые стоит закрепить." }
+        return hasRhythm
+            ? "Одна короткая практика — и ты увидишь следующий шаг."
+            : "Первая проверка покажет, над чем работать дальше."
+    }
+
+    private var actionTitle: String {
+        if pro.isPro { return "Открыть мой ритм" }
+        return hasRhythm ? "Смотреть ритм" : "Открыть Speaker"
+    }
+
+    private var action: () -> Void {
+        if pro.isPro || hasRhythm { return onRhythm }
+        return onSpeaker
+    }
+
+    private var actionIcon: String {
+        if pro.isPro || hasRhythm { return "waveform.path.ecg" }
+        return "mic.fill"
+    }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Image(systemName: pro.isPro ? "crown.fill" : (hasRhythm ? "waveform.path.ecg" : "mic.fill"))
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                            Text(pro.isPro ? "TAIKA+ АКТИВЕН" : "ТВОЙ СЛЕДУЮЩИЙ ШАГ")
+                                .font(PD.FontToken.caption(11, weight: .bold))
+                                .foregroundStyle(PD.ColorToken.textSecondary)
+                                .tracking(1.0)
+                        }
+                        Text(title)
+                            .font(PD.FontToken.title(22, weight: .bold))
+                            .foregroundStyle(PD.ColorToken.text)
+                            .lineLimit(2)
+                        Text(subtitle)
+                            .font(PD.FontToken.caption(13, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .lineLimit(2)
+                    }
+                    Spacer(minLength: 8)
+                    if pro.isPro {
+                        Text("PRO")
+                            .font(PD.FontToken.caption(11, weight: .bold))
+                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                            .tracking(1.0)
+                    } else if hasRhythm {
+                        Text("\(rhythmPercent)%")
+                            .font(PD.FontToken.title(18, weight: .bold))
+                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    Image(systemName: actionIcon)
+                    Text(actionTitle)
+                        .font(PD.FontToken.body(16, weight: .bold))
+                }
+                .foregroundStyle(Color.black.opacity(0.88))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(AnyShapeStyle(TaikaMasteryTokens.greenGradient), in: Capsule())
+
+                HStack(spacing: 8) {
+                    Image(systemName: pro.isPro ? "checkmark.circle" : (hasRhythm ? "waveform" : "sparkles"))
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                    Text(pro.isPro
+                         ? "Курсы, Speaker и игры доступны"
+                         : (hasRhythm ? "Ритм уже формируется" : "Начни с одной короткой проверки"))
+                        .font(PD.FontToken.caption(12, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 214, alignment: .top)
+            .background(
+                AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.10)),
+                in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.34)), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .shadow(color: Color.black.opacity(0.10), radius: 18, y: 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(title)
+        .accessibilityHint(subtitle)
     }
 }
 
