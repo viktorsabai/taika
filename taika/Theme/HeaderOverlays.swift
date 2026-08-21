@@ -1416,6 +1416,7 @@ struct GameParkOverlayView: View {
         switch source {
         case .main: return "Сначала выучи пару фраз"
         case .favorites: return "В избранном пока пусто"
+        case .dictionary: return "Словарь пока пуст"
         }
     }
 
@@ -1425,6 +1426,8 @@ struct GameParkOverlayView: View {
             return "Парк собирает выученные карточки из уроков. Пока их нет — играть не с чем."
         case .favorites:
             return "Добавь слова или фразы в избранное в уроках — здесь появятся режимы для практики."
+        case .dictionary:
+            return "Добавь фразы в личный словарь — здесь появятся режимы для практики."
         }
     }
 
@@ -1432,6 +1435,7 @@ struct GameParkOverlayView: View {
         switch source {
         case .main: return "Открой любой курс и отметь карточки как «запомнил»."
         case .favorites: return "В уроке нажми сердце на фразе."
+        case .dictionary: return "Добавь нужную фразу в личный словарь."
         }
     }
 
@@ -1439,6 +1443,7 @@ struct GameParkOverlayView: View {
         switch source {
         case .main: return "Вернись сюда — режимы откроются сами."
         case .favorites: return "Снова открой консоль из избранного и выбери игру."
+        case .dictionary: return "Вернись сюда — режимы словаря откроются сами."
         }
     }
 
@@ -1446,6 +1451,7 @@ struct GameParkOverlayView: View {
         switch source {
         case .main: return "К курсам"
         case .favorites: return "К курсам"
+        case .dictionary: return "К словарю"
         }
     }
 }

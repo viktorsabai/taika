@@ -1,3 +1,11 @@
+# HeaderOverlays compile blocker — Dictionary GameParkSource switches
+
+| Задача | Статус |
+|---|---|
+| Проверить enum и пять failing switch contexts | Сделано |
+| Добавить Dictionary branches без потери main/favorites semantics | Сделано |
+| Проверить все source switches и push build fix | В работе |
+
 # Final release-readiness audit
 
 | Область | Статус |
