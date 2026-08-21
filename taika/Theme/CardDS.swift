@@ -1030,10 +1030,6 @@ public struct StepCardActionBar: View {
     /// Мини-карточки (избранное): выучено → только залитая галочка, без чипа «запомнил» (иначе ломается нижний ряд).
     public let miniLearnedCheckmarkOnly: Bool
 
-    @State private var favBurstTrigger: Int = 0
-    @State private var learnBurstTrigger: Int = 0
-    @State private var playBurstTrigger: Int = 0
-    @Environment(\.taikaStepActionCaptions) private var showCaptions
 
     public init(
         isFavorite: Bool,
@@ -1065,175 +1061,116 @@ public struct StepCardActionBar: View {
         self.miniLearnedCheckmarkOnly = miniLearnedCheckmarkOnly
     }
 
-    /// Горизонтальный зазор между иконками: на квадратной step-карте ~232pt контента 28pt разносил ряд за край.
-    private static let stepActionHSpacing: CGFloat = 14
-    /// Фиксированная ширина слота «выучил» / chip. Слегка увеличено для баланса с левой парой иконок.
-    private static let stepLearnSlotWidth: CGFloat = 102
-    /// Fixed width for every icon slot so speaker / heart / expand / check align on one grid.
-    private static let stepIconSlotWidth: CGFloat = Theme.IconButton.tapMinCard
-    /// Width of the left icon cluster (2 icon slots + spacing), matched against the learn chip slot.
-    private static let stepLeftClusterWidth: CGFloat = (Theme.IconButton.tapMinCard * 2) + stepActionHSpacing
-
     public var body: some View {
         HStack(spacing: 0) {
-            // left slot
-            Group {
-                if isTip {
-                    StepIconCircleButton(
-                        systemName: "rectangle.expand.vertical",
-                        isActive: false,
-                        caption: showCaptions ? "ещё" : nil,
-                        action: { onExpand?() }
-                    )
-                } else if showsPlayAndFavorite {
-                    ZStack {
-                        StepIconCircleButton(
-                            systemName: "speaker.wave.2.fill",
-                            isActive: false,
-                            playbackActive: isAudioPlaying,
-                            caption: showCaptions ? "слушать" : nil,
-                            action: {
-                                playBurstTrigger &+= 1
-                                onPlay?()
-                            }
-                        )
-                        TaikaStepTapBurst(trigger: playBurstTrigger, systemName: "speaker.wave.2.fill")
-                            .frame(width: 72, height: 56)
-                    }
-                } else {
-                    Color.clear
-                        .frame(width: Theme.IconButton.tapMinCard, height: Theme.IconButton.tapMinCard)
-                }
+            if isTip {
+                actionPanelButton(
+                    systemName: "rectangle.expand.vertical",
+                    title: "ещё",
+                    isActive: false,
+                    action: { onExpand?() }
+                )
+            } else if showsPlayAndFavorite {
+                actionPanelButton(
+                    systemName: "speaker.wave.2.fill",
+                    title: "слушать",
+                    isActive: false,
+                    playbackActive: isAudioPlaying,
+                    action: { onPlay?() }
+                )
+            } else {
+                Color.clear.frame(maxWidth: .infinity, minHeight: 54)
             }
-            .frame(maxWidth: .infinity, alignment: .center)
 
-            // center slot
-            Group {
-                if showsPlayAndFavorite {
-                    ZStack {
-                        StepIconCircleButton(
-                            systemName: isFavorite ? "heart.fill" : "heart",
-                            isActive: isFavorite,
-                            caption: showCaptions ? (isFavorite ? "избранное" : "в избранное") : nil,
-                            action: {
-                                favBurstTrigger &+= 1
-                                onFavorite()
-                            }
-                        )
-                        TaikaStepTapBurst(trigger: favBurstTrigger, systemName: "heart.fill")
-                            .frame(width: 72, height: 56)
-                    }
-                } else {
-                    Color.clear
-                        .frame(width: Theme.IconButton.tapMinCard, height: Theme.IconButton.tapMinCard)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
+            panelDivider()
 
-            // right slot
-            Group {
-                if isTip {
-                    if tipShowsLearnSlot {
-                        Group {
-                            if isLearned {
-                                ZStack {
-                                    AppMiniChip(
-                                        title: "запомнил",
-                                        style: .accent
-                                    ) {
-                                        learnBurstTrigger &+= 1
-                                        if allowLearn { onLearn() }
-                                    }
-                                    TaikaStepTapBurst(trigger: learnBurstTrigger, systemName: "checkmark")
-                                        .frame(width: 100, height: 48)
-                                }
-                            } else {
-                                ZStack {
-                                    StepIconCircleButton(
-                                        systemName: "checkmark",
-                                        isActive: false,
-                                        caption: showCaptions ? "запомнил" : nil,
-                                        action: {
-                                            learnBurstTrigger &+= 1
-                                            if allowLearn { onLearn() }
-                                        }
-                                    )
-                                    TaikaStepTapBurst(trigger: learnBurstTrigger, systemName: "checkmark")
-                                        .frame(width: 72, height: 56)
-                                }
-                            }
-                        }
-                    } else {
-                        StepIconCircleButton(
-                            systemName: "chevron.right",
-                            isActive: false,
-                            caption: showCaptions ? "далее" : nil,
-                            action: { onNext?() }
-                        )
-                    }
-                } else {
-                    Group {
-                        if miniLearnedCheckmarkOnly {
-                            if isLearned {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                                    .frame(minWidth: Theme.IconButton.tapMinCard, minHeight: Theme.IconButton.tapMinCard)
-                                    .accessibilityLabel("Выучено")
-                            } else {
-                                // Как на полноразмерной step-карточке: приглушённая круглая галочка (в мини-избранном allowLearn обычно false).
-                                ZStack {
-                                    StepIconCircleButton(
-                                        systemName: "checkmark",
-                                        isActive: false,
-                                        caption: showCaptions ? "запомнил" : nil,
-                                        action: {
-                                            guard allowLearn else { return }
-                                            learnBurstTrigger &+= 1
-                                            onLearn()
-                                        }
-                                    )
-                                    if allowLearn {
-                                        TaikaStepTapBurst(trigger: learnBurstTrigger, systemName: "checkmark")
-                                            .frame(width: 72, height: 56)
-                                    }
-                                }
-                            }
-                        } else if isLearned {
-                            ZStack {
-                                AppMiniChip(
-                                    title: "запомнил",
-                                    style: .accent
-                                ) {
-                                    learnBurstTrigger &+= 1
-                                    if allowLearn { onLearn() }
-                                }
-                                TaikaStepTapBurst(trigger: learnBurstTrigger, systemName: "checkmark")
-                                    .frame(width: 100, height: 48)
-                            }
-                        } else {
-                            ZStack {
-                                StepIconCircleButton(
-                                    systemName: "checkmark",
-                                    isActive: false,
-                                    caption: showCaptions ? "запомнил" : nil,
-                                    action: {
-                                        learnBurstTrigger &+= 1
-                                        if allowLearn { onLearn() }
-                                    }
-                                )
-                                TaikaStepTapBurst(trigger: learnBurstTrigger, systemName: "checkmark")
-                                    .frame(width: 72, height: 56)
-                            }
-                        }
-                    }
-                }
+            if showsPlayAndFavorite {
+                actionPanelButton(
+                    systemName: isFavorite ? "heart.fill" : "heart",
+                    title: isFavorite ? "избранное" : "в избранное",
+                    isActive: isFavorite,
+                    action: onFavorite
+                )
+            } else {
+                Color.clear.frame(maxWidth: .infinity, minHeight: 54)
             }
-            .frame(maxWidth: .infinity, alignment: .center)
+
+            panelDivider()
+
+            if isTip && !tipShowsLearnSlot {
+                actionPanelButton(
+                    systemName: "chevron.right",
+                    title: "далее",
+                    isActive: false,
+                    action: { onNext?() }
+                )
+            } else if miniLearnedCheckmarkOnly && isLearned {
+                actionPanelButton(
+                    systemName: "checkmark",
+                    title: "выучено",
+                    isActive: true,
+                    isEnabled: false,
+                    action: {}
+                )
+            } else {
+                actionPanelButton(
+                    systemName: "checkmark",
+                    title: isLearned ? "запомнил" : "запомнить",
+                    isActive: isLearned,
+                    isEnabled: allowLearn,
+                    action: onLearn
+                )
+            }
         }
-        .frame(maxWidth: .infinity)
-        .font(.system(size: 16, weight: .semibold))
-        .foregroundStyle(CD.ColorToken.textSecondary)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(PD.ColorToken.card.opacity(0.92))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(PD.ColorToken.stroke.opacity(0.72), lineWidth: 1)
+        )
+        .frame(maxWidth: .infinity, minHeight: 66)
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private func actionPanelButton(
+        systemName: String,
+        title: String,
+        isActive: Bool,
+        isEnabled: Bool = true,
+        playbackActive: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: systemName)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(isActive || playbackActive ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                    .modifier(StepSpeakerWaveSpeakingModifier(systemName: systemName, speaking: playbackActive))
+                    .frame(width: 30, height: 28)
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(isEnabled ? PD.ColorToken.textSecondary : PD.ColorToken.textSecondary.opacity(0.42))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.96, useBouncySpring: false, flashOpacity: 0.04))
+        .disabled(!isEnabled)
+        .accessibilityLabel(title)
+    }
+
+    private func panelDivider() -> some View {
+        Rectangle()
+            .fill(PD.ColorToken.stroke.opacity(0.52))
+            .frame(width: 1, height: 34)
+            .accessibilityHidden(true)
     }
 }
 // MARK: - StepCardBase (shared shell for step cards – layout only, no logic)

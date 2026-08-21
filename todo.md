@@ -2342,3 +2342,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Use one clear `Начать тренировку · N` CTA with selected-card scope | Done — CTA opens native Speaker/Games choice for current saved set |
 | Preserve Dictionary behavior and validate Speaker/Game navigation | Done at source level |
 | Run source checks, commit, and push for device testing | In progress — Xcode/Simulator pending |
+
+
+# StepView — unified card action panel
+
+| Task | Status |
+|---|---|
+| Audit Step card action bar, duplicate animation layers, and tap-state sources | Done |
+| Build one stable bottom action panel for listen/favorite/learned | Done |
+| Normalize selected states and accessibility labels | Done |
+| Remove layout jumps, overlap, and foreign bounce behavior | Done at source level |
+| Run source checks, commit, and push for device testing | In progress — Xcode/Simulator pending |
