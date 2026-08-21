@@ -3142,3 +3142,21 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Replace complex legal phrasing with short survival phrases | [x] |
 | Define safe course promise: calm, respectful and clear interaction | [x] |
 | Validate JSON/progress/Speaker compatibility and push | [x] |
+
+# Curriculum complexity priority audit
+
+| Task | Status |
+|---|---|
+| Extract all course/lesson phrase inventories | [ ] |
+| Score complexity and multi-action phrase risk | [ ] |
+| Rank next courses after police and b_7 | [ ] |
+| Define next course audit scope | [ ] |
+
+# Service cluster simplification
+
+| Task | Status |
+|---|---|
+| Audit course_e_3 against hotel and housing owners | [x] |
+| Replace compound service phrases with short survival phrases | [x] |
+| Preserve course/lesson IDs, refs and progress counts | [x] |
+| Validate JSON and push the service-cluster revision | [x] |
