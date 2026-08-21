@@ -894,21 +894,24 @@ public struct SpeakerDSRoot: View {
                         .padding(.bottom, ToolBar.recommendedBottomInset + 12)
                     } else if phase.isFeedback {
                         if conversationIsPracticeFlow, effectiveShowBreakdown {
-                            // Разбор уже открыт — промежуточный скор не дублируем.
+                            // Полный разбор уже открыт — canvas не дублирует промежуточный результат.
                             Spacer(minLength: 0)
                         } else {
-                            Spacer(minLength: 8)
-                            conversationFocusCard
-                                .padding(.horizontal, padH)
-                                .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                            Spacer(minLength: 8)
-                            conversationIconChrome
-                                .padding(.horizontal, padH)
-                                .padding(.top, 4)
-                            conversationStickyMicBar
-                                .padding(.horizontal, padH)
-                                .padding(.top, 8)
-                                .padding(.bottom, ToolBar.recommendedBottomInset + 12)
+                            VStack(spacing: 10) {
+                                conversationLiveStage
+                                    .padding(.horizontal, padH)
+                                    .transition(.opacity)
+                                conversationWidgetFeedbackCenter
+                                    .padding(.horizontal, padH)
+                                    .transition(.opacity)
+                                conversationIconChrome
+                                    .padding(.horizontal, padH)
+                                conversationStickyMicBar
+                                    .padding(.horizontal, padH)
+                                    .padding(.top, 2)
+                                    .padding(.bottom, ToolBar.recommendedBottomInset + 12)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         }
                     } else if conversationIsRecording || phase == .analyzing {
                         // Live всегда выше «результата»: иначе тренировка из карточки
@@ -921,16 +924,20 @@ public struct SpeakerDSRoot: View {
                         Color.clear
                             .frame(height: ToolBar.recommendedBottomInset + 8)
                     } else if conversationHasResult {
-                        // Активный перевод: одна карточка + компактные действия.
-                        Spacer(minLength: 8)
-                        conversationWidgetResultCenter
-                            .padding(.horizontal, padH)
-                            .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                        Spacer(minLength: 8)
-                        conversationResultActions
-                            .padding(.horizontal, padH)
-                            .padding(.top, 4)
-                            .padding(.bottom, ToolBar.recommendedBottomInset + 12)
+                        // Результат продолжает тот же live canvas: sphere, phrase zone and actions keep their slots.
+                        VStack(spacing: 10) {
+                            conversationLiveStage
+                                .padding(.horizontal, padH)
+                                .transition(.opacity)
+                            conversationWidgetResultCenter
+                                .padding(.horizontal, padH)
+                                .transition(.opacity)
+                            conversationResultActions
+                                .padding(.horizontal, padH)
+                                .padding(.top, 2)
+                                .padding(.bottom, ToolBar.recommendedBottomInset + 12)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     } else if phase == .hint, !taikaHints.isEmpty {
                         // No-input recovery keeps the same sphere and vertical composition;
                         // only the feedback and one next action change.
@@ -1000,8 +1007,8 @@ public struct SpeakerDSRoot: View {
                     .frame(width: 220, height: 220)
 
                 MDVoiceSphere(
-                    symbol: isBusy ? "waveform.path.ecg" : (isRec ? "stop.fill" : "mic.fill"),
-                    accessibilityLabel: isBusy ? "Обработка" : (isRec ? "Стоп" : "Микрофон"),
+                    symbol: phase.isFeedback ? "waveform.path.ecg" : (isBusy ? "waveform.path.ecg" : (isRec ? "stop.fill" : "mic.fill")),
+                    accessibilityLabel: phase.isFeedback ? "Результат анализа" : (isBusy ? "Обработка" : (isRec ? "Стоп" : "Микрофон")),
                     meter: isRec ? recordingMeter : 0
                 ) {
                     let canRecord = external?.conversationCanRecord ?? true
@@ -1045,7 +1052,7 @@ public struct SpeakerDSRoot: View {
             // The state chip is the single status affordance. The old speech/text/translation
             // pipeline duplicated it and made later Speaker screens feel assembled.
         }
-        .frame(maxWidth: .infinity, minHeight: 350, alignment: .center)
+        .frame(maxWidth: .infinity, height: 350, alignment: .center)
         .animation(.spring(response: 0.42, dampingFraction: 0.86), value: phase)
         .animation(.easeInOut(duration: 0.24), value: recordingPartialRU)
     }
@@ -1110,7 +1117,13 @@ public struct SpeakerDSRoot: View {
     }
 
     @ViewBuilder private var conversationLiveHeroText: some View {
-        if phase == .hint {
+        if phase.isFeedback {
+            conversationWidgetPhoneticStack(
+                russian: external?.heardRU?.trimmingCharacters(in: .whitespacesAndNewlines),
+                phonetic: (external?.conversationExpectedTranslitForFeedback ?? external?.heardTranslit ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+                thai: (external?.conversationExpectedThai ?? external?.heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        } else if phase == .hint {
             Text("попробуем ещё раз?")
                 .font(.system(size: 20, weight: .semibold, design: .rounded))
                 .foregroundStyle(PD.ColorToken.textSecondary)
@@ -1706,77 +1719,35 @@ public struct SpeakerDSRoot: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// Компакт после попытки: скор + подсказка. Полный разбор открывается сразу оверлеем.
+    /// Inline feedback continuation: score and one next action stay beneath the same sphere canvas.
     @ViewBuilder private var conversationWidgetFeedbackCenter: some View {
         if case .feedback(let score, let hint) = phase {
             let scoreToShow = external?.displayScore ?? score
             let hintText = (hint ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            let russian = (external?.heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            let thai = (external?.conversationExpectedThai ?? external?.heardThai ?? "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            let translit = (external?.conversationExpectedTranslitForFeedback ?? external?.heardTranslit ?? "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
 
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Результат произношения")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(PD.ColorToken.text)
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Разбор произношения")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                    if !hintText.isEmpty {
+                        Text(hintText)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
+                            .lineLimit(2)
                     }
-                    Spacer(minLength: 0)
-                    SpeakerCountingScore(
-                        value: scoreToShow,
-                        font: .taikaStat(42),
-                        color: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
-                        suffix: "%"
-                    )
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                if !russian.isEmpty || !thai.isEmpty || !translit.isEmpty {
-                    Divider().overlay(Color.white.opacity(0.08))
-                    conversationWidgetPhoneticStack(
-                        russian: russian.isEmpty ? nil : russian,
-                        phonetic: translit,
-                        thai: thai
-                    )
-                }
-
-                if !hintText.isEmpty {
-                    Text(hintText)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.82))
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Button {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    external?.onRequestBreakdown?()
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "waveform.path.ecg")
-                        Text("Разбор слогов")
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .bold))
-                    }
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.text)
-                    .padding(.horizontal, 14)
-                    .frame(maxWidth: .infinity, minHeight: 42)
-                    .background(Capsule(style: .continuous).fill(PD.ColorToken.chip.opacity(0.92)))
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Открыть разбор тонов и слогов")
+                SpeakerCountingScore(
+                    value: scoreToShow,
+                    font: .taikaStat(34),
+                    color: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                    suffix: "%"
+                )
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 54, alignment: .center)
+            .animation(.easeInOut(duration: 0.24), value: scoreToShow)
         }
     }
 

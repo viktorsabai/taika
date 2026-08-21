@@ -2681,7 +2681,17 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Audit idle composition, keyboard trigger, and mode callbacks | [ ] |
-| Define fixed command canvas with onboarding tech sphere | [ ] |
-| Implement compact sphere and lower mode rail | [ ] |
-| Run source checks and push idle redesign | [ ] |
+| Audit idle composition, keyboard trigger, and mode callbacks | [x] |
+| Define fixed command canvas with onboarding tech sphere | [x] |
+| Implement compact sphere and lower mode rail | [x] |
+| Run source checks and push idle redesign | [x] — source validation; device interaction check pending |
+
+
+# Speaker — continuity regression after idle redesign
+
+| Task | Status |
+|---|---|
+| Audit conversation branches and geometry-changing transitions | [ ] |
+| Reuse existing training-style structure for conversation result | [ ] |
+| Remove invented standalone pronunciation card and keep inline breakdown | [ ] |
+| Run source checks and push continuity fix | [ ] |
