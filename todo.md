@@ -3038,3 +3038,13 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Define readable strength/growth hierarchy | [x] — strong side / next focus / maintain |
 | Implement expanded actionable panel | [x] — real skill score/error data |
 | Run checks, commit, push, and provide device handoff | [x] — 6268d81af71717109a5a121ca6594f8dbf3d3eff |
+
+
+# Lessons gradebook simplification
+
+| Task | Status |
+|---|---|
+| Audit nested diagnostic composition | [ ] |
+| Remove inner panel frame and duplicate labels | [ ] |
+| Integrate strength/focus into one inline strip | [ ] |
+| Run checks, commit, push, and provide device handoff | [ ] |

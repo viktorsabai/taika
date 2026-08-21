@@ -1953,49 +1953,32 @@ public struct LSCompletedTrainingHero: View {
 
     @ViewBuilder
     private var gradebookInsightPanel: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("ЧТО ПОДТЯНУТЬ")
-                    .font(.system(size: 11, weight: .bold))
-                    .kerning(0.6)
-                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
-                Spacer(minLength: 0)
-                Text("СИГНАЛЫ КУРСА")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
-            }
-
-            diagnosticSkillRow(
+        HStack(alignment: .top, spacing: 14) {
+            diagnosticSkillColumn(
                 label: "СИЛЬНАЯ СТОРОНА",
                 skill: strongestSkill,
-                fallbackTitle: "Пока собираем данные",
+                fallbackTitle: "Данные собираются",
                 fallbackSubtitle: "Пройди первую тренировку",
                 accent: AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient),
                 icon: "arrow.up.right"
             )
-
-            diagnosticSkillRow(
+            Rectangle()
+                .fill(PD.ColorToken.stroke.opacity(0.5))
+                .frame(width: 1, height: 58)
+            diagnosticSkillColumn(
                 label: weakCount > 0 ? "СЛЕДУЮЩИЙ ФОКУС" : "ПОДДЕРЖАТЬ",
                 skill: growthSkill,
-                fallbackTitle: weakCount > 0 ? "Нужна первая оценка" : "Закрепляй без пауз",
-                fallbackSubtitle: weakCount > 0 ? "Сначала проверь Speaker" : "Повтори материал, чтобы удержать результат",
+                fallbackTitle: weakCount > 0 ? "Нужна оценка" : "Закрепляй без пауз",
+                fallbackSubtitle: weakCount > 0 ? "Сначала проверь Speaker" : "Повтори материал",
                 accent: weakCount > 0 ? AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.84)),
                 icon: weakCount > 0 ? "arrow.down.right" : "checkmark"
             )
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.035))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(PD.ColorToken.stroke.opacity(0.42), lineWidth: 1)
-        )
+        .padding(.top, 2)
     }
 
     @ViewBuilder
-    private func diagnosticSkillRow(
+    private func diagnosticSkillColumn(
         label: String,
         skill: LSReinforcementSkill?,
         fallbackTitle: String,
@@ -2003,50 +1986,40 @@ public struct LSCompletedTrainingHero: View {
         accent: AnyShapeStyle,
         icon: String
     ) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: skill?.icon ?? icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(accent)
-                .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: skill?.icon ?? icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(accent)
                 Text(label)
                     .font(.system(size: 9, weight: .bold))
                     .kerning(0.45)
                     .foregroundStyle(PD.ColorToken.textSecondary)
+                    .lineLimit(1)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
                 Text(skill?.title ?? fallbackTitle)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(PD.ColorToken.text)
                     .lineLimit(1)
-                Text(skill.map { skill in
-                    let scoreText = skill.score.map { String($0) } ?? "—"
-                    return "\(skill.subtitle) · \(scoreText)/100"
-                } ?? fallbackSubtitle)
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if let score = skill?.score {
-                VStack(alignment: .trailing, spacing: 3) {
+                    .minimumScaleFactor(0.82)
+                Spacer(minLength: 0)
+                if let score = skill?.score {
                     Text("\(score)")
-                        .font(Theme.Fonts.metric(20))
+                        .font(Theme.Fonts.metric(18))
                         .foregroundStyle(accent)
                         .monospacedDigit()
-                    Text("SCORE")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
                 }
-            } else {
-                Text("—")
-                    .font(Theme.Fonts.metric(20))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
             }
+            Text(skill.map { skill in
+                let scoreText = skill.score.map { String($0) } ?? "—"
+                return "\(skill.subtitle) · \(scoreText)/100"
+            } ?? fallbackSubtitle)
+                .font(.system(size: 10, weight: .regular))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .lineLimit(1)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
-        .background(Color.white.opacity(0.025), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
