@@ -2304,3 +2304,29 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Keep actions selection-aware and disabled without a valid lesson scope | Done |
 | Remove the `эффективность` label from the score ring while preserving accessibility text | Done |
 | Run source checks, commit, and push the refinement | In progress — Xcode visual validation pending |
+
+
+# Favorites / Dictionary — unified Speaker-aligned redesign
+
+| Task | Status |
+|---|---|
+| Audit current Favorites and Dictionary states, data grouping, and navigation entry points | [ ] |
+| Compare Speaker course-picker interaction model with Favorites needs | [ ] |
+| Define course-grouped Favorites IA: course row → saved-card content → practice | [ ] |
+| Define consistent list/grid presentation behavior for Favorites and Dictionary | [ ] |
+| Prepare a final mobile mockup/spec before implementation | [ ] |
+| Implement unified visual system and native training actions | [ ] |
+| Verify state persistence, mode switching, empty states, and navigation handoffs | [ ] |
+| Commit and push one coherent Favorites redesign | [ ] |
+
+
+# Course completion — reinforcement-first handoff
+
+| Task | Status |
+|---|---|
+| Audit current completion result overlay and all result action callbacks | Done |
+| Make `Начать закрепление` the primary completion action | Done |
+| Group Speaker and Games as secondary tools under `ЗАКРЕПИТЬ РЕЗУЛЬТАТ` | Done |
+| Preserve current course/lesson/error-card scope through the handoff | Done at source level |
+| Move next-course navigation to a secondary bottom action | Done |
+| Run source checks, commit, and push one testing commit | In progress — Xcode/Simulator pending |

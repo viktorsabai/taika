@@ -1085,10 +1085,8 @@ struct StepView: View {
             switch advance {
             case .nextLesson:
                 return "Продолжить курс"
-            case .nextCourse:
-                return "Выбрать следующий курс"
-            case .end:
-                return "Посмотреть курсы"
+            case .nextCourse, .end:
+                return "Начать закрепление"
             }
         }()
 
@@ -1109,10 +1107,8 @@ struct StepView: View {
             case .nextLesson(_, let nextId):
                 let nextTitle = LessonsData.shared.lessonTitle(for: nextId) ?? "следующий урок"
                 return "Следующий урок: «\(nextTitle)»"
-            case .nextCourse:
-                return "Кун Кру советует продолжить маршрут"
-            case .end:
-                return "Кун Кру уже приготовила другие курсы"
+            case .nextCourse, .end:
+                return "Выбери способ, которым хочешь сохранить материал"
             }
         }()
 
@@ -1123,19 +1119,17 @@ struct StepView: View {
             secondaryTitle: "Игра",
             onPrimary: {
                 switch advance {
-                case .end:
-                    withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
-                    scheduleAuthSoftWallIfNeeded()
-                    nav.openCourseCatalog()
                 case .nextLesson:
                     prepareNextLessonAndNavigate()
-                case .nextCourse:
+                case .nextCourse, .end:
+                    GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: lessonsInCourse)
                     withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
                     scheduleAuthSoftWallIfNeeded()
-                    nav.openCourseCatalog()
+                    nav.go(.game(courseId: cid, lessonId: resolvedLessonId, gameType: summaryGameMode.rawValue))
                 }
             },
             onSecondary: {
+                GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: lessonsInCourse)
                 withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
                 scheduleAuthSoftWallIfNeeded()
                 nav.go(.game(courseId: cid, lessonId: resolvedLessonId, gameType: summaryGameMode.rawValue))
@@ -1174,10 +1168,17 @@ struct StepView: View {
                 showGamePaywallSheet = true
             },
             onOpenGame: { mode in
+                GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: lessonsInCourse)
                 withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
                 scheduleAuthSoftWallIfNeeded()
                 nav.go(.game(courseId: cid, lessonId: resolvedLessonId, gameType: mode.rawValue))
             },
+            onContinueLearning: isCourseMoment ? {
+                withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
+                scheduleAuthSoftWallIfNeeded()
+                nav.openCourseCatalog()
+            } : nil,
+            continueLearningTitle: "Выбрать следующий курс",
             primaryCaption: primaryCaption,
             lessonDurationText: lessonDurationTextValue(),
             overallProgressText: overallProgressTextValue(courseId: cid, lessonId: resolvedLessonId)

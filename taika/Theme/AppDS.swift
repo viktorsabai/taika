@@ -2166,6 +2166,9 @@ public struct LessonSummaryOverlay: View {
     /// Штатный callback для locked game; overlay должен остаться в исходном context.
     public var onLockedGame: ((GameModeType) -> Void)?
     public var onOpenGame: ((GameModeType) -> Void)?
+    /// Secondary escape route after course completion; reinforcement remains primary.
+    public var onContinueLearning: (() -> Void)?
+    public var continueLearningTitle: String
     public var primaryCaption: String?
     public var lessonDurationText: String? = nil
     public var overallProgressText: String? = nil
@@ -2199,6 +2202,8 @@ public struct LessonSummaryOverlay: View {
         isProUser: Bool = true,
         onLockedGame: ((GameModeType) -> Void)? = nil,
         onOpenGame: ((GameModeType) -> Void)? = nil,
+        onContinueLearning: (() -> Void)? = nil,
+        continueLearningTitle: String = "Выбрать следующий курс",
         primaryCaption: String? = nil,
         lessonDurationText: String? = nil,
         overallProgressText: String? = nil
@@ -2223,6 +2228,8 @@ public struct LessonSummaryOverlay: View {
         self.isProUser = isProUser
         self.onLockedGame = onLockedGame
         self.onOpenGame = onOpenGame
+        self.onContinueLearning = onContinueLearning
+        self.continueLearningTitle = continueLearningTitle
         self.primaryCaption = primaryCaption
         self.lessonDurationText = lessonDurationText
         self.overallProgressText = overallProgressText
@@ -2633,7 +2640,7 @@ public struct LessonSummaryOverlay: View {
     private func approvedCompletionFooter() -> some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 7) {
-                TaikaSectionLabel(title: "ДАЛЬШЕ")
+                TaikaSectionLabel(title: approvedIsFinalState ? "ЗАКРЕПИТЬ РЕЗУЛЬТАТ" : "ДАЛЬШЕ")
                 Button(action: {
                     runApprovedAction {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -2715,7 +2722,47 @@ public struct LessonSummaryOverlay: View {
                 }
             }
 
-            if showGameReinforce, let onSelectGameMode {
+                            if approvedIsFinalState {
+                    VStack(alignment: .leading, spacing: 7) {
+                        TaikaSectionLabel(title: "ИНСТРУМЕНТЫ ЗАКРЕПЛЕНИЯ")
+                        Button(action: {
+                            runApprovedAction {
+                                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                                onSecondary()
+                            }
+                        }) {
+                            HStack(spacing: 14) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(CD.ColorToken.card.opacity(0.72))
+                                        .frame(width: 40, height: 40)
+                                    Image(systemName: "gamecontroller.fill")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(CD.ColorToken.text)
+                                }
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("Игры")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(CD.ColorToken.text)
+                                    Text("Память и закрепление карточек курса")
+                                        .font(.system(size: 13, weight: .regular))
+                                        .foregroundStyle(CD.ColorToken.textSecondary)
+                                }
+                                Spacer(minLength: 0)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(CD.ColorToken.textSecondary)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+                            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(CD.ColorToken.card.opacity(0.52)))
+                            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.Strokes.strokeSubtle, lineWidth: 1))
+                        }
+                        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
+                    }
+                } else if showGameReinforce, let onSelectGameMode {
+
                 VStack(alignment: .leading, spacing: 7) {
                     TaikaSectionHeaderRow("ИЛИ ИГРА") {
                         Text("откроется сразу")
@@ -2730,11 +2777,24 @@ public struct LessonSummaryOverlay: View {
                 }
             }
 
+            if approvedIsFinalState, let onContinueLearning {
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onContinueLearning()
+                }) {
+                    Text(continueLearningTitle)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                }
+                .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
+            }
+
             Button(action: {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 onClose()
             }) {
-                Text(approvedIsFinalState ? "Вернуться к курсам" : "Остаться в курсе")
+                Text(approvedIsFinalState ? "Остаться в курсе" : "Остаться в курсе")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(CD.ColorToken.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 44)
