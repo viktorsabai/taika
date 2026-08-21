@@ -204,8 +204,8 @@ public struct GameModePickerDS: View {
                         : AnyShapeStyle(
                             LinearGradient(
                                 colors: [
-                                    ThemeManager.shared.currentAccentTintColor,
-                                    ThemeManager.shared.currentAccentTintColor.opacity(0.68)
+                                    Color(red: 1.0, green: 0.42, blue: 0.78),
+                                    Color(red: 0.68, green: 0.42, blue: 1.0).opacity(0.68)
                                 ],
                                 startPoint: .top,
                                 endPoint: .bottom

@@ -2546,3 +2546,26 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Inspect failing rail expression at GameModePickerDS.swift:206 | Done — LinearGradient received a LinearGradient as a Color stop |
 | Replace gradient-in-Color-array with shape-style-compatible fill | Done — Color-only tint stops retained |
 | Run source check and push compile correction | In progress |
+
+
+# Cross-flow synchronization audit
+
+| Audit area | Status |
+|---|---|
+| Map persistence/source-of-truth managers and notifications | Done |
+| Trace Warmup learn/favorite actions before course opening | Done |
+| Trace Course/Lessons/Step progress hydration after Warmup actions | Done |
+| Trace reinforcement/game/error/Speaker scopes and session persistence | Done — scope carriers verified; device validation pending |
+| Trace Favorites/Dictionary course-card synchronization | Done |
+| Classify explicit bugs and latent risks with severity | Done — P0/P1/P2 matrix in audit-sync-report.md |
+| Deliver readiness score and prioritized remediation plan | Done — 7.8/10 before device matrix |
+
+
+# Fix — persistent GameModePicker/CardDS compiler diagnostics
+
+| Task | Status |
+|---|---|
+| Inspect exact current source at GameModePickerDS.swift:206 and CardDS.swift:1174 | Done — current source differed from prior assumed fix |
+| Replace fragile gradient expression with explicit shape-style fill | Done — literal `Color` stops, no manager gradient in array |
+| Replace CardDS ambiguous helper with simplest explicit view expression | Done — `Text(verbatim: title)` removes Text initializer ambiguity |
+| Run source check and push persistent compile fix | In progress |
