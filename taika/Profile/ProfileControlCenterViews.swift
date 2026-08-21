@@ -319,40 +319,6 @@ struct ProfileStatisticsView: View {
     }
 }
 
-private struct ProfileMotionOrb: View {
-    let phase: CGFloat
-    let reduceMotion: Bool
-    let scale: CGFloat
-
-    init(phase: CGFloat, reduceMotion: Bool, scale: CGFloat = 1) {
-        self.phase = phase
-        self.reduceMotion = reduceMotion
-        self.scale = scale
-    }
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(ThemeManager.shared.currentAccentFill)
-                .opacity(0.26)
-                .frame(width: 112, height: 112)
-                .blur(radius: 2)
-                .scaleEffect(reduceMotion ? 1 : 0.94 + phase * 0.08)
-            Circle()
-                .stroke(Color.white.opacity(0.28), lineWidth: 1)
-                .frame(width: 128, height: 128)
-                .rotationEffect(.degrees(reduceMotion ? 0 : Double(phase) * 360))
-            Circle()
-                .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.28), lineWidth: 1)
-                .frame(width: 156, height: 156)
-                .rotationEffect(.degrees(reduceMotion ? 0 : -Double(phase) * 240))
-        }
-        .scaleEffect(scale)
-        .compositingGroup()
-        .opacity(0.9)
-    }
-}
-
 struct ProfileSupportView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var theme: ThemeManager
@@ -510,137 +476,6 @@ struct ProfileGlassRow: View {
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.62), lineWidth: 1))
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct ProfileValueItem: Identifiable {
-    let id: String
-    let title: String
-    let detail: String
-    let systemImage: String
-    let eyebrow: String
-}
-
-private struct ProfileValueCarouselCard: View {
-    let item: ProfileValueItem
-
-    private var accentTreatment: CardDS.AccentTreatment {
-        .taikaValues(
-            fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
-            glow: ThemeManager.shared.currentAccentTintColor
-        )
-    }
-
-    var body: some View {
-        CourseLessonCard(
-            title: item.title,
-            subtitle: item.detail,
-            courseCategory: item.eyebrow,
-            isPro: false,
-            tags: [],
-            brandText: "taikA",
-            size: CGSize(width: CardDS.Metrics.courseWidth, height: CardDS.Metrics.courseHeight),
-            sectionChrome: .none,
-            chromeStyle: .cards,
-            accentTreatment: accentTreatment,
-            primaryCTA: .next,
-            scale: .xs,
-            showsPrimaryAction: false,
-            showFavorite: false,
-            showConsole: false,
-            onPrimaryTap: nil,
-            showsInlineProgress: false
-        )
-    }
-}
-
-struct ProfileValuesView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @EnvironmentObject private var theme: ThemeManager
-    @State private var centeredValueIndex: Int = 0
-
-    private let values: [ProfileValueItem] = [
-        ProfileValueItem(id: "courses", title: "Сценарные курсы", detail: "Нужные фразы для жизни в Таиланде — в правильном контексте, а не случайный набор слов.", systemImage: "book.closed", eyebrow: "01  ·  TAika system"),
-        ProfileValueItem(id: "speaker", title: "Speaker", detail: "Переводи свою мысль, слышь тайскую речь и спокойно тренируй произношение, тон и голос.", systemImage: "waveform", eyebrow: "02  ·  VOICE PRACTICE"),
-        ProfileValueItem(id: "games", title: "Игровая практика", detail: "Закрепляй слова короткими действиями, чтобы знание переходило в реакцию в реальной жизни.", systemImage: "gamecontroller", eyebrow: "03  ·  ACTIVE MEMORY"),
-        ProfileValueItem(id: "rhythm", title: "Личный ритм", detail: "Taika собирает твою практику и подсказывает следующий полезный шаг без рейтингов и давления.", systemImage: "circle.dotted.and.circle", eyebrow: "04  ·  YOUR ROUTE")
-    ]
-
-    private var valuesIntro: some View {
-        VStack(spacing: 8) {
-            ProfileMotionOrb(phase: 0.35, reduceMotion: reduceMotion, scale: 0.36)
-                .frame(height: 74)
-                .opacity(0.78)
-            Text("Taika — твой личный Kun Kru")
-                .font(PD.FontToken.title(25, weight: .bold))
-                .foregroundStyle(PD.ColorToken.text)
-                .multilineTextAlignment(.center)
-            Text("Платформа, которая помогает говорить, понимать и действовать увереннее в Таиланде.")
-                .font(PD.FontToken.caption(14))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 10)
-    }
-
-    private var valuesCarousel: some View {
-        CDLessonCarousel(
-            data: values,
-            cardWidth: CDLessonCarouselCanonical.cardWidth,
-            cardHeight: CDLessonCarouselCanonical.courseLessonCardHeight,
-            spacing: CDLessonCarouselCanonical.spacing,
-            initialIndex: 0,
-            onTapScrollToCenter: true,
-            loop: false,
-            onCenterIndexChange: { index in
-                centeredValueIndex = index
-            }
-        ) { item in
-            ProfileValueCarouselCard(item: item)
-        }
-        .frame(height: CDLessonCarouselCanonical.courseLessonCardHeight + 12)
-    }
-
-    private var valuesProgress: some View {
-        HStack(spacing: 6) {
-            ForEach(values.indices, id: \.self) { index in
-                Capsule()
-                    .fill(
-                        index == centeredValueIndex
-                        ? AnyShapeStyle(theme.currentAccentFill)
-                        : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.28))
-                    )
-                    .frame(width: index == centeredValueIndex ? 18 : 5, height: 5)
-            }
-        }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: centeredValueIndex)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Карточка \(centeredValueIndex + 1) из \(values.count)")
-        .padding(.top, 2)
-        .padding(.bottom, 4)
-    }
-
-    var body: some View {
-        NavigationStack {
-            ProfileGlassBackdrop {
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 14) {
-                        valuesIntro
-                        valuesCarousel
-                        valuesProgress
-                    }
-                    .padding(.horizontal, PD.Spacing.screen)
-                    .padding(.top, 12)
-                    .padding(.bottom, 36)
-                }
-            }
-            .navigationTitle("Как устроена Taika")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Готово") { dismiss() } } }
-        }
     }
 }
 
@@ -926,7 +761,6 @@ struct ProfileRootContent: View {
     let onRestore: () -> Void
     let onTaikaPlus: () -> Void
     let onRhythm: () -> Void
-    let onValues: () -> Void
     let onSupport: () -> Void
     let onLegal: () -> Void
     let onReset: () -> Void
@@ -934,7 +768,14 @@ struct ProfileRootContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            rootSectionLabel("АККАУНТ")
+            rootSectionLabel("ДОСТУП")
+            ProfileTaikaPlusCard(pro: pro, restoreInFlight: restoreInFlight, onTap: onTaikaPlus, onRestore: onRestore)
+                .environmentObject(theme)
+
+            rootSectionLabel("МОЙ ПРОФИЛЬ")
+            ProfileAppRow(title: "Твой ритм", subtitle: "Прогресс, активность и следующий шаг", systemImage: "waveform.path.ecg", action: onRhythm)
+                .environmentObject(theme)
+
             ProfileAccountCard(
                 isLoggedIn: auth.isLoggedIn,
                 displayName: auth.displayName,
@@ -948,34 +789,29 @@ struct ProfileRootContent: View {
             )
             .environmentObject(theme)
 
-            rootSectionLabel("ДОСТУП")
-            ProfileTaikaPlusCard(pro: pro, restoreInFlight: restoreInFlight, onTap: onTaikaPlus, onRestore: onRestore)
-                .environmentObject(theme)
-
-            ProfileGlassRow(title: "Твой ритм", subtitle: "Прогресс, активность и следующий шаг", systemImage: "waveform.path.ecg", trailing: "chevron.right", action: onRhythm)
-                .environmentObject(theme)
-
-            ProfileGlassRow(title: "Как устроена Taika", subtitle: "Методика, подход и ключевые принципы", systemImage: "sparkles", trailing: "chevron.right", action: onValues)
-                .environmentObject(theme)
-
-            ProfileGlassRow(title: "Поддержка и обратная связь", subtitle: "Поможем и учтём твои пожелания", systemImage: "questionmark.bubble", trailing: "chevron.right", action: onSupport)
-                .environmentObject(theme)
-
-            rootSectionLabel("О ПРИЛОЖЕНИИ")
+            rootSectionLabel("СЕРВИС")
             VStack(spacing: 0) {
-                ProfileAppRow(title: "Что нового", subtitle: "Версия \(appVersionLabel)", systemImage: "info.circle", action: {})
+                ProfileAppRow(title: "Поддержка и обратная связь", subtitle: "Помощь, вопросы и предложения", systemImage: "questionmark.bubble", action: onSupport)
                 Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
                 ProfileAppRow(title: "Правовые документы", subtitle: "Политика и условия использования", systemImage: "doc.on.doc", action: onLegal)
-                #if DEBUG
                 Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
+                ProfileAppRow(title: "Что нового", subtitle: "Версия \(appVersionLabel)", systemImage: "info.circle", action: {})
+            }
+            .padding(.horizontal, 16)
+            .background(PD.ColorToken.card.opacity(0.30), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.54), lineWidth: 1))
+
+            #if DEBUG
+            rootSectionLabel("СИСТЕМА")
+            VStack(spacing: 0) {
                 ProfileAppRow(title: "Сбросить прогресс", subtitle: "Только локальные данные", systemImage: "trash", action: onReset)
                 Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
                 ProfileAppRow(title: "Отладка", subtitle: "Только для Debug-сборки", systemImage: "wrench.and.screwdriver", action: onDebug)
-                #endif
             }
             .padding(.horizontal, 16)
-            .background(PD.ColorToken.card.opacity(0.34), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .background(PD.ColorToken.card.opacity(0.30), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.54), lineWidth: 1))
+            #endif
         }
     }
 
@@ -1222,7 +1058,7 @@ private struct ProfileAppRow: View {
             HStack(spacing: 14) {
                 Image(systemName: systemImage)
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(PD.ColorToken.accent)
+                    .foregroundStyle(PD.ColorToken.textSecondary)
                     .frame(width: 26)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)

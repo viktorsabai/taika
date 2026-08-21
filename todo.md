@@ -2389,3 +2389,16 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Add one animated primary score, reference graph, and practical teaching tips | Done |
 | Remove redundant result copy and ambiguous carousel actions | Done — controls now have concise labels |
 | Run source regression checks and push the final Speaker fix | Ready — source sweep clean; Xcode/Simulator pending |
+
+
+# Profile — Taika control center redesign
+
+| Task | Status |
+|---|---|
+| Audit current Profile hero, progress, settings groups, and sheet routes | Done |
+| Build one primary Taika+ hero block without competing menu cards | Done — Taika+ is first content block under the page title |
+| Add compact progress/status block beneath the hero | Done — «Твой ритм» is the first profile action row |
+| Group account, support, app, legal, reset, and debug into a clean service list | Done |
+| Remove «Как устроена Taika» from the main Profile flow | Done — route and dead helpers removed |
+| Preserve existing actions and bottom-sheet navigation | Done — statistics/support/legal use compact detents |
+| Run source checks and push one Profile redesign commit | In progress — Xcode/Simulator pending |

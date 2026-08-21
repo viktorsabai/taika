@@ -57,7 +57,6 @@ struct ProfileView: View {
     @State private var showResetAllConfirm = false
     @State private var viewReloadToken = UUID()
     @State private var showDebugSheet = false
-    @State private var showValues = false
     @State private var showProSheet = false
     @State private var showStatistics = false
     @State private var showSupport = false
@@ -178,10 +177,6 @@ struct ProfileView: View {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showStatistics = true
                         },
-                        onValues: {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            showValues = true
-                        },
                         onSupport: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showSupport = true
@@ -237,21 +232,23 @@ struct ProfileView: View {
             ProfileStatisticsView()
                 .environmentObject(theme)
                 .environmentObject(nav)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSupport) {
             ProfileSupportView()
                 .environmentObject(theme)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showLegal) {
             ProfileLegalView()
                 .environmentObject(theme)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showDebugSheet) {
             ProfileDebugSheet()
-                .environmentObject(theme)
-        }
-        .fullScreenCover(isPresented: $showValues) {
-            ProfileValuesView()
                 .environmentObject(theme)
         }
         .onAppear {
