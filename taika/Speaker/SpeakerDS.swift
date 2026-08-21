@@ -1045,7 +1045,9 @@ public struct SpeakerDSRoot: View {
             // The state chip is the single status affordance. The old speech/text/translation
             // pipeline duplicated it and made later Speaker screens feel assembled.
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, minHeight: 350, alignment: .center)
+        .animation(.spring(response: 0.42, dampingFraction: 0.86), value: phase)
+        .animation(.easeInOut(duration: 0.24), value: recordingPartialRU)
     }
 
     @ViewBuilder private var conversationLiveStatusChip: some View {
@@ -1070,9 +1072,9 @@ public struct SpeakerDSRoot: View {
         HStack(spacing: 8) {
             if isRec {
                 Circle()
-                    .fill(Color.red)
+                    .fill(ThemeManager.shared.currentAccentTintColor)
                     .frame(width: 7, height: 7)
-                    .shadow(color: Color.red.opacity(0.65), radius: 4)
+                    .shadow(color: ThemeManager.shared.currentAccentTintColor.opacity(0.65), radius: 4)
                     .accessibilityHidden(true)
             }
             Text(label.uppercased())
@@ -1080,19 +1082,7 @@ public struct SpeakerDSRoot: View {
                 .tracking(1.4)
                 .foregroundStyle(labelStyle)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(
-            Capsule(style: .continuous)
-                .fill(ThemeManager.shared.currentAccentTintColor.opacity(isRec ? 0.22 : 0.14))
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(
-                            ThemeManager.shared.currentAccentFill.opacity(isRec ? 0.55 : 0.28),
-                            lineWidth: 1
-                        )
-                )
-        )
+        .padding(.top, 2)
         .accessibilityLabel(isRec ? "Идёт запись, \(label)" : label)
     }
 
@@ -1634,7 +1624,6 @@ public struct SpeakerDSRoot: View {
         let heard = (external?.heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let editTrimmed = conversationEditRU.trimmingCharacters(in: .whitespacesAndNewlines)
         let canRetranslate = !editTrimmed.isEmpty && editTrimmed != heard
-        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
 
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 8) {
@@ -1688,7 +1677,6 @@ public struct SpeakerDSRoot: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Surfaces.blackGlass(shape))
         .onAppear {
             if conversationEditRU.isEmpty || conversationEditRU == heard || !conversationEditFocused {
                 conversationEditRU = heard
@@ -1789,7 +1777,6 @@ public struct SpeakerDSRoot: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.Surfaces.blackGlass(shape))
         }
     }
 
@@ -2248,9 +2235,7 @@ public struct SpeakerDSRoot: View {
             .background(
                 Capsule(style: .continuous)
                     .fill(
-                        isRec
-                        ? AnyShapeStyle(Color.red.opacity(0.92))
-                        : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                        AnyShapeStyle(ThemeManager.shared.currentAccentFill)
                     )
             )
             .opacity(isBusy ? 0.55 : 1)
@@ -2309,9 +2294,9 @@ public struct SpeakerDSRoot: View {
                         .frame(width: size + 22, height: size + 22)
                 }
                 Circle()
-                    .fill(recording ? AnyShapeStyle(Color.red.opacity(0.92)) : AnyShapeStyle(accent))
+                    .fill(AnyShapeStyle(accent))
                     .frame(width: size, height: size)
-                    .shadow(color: (recording ? Color.red : accentColor).opacity(0.4), radius: 14, y: 5)
+                    .shadow(color: accentColor.opacity(0.4), radius: 14, y: 5)
                 Image(systemName: symbol)
                     .font(.system(size: size * 0.30, weight: .bold))
                     .foregroundColor(recording ? .white : .black)
@@ -4316,9 +4301,9 @@ public struct SpeakerDSRoot: View {
                 if showRecordingInPlace {
                     HStack(spacing: 8) {
                         Circle()
-                            .fill(Color.red)
+                            .fill(ThemeManager.shared.currentAccentTintColor)
                             .frame(width: 7, height: 7)
-                            .shadow(color: Color.red.opacity(0.6), radius: 4)
+                            .shadow(color: ThemeManager.shared.currentAccentTintColor.opacity(0.6), radius: 4)
                         Text("Запись")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(PD.ColorToken.text)
@@ -4329,10 +4314,10 @@ public struct SpeakerDSRoot: View {
                     .padding(.vertical, 5)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(Color.red.opacity(0.12))
+                            .fill(ThemeManager.shared.currentAccentTintColor.opacity(0.14))
                             .overlay(
                                 Capsule(style: .continuous)
-                                    .stroke(Color.red.opacity(0.35), lineWidth: 1)
+                                    .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.38), lineWidth: 1)
                             )
                     )
                 }
@@ -4377,8 +4362,12 @@ public struct SpeakerDSRoot: View {
                                             .foregroundStyle(PD.ColorToken.text)
                                             .multilineTextAlignment(.trailing)
                                         HStack(spacing: 6) {
-                                            if textScore > 0 { resultChip(label: "текст \(textScore)%") }
-                                            if let toneScore { resultChip(label: "тоны \(toneScore)%") }
+                                            if textScore > 0 {
+                                                breakdownMetricLabel(title: "текст", value: textScore)
+                                            }
+                                            if let toneScore {
+                                                breakdownMetricLabel(title: "тоны", value: toneScore)
+                                            }
                                         }
                                     }
                                 }
@@ -4759,20 +4748,15 @@ public struct SpeakerDSRoot: View {
     }
 
     @ViewBuilder
-    private func resultChip(label: String) -> some View {
-        Text(label)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(PD.ColorToken.textSecondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(PD.ColorToken.chip.opacity(0.62))
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(PD.ColorToken.stroke.opacity(0.72), lineWidth: 1)
-            )
+    private func breakdownMetricLabel(title: String, value: Int) -> some View {
+        HStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+            Text("\(value)%")
+                .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+        }
     }
 
     /// Два графика на всю фразу: эталон и пользователь. Ось X — подписи слогов, чтобы было видно, где ошибка.

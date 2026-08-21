@@ -2640,7 +2640,17 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Audit Profile hero, Your Rhythm, Account, and access-state components | [ ] |
-| Separate Your Rhythm and Account into clean independent rows | [ ] |
-| Reuse canonical completed-card gradient and replace inactive red/pink with locks | [ ] |
-| Validate Profile states and push visual logic fix | [ ] |
+| Audit Profile hero, Your Rhythm, Account, and access-state components | [x] |
+| Separate Your Rhythm and Account into clean independent rows | [x] |
+| Reuse canonical completed-card gradient and replace inactive red/pink with locks | [x] |
+| Validate Profile states and push visual logic fix | [x] — source validation; device state check pending |
+
+
+# Speaker — instant translation coherent analysis canvas
+
+| Task | Status |
+|---|---|
+| Audit idle, recording, analyzing, result states and current result/panel components | [ ] |
+| Define fixed canvas zones and one canonical result hierarchy | [ ] |
+| Replace jumping orb and legacy framed/chip result treatment | [ ] |
+| Run source checks, preserve callbacks/limits, and push redesign | [ ] |
