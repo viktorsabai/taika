@@ -349,6 +349,11 @@ struct CourseView: View {
             let courseCompleted = total > 0 && done >= total
             let courseProgress = lessonsManager.coursePercent(for: c.id)
             let canonCourseId = ProgressManager.shared.canonicalize(c.id)
+            let courseFavoriteKey = "course:\(canonCourseId)".lowercased()
+            let isFavorite = favs.items.contains { item in
+                let rawId = item.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                return rawId == courseFavoriteKey || rawId == canonCourseId.lowercased()
+            }
             let pronunciationPercent: Int? = pronunciation.heard[canonCourseId]
             let pronunciationAdvancedPercent: Int? = pro.isPro ? pronunciation.advanced[canonCourseId] : nil
             let reinforcementMetrics = ReinforcementStore.shared.metrics(courseId: c.id)
@@ -401,8 +406,10 @@ struct CourseView: View {
                 homeworkDone: done,
                 isActive: false,
                 onTap: { handleTapCourse(c, persistCarousel: persistCarousel) },
-                isFavorite: false,
-                onToggleFavorite: nil,
+                isFavorite: isFavorite,
+                onToggleFavorite: {
+                    FavoriteManager.shared.toggle(item: c)
+                },
                 onTapConsole: isTheoryBonus ? nil : {
                     let cards = CourseManager.shared.cardsForGame(courseId: c.id)
                     guard !cards.isEmpty else {

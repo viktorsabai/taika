@@ -2526,3 +2526,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Show compact `Speaker · N` chip only when a real score exists | Done — course+lesson average from persisted attempts |
 | Keep error chip and score chip on one row without overlap | Done — compact chips share the title row |
 | Run source check and push lesson-status fix | In progress |
+
+
+# Fix — completed course favorite toggle
+
+| Task | Status |
+|---|---|
+| Trace completed-card heart callback and favorite state source | Done — mapping forced false/nil for production cards |
+| Repair callback wiring for completed course cards | Done — `FavoriteManager.shared.toggle(item: c)` |
+| Persist favorite course and publish immediate filled-heart state | Done — reads `favs.items`, manager publishes changes |
+| Verify course appears in Favorites after toggle | Done by source trace — canonical `course:<id>` favoritable path |
+| Run source check and push favorite-toggle fix | In progress |
