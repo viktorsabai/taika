@@ -1133,9 +1133,9 @@ public struct StepCardActionBar: View {
         isActive: Bool,
         isEnabled: Bool = true,
         action: @escaping () -> Void
-    ) -> AnyView {
-        AnyView(
-            Button(action: action) {
+    ) -> some View {
+        Button(action: action) {
+            AnyView(
                 HStack(spacing: 10) {
                 Image(systemName: systemName)
                     .font(.system(size: 14, weight: .bold))
@@ -1166,12 +1166,12 @@ public struct StepCardActionBar: View {
                     .fill(ThemeManager.shared.currentAccentFill.opacity(isEnabled ? 0.92 : 0.22))
                     .frame(width: 3)
             }
-            .contentShape(Rectangle())
+                .contentShape(Rectangle())
+            )
         }
         .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.96, useBouncySpring: false, flashOpacity: 0.05))
         .disabled(!isEnabled)
-            .accessibilityLabel(Text(title))
-        )
+        .accessibilityLabel(Text(title))
     }
 
     private func quietActionButton(
@@ -1179,9 +1179,9 @@ public struct StepCardActionBar: View {
         title: String,
         isActive: Bool,
         action: @escaping () -> Void
-    ) -> AnyView {
-        AnyView(
-            Button(action: action) {
+    ) -> some View {
+        Button(action: action) {
+            AnyView(
                 HStack(spacing: 6) {
                 Image(systemName: systemName)
                     .font(.system(size: 14, weight: .semibold))
@@ -1193,11 +1193,11 @@ public struct StepCardActionBar: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
             }
-            .contentShape(Rectangle())
+                .contentShape(Rectangle())
+            )
         }
         .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.94, useBouncySpring: false, flashOpacity: 0.03))
-            .accessibilityLabel(Text(title))
-        )
+        .accessibilityLabel(Text(title))
     }
 }
 // MARK: - StepCardBase (shared shell for step cards – layout only, no logic)

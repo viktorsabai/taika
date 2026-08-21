@@ -35,7 +35,10 @@ struct DictionarySoftActionLabel: View {
             RoundedRectangle(cornerRadius: 2, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [ThemeManager.shared.currentAccentTintColor, ThemeManager.shared.currentAccentFill],
+                        colors: [
+                            ThemeManager.shared.currentAccentTintColor.opacity(0.68),
+                            ThemeManager.shared.currentAccentTintColor
+                        ],
                         startPoint: .top,
                         endPoint: .bottom
                     )

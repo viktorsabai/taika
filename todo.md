@@ -2494,3 +2494,13 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Add guided recovery state when daily attempts are exhausted | Done — Instant Translation + Taika+ actions |
 | Preserve card navigation, playback, recording-disabled, and session scope semantics | Done — callbacks preserved; persisted quota passed reactively |
 | Run source check and push Speaker refinement | In progress |
+
+
+# Fix — Dictionary gradient and CardDS action builder compile errors
+
+| Task | Status |
+|---|---|
+| Inspect DictionaryQuickDrawer gradient array and CardDS action helper contract | Done |
+| Correct `LinearGradient`/`Color` type mismatch in Dictionary | Done — gradient now receives only Color stops |
+| Replace ambiguous CardDS AnyView wrapper with a compile-safe explicit view contract | Done — outer AnyView removed; label remains explicitly type-erased |
+| Run source check and push compile-fix commit | In progress |
