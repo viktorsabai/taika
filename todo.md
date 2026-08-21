@@ -2660,8 +2660,18 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Audit gradebook metrics, lesson rows, system alert, and GameModePicker routing | [ ] |
-| Remove redundant top counters and retain one strong overall course effectiveness visualization | [ ] |
-| Add compact lesson-level reinforcement, error, and Speaker metadata affordances | [ ] |
-| Remove duplicate system-message and in-app GameModePicker action | [ ] |
-| Run source checks and push final Lessons/Course pass | [ ] |
+| Audit gradebook metrics, lesson rows, system alert, and GameModePicker routing | [x] |
+| Remove redundant top counters and retain one strong overall course effectiveness visualization | [x] |
+| Add compact lesson-level reinforcement, error, and Speaker metadata affordances | [x] |
+| Remove duplicate system-message and in-app GameModePicker action | [x] |
+| Run source checks and push final Lessons/Course pass | [x] — source validation; device matrix pending |
+
+
+# Final Profile closure — demo hero carousel
+
+| Task | Status |
+|---|---|
+| Audit existing Taika+ hero, rhythm preview, and Profile root composition | [ ] |
+| Move Your Rhythm into an auto-rotating demo-preview carousel with Taika+ | [ ] |
+| Keep Account as one explicit standalone profile row | [ ] |
+| Validate carousel taps, timer lifecycle, and push final Profile closure | [ ] |

@@ -768,16 +768,17 @@ struct ProfileRootContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            // Taika+ is the only hero surface on Profile. Everything below is a continuous control list.
-            ProfileTaikaPlusCard(pro: pro, restoreInFlight: restoreInFlight, onTap: onTaikaPlus, onRestore: onRestore)
-                .environmentObject(theme)
+            ProfileHeroCarousel(
+                pro: pro,
+                restoreInFlight: restoreInFlight,
+                onTaikaPlus: onTaikaPlus,
+                onRestore: onRestore,
+                onRhythm: onRhythm
+            )
+            .environmentObject(theme)
 
-            rootSectionLabel("МОЙ ПРОФИЛЬ")
-            VStack(spacing: 0) {
-                ProfileAppRow(title: "Твой ритм", subtitle: "Прогресс, активность и следующий шаг", systemImage: "waveform.path.ecg", action: onRhythm)
-                    .environmentObject(theme)
-                Divider().overlay(PD.ColorToken.stroke.opacity(0.36))
-                ProfileAccountCard(
+            rootSectionLabel("АККАУНТ")
+            ProfileAccountCard(
                     isLoggedIn: auth.isLoggedIn,
                     displayName: auth.displayName,
                     isLoading: authInProgress,
@@ -787,9 +788,8 @@ struct ProfileRootContent: View {
                         try? auth.signOut()
                         ProManager.shared.reset()
                     }
-                )
-                .environmentObject(theme)
-            }
+            )
+            .environmentObject(theme)
 
             rootSectionLabel("СЕРВИС")
             VStack(spacing: 0) {
@@ -842,6 +842,135 @@ private struct ProfileBuildCard: View {
             Spacer(minLength: 0)
         }
         .padding(.vertical, 6)
+    }
+}
+
+private struct ProfileHeroCarousel: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject private var theme: ThemeManager
+    @ObservedObject var pro: ProManager
+    let restoreInFlight: Bool
+    let onTaikaPlus: () -> Void
+    let onRestore: () -> Void
+    let onRhythm: () -> Void
+
+    @State private var selectedSlide = 0
+    @State private var rhythmPhase: CGFloat = 0
+    private let slideTimer = Timer.publish(every: 5.5, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                if selectedSlide == 0 {
+                    ProfileTaikaPlusCard(
+                        pro: pro,
+                        restoreInFlight: restoreInFlight,
+                        onTap: onTaikaPlus,
+                        onRestore: onRestore
+                    )
+                    .environmentObject(theme)
+                    .transition(.asymmetric(insertion: .opacity, removal: .opacity))
+                } else {
+                    ProfileRhythmPreviewCard(
+                        profile: ProfileManager.shared,
+                        phase: rhythmPhase,
+                        reduceMotion: reduceMotion,
+                        onTap: onRhythm
+                    )
+                    .environmentObject(theme)
+                    .transition(.asymmetric(insertion: .opacity, removal: .opacity))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .animation(.easeInOut(duration: 0.38), value: selectedSlide)
+
+            HStack(spacing: 6) {
+                ForEach(0..<2, id: \.self) { index in
+                    Capsule(style: .continuous)
+                        .fill(index == selectedSlide ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.72)))
+                        .frame(width: index == selectedSlide ? 22 : 7, height: 5)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(selectedSlide == 0 ? "Слайд Taika+" : "Слайд Твой ритм")
+        }
+        .onReceive(slideTimer) { _ in
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 0.38)) {
+                selectedSlide = (selectedSlide + 1) % 2
+            }
+        }
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 5).repeatForever(autoreverses: true)) {
+                rhythmPhase = 1
+            }
+        }
+    }
+}
+
+private struct ProfileRhythmPreviewCard: View {
+    @EnvironmentObject private var theme: ThemeManager
+    @ObservedObject var profile: ProfileManager
+    let phase: CGFloat
+    let reduceMotion: Bool
+    let onTap: () -> Void
+
+    private var percent: Int {
+        guard !profile.activityWeekDays.isEmpty else { return 0 }
+        let total = profile.activityWeekDays.reduce(0.0) { $0 + $1.intensity01 }
+        return min(100, max(0, Int((total / Double(profile.activityWeekDays.count) * 100).rounded())))
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 16) {
+                ProfileRhythmRing(
+                    percent: percent,
+                    phase: phase,
+                    reduceMotion: reduceMotion,
+                    accent: AnyShapeStyle(theme.currentAccentFill)
+                )
+                .frame(width: 112, height: 112)
+
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack(spacing: 7) {
+                        Image(systemName: "waveform.path.ecg")
+                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                        Text("Твой ритм")
+                            .font(PD.FontToken.title(20, weight: .bold))
+                            .foregroundStyle(PD.ColorToken.text)
+                    }
+                    Text("Прогресс, активность и следующий шаг")
+                        .font(PD.FontToken.caption(13, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(2)
+                    Text("Смотреть детали")
+                        .font(PD.FontToken.caption(12, weight: .semibold))
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 190, alignment: .leading)
+            .background(
+                LinearGradient(
+                    colors: [
+                        PD.ColorToken.card.opacity(0.82),
+                        TaikaMasteryTokens.green.opacity(0.12)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(TaikaMasteryTokens.greenGradient.opacity(0.42), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Открыть Твой ритм")
     }
 }
 
