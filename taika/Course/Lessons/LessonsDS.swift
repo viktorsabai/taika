@@ -2099,6 +2099,33 @@ public struct LSCompletedLessonList: View {
         self.showFocusAction = showFocusAction
         self.sectionTitle = sectionTitle
     }
+
+    private func lessonMetaLine(item: LS.Item, errorFill: AnyShapeStyle, accentFill: AnyShapeStyle) -> some View {
+        HStack(spacing: 7) {
+            let reinforcementLabel = item.reinforcementSessionCount == 0 && item.speakerScore == nil
+                ? "не закреплён"
+                : (item.errorCardCount > 0 ? "ошибки \(item.errorCardCount)" : "без ошибок")
+            Text(reinforcementLabel)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(item.errorCardCount > 0 ? errorFill : AnyShapeStyle(PD.ColorToken.textSecondary))
+                .lineLimit(1)
+
+            if let speakerScore = item.speakerScore {
+                Text("·")
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.45))
+                HStack(spacing: 3) {
+                    Image(systemName: "waveform")
+                        .font(.system(size: 8, weight: .bold))
+                    Text("Speaker \(speakerScore)")
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                }
+                .foregroundStyle(accentFill)
+            }
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.78)
+    }
+
     @ViewBuilder
     public var body: some View {
         if isCompletedPresentation {

@@ -2691,7 +2691,16 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Audit conversation branches and geometry-changing transitions | [ ] |
-| Reuse existing training-style structure for conversation result | [ ] |
-| Remove invented standalone pronunciation card and keep inline breakdown | [ ] |
-| Run source checks and push continuity fix | [ ] |
+| Audit conversation branches and geometry-changing transitions | [x] |
+| Reuse existing training-style structure for conversation result | [x] |
+| Remove invented standalone pronunciation card and keep inline breakdown | [x] |
+| Run source checks and push continuity fix | [x] — source validation; device phases pending |
+
+
+# Fix — LessonsDS missing lessonMetaLine helper
+
+| Task | Status |
+|---|---|
+| Inspect both lesson row call sites and nearby helpers | [ ] |
+| Restore one shared compile-safe lessonMetaLine implementation | [ ] |
+| Run source checks and push helper fix | [ ] |
