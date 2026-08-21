@@ -2899,7 +2899,18 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Trace current Voice/Text state and visible CTA composition | [ ] |
-| Ensure Voice shows only mic and Text shows only composer | [ ] |
-| Add fast icon/content transition between modes | [ ] |
+| Trace current Voice/Text state and visible CTA composition | [x] |
+| Ensure Voice shows only mic and Text shows only composer | [x] |
+| Add fast icon/content transition between modes | [x] — spring/opacity/scale switch with Voice return control |
+| Run checks, commit, push, and provide device handoff | [x] — 842210939eb20b2d13f2ef5e49849cfbf0e4acfa |
+
+
+# Speaker pronunciation result completion
+
+| Task | Status |
+|---|---|
+| Trace the actual on-device result branch | [ ] |
+| Route pronunciation results into complete breakdown | [ ] |
+| Replace stale score typography | [ ] |
+| Restore syllable navigation and tone breakdown | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |

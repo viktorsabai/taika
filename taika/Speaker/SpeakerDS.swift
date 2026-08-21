@@ -1751,7 +1751,7 @@ public struct SpeakerDSRoot: View {
 
                     SpeakerCountingScore(
                         value: scoreToShow,
-                        font: .taikaStat(34),
+                        font: Theme.Fonts.metric(48),
                         color: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
                         suffix: "%"
                     )
@@ -1788,6 +1788,36 @@ public struct SpeakerDSRoot: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if external?.onRequestBreakdown != nil {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        external?.onRequestBreakdown?()
+                    } label: {
+                        HStack(spacing: 9) {
+                            Image(systemName: "waveform.path.ecg")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Разбор тонов")
+                                .font(.system(size: 14, weight: .semibold))
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+                        .foregroundStyle(PD.ColorToken.text)
+                        .padding(.horizontal, 14)
+                        .frame(height: 42)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(PD.ColorToken.chip.opacity(0.72))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.34), lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+                    .accessibilityLabel("Открыть разбор тонов")
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -2024,6 +2054,14 @@ public struct SpeakerDSRoot: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Ещё раз")
+
+            conversationChromeIconButton(
+                systemName: "waveform.path.ecg",
+                enabled: true,
+                accessibility: "Разбор тонов"
+            ) {
+                external?.onRequestBreakdown?()
+            }
 
             conversationChromeIconButton(
                 systemName: "xmark",
