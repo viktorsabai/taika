@@ -3054,7 +3054,17 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect back-face layout and action styles | [ ] |
-| Replace decorative clutter with canonical native hierarchy | [ ] |
-| Unify typography and action buttons | [ ] |
-| Run checks, commit, push, and provide device handoff | [ ] |
+| Inspect back-face layout and action styles | [x] |
+| Replace decorative clutter with canonical native hierarchy | [x] — back-face waves hidden |
+| Unify typography and action buttons | [x] — Theme.Fonts + shared CardBackActionButtonStyle |
+| Run checks, commit, push, and provide device handoff | [x] — 4a817abd4f87787766bdc9f7253319a96e87a268 |
+
+
+# CardDS font compile fix
+
+| Task | Status |
+|---|---|
+| Inspect Theme.Fonts API and failing calls | [ ] |
+| Replace invalid caption font call | [ ] |
+| Check all new back-face font calls | [ ] |
+| Commit, push, and provide exact handoff | [ ] |

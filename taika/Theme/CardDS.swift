@@ -3315,18 +3315,18 @@ public struct CourseLessonCard: View {
             case .courseGradeSheet:
                 VStack(alignment: .leading, spacing: 11) {
                     Text("ЗАКРЕПЛЕНИЕ")
-                        .font(Theme.Fonts.caption(11, weight: .bold))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
                         .kerning(0.8)
                         .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
 
                     Text("Закрепи пройденный курс")
-                        .font(Theme.Fonts.body(19, weight: .semibold))
+                        .font(Theme.Fonts.heading)
                         .foregroundStyle(PD.ColorToken.text)
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
 
                     Text(reinforcementScore == nil ? "Один короткий повтор — и материал останется в речи." : "Курс пройден. Выбери один способ удержать результат.")
-                        .font(Theme.Fonts.caption(13, weight: .regular))
+                        .font(Theme.Fonts.caption)
                         .foregroundStyle(PD.ColorToken.textSecondary)
                         .lineSpacing(1)
                         .fixedSize(horizontal: false, vertical: true)
