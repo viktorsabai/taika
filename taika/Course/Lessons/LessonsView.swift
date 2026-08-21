@@ -430,9 +430,9 @@ private extension LessonsView {
                     updateReinforcementSelection(Set(ids))
                     launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
                 },
-                showFocusAction: false,
                 accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
-                accentColor: TaikaMasteryTokens.greenGlow
+                accentColor: TaikaMasteryTokens.greenGlow,
+                showFocusAction: false
             )
         }
     }
