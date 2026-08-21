@@ -224,6 +224,8 @@ Total revenue = subscription net revenue + ad net revenue
 
 ## 8. Связанные материалы
 
+- `ANALYTICS_EVENTS_SPEC_RU.md` — детальная схема Analytics Events, свойств, воронок и acceptance criteria.
+- `MARKETING_LAUNCH_PLAN_RU.md` — план pre-launch, TestFlight, App Store launch и первых каналов привлечения.
 - `TAIKA_TESTFLIGHT_ADS_ECONOMICS_RU.md` — подробная экономика и процесс TestFlight.
 - `TAIKA_MONETIZATION_RECOMMENDATIONS_RU.md` — предыдущий аудит монетизации и архитектурные рекомендации.
 - `taika_economics_sources.md` — источники и допущения модели.
