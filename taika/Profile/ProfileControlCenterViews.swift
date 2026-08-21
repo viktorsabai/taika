@@ -864,12 +864,12 @@ private struct ProfileAccountCard: View {
 
     private var statusStyle: AnyShapeStyle {
         isLoggedIn
-            ? AnyShapeStyle(Color.green.opacity(0.95))
-            : AnyShapeStyle(theme.currentAccentFill)
+            ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
+            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.78))
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
             Button(action: accountAction) {
                 HStack(spacing: 14) {
                     Image(systemName: "apple.logo")
@@ -903,9 +903,10 @@ private struct ProfileAccountCard: View {
                     .font(PD.FontToken.caption(12))
                     .foregroundStyle(PD.ColorToken.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 56)
+                    .padding(.bottom, 10)
             }
         }
-        .padding(.vertical, 6)
     }
 }
 
@@ -921,7 +922,13 @@ private struct ProfileTaikaPlusCard: View {
     }
 
     private var statusColor: Color {
-        pro.isPro ? Color.green : theme.currentAccentTintColor
+        pro.isPro ? TaikaMasteryTokens.green : PD.ColorToken.textSecondary.opacity(0.52)
+    }
+
+    private var statusStyle: AnyShapeStyle {
+        pro.isPro
+            ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
+            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.78))
     }
 
     private var statusSubtitle: String {
@@ -933,8 +940,8 @@ private struct ProfileTaikaPlusCard: View {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 7) {
                     HStack(spacing: 8) {
-                        Image(systemName: "crown.fill")
-                            .foregroundStyle(theme.currentAccentFill)
+                        Image(systemName: pro.isPro ? "crown.fill" : "lock.fill")
+                            .foregroundStyle(statusStyle)
                         Text(pro.isPro ? "Taika+ активен" : "Открыть Taika+")
                             .font(PD.FontToken.title(21, weight: .bold))
                             .foregroundStyle(PD.ColorToken.text)
@@ -952,7 +959,7 @@ private struct ProfileTaikaPlusCard: View {
                         .shadow(color: statusColor.opacity(0.7), radius: 7)
                     Text(statusTitle)
                         .font(PD.FontToken.caption(10, weight: .bold))
-                        .foregroundStyle(statusColor)
+                        .foregroundStyle(statusStyle)
                         .tracking(0.7)
                 }
             }
@@ -966,7 +973,12 @@ private struct ProfileTaikaPlusCard: View {
                 .foregroundStyle(Color.black.opacity(0.88))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(theme.currentAccentFill, in: Capsule())
+                .background(
+                    pro.isPro
+                        ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
+                        : AnyShapeStyle(PD.ColorToken.chip.opacity(0.72)),
+                    in: Capsule()
+                )
             }
             .buttonStyle(.plain)
 
@@ -996,27 +1008,29 @@ private struct ProfileTaikaPlusCard: View {
         }
         .padding(16)
         .background(
-            LinearGradient(
-                colors: [
-                    theme.currentAccentTintColor.opacity(pro.isPro ? 0.22 : 0.13),
-                    PD.ColorToken.card.opacity(0.56),
-                    Color.black.opacity(0.16)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
+            pro.isPro
+                ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.18))
+                : AnyShapeStyle(PD.ColorToken.card.opacity(0.72)),
             in: RoundedRectangle(cornerRadius: 26, style: .continuous)
         )
-        .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(statusColor.opacity(pro.isPro ? 0.48 : 0.28), lineWidth: 1))
-        .shadow(color: statusColor.opacity(pro.isPro ? 0.16 : 0.08), radius: 18, y: 8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(
+                    pro.isPro
+                        ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.62))
+                        : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.62)),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: statusColor.opacity(pro.isPro ? 0.16 : 0.04), radius: 18, y: 8)
     }
 
     private func profileCapability(_ image: String, _ title: String, _ available: Bool) -> some View {
         let capabilityStyle: AnyShapeStyle = available
-            ? AnyShapeStyle(theme.currentAccentFill)
-            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.72))
+            ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
+            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.62))
         return VStack(spacing: 3) {
-            Image(systemName: image)
+            Image(systemName: available ? image : "lock.fill")
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(capabilityStyle)
             Text(title)

@@ -2631,6 +2631,16 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Audit list/grid rows, spacing, surfaces, actions, and view mode behavior in both tabs | [ ] |
-| Align both tabs to one shared mirrored list contract | [ ] |
-| Validate both tabs and push visual consistency fix | [ ] |
+| Audit list/grid rows, spacing, surfaces, actions, and view mode behavior in both tabs | [x] |
+| Align both tabs to one shared mirrored list contract | [x] |
+| Validate both tabs and push visual consistency fix | [x] — source validation; device visual check pending |
+
+
+# Bug — Profile service rows and subscription state styling
+
+| Task | Status |
+|---|---|
+| Audit Profile hero, Your Rhythm, Account, and access-state components | [ ] |
+| Separate Your Rhythm and Account into clean independent rows | [ ] |
+| Reuse canonical completed-card gradient and replace inactive red/pink with locks | [ ] |
+| Validate Profile states and push visual logic fix | [ ] |
