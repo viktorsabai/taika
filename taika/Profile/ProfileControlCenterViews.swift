@@ -864,22 +864,34 @@ private struct ProfileActionHero: View {
         return "mic.fill"
     }
 
+    private var signalValues: [CGFloat] {
+        let values = profile.activityWeekDays.map { CGFloat($0.intensity01) }
+        return values.isEmpty ? Array(repeating: 0, count: 7) : values
+    }
+
+    private var signalLabel: String {
+        if pro.isPro { return "ПРАКТИКА · 7 ДНЕЙ" }
+        if hasRhythm { return "РИТМ · 7 ДНЕЙ" }
+        return "ПЕРВАЯ ПРОВЕРКА"
+    }
+
+    private var signalValue: String {
+        if pro.isPro { return "TAIKA+" }
+        if hasRhythm { return "\(rhythmPercent)%" }
+        return "—"
+    }
+
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 13) {
                 HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            Image(systemName: pro.isPro ? "crown.fill" : (hasRhythm ? "waveform.path.ecg" : "mic.fill"))
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
-                            Text(pro.isPro ? "TAIKA+ АКТИВЕН" : "ТВОЙ СЛЕДУЮЩИЙ ШАГ")
-                                .font(PD.FontToken.caption(11, weight: .bold))
-                                .foregroundStyle(PD.ColorToken.textSecondary)
-                                .tracking(1.0)
-                        }
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(pro.isPro ? "TAIKA+ · NEXT STEP" : "PROFILE · NEXT STEP")
+                            .font(PD.FontToken.caption(10, weight: .bold))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .tracking(1.2)
                         Text(title)
-                            .font(PD.FontToken.title(22, weight: .bold))
+                            .font(PD.FontToken.title(23, weight: .bold))
                             .foregroundStyle(PD.ColorToken.text)
                             .lineLimit(2)
                         Text(subtitle)
@@ -888,55 +900,91 @@ private struct ProfileActionHero: View {
                             .lineLimit(2)
                     }
                     Spacer(minLength: 8)
-                    if pro.isPro {
-                        Text("PRO")
-                            .font(PD.FontToken.caption(11, weight: .bold))
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(signalValue)
+                            .font(PD.FontToken.title(20, weight: .bold))
                             .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
-                            .tracking(1.0)
-                    } else if hasRhythm {
-                        Text("\(rhythmPercent)%")
-                            .font(PD.FontToken.title(18, weight: .bold))
-                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                        Text(signalLabel)
+                            .font(PD.FontToken.caption(9, weight: .bold))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .tracking(0.7)
+                            .multilineTextAlignment(.trailing)
                     }
                 }
 
-                HStack(spacing: 8) {
+                HStack(alignment: .center, spacing: 12) {
+                    ProfileActionSignalGraph(values: signalValues)
+                        .stroke(AnyShapeStyle(TaikaMasteryTokens.greenGradient), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                        .frame(height: 48)
+                    Rectangle()
+                        .fill(PD.ColorToken.stroke.opacity(0.5))
+                        .frame(width: 1, height: 42)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(pro.isPro ? "Сигнал практики" : (hasRhythm ? "Сигнал ритма" : "Сигнал появится после первой проверки"))
+                            .font(PD.FontToken.caption(11, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.text)
+                            .lineLimit(2)
+                        Text(pro.isPro ? "Продолжай без пауз" : (hasRhythm ? "Найдено, что повторить" : "Один voice check"))
+                            .font(PD.FontToken.caption(10))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                HStack(spacing: 9) {
                     Image(systemName: actionIcon)
+                        .font(.system(size: 15, weight: .bold))
                     Text(actionTitle)
                         .font(PD.FontToken.body(16, weight: .bold))
-                }
-                .foregroundStyle(Color.black.opacity(0.88))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 13)
-                .background(AnyShapeStyle(TaikaMasteryTokens.greenGradient), in: Capsule())
-
-                HStack(spacing: 8) {
-                    Image(systemName: pro.isPro ? "checkmark.circle" : (hasRhythm ? "waveform" : "sparkles"))
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
-                    Text(pro.isPro
-                         ? "Курсы, Speaker и игры доступны"
-                         : (hasRhythm ? "Ритм уже формируется" : "Начни с одной короткой проверки"))
-                        .font(PD.FontToken.caption(12, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
                     Spacer(minLength: 0)
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 14, weight: .bold))
                 }
+                .foregroundStyle(Color.black.opacity(0.90))
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(AnyShapeStyle(TaikaMasteryTokens.greenGradient), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                )
             }
             .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 214, alignment: .top)
+            .frame(maxWidth: .infinity, minHeight: 240, alignment: .top)
             .background(
-                AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.10)),
+                AnyShapeStyle(Color.white.opacity(0.035)),
                 in: RoundedRectangle(cornerRadius: 26, style: .continuous)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.34)), lineWidth: 1)
+                    .stroke(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.42)), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
-        .shadow(color: Color.black.opacity(0.10), radius: 18, y: 8)
+        .shadow(color: Color.black.opacity(0.12), radius: 22, y: 10)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
         .accessibilityHint(subtitle)
+    }
+}
+
+private struct ProfileActionSignalGraph: Shape {
+    let values: [CGFloat]
+
+    func path(in rect: CGRect) -> Path {
+        guard values.count > 1 else { return Path() }
+        let maxValue = max(values.max() ?? 1, 0.08)
+        let step = rect.width / CGFloat(values.count - 1)
+        var path = Path()
+        for (index, value) in values.enumerated() {
+            let x = CGFloat(index) * step
+            let normalized = min(1, max(0, value / maxValue))
+            let y = rect.maxY - (normalized * (rect.height - 8)) - 4
+            let point = CGPoint(x: x, y: y)
+            if index == 0 { path.move(to: point) } else { path.addLine(to: point) }
+        }
+        return path
     }
 }
 

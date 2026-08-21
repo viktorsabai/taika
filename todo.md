@@ -3004,8 +3004,27 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect hero state inputs and carousel call sites | [ ] |
-| Implement one adaptive next-step hero | [ ] |
-| Remove obsolete Taika+/Rhythm carousel duplication | [ ] |
-| Preserve free/pro CTA navigation | [ ] |
+| Inspect hero state inputs and carousel call sites | [x] |
+| Implement one adaptive next-step hero | [x] — free/pro-aware Action Hero |
+| Remove obsolete Taika+/Rhythm carousel duplication | [x] — root now renders one hero |
+| Preserve free/pro CTA navigation | [x] — Speaker, Rhythm, Taika+ callbacks wired |
+| Run checks, commit, push, and provide device handoff | [x] — 4a695d097a7289d5281306fe8e1926b696603de1 |
+
+
+# External Speaker audit prompt
+
+| Task | Status |
+|---|---|
+| Consolidate all reported Speaker bugs and UX requirements | [x] |
+| Write explicit state machine and visual acceptance criteria | [x] |
+| Deliver reusable Russian prompt document | [x] — speaker-external-ai-prompt.md |
+
+
+# Profile data-banner redesign
+
+| Task | Status |
+|---|---|
+| Inspect admin reference and current banner constraints | [ ] |
+| Define readable graph-led banner composition | [ ] |
+| Implement clear CTA and compact data visualization | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |
