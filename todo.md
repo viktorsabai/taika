@@ -2880,6 +2880,16 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect composer presentation and bottom inset layout | [ ] |
-| Anchor composer above tab bar with stable transition | [ ] |
-| Run checks, commit, push, and provide device handoff | [ ] |
+| Inspect composer presentation and bottom inset layout | [x] |
+| Anchor composer above tab bar with stable transition | [x] |
+| Run checks, commit, push, and provide device handoff | [x] — ec4d07192b99482f34383c74f7e9b4c1301e1634 |
+
+
+# Speaker text composer actual-path trace
+
+| Task | Status |
+|---|---|
+| Trace tap → state → rendered composer path | [ ] |
+| Identify stale bottom-sheet/overlay implementation | [ ] |
+| Patch actual path and remove stale behavior | [ ] |
+| Verify branch alignment, checks, commit, push, handoff | [ ] |

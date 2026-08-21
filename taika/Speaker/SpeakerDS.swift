@@ -883,20 +883,19 @@ public struct SpeakerDSRoot: View {
                        !conversationIsRecording,
                        !phase.isProcessing,
                        !phase.isFeedback {
-                        Spacer(minLength: 0)
-                        conversationLiveStage
-                            .padding(.horizontal, padH)
-                            .transition(.opacity.combined(with: .scale(scale: 0.97)))
-                        conversationTextComposerPanel
-                            .padding(.horizontal, padH)
-                            .padding(.top, 14)
-                            .transition(
-                                .asymmetric(
-                                    insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .center)),
-                                    removal: .opacity.combined(with: .scale(scale: 0.96, anchor: .center))
+                        VStack(spacing: 18) {
+                            conversationLiveStage
+                                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                            conversationTextComposerPanel
+                                .transition(
+                                    .asymmetric(
+                                        insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .center)),
+                                        removal: .opacity.combined(with: .scale(scale: 0.96, anchor: .center))
+                                    )
                                 )
-                            )
-                        Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, padH)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                     } else if phase.isFeedback {
                         if conversationIsPracticeFlow, effectiveShowBreakdown {
                             // Полный разбор уже открыт — canvas не дублирует промежуточный результат.
