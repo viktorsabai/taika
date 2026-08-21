@@ -61,6 +61,8 @@ public struct GameModePickerDS: View {
     public var onClose: () -> Void
     /// Callback invoked when user taps a locked mode (e.g. Grand Dialogue before completion).
     public var onLockedTap: (GameModeType) -> Void = { _ in }
+    /// Optional first-class Speaker reinforcement action for course-scoped launchers.
+    public var onSpeaker: (() -> Void)?
     /// Режимы, которые отображаются, но пока нельзя стартовать (например, Grand Dialogue до completion курса).
     public var lockedModes: Set<GameModeType> = []
     /// Режимы в порядке отображения (по умолчанию без Grand Dialogue).
@@ -82,7 +84,8 @@ public struct GameModePickerDS: View {
         modes: [GameModeType] = GameModeType.modesLessonAndPark,
         embedInEtalon: Bool = true,
         contentHorizontalInset: CGFloat = 20,
-        contentBottomInset: CGFloat = 24
+        contentBottomInset: CGFloat = 24,
+        onSpeaker: (() -> Void)? = nil
     ) {
         self._selected = selected
         self.isProUser = isProUser
@@ -94,6 +97,7 @@ public struct GameModePickerDS: View {
         self.embedInEtalon = embedInEtalon
         self.contentHorizontalInset = contentHorizontalInset
         self.contentBottomInset = contentBottomInset
+        self.onSpeaker = onSpeaker
     }
 
     public var body: some View {
@@ -129,6 +133,10 @@ public struct GameModePickerDS: View {
     @ViewBuilder
     private var pickerBody: some View {
         VStack(spacing: 10) {
+            if let onSpeaker {
+                speakerModeRow(action: onSpeaker)
+            }
+
             ForEach(modes, id: \.self) { mode in
                 modeRow(mode)
                     .contentShape(Rectangle())
@@ -151,6 +159,53 @@ public struct GameModePickerDS: View {
                 selected = firstUnlocked
             }
         }
+    }
+
+    private func speakerModeRow(action: @escaping () -> Void) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "waveform.path.ecg")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Спикер")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text("закрепить произношение и тоны")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(PD.ColorToken.card.opacity(0.82))
+            )
+            .overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                    .frame(width: 3)
+                    .padding(.vertical, 10)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(PD.ColorToken.stroke.opacity(0.72), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Спикер: закрепить произношение и тоны")
     }
 
     @ViewBuilder

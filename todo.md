@@ -2710,6 +2710,16 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect unsupported frame expression and nearby modifiers | [ ] |
-| Replace with compatible fixed-height expression | [ ] |
-| Run source checks and push Speaker frame fix | [ ] |
+| Inspect unsupported frame expression and nearby modifiers | [x] |
+| Replace with compatible fixed-height expression | [x] |
+| Run source checks and push Speaker frame fix | [x] |
+
+
+# Lessons reinforcement picker — add Speaker tones
+
+| Task | Status |
+|---|---|
+| Audit picker options and existing Speaker training route | [ ] |
+| Add Speaker tone-reinforcement option | [ ] |
+| Preserve selected course/lesson card scope through navigation | [ ] |
+| Run source checks and push picker update | [ ] |

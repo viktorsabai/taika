@@ -971,6 +971,28 @@ public struct LessonsView: View {
 #endif
                                     }
                                 },
+                                onSpeaker: {
+                                    let cid = currentCourse?.courseID ?? ""
+                                    let scopedIds = pendingGameLessonIds.isEmpty
+                                        ? effectiveReinforcementLessonIds
+                                        : pendingGameLessonIds
+                                    guard !cid.isEmpty, !scopedIds.isEmpty else { return }
+
+                                    SpeakerManager.shared.rebuildQueue()
+                                    SpeakerManager.shared.setSpeakerUIMode(.training)
+                                    SpeakerRequestedCourseId.shared.set(
+                                        courseId: cid,
+                                        lessonIds: scopedIds,
+                                        cardKeys: pendingGameCardKeys
+                                    )
+
+                                    showGameModePicker = false
+                                    showGameOverlay = false
+                                    frozenSnapshot = nil
+                                    pendingGameLessonIds = []
+                                    pendingGameCardKeys = nil
+                                    nav.requestTab(2)
+                                },
                                 modes: GameModeType.modesLessonAndPark
                             )
                             .transition(.move(edge: .bottom).combined(with: .opacity))
