@@ -2281,3 +2281,15 @@ Keep three independent state axes: course completion, lesson completion, and rei
 - [ ] Ensure errors survive closing/reopening LessonsView and are scoped to the correct lesson.
 - [ ] Push one focused fix after static validation.
 
+
+
+# New epic — Step completion pipeline, button UI, and canonical mini-paywall
+
+| Task | Status |
+|---|---|
+| Trace Step completion → final message → persistence → navigation → re-entry | Done |
+| Verify result message is emitted exactly once and survives state updates | Done at source level |
+| Audit Step button surfaces, press states, disabled states, and duplicate actions | Done |
+| Repair logical gaps without changing educational scope semantics | Done |
+| Replace outdated post-game non-Pro sheet with existing canonical mini-paywall | Done |
+| Run source-level regression checks and prepare one commit/push | In progress — Xcode/Simulator pending |

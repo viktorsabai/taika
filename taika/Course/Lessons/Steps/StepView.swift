@@ -48,6 +48,59 @@ extension UserSession {
     }
 }
 
+/// Compact contextual gate shown after a lesson game is selected from the result message.
+/// The real checkout remains the canonical PRO overlay; this surface only explains the action.
+private struct StepGameMiniPaywall: View {
+    let onClose: () -> Void
+    let onOpenPro: () -> Void
+
+    var body: some View {
+        GlassPaywall(
+            title: "Открой все игры",
+            subtitle: "Эта тренировка доступна в Taika+. Вернись к закреплению курса без ограничений.",
+            actionTitle: "Открыть Taika+",
+            action: onOpenPro
+        ) {
+            HStack(spacing: 12) {
+                Image(systemName: "gamecontroller.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                    .frame(width: 42, height: 42)
+                    .background(Circle().fill(CD.ColorToken.chip))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Закрепление курса")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.text)
+                    Text("Память, слоги и тренировка на слух")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(CD.ColorToken.chip.opacity(0.72))
+            )
+        }
+        .overlay(alignment: .topTrailing) {
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(CD.ColorToken.chip.opacity(0.94)))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 10)
+            .padding(.trailing, 12)
+            .accessibilityLabel("Закрыть")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+}
 
 struct StepView: View {
     let courseId: String?
@@ -115,6 +168,8 @@ struct StepView: View {
     @State private var showLessonSummary: Bool = false
     @State private var summaryOverlaySettled: Bool = false
     @State private var didShowSummaryOnce: Bool = false
+    /// Direct-start opens suppress only the hydration-time summary; after the user changes a card, completion may render normally.
+    @State private var didMutateLearningProgress: Bool = false
     @State private var summaryGameMode: GameModeType = .match
     @State private var isAdvancingFromSummary: Bool = false
     @State private var showGamePaywallSheet: Bool = false
@@ -177,7 +232,7 @@ struct StepView: View {
     /// This guard is intentionally at render level because persisted progress can emit
     /// completion state again while StepView hydrates its cards.
     private var shouldRenderLessonSummary: Bool {
-        showLessonSummary && !suppressInitialCompletionSummary
+        showLessonSummary && (!suppressInitialCompletionSummary || didMutateLearningProgress)
     }
 
     // Compact (progress-only) projections
@@ -1346,12 +1401,26 @@ struct StepView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .sheet(isPresented: $showGamePaywallSheet) {
-                TaikaPlusPaywallView(courseId: nil, reason: .games) {
-                    showGamePaywallSheet = false
-                }
-                .presentationDetents([.fraction(0.46), .medium])
+                StepGameMiniPaywall(
+                    onClose: {
+                        showGamePaywallSheet = false
+                    },
+                    onOpenPro: {
+                        showGamePaywallSheet = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+                            overlay.presentPro(reason: .games)
+                        }
+                    }
+                )
+                .presentationDetents([.fraction(0.42), .medium])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
+                .presentationBackground {
+                    ZStack {
+                        Rectangle().fill(.ultraThinMaterial)
+                        PD.ColorToken.background.opacity(0.94)
+                    }
+                }
             }
             .onChange(of: showLessonSummary) { _, isOn in
                 if isOn {
@@ -1379,9 +1448,9 @@ struct StepView: View {
                 // A direct open from LessonsView starts in the normal learning flow even when
                 // every card was previously learned. If the user changes progress afterwards,
                 // the existing completion transition is allowed to work again.
-                if suppressInitialCompletionSummary {
-                    didShowSummaryOnce = true
-                }
+                // Do not mark the summary as shown here. A direct-start lesson only suppresses
+                // the hydration-time overlay; the first real user progress mutation must still
+                // be able to present the completion result.
                 // debug print removed
                 loadFromStepData()
                 if !isOverlay && !resolvedCourseId.isEmpty {
@@ -1587,6 +1656,9 @@ struct StepView: View {
                         }
                     }.count
                     if learnedNowCount >= totalLearnable {
+                        // A direct-start lesson may hydrate as already complete, but only a real
+                        // user mutation is allowed to present the result overlay in that flow.
+                        guard !suppressInitialCompletionSummary || didMutateLearningProgress else { return }
                         if !didShowSummaryOnce {
                             didShowSummaryOnce = true
                             withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
@@ -1750,6 +1822,7 @@ struct StepView: View {
                 return
             }
             let wasLearned = anim.learned.contains(i)
+            didMutateLearningProgress = true
             anim.toggleLearned(i)
 #if !DEBUG
             UIImpactFeedbackGenerator(style: .light).impactOccurred()

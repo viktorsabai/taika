@@ -1244,8 +1244,6 @@ fileprivate struct StepIconCircleButton: View {
     var playbackActive: Bool = false
     var caption: String? = nil
     let action: () -> Void
-    @State private var pulseScale: CGFloat = 1
-
     private var iconForeground: AnyShapeStyle {
         let accent = ThemeManager.shared.currentAccentFill
         let dim = CD.ColorToken.textSecondary.opacity(0.92)
@@ -1259,23 +1257,12 @@ fileprivate struct StepIconCircleButton: View {
     }
 
     var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.58)) {
-                pulseScale = 1.12
-            }
-            action()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                    pulseScale = 1.0
-                }
-            }
-        }) {
+        Button(action: action) {
             VStack(spacing: 3) {
                 Image(systemName: systemName)
                     .font(.system(size: Theme.IconButton.iconSizeCard, weight: .semibold))
                     .foregroundStyle(iconForeground)
                     .modifier(StepSpeakerWaveSpeakingModifier(systemName: systemName, speaking: playbackActive))
-                    .scaleEffect(pulseScale)
                     .frame(width: 36, height: 36)
                     .background(
                         Circle()
@@ -1297,7 +1284,7 @@ fileprivate struct StepIconCircleButton: View {
             .frame(minWidth: Theme.IconButton.tapMinCard, minHeight: Theme.IconButton.tapMinCard)
             .contentShape(Rectangle())
         }
-        .buttonStyle(PressDownStyle(scale: 0.88, fade: 0.92, useBouncySpring: true, flashOpacity: 0.16))
+        .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.98, useBouncySpring: false, flashOpacity: 0.08))
         .accessibilityLabel(caption ?? systemName)
     }
 }
