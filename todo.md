@@ -3064,7 +3064,72 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect Theme.Fonts API and failing calls | [ ] |
-| Replace invalid caption font call | [ ] |
-| Check all new back-face font calls | [ ] |
-| Commit, push, and provide exact handoff | [ ] |
+| Inspect Theme.Fonts API and failing calls | [x] |
+| Replace invalid caption font call | [x] — valid system rounded font |
+| Check all new back-face font calls | [x] — no Theme.Fonts.caption/body function calls remain |
+| Commit, push, and provide exact handoff | [x] — d378ae1766d8d1dc79b05b8be67e5d216caa6896 |
+
+
+# Course taxonomy and overlap audit
+
+| Task | Status |
+|---|---|
+| Map existing course categories and their learning boundaries | [ ] |
+| Identify semantic overlap with mini-dialogues | [ ] |
+| Compare alternative curriculum architectures | [ ] |
+| Define recommended ownership rules for scenarios and phrases | [ ] |
+
+# First curriculum cluster — mini-dialogues ownership
+
+| Task | Status |
+|---|---|
+| Use course_b_7 as the pilot course for non-overlap redesign | [ ] |
+| Compare course_b_7 against course_l_14, course_e_1, course_e_3, course_e_4 and the relevant food/transport owners | [ ] |
+| Define keep/delete/replace/add decisions at lesson and step level | [ ] |
+| Approve content delta before editing production JSON | [ ] |
+
+# Content JSON contract audit — mini-dialogues
+
+| Task | Status |
+|---|---|
+| Inspect StepData decoding and allowed item fields | [ ] |
+| Trace stepset/lesson/hometask references | [ ] |
+| Verify progress denominator and dialog semantics | [ ] |
+| Define safe dialog syntax before content edits | [ ] |
+
+# Pilot course_b_7_l1 — replacement dialogue
+
+| Task | Status |
+|---|---|
+| Audit current l1 steps and existing phrase inventory | [ ] |
+| Define core replacement scenario and fallback branch | [ ] |
+| Draft exact Thai/Russian/phonetic step content | [ ] |
+| Map conversation links and validate progress semantics | [ ] |
+
+# Pilot vs taxi course overlap audit
+
+| Task | Status |
+|---|---|
+| Locate taxi/transport course ownership and step sets | [ ] |
+| Extract pilot phrase inventory | [ ] |
+| Compare exact and semantic overlaps | [ ] |
+| Decide keep/replace/transfer for each candidate phrase | [ ] |
+
+# course_b_7 vs food/market overlap audit
+
+| Task | Status |
+|---|---|
+| Locate food and market course owners | [ ] |
+| Extract b_7 lesson inventory excluding taxi pilot | [ ] |
+| Compare exact and semantic overlaps | [ ] |
+| Define keep/replace/remove decisions per lesson | [ ] |
+
+# course_b_7 curriculum implementation
+
+| Task | Status |
+|---|---|
+| Preserve current course/lesson IDs and reference links | [x] |
+| Replace taxi/food/market duplicate lesson content | [x] |
+| Add short phrase-bank scenarios with existing JSON fields | [x] — native-language QA still pending |
+| Validate JSON, progress denominator, Speaker and overlap | [x] — JSON/refs/orders validated; device flow pending |
+| Commit and push to 2026-01-21-k7hb-d2004 | [x] |

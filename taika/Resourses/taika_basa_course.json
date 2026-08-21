@@ -176,7 +176,7 @@
   {
     "id": "course_b_7",
     "title": "Диалоги как у местных",
-    "description": "Капстоун: склейка Базы в сцены 7-Eleven, кафе, такси, рынок.",
+    "description": "Короткие phrase banks для бытовых поворотов: заменить, изменить выбор, ответить коротко и закончить контакт — без дублей тематических курсов.",
     "category": "База от Тайки",
     "is_pro": false,
     "lesson_count": 6,
@@ -185,15 +185,15 @@
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Диалоги",
-        "count": 10
+        "type": "Речевые реакции",
+        "count": 6
       },
       {
-        "type": "Фразы",
-        "count": 20
+        "type": "Phrase banks",
+        "count": 36
       }
     ],
-    "short_description": "Склейка базы в диалоги"
+    "short_description": "Короткие реакции без дублей"
   },
   {
     "id": "course_l_1",
