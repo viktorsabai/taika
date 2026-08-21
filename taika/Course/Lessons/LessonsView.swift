@@ -313,7 +313,7 @@ private extension LessonsView {
     }
 
     private func launchSelectedErrorFocus() {
-        let ids = Array(effectiveReinforcementLessonIds.intersection(weakCompletedLessonIds)).sorted()
+        let ids = Array(Set(effectiveReinforcementLessonIds).intersection(weakCompletedLessonIds)).sorted()
         guard !ids.isEmpty else { return }
         let keys = ReinforcementStore.shared.failedCardKeys(
             courseId: currentCourse?.courseID ?? "",
@@ -399,12 +399,12 @@ private extension LessonsView {
                 selectedCount: effectiveReinforcementLessonIds.count,
                 totalLessons: completedLessonOptions.count,
                 weakCount: weakCompletedLessonIds.count,
-                selectedWeakCount: effectiveReinforcementLessonIds.intersection(weakCompletedLessonIds).count,
                 onSpeaker: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { launchSpeakerTraining() },
                 onGamePark: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { launchGameTraining() },
                 onGameMode: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { mode in launchClassifiedGame(modeRawValue: mode) },
                 onProLocked: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { showGamesProSheet() },
-                onFocus: isTheoryBonusCourse || effectiveReinforcementLessonIds.intersection(weakCompletedLessonIds).isEmpty ? nil : { launchSelectedErrorFocus() }
+                selectedWeakCount: Set(effectiveReinforcementLessonIds).intersection(weakCompletedLessonIds).count,
+                onFocus: isTheoryBonusCourse || Set(effectiveReinforcementLessonIds).intersection(weakCompletedLessonIds).isEmpty ? nil : { launchSelectedErrorFocus() }
             )
 
             LSCompletedLessonList(
