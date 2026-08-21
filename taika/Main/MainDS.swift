@@ -1687,13 +1687,11 @@ public struct MDVoiceSphere: View {
                         .stroke(tint.opacity(pulseOut ? 0 : 0.55), lineWidth: 1.4)
                         .frame(width: 148, height: 148)
                         .scaleEffect(pulseOut ? 1.28 : 1.0)
-                        .scaleEffect(1 + voiceLevel * 0.12)
 
                     Circle()
                         .stroke(tint.opacity(pulseOut ? 0 : 0.28), lineWidth: 1)
                         .frame(width: 172, height: 172)
                         .scaleEffect(pulseOut ? 1.18 : 1.0)
-                        .scaleEffect(1 + voiceLevel * 0.16)
 
                     Circle()
                         .fill(
@@ -1705,18 +1703,15 @@ public struct MDVoiceSphere: View {
                             )
                         )
                         .frame(width: 190, height: 190)
-                        .scaleEffect(1 + voiceLevel * 0.08)
 
                     Circle()
                         .fill(accent)
                         .frame(width: 96, height: 96)
-                        .scaleEffect(1 + voiceLevel * 0.12)
-                        .shadow(color: tint.opacity(0.65), radius: 24, y: 8)
+                        .shadow(color: tint.opacity(0.65 + voiceLevel * 0.12), radius: 24, y: 8)
 
                     Image(systemName: symbol)
                         .font(.system(size: 34, weight: .bold))
                         .foregroundStyle(Color.black)
-                        .scaleEffect(1 + voiceLevel * 0.08)
                 }
                 .animation(.easeOut(duration: 0.12), value: meter)
             }

@@ -2353,3 +2353,15 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Normalize selected states and accessibility labels | Done |
 | Remove layout jumps, overlap, and foreign bounce behavior | Done at source level |
 | Run source checks, commit, and push for device testing | In progress — Xcode/Simulator pending |
+
+
+# Speaker — unified sphere and pronunciation result flow
+
+| Task | Status |
+|---|---|
+| Audit sphere geometry across idle/listening/recording/analyzing/result states | Done |
+| Remove layout-driven sphere jumps while preserving state-driven effects | Done at source level |
+| Redesign pronunciation result as one reinforcement-style breakdown | Done |
+| Keep Russian phrase, Thai pronunciation, score, and chips in one composition | Done |
+| Remove nested frames and redundant explanatory copy | Done at result-shell level; inner analysis modules preserved |
+| Validate E2E flow and push one testing commit | In progress — Xcode/Simulator pending |

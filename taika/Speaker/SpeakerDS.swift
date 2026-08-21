@@ -4293,22 +4293,6 @@ public struct SpeakerDSRoot: View {
     ) -> AnyView {
         let showRecordingInPlace = isRecordingFromBreakdown && breakdownPhase == .recording
         let unlockTone = hasFullToneAccess || isProUser
-        let focusTitle: String = {
-            if let toneScore, toneScore + 12 < textScore { return "Смотри тоны" }
-            if let toneScore, textScore + 12 < toneScore { return "Смотри слова" }
-            if textScore >= 75 { return "Уже близко" }
-            return "Смотри слоги"
-        }()
-        let focusBody: String = {
-            if let toneScore, toneScore + 12 < textScore {
-                return "Слова уже читаются. Главный рычаг сейчас — тоны на каждом слоге."
-            }
-            if let toneScore, textScore + 12 < toneScore {
-                return "Тоны живые. Сделай слоги чуть чётче — и фраза соберётся."
-            }
-            return "Посмотри график и слоги: где линия совпала — держи, где слабее — повтори."
-        }()
-
         let headerView: AnyView = AnyView(
             HStack(alignment: .center, spacing: 8) {
                 Text(presentsAsSheet ? "Разбор" : "разбор")
@@ -4358,66 +4342,94 @@ public struct SpeakerDSRoot: View {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading, spacing: presentsAsSheet ? 18 : 10) {
                         if presentsAsSheet {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(focusTitle)
-                                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                                    .foregroundStyle(PD.ColorToken.text)
-                                Text(focusBody)
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundStyle(PD.ColorToken.textSecondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
+                            VStack(alignment: .leading, spacing: 14) {
+                                HStack(alignment: .top, spacing: 14) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("РЕЗУЛЬТАТ")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .tracking(1.1)
+                                            .foregroundStyle(PD.ColorToken.textSecondary)
+                                        Text("\(displayScore)%")
+                                            .font(Theme.Fonts.metric(48))
+                                            .monospacedDigit()
+                                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                            .contentTransition(.numericText())
+                                    }
+                                    Spacer(minLength: 8)
+                                    VStack(alignment: .trailing, spacing: 6) {
+                                        Text(displayScore >= 80 ? "Фраза собрана" : "Есть что усилить")
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundStyle(PD.ColorToken.text)
+                                            .multilineTextAlignment(.trailing)
+                                        HStack(spacing: 6) {
+                                            if textScore > 0 { resultChip(label: "текст \(textScore)%") }
+                                            if let toneScore { resultChip(label: "тоны \(toneScore)%") }
+                                        }
+                                    }
+                                }
 
-                            if !phraseLabel.isEmpty {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(phraseLabel)
-                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(PD.ColorToken.text)
-                                    PhoneticWithColoredArrowsView(
-                                        phonetic: Self.phoneticDisplayWithoutHyphens(expected),
-                                        font: .system(size: 15, weight: .medium),
-                                        alignment: .leading
+                                Rectangle()
+                                    .fill(PD.ColorToken.stroke.opacity(0.7))
+                                    .frame(height: 1)
+
+                                VStack(alignment: .leading, spacing: 5) {
+                                    if !phraseLabel.isEmpty {
+                                        Text(phraseLabel)
+                                            .font(.system(size: 17, weight: .semibold))
+                                            .foregroundStyle(PD.ColorToken.text)
+                                    }
+                                    if !expected.isEmpty {
+                                        Text(Self.phoneticDisplayWithoutHyphens(expected))
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundStyle(PD.ColorToken.textSecondary)
+                                            .lineLimit(3)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    if !userText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                        HStack(spacing: 6) {
+                                            Text("ты сказала")
+                                                .font(.system(size: 11, weight: .semibold))
+                                                .foregroundStyle(PD.ColorToken.textSecondary)
+                                            Text(userText)
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundStyle(PD.ColorToken.text)
+                                                .lineLimit(2)
+                                        }
+                                    }
+                                }
+
+                                if unlockTone, !syllableFeedback.isEmpty || showRecordingInPlace {
+                                    breakdownPhraseGraphSection(
+                                        expected: expected,
+                                        syllableFeedback: syllableFeedback,
+                                        isRecordingFromBreakdown: showRecordingInPlace,
+                                        recordingMeter: recordingMeter,
+                                        referenceRevealProgress: referenceRevealProgress,
+                                        onboardingStyle: false
                                     )
+                                } else if unlockTone, breakdownRequestInFlight {
+                                    HStack(spacing: 10) {
+                                        ProgressView()
+                                        Text("анализ")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundStyle(PD.ColorToken.textSecondary)
+                                    }
+                                } else if !unlockTone {
+                                    breakdownPhraseGraphPlaceholder(expected: expected, isProLocked: true)
                                 }
-                            }
 
-                            if unlockTone, !syllableFeedback.isEmpty || showRecordingInPlace {
-                                breakdownPhraseGraphSection(
-                                    expected: expected,
-                                    syllableFeedback: syllableFeedback,
-                                    isRecordingFromBreakdown: showRecordingInPlace,
-                                    recordingMeter: recordingMeter,
-                                    referenceRevealProgress: referenceRevealProgress,
-                                    onboardingStyle: true
-                                )
-                            } else if unlockTone, breakdownRequestInFlight {
-                                HStack(spacing: 10) {
-                                    ProgressView()
-                                    Text("Смотрю слоги…")
-                                        .font(.system(size: 15, weight: .medium))
+                                if unlockTone, !syllableFeedback.isEmpty {
+                                    breakdownSyllableRowsHumanSection(
+                                        expected: expected,
+                                        syllableFeedback: syllableFeedback
+                                    )
+                                } else if unlockTone, breakdownRequestFailed {
+                                    Text("Разбор временно недоступен")
+                                        .font(.system(size: 13, weight: .semibold))
                                         .foregroundStyle(PD.ColorToken.textSecondary)
+                                } else if !unlockTone {
+                                    breakdownProTeaseSection(expected: expected)
                                 }
-                            } else if !unlockTone {
-                                breakdownPhraseGraphPlaceholder(expected: expected, isProLocked: true)
-                            }
-
-                            if unlockTone, !syllableFeedback.isEmpty {
-                                breakdownSyllableRowsHumanSection(
-                                    expected: expected,
-                                    syllableFeedback: syllableFeedback
-                                )
-                                let conclusion = Self.breakdownSummaryNoteHuman(syllableFeedback: syllableFeedback)
-                                if !conclusion.isEmpty {
-                                    Text(conclusion)
-                                        .font(.system(size: 15, weight: .medium))
-                                        .foregroundStyle(PD.ColorToken.textSecondary)
-                                }
-                            } else if unlockTone, breakdownRequestFailed {
-                                Text("Не удалось загрузить разбор. Попробуй ещё раз с хорошим интернетом.")
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundStyle(PD.ColorToken.textSecondary)
-                            } else if !unlockTone {
-                                breakdownProTeaseSection(expected: expected)
                             }
                         } else {
                             // Legacy dense card (non-sheet)
@@ -4723,6 +4735,23 @@ public struct SpeakerDSRoot: View {
                 }
         }
         .padding(.top, 2)
+    }
+
+    @ViewBuilder
+    private func resultChip(label: String) -> some View {
+        Text(label)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(PD.ColorToken.textSecondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(PD.ColorToken.chip.opacity(0.62))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(PD.ColorToken.stroke.opacity(0.72), lineWidth: 1)
+            )
     }
 
     /// Два графика на всю фразу: эталон и пользователь. Ось X — подписи слогов, чтобы было видно, где ошибка.
