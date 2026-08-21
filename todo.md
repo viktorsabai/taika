@@ -2474,3 +2474,12 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Replace legacy black CTA buttons in Dictionary drawer | Done — training/reinforcement footer actions |
 | Replace first-entry CourseView scenario/start CTAs | Done — mode rows plus focus action |
 | Run global sweep, source check, and push unified CTA commit | In progress |
+
+
+# Fix — CardDS remaining builder ambiguity at line 1172
+
+| Task | Status |
+|---|---|
+| Inspect full Step action helper and modifiers around line 1172 | Done — failure was builder-level, not only label overload |
+| Explicitly type the full action surface expression | Done — both helpers return `AnyView` |
+| Run source check and push corrected compile state | In progress |

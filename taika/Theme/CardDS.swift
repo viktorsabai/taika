@@ -1133,9 +1133,10 @@ public struct StepCardActionBar: View {
         isActive: Bool,
         isEnabled: Bool = true,
         action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
+    ) -> AnyView {
+        AnyView(
+            Button(action: action) {
+                HStack(spacing: 10) {
                 Image(systemName: systemName)
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(isActive ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.text))
@@ -1169,7 +1170,8 @@ public struct StepCardActionBar: View {
         }
         .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.96, useBouncySpring: false, flashOpacity: 0.05))
         .disabled(!isEnabled)
-        .accessibilityLabel(Text(title))
+            .accessibilityLabel(Text(title))
+        )
     }
 
     private func quietActionButton(
@@ -1177,9 +1179,10 @@ public struct StepCardActionBar: View {
         title: String,
         isActive: Bool,
         action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
+    ) -> AnyView {
+        AnyView(
+            Button(action: action) {
+                HStack(spacing: 6) {
                 Image(systemName: systemName)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(isActive ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary))
@@ -1193,7 +1196,8 @@ public struct StepCardActionBar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.94, useBouncySpring: false, flashOpacity: 0.03))
-        .accessibilityLabel(Text(title))
+            .accessibilityLabel(Text(title))
+        )
     }
 }
 // MARK: - StepCardBase (shared shell for step cards – layout only, no logic)
