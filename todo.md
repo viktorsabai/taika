@@ -2972,8 +2972,18 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect current mode state, gestures, and composer path | [ ] |
-| Add Voice/Text swipe scene state and distinct sphere visuals | [ ] |
-| Move keyboard composer to centered Text scene | [ ] |
-| Remove bottom Voice/Text rail and prevent simultaneous mic | [ ] |
+| Inspect current mode state, gestures, and composer path | [x] |
+| Add Voice/Text swipe scene state and distinct sphere visuals | [x] — voice waveform sphere / keyboard sphere |
+| Move keyboard composer to centered Text scene | [x] |
+| Remove bottom Voice/Text rail and prevent simultaneous mic | [x] |
+| Run checks, commit, push, and provide device handoff | [x] — 65cec64ed3575ac2fe7774fc36552ed604a7e18f |
+
+
+# Profile hero banner parity
+
+| Task | Status |
+|---|---|
+| Inspect Taika+ and Rhythm banner differences | [ ] |
+| Match exact dimensions, spacing, hierarchy, and CTA | [ ] |
+| Reduce Rhythm saturation to canonical gradient treatment | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |

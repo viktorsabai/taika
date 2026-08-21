@@ -962,17 +962,18 @@ private struct ProfileRhythmPreviewCard: View {
             .padding(.vertical, 9)
         }
         .padding(16)
+        .frame(minHeight: 238, alignment: .top)
         .background(
-            AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.18)),
+            AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.12)),
             in: RoundedRectangle(cornerRadius: 26, style: .continuous)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.62)), lineWidth: 1)
+                .stroke(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.36)), lineWidth: 1)
         )
         }
         .buttonStyle(.plain)
-        .shadow(color: TaikaMasteryTokens.green.opacity(0.16), radius: 18, y: 8)
+        .shadow(color: Color.black.opacity(0.10), radius: 18, y: 8)
         .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Открыть Твой ритм")
@@ -1156,9 +1157,10 @@ private struct ProfileTaikaPlusCard: View {
             .padding(.vertical, 9)
         }
         .padding(16)
+        .frame(minHeight: 238, alignment: .top)
         .background(
             pro.isPro
-                ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.18))
+                ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.12))
                 : AnyShapeStyle(PD.ColorToken.card.opacity(0.72)),
             in: RoundedRectangle(cornerRadius: 26, style: .continuous)
         )
@@ -1166,12 +1168,12 @@ private struct ProfileTaikaPlusCard: View {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .stroke(
                     pro.isPro
-                        ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.62))
+                        ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.36))
                         : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.62)),
                     lineWidth: 1
                 )
         )
-        .shadow(color: statusColor.opacity(pro.isPro ? 0.16 : 0.04), radius: 18, y: 8)
+        .shadow(color: Color.black.opacity(0.10), radius: 18, y: 8)
     }
 
     private func profileCapability(_ image: String, _ title: String, _ available: Bool) -> some View {
