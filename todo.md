@@ -2940,8 +2940,19 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Trace idle/recording/processing/result live-stage branches | [ ] |
-| Unify fixed sphere, status/result, and mode-toolbar slots | [ ] |
-| Remove black-square recording artifact | [ ] |
-| Validate all four states and prevent sphere jumps | [ ] |
-| Run checks, commit, push, and provide device handoff | [ ] |
+| Trace idle/recording/processing/result live-stage branches | [x] |
+| Unify fixed sphere, status/result, and mode-toolbar slots | [x] |
+| Remove black-square recording artifact | [x] — waveform icon stays stable across states |
+| Validate all four states and prevent sphere jumps | [x] — source-level branch validation; device sweep pending |
+| Run checks, commit, push, and provide device handoff | [x] — cbf3f67c6f100cdca36d306200476bbc2f6b6379 |
+
+
+# Speaker pronunciation result hierarchy
+
+| Task | Status |
+|---|---|
+| Inspect result center and action footer composition | [ ] |
+| Keep Thai/reference in one compact phrase row | [ ] |
+| Move tone breakdown to its own dedicated row | [ ] |
+| Separate action icons and remove duplicate instant translation CTA | [ ] |
+| Protect bottom toolbar spacing and push device handoff | [ ] |

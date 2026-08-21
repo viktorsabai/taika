@@ -915,10 +915,8 @@ public struct SpeakerDSRoot: View {
                                     .transition(.opacity)
                                 conversationIconChrome
                                     .padding(.horizontal, padH)
-                                conversationStickyMicBar
-                                    .padding(.horizontal, padH)
-                                    .padding(.top, 2)
-                                    .padding(.bottom, 8)
+                                Color.clear
+                                    .frame(height: 8)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         }
@@ -1775,34 +1773,43 @@ public struct SpeakerDSRoot: View {
                 }
 
                 if !expectedThai.isEmpty || !userText.isEmpty {
-                    VStack(alignment: .leading, spacing: 7) {
-                        if !userText.isEmpty {
+                    HStack(alignment: .top, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 6) {
                             Text("ТЫ СКАЗАЛА")
                                 .font(.system(size: 10, weight: .bold))
                                 .tracking(0.6)
                                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.62))
-                            Text(userText)
-                                .font(.system(size: 17, weight: .semibold))
+                            Text(userText.isEmpty ? "—" : userText)
+                                .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(PD.ColorToken.text)
-                                .lineLimit(2)
+                                .lineLimit(3)
+                                .minimumScaleFactor(0.82)
                         }
-                        if !expectedThai.isEmpty {
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(ThemeManager.shared.currentAccentTintColor)
+                            .padding(.top, 22)
+
+                        VStack(alignment: .leading, spacing: 6) {
                             Text("ЭТАЛОН")
                                 .font(.system(size: 10, weight: .bold))
                                 .tracking(0.6)
                                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.62))
-                                .padding(.top, 2)
-                            Text(expectedThai)
-                                .font(.system(size: 21, weight: .semibold))
+                            Text(expectedThai.isEmpty ? "—" : expectedThai)
+                                .font(.system(size: 18, weight: .semibold))
                                 .foregroundStyle(ThemeManager.shared.currentAccentFill)
                                 .lineLimit(2)
+                                .minimumScaleFactor(0.82)
                             if !expectedPhonetic.isEmpty {
                                 Text(expectedPhonetic)
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(PD.ColorToken.textSecondary)
                                     .lineLimit(2)
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -2071,14 +2078,6 @@ public struct SpeakerDSRoot: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Ещё раз")
-
-            conversationChromeIconButton(
-                systemName: "waveform.path.ecg",
-                enabled: true,
-                accessibility: "Разбор тонов"
-            ) {
-                external?.onRequestBreakdown?()
-            }
 
             conversationChromeIconButton(
                 systemName: "xmark",
