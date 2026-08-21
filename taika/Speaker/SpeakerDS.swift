@@ -4349,11 +4349,12 @@ public struct SpeakerDSRoot: View {
                                             .font(.system(size: 11, weight: .semibold))
                                             .tracking(1.1)
                                             .foregroundStyle(PD.ColorToken.textSecondary)
-                                        Text("\(displayScore)%")
-                                            .font(Theme.Fonts.metric(48))
-                                            .monospacedDigit()
-                                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                                            .contentTransition(.numericText())
+                                        SpeakerCountingScore(
+                                            value: displayScore,
+                                            font: Theme.Fonts.metric(48),
+                                            color: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
+                                            suffix: "%"
+                                        )
                                     }
                                     Spacer(minLength: 8)
                                     VStack(alignment: .trailing, spacing: 6) {
@@ -4422,6 +4423,12 @@ public struct SpeakerDSRoot: View {
                                     breakdownSyllableRowsHumanSection(
                                         expected: expected,
                                         syllableFeedback: syllableFeedback
+                                    )
+                                    breakdownPracticeTipsSection(
+                                        expected: expected,
+                                        syllableFeedback: syllableFeedback,
+                                        textScore: textScore,
+                                        toneScore: toneScore
                                     )
                                 } else if unlockTone, breakdownRequestFailed {
                                     Text("Разбор временно недоступен")
@@ -4794,13 +4801,57 @@ public struct SpeakerDSRoot: View {
                     }
                 }
 
-                TaikaTechWaveform(
-                    meter: waveMeter,
-                    pace: wavePace,
-                    lineCount: onboardingStyle ? 4 : 3
-                )
-                .frame(height: onboardingStyle ? 42 : 34)
-                .padding(.horizontal, 2)
+                if hasFeedback {
+                    let userContour = Self.normalizedContour(
+                        syllableFeedback.flatMap { $0.f0Contour ?? [] }
+                    )
+                    let referenceContour = Self.referenceContour(
+                        for: syllableFeedback.map(\.toneExpected),
+                        targetCount: max(userContour.count, syllableFeedback.count * 8)
+                    )
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 10) {
+                            HStack(spacing: 5) {
+                                Circle().fill(ThemeManager.shared.currentAccentTintColor).frame(width: 6, height: 6)
+                                Text("эталон")
+                            }
+                            HStack(spacing: 5) {
+                                Circle().fill(ThemeManager.shared.currentAccentFill).frame(width: 6, height: 6)
+                                Text("твоя линия")
+                            }
+                        }
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.white.opacity(0.025))
+                            if referenceContour.count >= 2 {
+                                Self.breakdownPhraseSparkline(
+                                    values: referenceContour,
+                                    isReference: true
+                                )
+                            }
+                            if userContour.count >= 2 {
+                                Self.breakdownPhraseSparkline(values: userContour)
+                            } else {
+                                Text("линия записи недоступна")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.68))
+                            }
+                        }
+                        .frame(height: onboardingStyle ? 54 : 48)
+                        .padding(.horizontal, 2)
+                    }
+                } else {
+                    TaikaTechWaveform(
+                        meter: waveMeter,
+                        pace: wavePace,
+                        lineCount: onboardingStyle ? 4 : 3
+                    )
+                    .frame(height: onboardingStyle ? 42 : 34)
+                    .padding(.horizontal, 2)
+                }
 
                 if !syllableLabels.isEmpty {
                     HStack(spacing: 0) {
@@ -4827,6 +4878,48 @@ public struct SpeakerDSRoot: View {
             }
             .padding(.top, 4)
         )
+    }
+
+    private static func normalizedContour(_ values: [Double]) -> [Double] {
+        guard values.count >= 2 else { return [] }
+        let finite = values.filter { $0.isFinite }
+        guard finite.count >= 2 else { return [] }
+        let minValue = finite.min() ?? 0
+        let maxValue = finite.max() ?? 1
+        let span = maxValue - minValue
+        guard span > 0.0001 else { return finite.map { _ in 0.5 } }
+        return finite.map { max(0, min(1, ($0 - minValue) / span)) }
+    }
+
+    /// Нормализованная эталонная траектория из toneExpected. Это visual guide, не оценка вместо API.
+    private static func referenceContour(for tones: [String?], targetCount: Int) -> [Double] {
+        guard !tones.isEmpty else { return [] }
+        let profiles: [[Double]] = tones.map { raw in
+            let tone = (raw ?? "").lowercased()
+            if tone.contains("rise") || tone.contains("вос") || tone.contains("rising") {
+                return [0.34, 0.39, 0.46, 0.55, 0.66, 0.76]
+            }
+            if tone.contains("fall") || tone.contains("нис") || tone.contains("falling") {
+                return [0.76, 0.68, 0.58, 0.48, 0.39, 0.32]
+            }
+            if tone.contains("high") || tone.contains("выс") {
+                return [0.55, 0.66, 0.72, 0.70, 0.66, 0.62]
+            }
+            if tone.contains("low") || tone.contains("низ") {
+                return [0.42, 0.34, 0.30, 0.32, 0.36, 0.40]
+            }
+            return [0.50, 0.52, 0.53, 0.52, 0.50, 0.49]
+        }
+        let flattened = profiles.flatMap { $0 }
+        guard targetCount > 0, flattened.count > targetCount else { return flattened }
+        let step = Double(flattened.count - 1) / Double(targetCount - 1)
+        return (0..<targetCount).map { index in
+            let position = Double(index) * step
+            let left = Int(position.rounded(.down))
+            let right = min(flattened.count - 1, left + 1)
+            let fraction = position - Double(left)
+            return flattened[left] * (1 - fraction) + flattened[right] * fraction
+        }
     }
 
     /// Полноширинный график контура (от края до края). isReference = серый эталон, иначе акцент.
@@ -4921,6 +5014,55 @@ public struct SpeakerDSRoot: View {
             }
         }
         .padding(.top, 2)
+    }
+
+    @ViewBuilder private func breakdownPracticeTipsSection(
+        expected: String,
+        syllableFeedback: [SpeakerManager.SyllableFeedback],
+        textScore: Int,
+        toneScore: Int?
+    ) -> some View {
+        let chunks = Self.translitChunksForSyllables(expected)
+        let weakestIndex = syllableFeedback.enumerated().min(by: { $0.element.score < $1.element.score })?.offset ?? 0
+        let weakest = weakestIndex < chunks.count
+            ? Self.syllableLabelWithoutArrows(chunks[weakestIndex])
+            : (syllableFeedback.first?.syllable ?? "этом слоге")
+        let tip: String
+        if let toneScore, toneScore + 8 < textScore {
+            tip = "Сначала повтори тон на «\(weakest)»: медленнее, с явным подъёмом или падением голоса."
+        } else if let toneScore, toneScore < 70 {
+            tip = "Сделай короткую паузу перед «\(weakest)» и повтори слог отдельно, затем собери всю фразу."
+        } else if textScore < 70 {
+            tip = "Скажи фразу медленнее и держи границы слогов — особенно на «\(weakest)»."
+        } else {
+            tip = "Повтори фразу ещё раз в том же темпе и сохрани точный тон на «\(weakest)»."
+        }
+
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "lightbulb.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Следующая попытка")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                Text(tip)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.035))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(PD.ColorToken.stroke.opacity(0.62), lineWidth: 1)
+                )
+        )
     }
 
     /// Free: короткий tease по слогам — без CTA внутри (кнопка только в футере разбора).
@@ -5378,17 +5520,22 @@ public struct SpeakerDSRoot: View {
             Button {
                 external?.onPrev?()
             } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(
-                        AnyShapeStyle(
-                            disabledAll
-                            ? PD.ColorToken.textSecondary.opacity(0.35)
-                            : PD.ColorToken.text
+                VStack(spacing: 3) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(
+                            AnyShapeStyle(
+                                disabledAll
+                                ? PD.ColorToken.textSecondary.opacity(0.35)
+                                : PD.ColorToken.text
+                            )
                         )
-                    )
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+                        .frame(width: 44, height: 44)
+                    Text("назад")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(disabledAll)
@@ -5398,17 +5545,22 @@ public struct SpeakerDSRoot: View {
                 guard canPlayReference else { return }
                 external?.onPlayReference()
             } label: {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(
-                        AnyShapeStyle(
-                            canPlayReference
-                            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35))
+                VStack(spacing: 3) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(
+                            AnyShapeStyle(
+                                canPlayReference
+                                ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                                : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35))
+                            )
                         )
-                    )
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+                        .frame(width: 44, height: 44)
+                    Text("эталон")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(!canPlayReference)
@@ -5423,18 +5575,24 @@ public struct SpeakerDSRoot: View {
                     external?.onMicTap()   // start recording
                 }
             } label: {
-                Image(systemName:
-                        isRecording
-                        ? "stop.fill"
-                        : (isFeedback ? "arrow.clockwise" : "mic.fill")
-                )
-                    .font(.system(size: 22, weight: .bold))
-                    .frame(width: 72, height: 72)
-                    .background(
-                        Circle()
-                            .fill(ThemeManager.shared.currentAccentFill)
+                VStack(spacing: 3) {
+                    Image(systemName:
+                            isRecording
+                            ? "stop.fill"
+                            : (isFeedback ? "arrow.clockwise" : "mic.fill")
                     )
-                    .foregroundColor(.black)
+                        .font(.system(size: 22, weight: .bold))
+                        .frame(width: 72, height: 72)
+                        .background(
+                            Circle()
+                                .fill(ThemeManager.shared.currentAccentFill)
+                        )
+                        .foregroundColor(.black)
+                    Text(isRecording ? "остановить" : (isFeedback ? "ещё раз" : "записать"))
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(isAnalyzing)
@@ -5444,15 +5602,22 @@ public struct SpeakerDSRoot: View {
                 guard canPlayAttempt else { return }
                 external?.onPlayAttempt()
             } label: {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(
-                        canPlayAttempt
-                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                        : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35))
-                    )
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+                VStack(spacing: 3) {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(
+                            canPlayAttempt
+                            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35))
+                        )
+                        .frame(width: 44, height: 44)
+                    Text("твоя запись")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(!canPlayAttempt)
@@ -5461,17 +5626,22 @@ public struct SpeakerDSRoot: View {
             Button {
                 external?.onNext()
             } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(
-                        AnyShapeStyle(
-                            disabledAll
-                            ? PD.ColorToken.textSecondary.opacity(0.35)
-                            : PD.ColorToken.text
+                VStack(spacing: 3) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(
+                            AnyShapeStyle(
+                                disabledAll
+                                ? PD.ColorToken.textSecondary.opacity(0.35)
+                                : PD.ColorToken.text
+                            )
                         )
-                    )
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+                        .frame(width: 44, height: 44)
+                    Text("дальше")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(disabledAll)

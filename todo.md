@@ -2376,3 +2376,16 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Reuse the same restrained action-row primitive in LessonsView grade sheet | Done |
 | Validate scroll, safe-area, disabled, and selected states | In progress — Xcode/Simulator pending |
 | Push one UI consistency commit | In progress |
+
+
+# Final Speaker reinforcement quality pass
+
+| Task | Status |
+|---|---|
+| Verify shared 10-attempt daily limit for both Speaker modes | Done — both stores use 10 |
+| Audit course reinforcement scope, carousel selection, and session persistence | Done at source level; scope resets only on explicit filter change |
+| Verify score, tone, syllable, and reference-graph calculations | Done at source level; user f0 + tone metadata graph |
+| Unify idle, recording, analyzing, and result states around the stable sphere | Done in prior sphere pass |
+| Add one animated primary score, reference graph, and practical teaching tips | Done |
+| Remove redundant result copy and ambiguous carousel actions | Done — controls now have concise labels |
+| Run source regression checks and push the final Speaker fix | Ready — source sweep clean; Xcode/Simulator pending |
