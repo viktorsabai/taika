@@ -2365,3 +2365,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Keep Russian phrase, Thai pronunciation, score, and chips in one composition | Done |
 | Remove nested frames and redundant explanatory copy | Done at result-shell level; inner analysis modules preserved |
 | Validate E2E flow and push one testing commit | In progress — Xcode/Simulator pending |
+
+
+# CTA and row consistency — Speaker, Favorites, Dictionary, LessonsView
+
+| Task | Status |
+|---|---|
+| Audit Favorites/Dictionary persistent CTA placement above bottom navigation | Done |
+| Unify Favorites and Dictionary card-row height, spacing, divider, and trailing action | Done at source level |
+| Reuse the same restrained action-row primitive in LessonsView grade sheet | Done |
+| Validate scroll, safe-area, disabled, and selected states | In progress — Xcode/Simulator pending |
+| Push one UI consistency commit | In progress |

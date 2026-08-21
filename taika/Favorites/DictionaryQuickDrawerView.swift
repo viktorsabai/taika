@@ -675,6 +675,7 @@ struct DictionaryPhraseActionsMenu: View {
     var onEdit: (() -> Void)?
     var onDelete: (() -> Void)?
     var onTrain: (() -> Void)?
+    var compact: Bool = false
 
     var body: some View {
         Menu {
@@ -686,11 +687,19 @@ struct DictionaryPhraseActionsMenu: View {
             )
         } label: {
             Image(systemName: "ellipsis")
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(CD.ColorToken.textSecondary)
-                .frame(width: 34, height: 34)
-                .background(Circle().fill(CD.ColorToken.chip))
-                .overlay(Circle().stroke(PD.ColorToken.stroke.opacity(0.65), lineWidth: 1))
+                .font(.system(size: compact ? 15 : 15, weight: .bold))
+                .foregroundStyle(compact ? PD.ColorToken.textSecondary : CD.ColorToken.textSecondary)
+                .frame(width: compact ? 28 : 34, height: compact ? 36 : 34)
+                .background {
+                    if !compact {
+                        Circle().fill(CD.ColorToken.chip)
+                    }
+                }
+                .overlay {
+                    if !compact {
+                        Circle().stroke(PD.ColorToken.stroke.opacity(0.65), lineWidth: 1)
+                    }
+                }
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Действия с фразой")

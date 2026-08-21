@@ -101,7 +101,7 @@ struct FavoriteView: View {
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             PD.ColorToken.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -128,14 +128,8 @@ struct FavoriteView: View {
                             favoritesTabContent()
                                 .frame(maxWidth: .infinity, alignment: .topLeading)
 
-                            if showsBottomTrainingBar {
-                                favoritesTrainingCTA()
-                                    .padding(.horizontal, CD.Spacing.screen)
-                                    .padding(.top, 18)
-                                    .padding(.bottom, bottomContentInset)
-                            } else {
-                                Spacer(minLength: bottomContentInset)
-                            }
+                            // The training CTA is pinned above the app toolbar; keep scroll content clear of it.
+                            Spacer(minLength: showsBottomTrainingBar ? ToolBar.recommendedBottomInset + 104 : bottomContentInset)
                         }
                     }
                     .environment(\.taikaRootHeaderClearance, 0)
@@ -143,6 +137,21 @@ struct FavoriteView: View {
                 }
             }
             .padding(.top, Theme.Layout.rootHeaderClearance)
+
+            if showsBottomTrainingBar {
+                favoritesTrainingCTA()
+                    .padding(.horizontal, CD.Spacing.screen)
+                    .padding(.bottom, ToolBar.recommendedBottomInset + 10)
+                    .padding(.top, 12)
+                    .background(
+                        LinearGradient(
+                            colors: [PD.ColorToken.background.opacity(0), PD.ColorToken.background.opacity(0.96)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .ignoresSafeArea(edges: .bottom)
+                    )
+            }
         }
         .confirmationDialog(
             selectedTab == .dictionary ? "Начать тренировку словаря" : "Начать тренировку избранного",

@@ -956,7 +956,8 @@ private struct FDFavPhraseCompactRow: View {
                         card: dto,
                         onEdit: onEdit,
                         onDelete: onDelete,
-                        onTrain: onTrain
+                        onTrain: onTrain,
+                        compact: true
                     )
                 } else {
                     FavCircleIconButton(
@@ -1320,7 +1321,8 @@ private struct FDFavPhraseGridCard: View {
                     card: dto,
                     onEdit: onEdit,
                     onDelete: onDelete,
-                    onTrain: onTrain
+                    onTrain: onTrain,
+                    compact: true
                 )
                 .padding(8)
             }

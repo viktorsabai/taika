@@ -2092,33 +2092,34 @@ public struct LSCompletedTrainingHero: View {
 
     @ViewBuilder
     private func actionRow(icon: String, title: String, detail: String, enabled: Bool, action: (() -> Void)?) -> some View {
-        let content = HStack(spacing: 10) {
+        let content = HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(enabled ? AnyShapeStyle(PD.ColorToken.text) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.45)))
-                .frame(width: 22, alignment: .leading)
-            VStack(alignment: .leading, spacing: 2) {
+                .frame(width: 24, alignment: .leading)
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(enabled ? PD.ColorToken.text : PD.ColorToken.textSecondary.opacity(0.55))
                 Text(detail)
-                    .font(.system(size: 10, weight: .regular))
+                    .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(PD.ColorToken.textSecondary.opacity(enabled ? 0.82 : 0.45))
+                    .lineLimit(2)
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
+            Image(systemName: "arrow.up.right")
+                .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(enabled ? 0.9 : 0.42))
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 11)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 13)
         .background(
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(enabled ? Color.white.opacity(0.045) : Color.white.opacity(0.018))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .stroke(enabled ? PD.ColorToken.stroke.opacity(0.68) : PD.ColorToken.stroke.opacity(0.24), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(enabled ? PD.ColorToken.stroke.opacity(0.8) : PD.ColorToken.stroke.opacity(0.28), lineWidth: 1)
         )
         .padding(.bottom, 8)
 
@@ -2358,16 +2359,16 @@ public struct LSCompletedLessonList: View {
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(PD.ColorToken.textSecondary.opacity(canStartFocus ? 0.9 : 0.38))
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(canStartFocus ? Color.white.opacity(0.045) : Color.white.opacity(0.018))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(canStartFocus ? PD.ColorToken.stroke.opacity(0.68) : PD.ColorToken.stroke.opacity(0.28), lineWidth: 1)
-                    )
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 13)
+                            .background(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .fill(canStartFocus ? Color.white.opacity(0.045) : Color.white.opacity(0.018))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .stroke(canStartFocus ? PD.ColorToken.stroke.opacity(0.8) : PD.ColorToken.stroke.opacity(0.28), lineWidth: 1)
+                            )
                 }
                 .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.98, useBouncySpring: false))
                 .disabled(!canStartFocus)
