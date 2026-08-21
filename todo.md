@@ -3160,3 +3160,31 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Replace compound service phrases with short survival phrases | [x] |
 | Preserve course/lesson IDs, refs and progress counts | [x] |
 | Validate JSON and push the service-cluster revision | [x] |
+
+# Advanced/long course complexity queue
+
+| Task | Status |
+|---|---|
+| Exclude all course_b_* from the next queue | [ ] |
+| Rank course_l_*, course_long_* and advanced course_e_* by phrase overload | [ ] |
+| Check domain overlap before selecting the next course | [ ] |
+| Recommend one next advanced course without editing content | [ ] |
+
+# course_l_10 simplification draft
+
+| Task | Status |
+|---|---|
+| Audit current gym lessons and steps | [ ] |
+| Define unique gym phrase-bank skills | [ ] |
+| Draft short cards for each lesson | [ ] |
+| Keep draft separate from production until native QA | [ ] |
+
+# Non-base course sequential audit
+
+| Task | Status |
+|---|---|
+| Enumerate all courses outside category «База от Тайки» | [x] — 34 courses |
+| Establish one-course-at-a-time audit order | [x] — priority queue built |
+| Create per-course draft template and quality gates | [x] — 31 draft files |
+| Save each draft separately; do not batch-edit production JSON | [x] |
+| Build draft index and progress ledger | [x] — docs/nonbase_course_audit_queue.md |
