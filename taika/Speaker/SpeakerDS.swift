@@ -2104,23 +2104,29 @@ public struct SpeakerDSRoot: View {
                 }
             }
 
-            conversationModeRailButton(
-                systemName: "graduationcap.fill",
-                title: "Закрепление",
-                selected: false,
-                accessibility: "Открыть закрепление курсов"
-            ) {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                external?.onSpeakerUIModeChange(.training)
-            }
         }
-        .padding(5)
-        .background(.ultraThinMaterial, in: Capsule(style: .continuous))
-        .overlay(
-            Capsule(style: .continuous)
-                .stroke(PD.ColorToken.stroke.opacity(0.68), lineWidth: 1)
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.ultraThinMaterial)
         )
-        .frame(maxWidth: 330)
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.16),
+                            PD.ColorToken.stroke.opacity(0.56),
+                            ThemeManager.shared.currentAccentTintColor.opacity(0.18)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: Color.black.opacity(0.22), radius: 18, y: 8)
+        .frame(maxWidth: 248)
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Режимы Speaker")
@@ -2134,20 +2140,30 @@ public struct SpeakerDSRoot: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: 7) {
                 Image(systemName: systemName)
                     .font(.system(size: 14, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.78)
+                    .minimumScaleFactor(0.84)
             }
-            .foregroundStyle(selected ? AnyShapeStyle(Color.black) : AnyShapeStyle(PD.ColorToken.textSecondary))
-            .frame(maxWidth: .infinity, minHeight: 42)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(selected ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(Color.clear))
-            )
+            .foregroundStyle(selected ? AnyShapeStyle(Color.black.opacity(0.90)) : AnyShapeStyle(PD.ColorToken.textSecondary))
+            .frame(maxWidth: .infinity, minHeight: 40)
+            .background {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        selected
+                            ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
+                            : AnyShapeStyle(Color.clear)
+                    )
+                    .overlay {
+                        if selected {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color.white.opacity(0.22), lineWidth: 0.8)
+                        }
+                    }
+            }
         }
         .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
         .accessibilityLabel(accessibility)

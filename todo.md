@@ -2860,7 +2860,17 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect score/result and syllable breakdown implementation | [ ] |
-| Increase result readability and restore canonical score typography | [ ] |
-| Restore syllable navigation and tone feedback | [ ] |
+| Inspect score/result and syllable breakdown implementation | [x] |
+| Increase result readability and restore canonical score typography | [x] |
+| Restore syllable navigation and tone feedback | [x] |
+| Run checks, commit, push, and provide device handoff | [x] — 2bb4ad94f6e624d34e63f82498e692f70c472677 |
+
+
+# Speaker Voice/Text rail refinement
+
+| Task | Status |
+|---|---|
+| Inspect mode rail and reinforcement references | [ ] |
+| Remove Reinforcement from the bottom control | [ ] |
+| Redesign Voice/Text as a modern two-state segmented control | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |
