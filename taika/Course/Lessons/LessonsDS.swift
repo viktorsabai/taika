@@ -1778,6 +1778,8 @@ public struct LSCompletedTrainingHero: View {
     public let onGamePark: (() -> Void)?
     public let onGameMode: ((String) -> Void)?
     public let onProLocked: (() -> Void)?
+    public let selectedWeakCount: Int
+    public let onFocus: (() -> Void)?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var didReveal = false
     @State private var displayedScore = 0
@@ -1790,7 +1792,9 @@ public struct LSCompletedTrainingHero: View {
         onSpeaker: (() -> Void)? = nil,
         onGamePark: (() -> Void)? = nil,
         onGameMode: ((String) -> Void)? = nil,
-        onProLocked: (() -> Void)? = nil
+        onProLocked: (() -> Void)? = nil,
+        selectedWeakCount: Int = 0,
+        onFocus: (() -> Void)? = nil
     ) {
         self.stats = stats
         self.selectedCount = selectedCount
@@ -1800,6 +1804,8 @@ public struct LSCompletedTrainingHero: View {
         self.onGamePark = onGamePark
         self.onGameMode = onGameMode
         self.onProLocked = onProLocked
+        self.selectedWeakCount = max(0, selectedWeakCount)
+        self.onFocus = onFocus
     }
 
     private var scoreValue: Int { stats.reinforcementScore ?? 0 }
@@ -1841,13 +1847,11 @@ public struct LSCompletedTrainingHero: View {
                             .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
                             .monospacedDigit()
                             .contentTransition(.numericText())
-                        Text("ЭФФЕКТИВНОСТЬ")
-                            .font(.system(size: 8, weight: .bold))
-                            .kerning(0.35)
-                            .foregroundStyle(PD.ColorToken.textSecondary)
                     }
                 }
                 .frame(width: 116, height: 116)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(stats.reinforcementScore == nil ? "Результат пока не рассчитан" : "\(displayedScore) процентов закрепления")
                 .opacity(didReveal ? 1 : 0)
                 .scaleEffect(didReveal || reduceMotion ? 1 : 0.94)
 
@@ -1921,6 +1925,15 @@ public struct LSCompletedTrainingHero: View {
                     detail: selectedCount > 0 ? "Память и закрепление выбранных уроков" : "Сначала выбери уроки ниже",
                     enabled: onGamePark != nil && selectedCount > 0,
                     action: onGamePark
+                )
+                actionRow(
+                    icon: "scope",
+                    title: "Начать с фокуса",
+                    detail: selectedWeakCount > 0
+                        ? "\(selectedWeakCount) уроков с ошибками"
+                        : "Выбери урок с ошибками ниже",
+                    enabled: onFocus != nil && selectedWeakCount > 0,
+                    action: onFocus
                 )
             }
         }
@@ -2095,7 +2108,7 @@ public struct LSCompletedTrainingHero: View {
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(enabled ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.42)))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(enabled ? 0.9 : 0.42))
         }
         .padding(.horizontal, 11)
         .padding(.vertical, 11)
@@ -2109,7 +2122,14 @@ public struct LSCompletedTrainingHero: View {
         )
         .padding(.bottom, 8)
 
-        if enabled, let action { Button(action: action) { content }.buttonStyle(.plain) } else { content }
+        if enabled, let action {
+            Button(action: action) {
+                content
+            }
+            .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.98, useBouncySpring: false))
+        } else {
+            content
+        }
     }
 }
 
@@ -2128,10 +2148,11 @@ public struct LSCompletedLessonList: View {
     public let accentFill: AnyShapeStyle
     public let accentColor: Color
     public let isCompletedPresentation: Bool
+    public let showFocusAction: Bool
     public let sectionTitle: String
     @State private var showingErrorsOnly: Bool = false
 
-    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], courseSessionCount: Int = 0, onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, onSelectWeak: (() -> Void)? = nil, onTrainWeak: ((Set<String>) -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGradient), accentColor: Color = TaikaMasteryTokens.greenGlow, isCompletedPresentation: Bool = true, sectionTitle: String = "ФОКУС НА СЕГОДНЯ") {
+    public init(items: [LS.Item], selectedIds: Set<String>, weakIds: Set<String>, scores: [String: Int] = [:], courseSessionCount: Int = 0, onToggle: @escaping (String) -> Void, onOpen: ((String) -> Void)? = nil, onSelectAll: (() -> Void)? = nil, onClearAll: (() -> Void)? = nil, onSelectWeak: (() -> Void)? = nil, onTrainWeak: ((Set<String>) -> Void)? = nil, accentFill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenGradient), accentColor: Color = TaikaMasteryTokens.greenGlow, isCompletedPresentation: Bool = true, showFocusAction: Bool = true, sectionTitle: String = "ФОКУС НА СЕГОДНЯ") {
         self.items = items
         self.selectedIds = selectedIds
         self.weakIds = weakIds
@@ -2146,6 +2167,7 @@ public struct LSCompletedLessonList: View {
                 self.accentFill = accentFill
         self.accentColor = accentColor
         self.isCompletedPresentation = isCompletedPresentation
+        self.showFocusAction = showFocusAction
         self.sectionTitle = sectionTitle
     }
     @ViewBuilder
@@ -2307,49 +2329,51 @@ public struct LSCompletedLessonList: View {
                 }
             }
 
-            let focusTitle = canStartFocus ? "Начать с фокуса" : "Фокус пока недоступен"
-            let focusDetail: String = {
-                if !hasErrors { return "После игры здесь появятся карточки для повторения" }
-                if selectedFocusIds.isEmpty { return "Выбери урок с ошибками выше" }
-                return "\(selectedFocusIds.count) уроков · \(weakCardCount) карточки требуют внимания"
-            }()
-            Button {
-                onTrainWeak?(selectedFocusIds)
-            } label: {
-                HStack(spacing: 11) {
-                    Image(systemName: canStartFocus ? "scope" : "scope")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(canStartFocus ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.42)))
-                        .frame(width: 24)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(focusTitle)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(canStartFocus ? PD.ColorToken.text : PD.ColorToken.textSecondary.opacity(0.55))
-                        Text(focusDetail)
-                            .font(.system(size: 12, weight: .regular))
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(canStartFocus ? 0.86 : 0.48))
-                            .lineLimit(2)
+            if showFocusAction {
+                let focusTitle = canStartFocus ? "Начать с фокуса" : "Фокус пока недоступен"
+                let focusDetail: String = {
+                    if !hasErrors { return "После игры здесь появятся карточки для повторения" }
+                    if selectedFocusIds.isEmpty { return "Выбери урок с ошибками выше" }
+                    return "\(selectedFocusIds.count) уроков · \(weakCardCount) карточки требуют внимания"
+                }()
+                Button {
+                    onTrainWeak?(selectedFocusIds)
+                } label: {
+                    HStack(spacing: 11) {
+                        Image(systemName: "scope")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(canStartFocus ? 0.9 : 0.42))
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(focusTitle)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(canStartFocus ? PD.ColorToken.text : PD.ColorToken.textSecondary.opacity(0.55))
+                            Text(focusDetail)
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(canStartFocus ? 0.86 : 0.48))
+                                .lineLimit(2)
+                        }
+                        Spacer(minLength: 8)
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(canStartFocus ? 0.9 : 0.38))
                     }
-                    Spacer(minLength: 8)
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(canStartFocus ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.38)))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(canStartFocus ? Color.white.opacity(0.045) : Color.white.opacity(0.018))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(canStartFocus ? PD.ColorToken.stroke.opacity(0.68) : PD.ColorToken.stroke.opacity(0.28), lineWidth: 1)
+                    )
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(canStartFocus ? Color.white.opacity(0.055) : Color.white.opacity(0.018))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(canStartFocus ? PD.ColorToken.stroke.opacity(0.72) : PD.ColorToken.stroke.opacity(0.28), lineWidth: 1)
-                )
+                .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.98, useBouncySpring: false))
+                .disabled(!canStartFocus)
+                .padding(.top, 12)
+                .accessibilityLabel(canStartFocus ? "Начать закрепление с выбранных ошибок" : focusDetail)
             }
-            .buttonStyle(.plain)
-            .disabled(!canStartFocus)
-            .padding(.top, 12)
-            .accessibilityLabel(canStartFocus ? "Начать закрепление с выбранных ошибок" : focusDetail)
         }
         .padding(.top, 4)
     }

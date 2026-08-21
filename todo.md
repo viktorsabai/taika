@@ -2293,3 +2293,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Repair logical gaps without changing educational scope semantics | Done |
 | Replace outdated post-game non-Pro sheet with existing canonical mini-paywall | Done |
 | Run source-level regression checks and prepare one commit/push | In progress — Xcode/Simulator pending |
+
+
+# LessonsView — unified next-step block refinement
+
+| Task | Status |
+|---|---|
+| Audit completed CTA placement and score-ring label | Done |
+| Combine Speaker, Games, and Start with focus into one restrained native block above the lesson/error list | Done |
+| Keep actions selection-aware and disabled without a valid lesson scope | Done |
+| Remove the `эффективность` label from the score ring while preserving accessibility text | Done |
+| Run source checks, commit, and push the refinement | In progress — Xcode visual validation pending |

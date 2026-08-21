@@ -312,6 +312,17 @@ private extension LessonsView {
         }
     }
 
+    private func launchSelectedErrorFocus() {
+        let ids = Array(effectiveReinforcementLessonIds.intersection(weakCompletedLessonIds)).sorted()
+        guard !ids.isEmpty else { return }
+        let keys = ReinforcementStore.shared.failedCardKeys(
+            courseId: currentCourse?.courseID ?? "",
+            lessonIds: ids
+        )
+        updateReinforcementSelection(Set(ids))
+        launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
+    }
+
     /// A classified skill row opens its selected mode directly; the generic Game Park entry keeps the picker.
     private func launchClassifiedGame(modeRawValue: String) {
         guard let mode = GameModeType(rawValue: modeRawValue),
@@ -388,10 +399,12 @@ private extension LessonsView {
                 selectedCount: effectiveReinforcementLessonIds.count,
                 totalLessons: completedLessonOptions.count,
                 weakCount: weakCompletedLessonIds.count,
+                selectedWeakCount: effectiveReinforcementLessonIds.intersection(weakCompletedLessonIds).count,
                 onSpeaker: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { launchSpeakerTraining() },
                 onGamePark: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { launchGameTraining() },
                 onGameMode: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { mode in launchClassifiedGame(modeRawValue: mode) },
-                onProLocked: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { showGamesProSheet() }
+                onProLocked: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { showGamesProSheet() },
+                onFocus: isTheoryBonusCourse || effectiveReinforcementLessonIds.intersection(weakCompletedLessonIds).isEmpty ? nil : { launchSelectedErrorFocus() }
             )
 
             LSCompletedLessonList(
@@ -417,6 +430,7 @@ private extension LessonsView {
                     updateReinforcementSelection(Set(ids))
                     launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
                 },
+                showFocusAction: false,
                 accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
                 accentColor: TaikaMasteryTokens.greenGlow
             )
