@@ -2521,7 +2521,7 @@ private struct CardBackActionButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(isMastery ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(Color.white.opacity(0.86)))
+            .foregroundStyle(Color.white.opacity(0.88))
             .lineLimit(1)
             .minimumScaleFactor(0.78)
             .padding(.horizontal, 14)
@@ -2529,18 +2529,12 @@ private struct CardBackActionButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 Capsule(style: .continuous)
-                    .fill(
-                        isMastery
-                        ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.14))
-                        : AnyShapeStyle(Color.clear)
-                    )
+                    .fill(Color.white.opacity(0.035))
             )
             .overlay(
                 Capsule(style: .continuous)
                     .stroke(
-                        isMastery
-                        ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
-                        : AnyShapeStyle(Color.white.opacity(0.28)),
+                        AnyShapeStyle(Color.white.opacity(0.22)),
                         lineWidth: 1
                     )
             )
@@ -3214,12 +3208,12 @@ public struct CourseLessonCard: View {
         func gradeMetric(value: String, label: String) -> some View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(value)
-                    .font(Theme.Fonts.metric(17))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Color.white.opacity(0.96))
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
                 Text(label.uppercased())
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(Color.white.opacity(0.50))
                     .kerning(0.45)
             }
@@ -3229,7 +3223,7 @@ public struct CourseLessonCard: View {
         func gradeRow(title: String, value: String?) -> some View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(title.uppercased())
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(Color.white.opacity(0.68))
                     .kerning(0.35)
                     .lineLimit(1)
@@ -3315,18 +3309,18 @@ public struct CourseLessonCard: View {
             case .courseGradeSheet:
                 VStack(alignment: .leading, spacing: 11) {
                     Text("ЗАКРЕПЛЕНИЕ")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(size: 11, weight: .semibold))
                         .kerning(0.8)
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
+                        .foregroundStyle(Color.white.opacity(0.62))
 
                     Text("Закрепи пройденный курс")
-                        .font(Theme.Fonts.heading)
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(PD.ColorToken.text)
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
 
                     Text(reinforcementScore == nil ? "Один короткий повтор — и материал останется в речи." : "Курс пройден. Выбери один способ удержать результат.")
-                        .font(Theme.Fonts.caption)
+                        .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(PD.ColorToken.textSecondary)
                         .lineSpacing(1)
                         .fixedSize(horizontal: false, vertical: true)
