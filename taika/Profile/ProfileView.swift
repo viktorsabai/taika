@@ -250,6 +250,9 @@ struct ProfileView: View {
         .sheet(isPresented: $showDebugSheet) {
             ProfileDebugSheet()
                 .environmentObject(theme)
+                .presentationDetents([.fraction(0.42)])
+                .presentationCornerRadius(28)
+                .presentationDragIndicator(.visible)
         }
         .onAppear {
             if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,

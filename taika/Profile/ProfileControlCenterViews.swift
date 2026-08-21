@@ -768,26 +768,28 @@ struct ProfileRootContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            rootSectionLabel("ДОСТУП")
+            // Taika+ is the only hero surface on Profile. Everything below is a continuous control list.
             ProfileTaikaPlusCard(pro: pro, restoreInFlight: restoreInFlight, onTap: onTaikaPlus, onRestore: onRestore)
                 .environmentObject(theme)
 
             rootSectionLabel("МОЙ ПРОФИЛЬ")
-            ProfileAppRow(title: "Твой ритм", subtitle: "Прогресс, активность и следующий шаг", systemImage: "waveform.path.ecg", action: onRhythm)
+            VStack(spacing: 0) {
+                ProfileAppRow(title: "Твой ритм", subtitle: "Прогресс, активность и следующий шаг", systemImage: "waveform.path.ecg", action: onRhythm)
+                    .environmentObject(theme)
+                Divider().overlay(PD.ColorToken.stroke.opacity(0.36))
+                ProfileAccountCard(
+                    isLoggedIn: auth.isLoggedIn,
+                    displayName: auth.displayName,
+                    isLoading: authInProgress,
+                    errorMessage: authErrorMessage,
+                    onAppleID: onAppleID,
+                    onSignOut: {
+                        try? auth.signOut()
+                        ProManager.shared.reset()
+                    }
+                )
                 .environmentObject(theme)
-
-            ProfileAccountCard(
-                isLoggedIn: auth.isLoggedIn,
-                displayName: auth.displayName,
-                isLoading: authInProgress,
-                errorMessage: authErrorMessage,
-                onAppleID: onAppleID,
-                onSignOut: {
-                    try? auth.signOut()
-                    ProManager.shared.reset()
-                }
-            )
-            .environmentObject(theme)
+            }
 
             rootSectionLabel("СЕРВИС")
             VStack(spacing: 0) {
@@ -797,9 +799,6 @@ struct ProfileRootContent: View {
                 Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
                 ProfileAppRow(title: "Что нового", subtitle: "Версия \(appVersionLabel)", systemImage: "info.circle", action: {})
             }
-            .padding(.horizontal, 16)
-            .background(PD.ColorToken.card.opacity(0.30), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.54), lineWidth: 1))
 
             #if DEBUG
             rootSectionLabel("СИСТЕМА")
@@ -808,9 +807,6 @@ struct ProfileRootContent: View {
                 Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
                 ProfileAppRow(title: "Отладка", subtitle: "Только для Debug-сборки", systemImage: "wrench.and.screwdriver", action: onDebug)
             }
-            .padding(.horizontal, 16)
-            .background(PD.ColorToken.card.opacity(0.30), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.54), lineWidth: 1))
             #endif
         }
     }
@@ -845,9 +841,7 @@ private struct ProfileBuildCard: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(16)
-        .background(PD.ColorToken.card.opacity(0.30), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.48), lineWidth: 1))
+        .padding(.vertical, 6)
     }
 }
 
@@ -874,10 +868,6 @@ private struct ProfileAccountCard: View {
             : AnyShapeStyle(theme.currentAccentFill)
     }
 
-    private var statusFill: Color {
-        isLoggedIn ? Color.green.opacity(0.16) : theme.currentAccentTintColor.opacity(0.16)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Button(action: accountAction) {
@@ -886,7 +876,6 @@ private struct ProfileAccountCard: View {
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(PD.ColorToken.text)
                         .frame(width: 42, height: 42)
-                        .background(Color.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Аккаунт")
                             .font(PD.FontToken.body(17, weight: .semibold))
@@ -902,9 +891,6 @@ private struct ProfileAccountCard: View {
                         Text(isLoggedIn ? "Активен" : "Войти")
                             .font(PD.FontToken.caption(12, weight: .semibold))
                             .foregroundStyle(statusStyle)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 7)
-                            .background(statusFill, in: Capsule())
                         Image(systemName: "chevron.right")
                             .foregroundStyle(PD.ColorToken.textSecondary)
                     }
@@ -919,9 +905,7 @@ private struct ProfileAccountCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(16)
-        .background(PD.ColorToken.card.opacity(0.40), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(PD.ColorToken.stroke.opacity(0.60), lineWidth: 1))
+        .padding(.vertical, 6)
     }
 }
 
@@ -1009,7 +993,6 @@ private struct ProfileTaikaPlusCard: View {
                 profileCapability("gamecontroller", "Игры", pro.isPro)
             }
             .padding(.vertical, 9)
-            .background(Color.black.opacity(0.12), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
         }
         .padding(16)
         .background(

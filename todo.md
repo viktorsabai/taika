@@ -2443,3 +2443,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Replace three CTA rows with one floating native training button | Done — Favorites-style bottom dock |
 | Preserve Speaker/Games routing and disabled/empty states through the action | Done — course scope preserved; error scope stays card-aware |
 | Run source check and push unified LessonsView CTA | In progress |
+
+
+# Profile — hierarchy and sheet simplification
+
+| Task | Status |
+|---|---|
+| Audit Profile hero, section containers, row primitives, and Debugging presentation | Done |
+| Make Taika+ the only prominent hero surface | Done — only Taika+ retains framed gradient hero treatment |
+| Flatten «Мой профиль», account, service, and system rows into one native list language | Done — dividers only; no outer card shells |
+| Convert Debugging from large window to compact bottom sheet | Done — 0.42 fraction drawer with corner radius |
+| Run source check and push Profile hierarchy redesign | In progress |
