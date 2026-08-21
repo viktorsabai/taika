@@ -997,7 +997,7 @@ public struct SpeakerDSRoot: View {
         VStack(spacing: 14) {
             ZStack {
                 SpeakerLiveStateHalo(isRecording: isRec, isProcessing: isBusy)
-                    .frame(width: 240, height: 240)
+                    .frame(width: 220, height: 220)
 
                 MDVoiceSphere(
                     symbol: isBusy ? "waveform.path.ecg" : (isRec ? "stop.fill" : "mic.fill"),
@@ -1023,7 +1023,7 @@ public struct SpeakerDSRoot: View {
                         .accessibilityLabel("Обработка")
                 }
             }
-            .frame(width: 240, height: 240)
+            .frame(width: 220, height: 220)
 
             conversationLiveHeroText
                 .frame(minHeight: 84, maxHeight: 128, alignment: .center)
@@ -2057,13 +2057,88 @@ public struct SpeakerDSRoot: View {
     /// only in recovery/practice/result-adjacent states where it has context.
     @ViewBuilder private var conversationUnifiedInputBar: some View {
         if phase == .idle && !conversationHasResult && !conversationIsPracticeFlow {
-            conversationTextEntryButton
+            conversationIdleModeRail
         } else {
             HStack(spacing: 10) {
                 conversationTextEntryButton
                 conversationStickyMicBar
             }
         }
+    }
+
+    @ViewBuilder private var conversationIdleModeRail: some View {
+        HStack(spacing: 4) {
+            conversationModeRailButton(
+                systemName: "mic.fill",
+                title: "Голос",
+                selected: true,
+                accessibility: "Голосовой режим"
+            ) {
+                external?.onMicTap()
+            }
+
+            conversationModeRailButton(
+                systemName: "keyboard",
+                title: "Текст",
+                selected: false,
+                accessibility: "Ввести текст"
+            ) {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
+                    conversationTextComposerExpanded = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                    conversationComposeFocused = true
+                }
+            }
+
+            conversationModeRailButton(
+                systemName: "graduationcap.fill",
+                title: "Закрепление",
+                selected: false,
+                accessibility: "Открыть закрепление курсов"
+            ) {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                external?.onSpeakerUIModeChange(.training)
+            }
+        }
+        .padding(5)
+        .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(PD.ColorToken.stroke.opacity(0.68), lineWidth: 1)
+        )
+        .frame(maxWidth: 330)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Режимы Speaker")
+    }
+
+    private func conversationModeRailButton(
+        systemName: String,
+        title: String,
+        selected: Bool,
+        accessibility: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: systemName)
+                    .font(.system(size: 14, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+            .foregroundStyle(selected ? AnyShapeStyle(Color.black) : AnyShapeStyle(PD.ColorToken.textSecondary))
+            .frame(maxWidth: .infinity, minHeight: 42)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(selected ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(Color.clear))
+            )
+        }
+        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+        .accessibilityLabel(accessibility)
     }
 
     /// Развёрнутое окно текстового ввода на жидком стекле (не поверх сырой ленты).

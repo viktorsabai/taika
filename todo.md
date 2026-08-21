@@ -2671,7 +2671,17 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Audit existing Taika+ hero, rhythm preview, and Profile root composition | [ ] |
-| Move Your Rhythm into an auto-rotating demo-preview carousel with Taika+ | [ ] |
-| Keep Account as one explicit standalone profile row | [ ] |
-| Validate carousel taps, timer lifecycle, and push final Profile closure | [ ] |
+| Audit existing Taika+ hero, rhythm preview, and Profile root composition | [x] |
+| Move Your Rhythm into an auto-rotating demo-preview carousel with Taika+ | [x] |
+| Keep Account as one explicit standalone profile row | [x] |
+| Validate carousel taps, timer lifecycle, and push final Profile closure | [x] — source validation; device check pending |
+
+
+# Speaker — idle command canvas redesign
+
+| Task | Status |
+|---|---|
+| Audit idle composition, keyboard trigger, and mode callbacks | [ ] |
+| Define fixed command canvas with onboarding tech sphere | [ ] |
+| Implement compact sphere and lower mode rail | [ ] |
+| Run source checks and push idle redesign | [ ] |
