@@ -3024,7 +3024,17 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect admin reference and current banner constraints | [ ] |
-| Define readable graph-led banner composition | [ ] |
-| Implement clear CTA and compact data visualization | [ ] |
+| Inspect admin reference and current banner constraints | [x] — one focus / one signal / one next step |
+| Define readable graph-led banner composition | [x] — compact signal graph + single primary CTA |
+| Implement clear CTA and compact data visualization | [x] |
+| Run checks, commit, push, and provide device handoff | [x] — 5c05b3280f8edcfa2863847f5765af3b910b37b2 |
+
+
+# Lessons gradebook diagnostic panel
+
+| Task | Status |
+|---|---|
+| Inspect diagnostic data and current insight UI | [ ] |
+| Define readable strength/growth hierarchy | [ ] |
+| Implement expanded actionable panel | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |

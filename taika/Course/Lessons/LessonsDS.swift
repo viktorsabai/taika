@@ -1877,11 +1877,8 @@ public struct LSCompletedTrainingHero: View {
                 .offset(y: didReveal ? 0 : 5)
             }
 
-            HStack(spacing: 8) {
-                conclusionTag(title: "Сильные стороны", value: strengthTag)
-                conclusionTag(title: "Зона роста", value: growthTag)
-            }
-            .opacity(didReveal ? 1 : 0)
+            gradebookInsightPanel
+                .opacity(didReveal ? 1 : 0)
 
             Rectangle()
                 .fill(PD.ColorToken.stroke.opacity(0.55))
@@ -1941,41 +1938,115 @@ public struct LSCompletedTrainingHero: View {
         return "Продолжай закреплять — ты почти всё запомнил(а)."
     }
 
-    private var strengthTag: String {
-        let scored = skillRows.compactMap { skill -> (String, Int)? in
-            guard let score = skill.score else { return nil }
-            return (skill.title, score)
-        }
-        return scored.max(by: { $0.1 < $1.1 })?.0 ?? "память"
+    private var strongestSkill: LSReinforcementSkill? {
+        skillRows
+            .filter { $0.score != nil }
+            .max { ($0.score ?? 0) < ($1.score ?? 0) }
     }
 
-    private var growthTag: String {
-        if weakCount > 0 {
-            let scored = skillRows.compactMap { skill -> (String, Int)? in
-                guard let score = skill.score else { return nil }
-                return (skill.title, score)
+    private var growthSkill: LSReinforcementSkill? {
+        guard weakCount > 0 else { return nil }
+        return skillRows
+            .filter { $0.score != nil }
+            .min { ($0.score ?? 0) < ($1.score ?? 0) }
+    }
+
+    @ViewBuilder
+    private var gradebookInsightPanel: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("ЧТО ПОДТЯНУТЬ")
+                    .font(.system(size: 11, weight: .bold))
+                    .kerning(0.6)
+                    .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
+                Spacer(minLength: 0)
+                Text("СИГНАЛЫ КУРСА")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
             }
-            return scored.min(by: { $0.1 < $1.1 })?.0 ?? "на слух"
+
+            diagnosticSkillRow(
+                label: "СИЛЬНАЯ СТОРОНА",
+                skill: strongestSkill,
+                fallbackTitle: "Пока собираем данные",
+                fallbackSubtitle: "Пройди первую тренировку",
+                accent: AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient),
+                icon: "arrow.up.right"
+            )
+
+            diagnosticSkillRow(
+                label: weakCount > 0 ? "СЛЕДУЮЩИЙ ФОКУС" : "ПОДДЕРЖАТЬ",
+                skill: growthSkill,
+                fallbackTitle: weakCount > 0 ? "Нужна первая оценка" : "Закрепляй без пауз",
+                fallbackSubtitle: weakCount > 0 ? "Сначала проверь Speaker" : "Повтори материал, чтобы удержать результат",
+                accent: weakCount > 0 ? AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.84)),
+                icon: weakCount > 0 ? "arrow.down.right" : "checkmark"
+            )
         }
-        return "поддержать"
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.035))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(PD.ColorToken.stroke.opacity(0.42), lineWidth: 1)
+        )
     }
 
-    private func conclusionTag(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title.uppercased())
-                .font(.system(size: 9, weight: .bold))
-                .kerning(0.25)
-                .foregroundStyle(PD.ColorToken.textSecondary)
-            Text(value)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
+    @ViewBuilder
+    private func diagnosticSkillRow(
+        label: String,
+        skill: LSReinforcementSkill?,
+        fallbackTitle: String,
+        fallbackSubtitle: String,
+        accent: AnyShapeStyle,
+        icon: String
+    ) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: skill?.icon ?? icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(accent)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 9, weight: .bold))
+                    .kerning(0.45)
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                Text(skill?.title ?? fallbackTitle)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .lineLimit(1)
+                Text(skill.map { skill in
+                    let scoreText = skill.score.map { String($0) } ?? "—"
+                    return "\(skill.subtitle) · \(scoreText)/100"
+                } ?? fallbackSubtitle)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let score = skill?.score {
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text("\(score)")
+                        .font(Theme.Fonts.metric(20))
+                        .foregroundStyle(accent)
+                        .monospacedDigit()
+                    Text("SCORE")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+            } else {
+                Text("—")
+                    .font(Theme.Fonts.metric(20))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
-        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.04)))
+        .background(Color.white.opacity(0.025), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     @ViewBuilder
