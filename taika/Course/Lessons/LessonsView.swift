@@ -500,6 +500,17 @@ private extension LessonsView {
         }
     }
 
+    private func speakerScore(courseId: String, lessonId: String) -> Int? {
+        let scores = SpeakerAttemptsStore.loadAll().values
+            .filter {
+                $0.courseId == courseId &&
+                $0.lessonId == lessonId
+            }
+            .map { $0.advancedScore ?? $0.heardConfidence }
+        guard !scores.isEmpty else { return nil }
+        return max(0, min(100, Int((Double(scores.reduce(0, +)) / Double(scores.count)).rounded())))
+    }
+
     func lessonItems() -> [LS.Item] {
         guard let cid = currentCourse?.courseID else { return [] }
         return lessonsSorted.enumerated().map { (i, l) in
@@ -520,6 +531,8 @@ private extension LessonsView {
                 let learnedCardCount = min(learnableCount, max(0, Int((clamped * Double(max(1, learnableCount))).rounded())))
                 let errorCardCount = ReinforcementStore.shared.failedCardKeys(courseId: cid, lessonIds: [l.lessonID]).count
                 let reinforcementScore = ReinforcementStore.shared.lessonScore(courseId: cid, lessonId: l.lessonID)
+                let reinforcementSessionCount = ReinforcementStore.shared.gameSessions(courseId: cid, lessonId: l.lessonID)
+                let speakerScore = speakerScore(courseId: cid, lessonId: l.lessonID)
                 return LS.Item(
                     id: l.lessonID,
                     index: i,
@@ -534,7 +547,9 @@ private extension LessonsView {
                     favoriteCount: FavoriteManager.shared.countCardsForLesson(courseId: cid, lessonId: l.lessonID),
                     learnedCardCount: learnedCardCount,
                     errorCardCount: errorCardCount,
-                    reinforcementScore: reinforcementScore
+                    reinforcementScore: reinforcementScore,
+                    reinforcementSessionCount: reinforcementSessionCount,
+                    speakerScore: speakerScore
                 )
             }()
         }

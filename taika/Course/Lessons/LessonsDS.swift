@@ -18,6 +18,8 @@ public enum LS {
         public let learnedCardCount: Int
         public let errorCardCount: Int
         public let reinforcementScore: Int?
+        public let reinforcementSessionCount: Int
+        public let speakerScore: Int?
         public init(id: String = UUID().uuidString,
                     index: Int,
                     title: String,
@@ -31,7 +33,9 @@ public enum LS {
                     favoriteCount: Int = 0,
                     learnedCardCount: Int = 0,
                     errorCardCount: Int = 0,
-                    reinforcementScore: Int? = nil) {
+                    reinforcementScore: Int? = nil,
+                    reinforcementSessionCount: Int = 0,
+                    speakerScore: Int? = nil) {
             self.id = id
             self.index = index
             self.title = title
@@ -46,6 +50,8 @@ public enum LS {
             self.learnedCardCount = max(0, learnedCardCount)
             self.errorCardCount = max(0, errorCardCount)
             self.reinforcementScore = reinforcementScore
+            self.reinforcementSessionCount = max(0, reinforcementSessionCount)
+            self.speakerScore = speakerScore.map { max(0, min(100, $0)) }
         }
     }
 
@@ -2222,11 +2228,35 @@ public struct LSCompletedLessonList: View {
                                                             .stroke(LSGradeSheetTokens.error.opacity(0.38), lineWidth: 1)
                                                     )
                                             )
+                                        } else if item.reinforcementSessionCount == 0 && item.speakerScore == nil {
+                                            Text("не закреплён")
+                                                .font(.system(size: 11, weight: .regular))
+                                                .foregroundStyle(PD.ColorToken.textSecondary)
+                                                .lineLimit(1)
                                         } else {
                                             Text("без ошибок")
                                                 .font(.system(size: 11, weight: .regular))
                                                 .foregroundStyle(PD.ColorToken.textSecondary)
                                                 .lineLimit(1)
+                                        }
+                                        if let speakerScore = item.speakerScore {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "waveform")
+                                                    .font(.system(size: 8, weight: .bold))
+                                                Text("Speaker · \(speakerScore)")
+                                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                            }
+                                            .foregroundStyle(accentFill)
+                                            .padding(.horizontal, 7)
+                                            .padding(.vertical, 4)
+                                            .background(
+                                                Capsule(style: .continuous)
+                                                    .fill(accentColor.opacity(0.10))
+                                                    .overlay(
+                                                        Capsule(style: .continuous)
+                                                            .stroke(accentColor.opacity(0.30), lineWidth: 1)
+                                                    )
+                                            )
                                         }
                                         Spacer(minLength: 0)
                                     }
@@ -2362,9 +2392,20 @@ public struct LSCompletedLessonList: View {
                                     Text(item.title)
                                         .font(.system(size: 15, weight: .semibold))
                                         .foregroundStyle(PD.ColorToken.text)
-                                    Text(item.errorCardCount > 0 ? "ошибки \(item.errorCardCount)" : "без ошибок")
+                                    HStack(spacing: 6) {
+                                        Text(
+                                            item.errorCardCount > 0
+                                                ? "ошибки \(item.errorCardCount)"
+                                                : (item.reinforcementSessionCount == 0 && item.speakerScore == nil ? "не закреплён" : "без ошибок")
+                                        )
                                         .font(.system(size: 12, weight: .regular))
                                         .foregroundStyle(item.errorCardCount > 0 ? AnyShapeStyle(accentColor) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                                        if let speakerScore = item.speakerScore {
+                                            Text("Speaker · \(speakerScore)")
+                                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                                .foregroundStyle(AnyShapeStyle(accentColor))
+                                        }
+                                    }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }

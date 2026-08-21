@@ -2515,3 +2515,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Keep picker options limited to active/selected course | Done — course context and lesson filter preserved |
 | Verify selected lesson/card scope through Speaker start flow | Done by source trace — Step passes course/lesson IDs into `loadQueueForCourse` |
 | Run source check and push scope fix | In progress |
+
+
+# Fix — LessonsView lesson status and Speaker score chip
+
+| Task | Status |
+|---|---|
+| Audit lesson-row status logic and persisted Speaker score source | Done — existing persisted SpeakerAttemptsStore used |
+| Show `не закреплён` when a lesson has no reinforcement attempt | Done — requires zero game sessions and no Speaker attempt |
+| Show compact `Speaker · N` chip only when a real score exists | Done — course+lesson average from persisted attempts |
+| Keep error chip and score chip on one row without overlap | Done — compact chips share the title row |
+| Run source check and push lesson-status fix | In progress |
