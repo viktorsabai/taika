@@ -1154,7 +1154,7 @@ public struct StepCardActionBar: View {
             .background {
                 LinearGradient(
                     colors: [
-                        ThemeManager.shared.currentAccentFill.opacity(isActive ? 0.18 : 0.07),
+                        ThemeManager.shared.currentAccentTintColor.opacity(isActive ? 0.18 : 0.07),
                         PD.ColorToken.card.opacity(0.66)
                     ],
                     startPoint: .leading,

@@ -2578,3 +2578,13 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Inspect exact CardDS modifier chain at line 1174 | [ ] |
 | Replace accessibility overload with explicit accessibility-element contract | [ ] |
 | Run source check and push final CardDS compile fix | [ ] |
+
+
+# Diagnose — CardDS persistent type inference ambiguity
+
+| Task | Status |
+|---|---|
+| Inspect full primary/quiet Button helper and surrounding type aliases | [ ] |
+| Identify the exact generic boundary causing line 1173 diagnostic | [ ] |
+| Decompose action label/background into explicit native subviews | [ ] |
+| Run source check and push root-cause correction | [ ] |
