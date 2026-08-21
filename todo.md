@@ -2569,3 +2569,12 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Replace fragile gradient expression with explicit shape-style fill | Done — literal `Color` stops, no manager gradient in array |
 | Replace CardDS ambiguous helper with simplest explicit view expression | Done — `Text(verbatim: title)` removes Text initializer ambiguity |
 | Run source check and push persistent compile fix | In progress |
+
+
+# Fix — CardDS accessibility modifier ambiguity
+
+| Task | Status |
+|---|---|
+| Inspect exact CardDS modifier chain at line 1174 | [ ] |
+| Replace accessibility overload with explicit accessibility-element contract | [ ] |
+| Run source check and push final CardDS compile fix | [ ] |
