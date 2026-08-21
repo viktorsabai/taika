@@ -505,9 +505,9 @@ public struct SpeakerDSRoot: View {
             onRetranslateConversationDraft: onRetranslateConversationDraft,
             onDiscardConversationDraft: onDiscardConversationDraft,
             isProUser: isProUser,
+            hasFullToneBreakdownAccess: hasFullToneBreakdownAccess,
             trainingRemainingToday: trainingRemainingToday,
             trainingCanRecord: trainingCanRecord,
-            hasFullToneBreakdownAccess: hasFullToneBreakdownAccess,
             conversationRemainingToday: conversationRemainingToday,
             conversationRecordingElapsed: conversationRecordingElapsed,
             conversationRecordingMaxDuration: conversationRecordingMaxDuration,
@@ -5511,7 +5511,7 @@ public struct SpeakerDSRoot: View {
             if case .recording = phase { return true }
             return false
         }()
-        let isAnalyzing = phase == .analyzing || phase == .analyzingTranslation
+        let isAnalyzing = phase == .analyzing
         let isFeedback = phase.isFeedback
         let hasAttempt: Bool = {
 #if DEBUG

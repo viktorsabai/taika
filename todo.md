@@ -2588,3 +2588,13 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Identify the exact generic boundary causing line 1173 diagnostic | [ ] |
 | Decompose action label/background into explicit native subviews | [ ] |
 | Run source check and push root-cause correction | [ ] |
+
+
+# Fix — Speaker initializer order and phase case diagnostics
+
+| Task | Status |
+|---|---|
+| Inspect SpeakerDS initializer labels around line 510 | Done — declaration requires tone access before training quota |
+| Inspect canonical SpeakerPhase cases and stale translation phase reference | Done — local `SpeakerPhase` has only `.analyzing`; Manager phase owns translation case |
+| Apply argument-order and enum-case corrections | Done |
+| Run source check and push Speaker compile fix | In progress |
