@@ -2463,3 +2463,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Inspect line 1172 and surrounding style expressions | Done — ambiguity was on accessibilityLabel overload |
 | Apply smallest explicit type annotation without behavior change | Done — `Text(title)` passed explicitly |
 | Run source check and push compile correction | In progress |
+
+
+# Cross-app — unified native CTA surfaces
+
+| Task | Status |
+|---|---|
+| Audit side Dictionary drawer CTA buttons and first-entry CourseView scenario actions | Done |
+| Define one shared native CTA surface contract for count, icon, action, and disabled state | Done — graphite card, leading gradient rail, subtle stroke, press state |
+| Replace legacy black CTA buttons in Dictionary drawer | Done — training/reinforcement footer actions |
+| Replace first-entry CourseView scenario/start CTAs | Done — mode rows plus focus action |
+| Run global sweep, source check, and push unified CTA commit | In progress |

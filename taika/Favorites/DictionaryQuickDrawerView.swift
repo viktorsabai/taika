@@ -28,22 +28,25 @@ struct DictionarySoftActionLabel: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 13)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.black.opacity(0.72))
-                .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(CD.ColorToken.card.opacity(0.84))
+        )
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.10), Color.clear, Color.black.opacity(0.16)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                        colors: [ThemeManager.shared.currentAccentTintColor, ThemeManager.shared.currentAccentFill],
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 )
-        )
+                .frame(width: 3)
+                .padding(.vertical, 10)
+        }
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(CD.ColorToken.stroke.opacity(0.72), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.24), radius: 10, y: 5)
         .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.92, useBouncySpring: true, flashOpacity: 0.08))
     }
 }

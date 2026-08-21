@@ -2288,11 +2288,27 @@ public struct LSCompletedLessonList: View {
                             .padding(.vertical, 13)
                             .background(
                                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .fill(canStartFocus ? Color.white.opacity(0.045) : Color.white.opacity(0.018))
+                                    .fill(PD.ColorToken.card.opacity(canStartFocus ? 0.82 : 0.42))
                             )
+                            .overlay(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(
+                                        canStartFocus
+                                            ? AnyShapeStyle(
+                                                LinearGradient(
+                                                    colors: [ThemeManager.shared.currentAccentTintColor, ThemeManager.shared.currentAccentFill],
+                                                    startPoint: .top,
+                                                    endPoint: .bottom
+                                                )
+                                            )
+                                            : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.34))
+                                    )
+                                    .frame(width: 3)
+                                    .padding(.vertical, 10)
+                            }
                             .overlay(
                                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .stroke(canStartFocus ? PD.ColorToken.stroke.opacity(0.8) : PD.ColorToken.stroke.opacity(0.28), lineWidth: 1)
+                                    .stroke(PD.ColorToken.stroke.opacity(canStartFocus ? 0.72 : 0.34), lineWidth: 1)
                             )
                 }
                 .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.98, useBouncySpring: false))
