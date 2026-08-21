@@ -48,9 +48,9 @@ private struct TaikaHeaderModifier: ViewModifier {
                 HeaderMainActions()
             }
 
-        case .course(let title),
-             .lesson(let title),
-             .custom(let title):
+        case .course,
+             .lesson,
+             .custom:
 
             ToolbarItem(placement: .navigationBarLeading) {
                 BackButtonView()

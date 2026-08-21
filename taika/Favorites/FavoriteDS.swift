@@ -387,7 +387,7 @@ struct FDMiniCardV: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             isEditing.toggle()
         }
-        .onChange(of: isEditing) { newValue in
+        .onChange(of: isEditing) { _, newValue in
             isJiggling = newValue
         }
         .onAppear { refreshLearnedState() }
@@ -780,7 +780,7 @@ private struct FDMiniHackCardGestures: ViewModifier {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     isEditing.toggle()
                 }
-                .onChange(of: isEditing) { newValue in
+                .onChange(of: isEditing) { _, newValue in
                     isJiggling = newValue
                 }
         }

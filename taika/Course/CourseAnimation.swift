@@ -78,8 +78,8 @@ public struct CourseGlowModifier: ViewModifier {
         content
             .overlay(outlineLayer, alignment: .center)
             .onAppear { startDynamicIfNeeded() }
-            .onChange(of: active) { _ in startDynamicIfNeeded() }
-            .onChange(of: outlineStyle) { _ in startDynamicIfNeeded() }
+            .onChange(of: active) { _, _ in startDynamicIfNeeded() }
+            .onChange(of: outlineStyle) { _, _ in startDynamicIfNeeded() }
     }
 
     private var cardMask: some View {
@@ -90,8 +90,6 @@ public struct CourseGlowModifier: ViewModifier {
         Group {
             if active {
                 GeometryReader { geo in
-                    let w = geo.size.width
-                    let h = geo.size.height
                     ZStack {
                         // 1) Outline stroke with dynamic animated gradient (metallic/pearl palette)
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)

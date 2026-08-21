@@ -589,7 +589,6 @@ public final class ProgressManager: ObservableObject {
     /// Apply progress from cloud sync (USSnapshot). Call after UserSession.applySnapshotFromSync.
     public func applyFromUSSnapshot(_ snap: USSnapshot) {
         var learned: [LessonKey: Set<Int>] = [:]
-        let sep = "|"
         for (compound, set) in snap.learnedSteps {
             guard let idx = compound.firstIndex(of: "|") else { continue }
             let courseId = String(compound[..<idx])

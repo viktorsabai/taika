@@ -484,7 +484,6 @@ final class StepData {
             for x in selected {
                 if diversified.count >= count { break }
                 // avoid exact duplicates (lessonId+order)
-                let key = "\(x.lessonId)#\(x.item.order)"
                 let exists = diversified.contains { $0.lessonId == x.lessonId && $0.item.order == x.item.order }
                 if !exists { diversified.append(x) }
             }

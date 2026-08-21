@@ -1251,14 +1251,8 @@ public struct AppConsoleIconButton: View {
     public var body: some View {
         let isAction = act != nil
         let isDisabled = (state == .disabled) || !isEnabled
-        let isPressedStatic = (state == .pressed) // static preview of pressed
-        let isActiveStatic = (state == .active) || isActive
         let isSubtleInfo = (act == .info)
         let showGradient = isAction && !isDisabled && !isSubtleInfo
-        let iconOpacity: Double = isDisabled ? 0.45 : (isPressedStatic ? 1.0 : 0.90)
-        let iconInk: some ShapeStyle = showGradient
-            ? AnyShapeStyle(Color.black.opacity(0.90))
-            : AnyShapeStyle(CD.ColorToken.textSecondary.opacity(iconOpacity))
 
         let accentInk: some ShapeStyle = AnyShapeStyle(theme.currentAccentFill)
         let idleInk: some ShapeStyle = AnyShapeStyle(CD.ColorToken.textSecondary.opacity(isDisabled ? 0.5 : 0.92))
@@ -3353,14 +3347,7 @@ public struct HomeTaskSummaryOverlay: View {
                                 .padding(.horizontal, 4)
 
                             // CTAs — same variants as summary, with PRO gating on secondary
-                            Group {
-                                switch ctaStyle {
-                                case .brandChips:
-                                    buttonsBrandChips()
-                                default:
-                                    buttonsBrandChips()
-                                }
-                            }
+                            buttonsBrandChips()
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 28)
@@ -4965,13 +4952,13 @@ struct AppDS_Previews: PreviewProvider {
 
                 DSSection("Card icon buttons") {
                     HStack(spacing: 10) {
-                        AppCardIconButton(kind: .favorite, isActive: false) {}
+                        AppCardIconButton(kind: .favorite, isActive: false, onTap: {})
                         AppCardIconButton(kind: .favorite, isActive: true) {}
                         AppCardIconButton(kind: .console, isEnabled: false) {}
                         AppCardIconButton(kind: .console, isEnabled: true) {}
-                        AppFavCounterButton(count: 0) {}
-                        AppFavCounterButton(count: 3) {}
-                        AppFavCounterButton(count: 12) {}
+                        AppFavCounterButton(count: 0, onTap: {})
+                        AppFavCounterButton(count: 3, onTap: {})
+                        AppFavCounterButton(count: 12, onTap: {})
                     }
                 }
 
@@ -5024,7 +5011,7 @@ struct AppDS_Previews: PreviewProvider {
                     CardFooterRail {
                         AppCTAButtons(primary: .start, scale: .s, unifiedWidth: true, visual: .brandDark)
                     } right: {
-                        AppCardIconButton(kind: .favorite, isActive: false) {}
+                        AppCardIconButton(kind: .favorite, isActive: false, onTap: {})
                     }
                     .padding(.vertical, 6)
                 }

@@ -1263,10 +1263,7 @@ public struct HomeTaskView: View {
 
     /// Thai текст сматченной карточки для озвучки (из allTriples по pairId).
     private func thaiForPairId(_ pairId: String) -> String? {
-        guard let first = pairId.split(separator: "|", maxSplits: 1).first,
-              let last = pairId.split(separator: "|", maxSplits: 1).last else { return nil }
-        let ru = String(first)
-        let ph = String(last)
+        guard pairId.split(separator: "|", maxSplits: 1).count == 2 else { return nil }
         return allTriples.first { "\($0.ru)|\($0.ph)" == pairId }?.th
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }

@@ -511,7 +511,7 @@ public struct CDAssistantCard: View {
         .onTapGesture { onTap() }
         .frame(height: fixedHeight)
         .onAppear { startCycle() }
-        .onChange(of: currentIndex) { _ in /* keep cycle */ }
+        .onChange(of: currentIndex) { _, _ in /* keep cycle */ }
         .onReceive(dotsTimer) { _ in if isTyping { dotsPhase = (dotsPhase + 1) % 3 } }
         .onDisappear { typingTask?.cancel() }
     }
@@ -2461,7 +2461,6 @@ struct CourseDSPreviewHost: View {
 
                     // Removed search section under "КУРСЫ"
 
-                    let shouldAutoScroll = searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedPrimary < 0 && selectedSecondary < 0 && selectedCategory < 0
                     CDAllCoursesSection(
                         title: "КУРСЫ",
                         items: filteredAllCourses.map { item in

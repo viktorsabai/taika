@@ -1425,7 +1425,7 @@ struct StepView: View {
                 guard hasTwoSegments, stepSegment == 1, cardIndices.indices.contains(newValue) else { return }
                 anim.jump(to: cardIndices[newValue])
             }
-            .onChange(of: startIndex) { newStart in
+            .onChange(of: startIndex) { _, newStart in
                 // Prevent re-initialization after the first application of startIndex
                 guard !didSetInitialIndex else { return }
                 guard let s = newStart, !items.isEmpty else { return }
@@ -1435,7 +1435,7 @@ struct StepView: View {
                     didSetInitialIndex = true
                 }
             }
-            .onChange(of: anim.activeIndex) { newValue in
+            .onChange(of: anim.activeIndex) { _, newValue in
                 guard isMounted else { return }
                 guard didSetInitialIndex else { return }
                 guard progressReady else { return }

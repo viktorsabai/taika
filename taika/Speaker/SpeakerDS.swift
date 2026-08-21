@@ -2404,10 +2404,10 @@ public struct SpeakerDSRoot: View {
                 .presentationBackground(.ultraThinMaterial)
         }
         .animation(.easeInOut(duration: 0.18), value: phase.isFeedback)
-        .onChange(of: extSelectedId) { newValue in
+        .onChange(of: extSelectedId) { _, newValue in
             if let v = newValue { localSelectedId = v }
         }
-        .onChange(of: activeFilterId) { _ in
+        .onChange(of: activeFilterId) { _, _ in
             localSelectedId = nil
         }
         .task(id: helperHasInteracted) {
@@ -2652,7 +2652,7 @@ public struct SpeakerDSRoot: View {
         .opacity(speakerInviteAppeared ? 1 : 0.01)
         .animation(.spring(response: 0.46, dampingFraction: 0.86), value: speakerInviteAppeared)
         .onAppear { triggerSpeakerInviteAppear() }
-        .onChange(of: speakerUIMode) { _ in triggerSpeakerInviteAppear() }
+        .onChange(of: speakerUIMode) { _, _ in triggerSpeakerInviteAppear() }
     }
 
     /// Избранное / словарь: один ряд, контурные чипы (иконка · число · подпись).
@@ -2987,7 +2987,7 @@ public struct SpeakerDSRoot: View {
         .opacity(speakerInviteAppeared ? 1 : 0.01)
         .animation(.spring(response: 0.46, dampingFraction: 0.86), value: speakerInviteAppeared)
         .onAppear { triggerSpeakerInviteAppear() }
-        .onChange(of: speakerUIMode) { _ in
+        .onChange(of: speakerUIMode) { _, _ in
             triggerSpeakerInviteAppear()
             trainingTeaserIndex = 0
             conversationTeaserIndex = 0
@@ -7083,7 +7083,7 @@ private struct SpeakerPlayerWave: View {
                 phase = 1
             }
         }
-        .onChange(of: active) { _ in
+        .onChange(of: active) { _, _ in
             // preview-safe: avoid repeatForever in canvas (can hang)
             let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
             guard !isPreview else { return }

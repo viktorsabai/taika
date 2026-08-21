@@ -2164,7 +2164,6 @@ public struct TaikaFMBubbleTyping: View {
     }
 
     public var body: some View {
-        let bubbleReactions: [String] = []
         TaikaFMBubble(label: "taika fm", reactions: [], onReactionTap: nil, showBubble: showBubble) {
             Group {
                 switch phase {
@@ -3520,9 +3519,9 @@ public struct CourseLessonCard: View {
         .opacity(visualOpacity)
         .padding(.horizontal, 0)
         // Prevent state leak between reused carousel cells.
-        .onChange(of: flipEnabled) { _ in isFlipped = false }
-        .onChange(of: title) { _ in isFlipped = false }
-        .onChange(of: courseKey) { _ in isFlipped = false }
+        .onChange(of: flipEnabled) { _, _ in isFlipped = false }
+        .onChange(of: title) { _, _ in isFlipped = false }
+        .onChange(of: courseKey) { _, _ in isFlipped = false }
     }
 }
 
@@ -3625,7 +3624,6 @@ public struct WeeklyDayBadge: View {
     public var body: some View {
         // Precompute values to help the type-checker
         let dayNumber = BangkokCalendar.cal.component(.day, from: item.date)
-        let isToday = BangkokCalendar.cal.isDateInToday(item.date)
 
         HStack(spacing: 6) {
             Text(item.weekdayShort.uppercased())
@@ -4368,7 +4366,7 @@ public struct WeeklyResumeStrip: View {
         .background(Color.clear)
         .padding(.bottom, 0)
         // .onAppear and .onReceive removed
-        .onChange(of: items) { newItems in
+        .onChange(of: items) { _, newItems in
             guard weekProvider == nil else { return }
 
             // keep current selection if it's still present in the newItems (same day)
@@ -4985,7 +4983,6 @@ struct WeeklyResumeCell_PlannedStub_Previews: PreviewProvider {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         let yesterday = cal.date(byAdding: .day, value: -1, to: today) ?? today
-        let tomorrow = cal.date(byAdding: .day, value: 1, to: today) ?? today
         let in2 = cal.date(byAdding: .day, value: 2, to: today) ?? today
         let in3 = cal.date(byAdding: .day, value: 3, to: today) ?? today
 
@@ -5529,7 +5526,7 @@ public extension CardDS {
                     isEditing ? .easeInOut(duration: 0.12).repeatForever(autoreverses: true) : .default,
                     value: isJiggling
                 )
-                .onChange(of: isEditing) { editing in
+                .onChange(of: isEditing) { _, editing in
                     isJiggling = editing
                 }
             }

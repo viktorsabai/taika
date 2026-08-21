@@ -140,7 +140,6 @@ final class StepAudio: NSObject, ObservableObject {
 
     private func mappedRate(_ normalized: Float) -> Float {
         // map 0...1 into iOS tts range around default
-        let minR = AVSpeechUtteranceMinimumSpeechRate
         let defR = AVSpeechUtteranceDefaultSpeechRate
         let maxR = AVSpeechUtteranceMaximumSpeechRate
         // keep near default for clarity

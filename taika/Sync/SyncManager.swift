@@ -159,7 +159,9 @@ public final class SyncManager: ObservableObject {
         ]
         notificationTokens = names.map { name in
             center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                self?.schedulePush()
+                Task { @MainActor [weak self] in
+                    self?.schedulePush()
+                }
             }
         }
     }

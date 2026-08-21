@@ -849,7 +849,7 @@ public final class HomeTaskManager: ObservableObject {
 
     @MainActor
     public func appendBuilderPiece(_ piece: String) {
-        guard let round = currentBuilderRound else { return }
+        guard currentBuilderRound != nil else { return }
 
         let targetIndex = builderSelectedSlotForReplacement
             ?? assembledBuilder.firstIndex(where: { $0.isEmpty })

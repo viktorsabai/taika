@@ -269,7 +269,6 @@ final class StepManager: ObservableObject {
         // Skip notifying until steps are loaded to avoid progressTotal = 0 snapshots
         guard !steps.isEmpty else { return }
         // Use excludedProgressIndexes to stay consistent with eligibility logic
-        let lifehackCount = excludedProgressIndexes.count
         #if DEBUG
         if progressTotal == 0 {
             print("[StepManager] warning: progressTotal is 0 (no learnable cards) — header won’t advance")

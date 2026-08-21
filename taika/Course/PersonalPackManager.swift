@@ -31,9 +31,9 @@ private struct PersonalPackSnapshot: Codable {
 final class PersonalPackManager: ObservableObject {
     static let shared = PersonalPackManager()
 
-    static let courseId = "user_dict"
-    static let lessonId = "personal_pack"
-    static let lessonTitle = "Мой словарь"
+    nonisolated static let courseId = "user_dict"
+    nonisolated static let lessonId = "personal_pack"
+    nonisolated static let lessonTitle = "Мой словарь"
 
     private let storeKey = "taika.personal_pack.v1"
 

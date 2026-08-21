@@ -96,7 +96,7 @@ public struct StepAnimationView: View {
             learned = []
             favorites = []
         }
-        .onChange(of: items.count) { _ in
+        .onChange(of: items.count) { _, _ in
             // Clamp indices if data changed (e.g., hot reload), keep current selection if possible
             let clamped = min(max(activeIndex.wrappedValue, 0), max(items.count - 1, 0))
             if clamped != activeIndex.wrappedValue {
@@ -104,13 +104,13 @@ public struct StepAnimationView: View {
                 displayedActiveIndex = clamped
             }
         }
-        .onChange(of: learned) { newValue in
+        .onChange(of: learned) { _, newValue in
             // All cards learned – small celebration
             if items.isEmpty == false && newValue.count == items.count {
                 celebrate()
             }
         }
-        .onChange(of: activeIndex.wrappedValue) { newVal in
+        .onChange(of: activeIndex.wrappedValue) { _, newVal in
             let clamped = min(max(newVal, 0), max(items.count - 1, 0))
             guard clamped != displayedActiveIndex else { return }
             if isJumpingViaProgress { return }

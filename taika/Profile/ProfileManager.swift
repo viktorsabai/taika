@@ -71,25 +71,33 @@ final class ProfileManager: ObservableObject {
 
         observers.append(
             nc.addObserver(forName: Notification.Name("UserSessionActivityDidChange"), object: nil, queue: .main) { [weak self] _ in
-                self?.refresh()
+                Task { @MainActor [weak self] in
+                    self?.refresh()
+                }
             }
         )
 
         observers.append(
             nc.addObserver(forName: .init("CoursePlanDidChange"), object: nil, queue: .main) { [weak self] _ in
-                self?.refresh()
+                Task { @MainActor [weak self] in
+                    self?.refresh()
+                }
             }
         )
 
         observers.append(
             nc.addObserver(forName: .init("FavoritesDidChange"), object: nil, queue: .main) { [weak self] _ in
-                self?.refresh()
+                Task { @MainActor [weak self] in
+                    self?.refresh()
+                }
             }
         )
 
         observers.append(
             nc.addObserver(forName: Notification.Name.stepProgressDidChange, object: nil, queue: .main) { [weak self] _ in
-                self?.refresh()
+                Task { @MainActor [weak self] in
+                    self?.refresh()
+                }
             }
         )
     }

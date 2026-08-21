@@ -1228,34 +1228,6 @@ public final class SpeakerManager: ObservableObject {
                 }
             }
 
-        default:
-            if baseQueue.isEmpty {
-                stopMeter()
-                recordingPartialThai = nil
-                recordingMeter = 0
-                lastAttemptURL = nil
-                heardThai = nil
-                heardRU = nil
-                heardTranslit = nil
-                heardConfidence = 0
-                taikaHints = ["пройдите урок — здесь появятся фразы"]
-                queue = []
-                current = nil
-                setPhase(.hint)
-                lastAttempt = nil
-                attemptCount = 0
-                sessionScores = []
-                lastPlayed = .none
-                attemptPlayer?.stop()
-                attemptPlayer = nil
-            } else {
-                queue = baseQueue
-                if shuffleQueue { shuffle() }
-                current = queue.first
-                if let cur = current {
-                    restoreAttemptResult(for: cur)
-                }
-            }
         }
     }
 
@@ -3634,14 +3606,16 @@ public final class SpeakerManager: ObservableObject {
         stopMeter()
         recordingMeter = 0
         meterTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            // unified metering via protocol
-            self.recordingMeter = max(0, min(1, self.recorder.recordingMeter))
-            if self.phase == .recording {
-                let raw = self.recorder.partialText.trimmingCharacters(in: .whitespacesAndNewlines)
-                self.recordingPartialThai = raw.isEmpty ? nil : raw
-                // translit will be added later; keep it nil for now
-                self.recordingPartialTranslit = nil
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                // unified metering via protocol
+                self.recordingMeter = max(0, min(1, self.recorder.recordingMeter))
+                if self.phase == .recording {
+                    let raw = self.recorder.partialText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    self.recordingPartialThai = raw.isEmpty ? nil : raw
+                    // translit will be added later; keep it nil for now
+                    self.recordingPartialTranslit = nil
+                }
             }
         }
     }

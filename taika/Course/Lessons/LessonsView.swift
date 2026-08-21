@@ -875,7 +875,6 @@ public struct LessonsView: View {
                                 },
                                 onLockedTap: { mode in
                                     if mode.isPro && !ProManager.shared.isPro {
-                                        let cid = currentCourse?.courseID ?? ""
                                         withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
                                             showGameModePicker = false
                                             showGameOverlay = false

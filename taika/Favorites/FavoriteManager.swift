@@ -959,13 +959,9 @@ final class FavoriteManager: ObservableObject {
         }
     }
 
-    /// На main — сразу (иначе hydrate сердца гоняет с async и сбрасывает UI).
-    private func applyFavoritesMutation(_ work: @escaping () -> Void) {
-        if Thread.isMainThread {
-            work()
-        } else {
-            DispatchQueue.main.async(execute: work)
-        }
+    /// FavoriteManager is main-actor isolated, so mutations stay synchronous and ordered.
+    private func applyFavoritesMutation(_ work: () -> Void) {
+        work()
     }
 
     /// Toggle a generic favoritable entity
@@ -1343,7 +1339,7 @@ final class FavoriteManager: ObservableObject {
         let key = isHack ? raw : compareKey(raw)
         DispatchQueue.main.async {
             let before = self.items.count
-            _ = withAnimation {
+            withAnimation {
                 self.items.removeAll { it in
                     if isHack { return self.normalized(it.id) == key }
                     return self.compareKey(it.id) == key
@@ -1494,7 +1490,7 @@ final class FavoriteManager: ObservableObject {
     /// Reorder items to match the given id sequence; unknown ids keep their relative order at the end
     func applyOrder(_ orderedIds: [String]) {
         DispatchQueue.main.async {
-            _ = withAnimation {
+            withAnimation {
                 self.sortNewestFirst()
             }
             self.save()

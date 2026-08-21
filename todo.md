@@ -1,3 +1,31 @@
+# Warning-cleanup epic — implementation plan
+
+| Wave | Scope | Status |
+|---|---|---|
+| W0 | Baseline: 92 diagnostics, dependency order, preserve current behavior | Done |
+| W1 | SpeakerRecorder/SpeakerManager actor and Sendable boundaries | Done |
+| W2 | Audio permissions plus Profile/Sync/Step/PersonalPack/Favorites isolation | Done |
+| W3 | SwiftUI `onChange`, trailing closures and other deprecations | Done |
+| W4 | Safe unused/redundant/dead-code cleanup and semantic leftovers | Done |
+| W5 | Global warning sweep, report update, one commit/push for device build | In progress — source checks pass; Xcode/device gate pending |
+
+## Guardrails
+
+- Do not blanket-annotate the entire project with `@MainActor`.
+- Do not change Speaker UI flow, game scope, or session semantics while fixing diagnostics.
+- Keep audio callbacks and UI state ownership explicit.
+- Perform one final commit/push after all waves, as requested.
+
+# Yellow diagnostics audit
+
+| Задача | Статус |
+|---|---|
+| Извлечь и классифицировать полный список diagnostics из attachment | Сделано: в файле 92 entries |
+| Проверить Swift 6 actor-isolation и Sendable diagnostics | Сделано: 31 high-risk entries; Speaker cluster требует fix |
+| Проверить deprecated APIs отдельно от build blockers | Сделано: 28 entries |
+| Удалить безопасные unused/dead-code warnings без изменения поведения | Сделано в epic wave; fresh Xcode export pending |
+| Подготовить readiness impact и push исправлений | Implementation wave applied; device/Xcode validation pending |
+
 # HeaderOverlays compile blocker — Dictionary GameParkSource switches
 
 | Задача | Статус |

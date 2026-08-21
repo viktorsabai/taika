@@ -271,12 +271,7 @@ public struct LSLessonHeader: View {
         }
 
         var body: some View {
-            let completed = max(0, done)
-            let cappedTotal = max(1, total)
-            let maxSlots = 10
-
-            // Нормализуем долю текущего урока (0...1). При старых вызовах = 0.
-            let clampedFraction: Double = max(0.0, min(1.0, currentFraction))
+            // The strip is driven by explicit per-slot fractions when available.
 
             // How many whole slots are filled
 

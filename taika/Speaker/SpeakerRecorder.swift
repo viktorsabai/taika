@@ -12,6 +12,7 @@ extension Notification.Name {
     static let speakerRecorderDidStop = Notification.Name("speakerRecorderDidStop")
 }
 
+@MainActor
 protocol SpeakerRecording: AnyObject {
     var isRecording: Bool { get }
     var recordingMeter: Double { get }
@@ -81,7 +82,7 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
             return
         }
 
-        session.requestRecordPermission { [weak self] micGranted in
+        AVAudioApplication.requestRecordPermission { [weak self] micGranted in
             DispatchQueue.main.async {
                 guard let self = self else {
                     completion(false)
@@ -98,9 +99,9 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
         }
     }
 
-    /// Mic already authorized (or legacy granted).
+    /// Mic already authorized.
     var hasMicrophoneAccess: Bool {
-        AVAudioSession.sharedInstance().recordPermission == .granted
+        AVAudioApplication.shared.recordPermission == .granted
     }
 
     var hasSpeechAccess: Bool {
@@ -222,7 +223,6 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
         }
 
         recorder?.stop()
-        let recorderWasValid = (recorder != nil)
         recorder = nil
 
         partialText = ""
@@ -267,15 +267,17 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
         stopLevelMeter()
         recordingMeter = 0.0
         leveltimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            guard let r = self.recorder else {
-                self.recordingMeter = 0.0
-                return
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                guard let r = self.recorder else {
+                    self.recordingMeter = 0.0
+                    return
+                }
+                r.updateMeters()
+                let power = r.averagePower(forChannel: 0) // -160...0
+                let normalized = max(0.0, min(1.0, Double((power + 160.0) / 160.0)))
+                self.recordingMeter = normalized
             }
-            r.updateMeters()
-            let power = r.averagePower(forChannel: 0) // -160...0
-            let normalized = max(0.0, min(1.0, Double((power + 160.0) / 160.0)))
-            self.recordingMeter = normalized
         }
         RunLoop.main.add(leveltimer!, forMode: .common)
     }
