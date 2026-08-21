@@ -2411,3 +2411,13 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Inspect failing `breakdownPracticeTipsSection` statements | Done |
 | Move local calculations out of `@ViewBuilder` expression scope | Done — tip selection now uses a closure initializer |
 | Run diff/source validation and push corrective commit | In progress — Xcode validation pending |
+
+
+# LessonsView — subject-style next-step rows
+
+| Task | Status |
+|---|---|
+| Audit current completed CTA rows and active/disabled states | Done |
+| Remove heavy capsule borders and match grade-sheet subject rows | Done — quick actions use divider rows |
+| Add explicit canonical gradient treatment for active action | Done — gradient icon, subtle wash, and leading rail |
+| Run source check and push point fix | In progress — Xcode/Simulator pending |

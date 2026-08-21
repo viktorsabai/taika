@@ -2627,9 +2627,9 @@ public struct LSCoursePracticeDock: View {
     private func quickActionRow(icon: String, title: String, detail: String, isEnabled: Bool, action: (() -> Void)?) -> some View {
         let content = HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(isEnabled ? AnyShapeStyle(TaikaMasteryTokens.green) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.55)))
-                .frame(width: 22, alignment: .leading)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(isEnabled ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.55)))
+                .frame(width: 24, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 13, weight: .semibold))
@@ -2644,7 +2644,27 @@ public struct LSCoursePracticeDock: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(isEnabled ? 0.85 : 0.42))
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
+        .padding(.leading, isEnabled ? 8 : 0)
+        .background {
+            if isEnabled {
+                LinearGradient(
+                    colors: [
+                        TaikaMasteryTokens.green.opacity(0.08),
+                        Color.clear
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            }
+        }
+        .overlay(alignment: .leading) {
+            if isEnabled {
+                Capsule()
+                    .fill(TaikaMasteryTokens.greenGradient)
+                    .frame(width: 3)
+            }
+        }
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(PD.ColorToken.stroke.opacity(0.42))
