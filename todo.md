@@ -2454,3 +2454,12 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Flatten «Мой профиль», account, service, and system rows into one native list language | Done — dividers only; no outer card shells |
 | Convert Debugging from large window to compact bottom sheet | Done — 0.42 fraction drawer with corner radius |
 | Run source check and push Profile hierarchy redesign | In progress |
+
+
+# Fix — CardDS ambiguous foregroundStyle expression
+
+| Task | Status |
+|---|---|
+| Inspect line 1172 and surrounding style expressions | Done — ambiguity was on accessibilityLabel overload |
+| Apply smallest explicit type annotation without behavior change | Done — `Text(title)` passed explicitly |
+| Run source check and push compile correction | In progress |

@@ -1169,7 +1169,7 @@ public struct StepCardActionBar: View {
         }
         .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.96, useBouncySpring: false, flashOpacity: 0.05))
         .disabled(!isEnabled)
-        .accessibilityLabel(title)
+        .accessibilityLabel(Text(title))
     }
 
     private func quietActionButton(
@@ -1193,7 +1193,7 @@ public struct StepCardActionBar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.94, useBouncySpring: false, flashOpacity: 0.03))
-        .accessibilityLabel(title)
+        .accessibilityLabel(Text(title))
     }
 }
 // MARK: - StepCardBase (shared shell for step cards – layout only, no logic)
