@@ -2622,6 +2622,15 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Trace course row, favorite manager, and navigation callback for all course states | [ ] |
-| Restore canonical tap target and destination routing | [ ] |
-| Validate new, in-progress, and completed course rows and push fix | [ ] |
+| Trace course row, favorite manager, and navigation callback for all course states | [x] |
+| Restore canonical tap target and destination routing | [x] |
+| Validate new, in-progress, and completed course rows and push fix | [x] — source validation; device validation pending |
+
+
+# Bug — Favorites and Dictionary list chrome mismatch
+
+| Task | Status |
+|---|---|
+| Audit list/grid rows, spacing, surfaces, actions, and view mode behavior in both tabs | [ ] |
+| Align both tabs to one shared mirrored list contract | [ ] |
+| Validate both tabs and push visual consistency fix | [ ] |

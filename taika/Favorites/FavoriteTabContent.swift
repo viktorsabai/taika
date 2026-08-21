@@ -1433,17 +1433,22 @@ private struct FavCourseBlock<Content: View>: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .background {
-            if isFocused {
-                shape.fill(ThemeManager.shared.currentAccentTintColor.opacity(0.14))
-            } else {
-                Theme.Surfaces.card(shape)
-            }
-        }
+        .background(.ultraThinMaterial, in: shape)
+        .overlay(
+            LinearGradient(
+                colors: [
+                    ThemeManager.shared.currentAccentTintColor.opacity(isFocused ? 0.16 : 0.08),
+                    Color.clear
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .clipShape(shape)
+        )
         .overlay(
             shape.stroke(
                 isFocused
-                ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.42))
+                ? AnyShapeStyle(ThemeManager.shared.currentAccentTintColor.opacity(0.42))
                 : AnyShapeStyle(Theme.Strokes.strokeSubtle),
                 lineWidth: Theme.Strokes.strokeLineWidth
             )
@@ -1615,7 +1620,7 @@ struct FDFavDictionaryTabList: View {
     }
 
     private var dictionaryFilledContent: some View {
-        LazyVStack(alignment: .leading, spacing: 14) {
+        LazyVStack(alignment: .leading, spacing: 16) {
             if viewMode.wrappedValue == .grid {
                 dictionaryGrid
             } else {
