@@ -2957,14 +2957,18 @@ public struct CourseLessonCard: View {
 
     @ViewBuilder
     private var accentTreatmentOverlay: some View {
-        switch effectiveAccentTreatment {
-        case .none:
+        if isFlipped && backFaceKind == .courseGradeSheet {
             EmptyView()
-        case let .taikaValues(_, glow):
-            CDOrganicLearnedTreatment(
-                glow: glow,
-                isFavorite: isFavoriteActive
-            )
+        } else {
+            switch effectiveAccentTreatment {
+            case .none:
+                EmptyView()
+            case let .taikaValues(_, glow):
+                CDOrganicLearnedTreatment(
+                    glow: glow,
+                    isFavorite: isFavoriteActive
+                )
+            }
         }
     }
 
@@ -3309,65 +3313,69 @@ public struct CourseLessonCard: View {
                 }
 
             case .courseGradeSheet:
-                VStack(alignment: .leading, spacing: 9) {
-                    Spacer(minLength: 16)
+                VStack(alignment: .leading, spacing: 11) {
+                    Text("ЗАКРЕПЛЕНИЕ")
+                        .font(Theme.Fonts.caption(11, weight: .bold))
+                        .kerning(0.8)
+                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
+
                     Text("Закрепи пройденный курс")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.96))
+                        .font(Theme.Fonts.body(19, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.text)
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
 
-                    Text(reinforcementScore == nil ? "Результат курса готов. Теперь удержи навык практикой." : "Курс пройден. Подними результат коротким повторением.")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundStyle(Color.white.opacity(0.76))
-                        .lineSpacing(2)
+                    Text(reinforcementScore == nil ? "Один короткий повтор — и материал останется в речи." : "Курс пройден. Выбери один способ удержать результат.")
+                        .font(Theme.Fonts.caption(13, weight: .regular))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineSpacing(1)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    HStack(spacing: 8) {
+                    HStack(spacing: 0) {
                         gradeMetric(value: reinforcementScore.map { "\($0)%" } ?? "—", label: "игры")
+                        Rectangle()
+                            .fill(PD.ColorToken.stroke.opacity(0.55))
+                            .frame(width: 1, height: 28)
                         gradeMetric(value: pronunciationPercent.map { "\($0)%" } ?? "—", label: "голос")
+                        Rectangle()
+                            .fill(PD.ColorToken.stroke.opacity(0.55))
+                            .frame(width: 1, height: 28)
                         gradeMetric(value: reinforcementCoveredCards > 0 ? "\(reinforcementCoveredCards)" : "—", label: "карточки")
                     }
-                    .padding(.top, 2)
+                    .padding(.vertical, 3)
 
-                    Text("Следующий шаг")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.64))
-                        .padding(.top, 2)
-
-                    Spacer(minLength: 10)
-                    if let action = onBackSelectGameMode {
-                        Button {
-                            action("match")
-                        } label: {
-                            HStack(spacing: 9) {
-                                Image(systemName: "gamecontroller.fill")
-                                Text("Закрепить в игре")
-                                Spacer(minLength: 0)
-                                Image(systemName: "arrow.right")
+                    VStack(spacing: 8) {
+                        if let action = onBackSelectGameMode {
+                            Button {
+                                action("match")
+                            } label: {
+                                HStack(spacing: 9) {
+                                    Image(systemName: "gamecontroller.fill")
+                                    Text("Закрепить в игре")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    Image(systemName: "arrow.up.right")
+                                }
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.green))
+                            .buttonStyle(CardBackActionButtonStyle(isPrimary: true, isMastery: true))
                         }
-                        .buttonStyle(CardBackActionButtonStyle(isPrimary: true, isMastery: true))
-                    }
 
-                    if let action = onSpeakerTap {
-                        Button {
-                            action()
-                        } label: {
-                            HStack(spacing: 9) {
-                                Image(systemName: "mic.fill")
-                                Text("Тренировать в Спикере")
-                                Spacer(minLength: 0)
-                                Image(systemName: "arrow.right")
+                        if let action = onSpeakerTap {
+                            Button {
+                                action()
+                            } label: {
+                                HStack(spacing: 9) {
+                                    Image(systemName: "mic.fill")
+                                    Text("Проверить в Speaker")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    Image(systemName: "arrow.up.right")
+                                }
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .foregroundStyle(AnyShapeStyle(Color.white.opacity(0.94)))
+                            .buttonStyle(CardBackActionButtonStyle(isPrimary: false, isMastery: false))
                         }
-                        .buttonStyle(CardBackActionButtonStyle(isPrimary: false, isMastery: false))
                     }
+                    .padding(.top, 3)
                 }
+                .padding(.top, 6)
             }
         }
 

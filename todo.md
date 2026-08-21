@@ -3044,7 +3044,17 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Audit nested diagnostic composition | [ ] |
-| Remove inner panel frame and duplicate labels | [ ] |
-| Integrate strength/focus into one inline strip | [ ] |
+| Audit nested diagnostic composition | [x] |
+| Remove inner panel frame and duplicate labels | [x] |
+| Integrate strength/focus into one inline strip | [x] — borderless two-column strip |
+| Run checks, commit, push, and provide device handoff | [x] — b7107adcb1aeddc484c336d861548606e1b8add4 |
+
+
+# Completed course card back face
+
+| Task | Status |
+|---|---|
+| Inspect back-face layout and action styles | [ ] |
+| Replace decorative clutter with canonical native hierarchy | [ ] |
+| Unify typography and action buttons | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |
