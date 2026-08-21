@@ -225,11 +225,6 @@ public struct SpeakerDSRoot: View {
     @State private var conversationComposeText = ""
     @State private var conversationEditRU = ""
     @State private var conversationTextComposerExpanded = false
-    private enum ConversationScene {
-        case voice
-        case text
-    }
-    @State private var conversationScene: ConversationScene = .voice
     @Namespace private var speakerModeSwitchNamespace
     @FocusState private var conversationComposeFocused: Bool
     @FocusState private var conversationEditFocused: Bool
@@ -860,8 +855,15 @@ public struct SpeakerDSRoot: View {
                     Spacer(minLength: 0)
                 }
 
-                Color.clear
-                    .frame(height: ToolBar.recommendedBottomInset + 52)
+                if !focused {
+                    conversationUnifiedInputBar
+                        .padding(.horizontal, padH)
+                        .padding(.top, 10)
+                        .padding(.bottom, ToolBar.recommendedBottomInset + 12)
+                } else {
+                    Color.clear
+                        .frame(height: ToolBar.recommendedBottomInset + 52)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .allowsHitTesting(!focused)
@@ -877,26 +879,13 @@ public struct SpeakerDSRoot: View {
                     }
 
                 VStack(spacing: 0) {
-                    if conversationScene == .text,
-                       !conversationTextComposerExpanded,
+                    if conversationTextComposerExpanded,
                        !conversationHasResult,
                        !conversationIsRecording,
                        !phase.isProcessing,
                        !phase.isFeedback {
-                        conversationTextSceneStage
-                            .padding(.horizontal, padH)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .trailing).combined(with: .opacity),
-                                removal: .move(edge: .leading).combined(with: .opacity)
-                            ))
-                    } else if conversationTextComposerExpanded,
-                              !conversationHasResult,
-                              !conversationIsRecording,
-                              !phase.isProcessing,
-                              !phase.isFeedback {
                         VStack(spacing: 18) {
-                            conversationTextSceneStage
+                            conversationLiveStage
                                 .transition(.opacity.combined(with: .scale(scale: 0.97)))
                             conversationTextComposerPanel
                                 .transition(
@@ -970,6 +959,10 @@ public struct SpeakerDSRoot: View {
                             .frame(height: ToolBar.recommendedBottomInset + 8)
                     }
 
+                    // Second-level toolbar stays in the same overlay slot in every focused state.
+                    conversationIdleModeRail
+                        .padding(.horizontal, padH)
+                        .padding(.bottom, ToolBar.recommendedBottomInset + 12)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.top, 44)
@@ -981,23 +974,6 @@ public struct SpeakerDSRoot: View {
         .animation(.easeInOut(duration: 0.22), value: history.count)
         .animation(.easeInOut(duration: 0.22), value: focused)
         .animation(.spring(response: 0.38, dampingFraction: 0.86), value: conversationTextComposerExpanded)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 28)
-                .onEnded { value in
-                    guard !conversationTextComposerExpanded,
-                          !conversationIsRecording,
-                          !phase.isProcessing,
-                          !phase.isFeedback,
-                          !conversationHasResult,
-                          !conversationIsPracticeFlow,
-                          abs(value.translation.width) > abs(value.translation.height),
-                          abs(value.translation.width) > 42 else { return }
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
-                        conversationScene = value.translation.width < 0 ? .text : .voice
-                    }
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                }
-        )
     }
 
     @ViewBuilder private var conversationFocusGlassBackdrop: some View {
@@ -1023,37 +999,6 @@ public struct SpeakerDSRoot: View {
             .background(Theme.Surfaces.card(shape))
             .overlay(shape.stroke(Theme.Strokes.strokeSubtle.opacity(0.7), lineWidth: Theme.Strokes.strokeLineWidth))
             .shadow(color: Color.black.opacity(0.28), radius: 20, y: 8)
-    }
-
-    @ViewBuilder private var conversationTextSceneStage: some View {
-        VStack(spacing: 14) {
-            ZStack {
-                SpeakerLiveStateHalo(isRecording: false, isProcessing: false)
-                    .frame(width: 220, height: 220)
-                MDVoiceSphere(
-                    symbol: "keyboard.fill",
-                    accessibilityLabel: "Открыть текстовый ввод",
-                    meter: 0
-                ) {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
-                        conversationTextComposerExpanded = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                        conversationComposeFocused = true
-                    }
-                }
-                .scaleEffect(0.86)
-            }
-            .frame(width: 220, height: 220)
-            Text("Текст")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(PD.ColorToken.text)
-            Text("Тапни сферу, чтобы написать фразу")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.82))
-        }
-        .frame(maxWidth: .infinity)
     }
 
     /// Immersive live: одна компактная onboarding-style sphere остаётся в центре во всех voice states.
@@ -2177,8 +2122,14 @@ public struct SpeakerDSRoot: View {
     /// Idle: the sphere is the only voice CTA. The large bottom CTA appears
     /// only in recovery/practice/result-adjacent states where it has context.
     @ViewBuilder private var conversationUnifiedInputBar: some View {
-        Color.clear
-            .frame(height: 52)
+        if phase == .idle && !conversationHasResult && !conversationIsPracticeFlow {
+            conversationIdleModeRail
+        } else {
+            HStack(spacing: 10) {
+                conversationTextEntryButton
+                conversationStickyMicBar
+            }
+        }
     }
 
     @ViewBuilder private var conversationIdleModeRail: some View {
@@ -2279,10 +2230,30 @@ public struct SpeakerDSRoot: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(PD.ColorToken.text)
                 Spacer(minLength: 0)
-                Image(systemName: "hand.draw.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
-                    .accessibilityLabel("Свайпни вправо для голоса")
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    collapseConversationTextComposer(clearText: true)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("Голос")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(PD.ColorToken.text)
+                    .padding(.horizontal, 11)
+                    .frame(height: 32)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.white.opacity(0.08))
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.34), lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+                .accessibilityLabel("Переключить на голосовой режим")
             }
 
             TextField("Любая фраза…", text: $conversationComposeText, axis: .vertical)

@@ -2983,7 +2983,18 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect Taika+ and Rhythm banner differences | [ ] |
-| Match exact dimensions, spacing, hierarchy, and CTA | [ ] |
-| Reduce Rhythm saturation to canonical gradient treatment | [ ] |
+| Inspect Taika+ and Rhythm banner differences | [x] |
+| Match exact dimensions, spacing, hierarchy, and CTA | [x] — shared 238pt minimum height and shared 16/12/26 geometry |
+| Reduce Rhythm saturation to canonical gradient treatment | [x] — 0.12 fill / 0.36 stroke, no extra shadow color |
+| Run checks, commit, push, and provide device handoff | [x] — 9a27ad75865b225fcbe4512f7f9ae493e2721d2f |
+
+
+# Speaker canonical root recovery
+
+| Task | Status |
+|---|---|
+| Trace swipe regression in root canvas branches | [ ] |
+| Restore one fixed sphere stage and bounded result region | [ ] |
+| Keep swipe scene state isolated from recording/result branches | [ ] |
+| Validate idle, recording, processing, and result layouts | [ ] |
 | Run checks, commit, push, and provide device handoff | [ ] |
