@@ -121,6 +121,9 @@ public struct SpeakerDSRoot: View {
         let isProUser: Bool
         /// Full tone graph + syllables: Pro or still within today's free attempts.
         let hasFullToneBreakdownAccess: Bool
+        /// Training mode: remaining attempts today for the shared 10-attempt free quota.
+        let trainingRemainingToday: Int
+        let trainingCanRecord: Bool
         /// Conversation mode: remaining demo attempts today (free); Pro ignores.
         let conversationRemainingToday: Int
         /// Conversation mode: elapsed recording seconds for timer ring; 0 when idle.
@@ -147,6 +150,9 @@ public struct SpeakerDSRoot: View {
         let referencePlaybackProgress: Double
         /// Вызывается при появлении оверлея «разбор» — сбросить прогресс эталона, чтобы график «Эталон» был виден целиком.
         let onBreakdownAppear: (() -> Void)?
+        /// Recovery actions when the free daily training attempts are exhausted.
+        let onOpenInstantTranslation: (() -> Void)?
+        let onOpenTaikaPlus: (() -> Void)?
     }
 
     private let external: External?
@@ -407,6 +413,8 @@ public struct SpeakerDSRoot: View {
         onRetranslateConversationDraft: ((String) -> Void)? = nil,
         onDiscardConversationDraft: (() -> Void)? = nil,
         isProUser: Bool = false,
+        trainingRemainingToday: Int = 10,
+        trainingCanRecord: Bool = true,
         hasFullToneBreakdownAccess: Bool = false,
         conversationRemainingToday: Int = 3,
         conversationRecordingElapsed: TimeInterval = 0,
@@ -420,7 +428,9 @@ public struct SpeakerDSRoot: View {
         smartSpeakerPoliteness: String = "female",
         onSetSmartSpeakerPoliteness: @escaping (String) -> Void = { _ in },
         referencePlaybackProgress: Double = 1.0,
-        onBreakdownAppear: (() -> Void)? = nil
+        onBreakdownAppear: (() -> Void)? = nil,
+        onOpenInstantTranslation: (() -> Void)? = nil,
+        onOpenTaikaPlus: (() -> Void)? = nil
     ) {
         self.external = External(
             current: current,
@@ -495,6 +505,8 @@ public struct SpeakerDSRoot: View {
             onRetranslateConversationDraft: onRetranslateConversationDraft,
             onDiscardConversationDraft: onDiscardConversationDraft,
             isProUser: isProUser,
+            trainingRemainingToday: trainingRemainingToday,
+            trainingCanRecord: trainingCanRecord,
             hasFullToneBreakdownAccess: hasFullToneBreakdownAccess,
             conversationRemainingToday: conversationRemainingToday,
             conversationRecordingElapsed: conversationRecordingElapsed,
@@ -508,7 +520,9 @@ public struct SpeakerDSRoot: View {
             smartSpeakerPoliteness: smartSpeakerPoliteness,
             onSetSmartSpeakerPoliteness: onSetSmartSpeakerPoliteness,
             referencePlaybackProgress: referencePlaybackProgress,
-            onBreakdownAppear: onBreakdownAppear
+            onBreakdownAppear: onBreakdownAppear,
+            onOpenInstantTranslation: onOpenInstantTranslation,
+            onOpenTaikaPlus: onOpenTaikaPlus
         )
 #if DEBUG
         self.previewExternal = nil
@@ -5493,162 +5507,178 @@ public struct SpeakerDSRoot: View {
     // - result: [play ref] [play attempt] (so user can compare what they said)
     @ViewBuilder
     private var speakerPlayerPanel: some View {
-
         let isRecording: Bool = {
             if case .recording = phase { return true }
             return false
         }()
-
-        let isAnalyzing: Bool = (phase == .analyzing)
+        let isAnalyzing = phase == .analyzing || phase == .analyzingTranslation
         let isFeedback = phase.isFeedback
-        let disabledAll = isAnalyzing
-
-        let canPlayReference = !disabledAll
         let hasAttempt: Bool = {
 #if DEBUG
-            if let p = previewExternal {
-                return p.lastAttempt != nil
-            }
+            if let p = previewExternal { return p.lastAttempt != nil }
 #endif
             return external?.lastAttempt != nil
         }()
-        // in feedback phase we must ALWAYS allow replaying user attempt if it exists
         let canPlayAttempt = hasAttempt
+        let trainingMode = external?.speakerUIMode == .training
+        let trainingRemaining = max(0, external?.trainingRemainingToday ?? 0)
+        let trainingLimitExhausted = trainingMode && external?.isProUser != true && !(external?.trainingCanRecord ?? false)
+        let controlDisabled = isAnalyzing || trainingLimitExhausted
+        let railFill = PD.ColorToken.card.opacity(0.82)
 
-        HStack(spacing: 18) {
-
-            // PREV
-            Button {
-                external?.onPrev?()
-            } label: {
-                VStack(spacing: 3) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(
-                            AnyShapeStyle(
-                                disabledAll
-                                ? PD.ColorToken.textSecondary.opacity(0.35)
-                                : PD.ColorToken.text
-                            )
-                        )
-                        .frame(width: 44, height: 44)
-                    Text("назад")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
+        VStack(spacing: 10) {
+            HStack(spacing: 0) {
+                speakerRailButton(icon: "chevron.left", title: "Назад", isEnabled: !controlDisabled) {
+                    external?.onPrev?()
                 }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(disabledAll)
-
-            // PLAY REFERENCE
-            Button {
-                guard canPlayReference else { return }
-                external?.onPlayReference()
-            } label: {
-                VStack(spacing: 3) {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(
-                            AnyShapeStyle(
-                                canPlayReference
-                                ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                                : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35))
-                            )
-                        )
-                        .frame(width: 44, height: 44)
-                    Text("эталон")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
+                speakerRailButton(icon: "play.fill", title: "Эталон", isEnabled: !controlDisabled, isAccent: true) {
+                    external?.onPlayReference()
                 }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!canPlayReference)
 
-            // PRIMARY (MIC / STOP / REPEAT)
-            Button {
-                if isRecording {
-                    external?.onMicTap()   // stop recording
-                } else if isFeedback {
-                    external?.onRepeat()   // repeat after result
-                } else {
-                    external?.onMicTap()   // start recording
-                }
-            } label: {
-                VStack(spacing: 3) {
-                    Image(systemName:
-                            isRecording
-                            ? "stop.fill"
-                            : (isFeedback ? "arrow.clockwise" : "mic.fill")
+                Button {
+                    if isRecording {
+                        external?.onMicTap()
+                    } else if isFeedback {
+                        external?.onRepeat()
+                    } else {
+                        external?.onMicTap()
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: isRecording ? "stop.fill" : (isFeedback ? "arrow.clockwise" : "mic.fill"))
+                            .font(.system(size: 17, weight: .bold))
+                        Text(isRecording ? "Стоп" : (isFeedback ? "Ещё раз" : "Записать"))
+                            .font(.system(size: 12, weight: .semibold))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(controlDisabled ? PD.ColorToken.textSecondary.opacity(0.38) : PD.ColorToken.text)
+                    .frame(maxWidth: .infinity, minHeight: 46)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(controlDisabled ? PD.ColorToken.chip.opacity(0.36) : ThemeManager.shared.currentAccentFill)
                     )
-                        .font(.system(size: 22, weight: .bold))
-                        .frame(width: 72, height: 72)
-                        .background(
-                            Circle()
-                                .fill(ThemeManager.shared.currentAccentFill)
-                        )
-                        .foregroundColor(.black)
-                    Text(isRecording ? "остановить" : (isFeedback ? "ещё раз" : "записать"))
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
                 }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(isAnalyzing)
+                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.94, useBouncySpring: false, flashOpacity: 0.04))
+                .disabled(controlDisabled)
+                .accessibilityLabel(isRecording ? "Остановить запись" : (isFeedback ? "Записать ещё раз" : "Записать фразу"))
 
-            // PLAY ATTEMPT (что сказал) — тот же стиль, что и play: иконка цветом, активна только после записи
-            Button {
-                guard canPlayAttempt else { return }
-                external?.onPlayAttempt()
-            } label: {
-                VStack(spacing: 3) {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(
-                            canPlayAttempt
-                            ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35))
-                        )
-                        .frame(width: 44, height: 44)
-                    Text("твоя запись")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
+                speakerRailButton(icon: "waveform", title: "Моя запись", isEnabled: canPlayAttempt, isAccent: true) {
+                    external?.onPlayAttempt()
                 }
-                .contentShape(Rectangle())
+                speakerRailButton(icon: "chevron.right", title: "Дальше", isEnabled: !controlDisabled) {
+                    external?.onNext()
+                }
             }
-            .buttonStyle(.plain)
-            .disabled(!canPlayAttempt)
+            .padding(5)
+            .background(railFill, in: RoundedRectangle(cornerRadius: 19, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 19, style: .continuous)
+                    .stroke(PD.ColorToken.stroke.opacity(0.72), lineWidth: 1)
+            )
 
-            // NEXT
-            Button {
-                external?.onNext()
-            } label: {
-                VStack(spacing: 3) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(
-                            AnyShapeStyle(
-                                disabledAll
-                                ? PD.ColorToken.textSecondary.opacity(0.35)
-                                : PD.ColorToken.text
+            if trainingLimitExhausted {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        Text("На сегодня достаточно")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.text)
+                        Spacer(minLength: 0)
+                        Text("\(trainingRemaining) / 10")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                    Text("Записи закончились, но ты можешь продолжить без паузы.")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(2)
+
+                    HStack(spacing: 8) {
+                        Button {
+                            external?.onOpenInstantTranslation?()
+                        } label: {
+                            speakerRecoveryButton(icon: "text.bubble.fill", title: "Мгновенный перевод")
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            external?.onOpenTaikaPlus?()
+                        } label: {
+                            speakerRecoveryButton(icon: "crown.fill", title: "Открыть Taika+")
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(PD.ColorToken.card.opacity(0.62), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [ThemeManager.shared.currentAccentTintColor, ThemeManager.shared.currentAccentFill],
+                                startPoint: .top,
+                                endPoint: .bottom
                             )
                         )
-                        .frame(width: 44, height: 44)
-                    Text("дальше")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .frame(width: 3)
+                        .padding(.vertical, 10)
                 }
-                .contentShape(Rectangle())
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(PD.ColorToken.stroke.opacity(0.66), lineWidth: 1)
+                )
             }
-            .buttonStyle(.plain)
-            .disabled(disabledAll)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
+    }
+
+    private func speakerRailButton(
+        icon: String,
+        title: String,
+        isEnabled: Bool,
+        isAccent: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 9, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+            .foregroundStyle(
+                isEnabled
+                    ? (isAccent ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary))
+                    : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.32))
+            )
+            .frame(maxWidth: .infinity, minHeight: 46)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.94, useBouncySpring: false, flashOpacity: 0.03))
+        .disabled(!isEnabled)
+        .accessibilityLabel(title)
+    }
+
+    private func speakerRecoveryButton(icon: String, title: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+        }
+        .foregroundStyle(PD.ColorToken.text)
+        .frame(maxWidth: .infinity, minHeight: 38)
+        .background(PD.ColorToken.chip.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(PD.ColorToken.stroke.opacity(0.62), lineWidth: 1)
+        )
     }
 
 

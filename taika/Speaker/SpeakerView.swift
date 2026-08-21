@@ -14,6 +14,7 @@ struct SpeakerView: View {
     @ObservedObject private var speakerFilterState = SpeakerFilterState.shared
     @ObservedObject private var speaker = SpeakerManager.shared
     @ObservedObject private var conversationAttempts = SpeakerConversationAttemptsStore.shared
+    @ObservedObject private var trainingAttempts = SpeakerDailyAttemptsStore.shared
     @ObservedObject private var returnContext = SpeakerReturnContext.shared
     private let pro = ProManager.shared
     @State private var showSpeakerBreakdown = false
@@ -39,6 +40,7 @@ struct SpeakerView: View {
         _selectedTab = selectedTab
         _speakerFilterState = ObservedObject(wrappedValue: SpeakerFilterState.shared)
         _speaker = ObservedObject(wrappedValue: SpeakerManager.shared)
+        _trainingAttempts = ObservedObject(wrappedValue: SpeakerDailyAttemptsStore.shared)
         _showSpeakerBreakdown = State(initialValue: false)
     }
 
@@ -302,6 +304,8 @@ struct SpeakerView: View {
             onRetranslateConversationDraft: { speaker.retranslateConversationDraft($0) },
             onDiscardConversationDraft: { speaker.discardConversationDraft() },
             isProUser: pro.isPro,
+            trainingRemainingToday: trainingAttempts.remainingToday,
+            trainingCanRecord: trainingAttempts.canRecord,
             hasFullToneBreakdownAccess: hasFullToneBreakdownAccess,
             conversationRemainingToday: conversationAttempts.remainingToday,
             conversationRecordingElapsed: speaker.conversationRecordingElapsed,
@@ -315,7 +319,15 @@ struct SpeakerView: View {
             smartSpeakerPoliteness: speaker.smartSpeakerPoliteness,
             onSetSmartSpeakerPoliteness: { speaker.setSmartSpeakerPoliteness($0) },
             referencePlaybackProgress: speaker.referencePlaybackProgress,
-            onBreakdownAppear: { speaker.resetReferenceProgress() }
+            onBreakdownAppear: { speaker.resetReferenceProgress() },
+            onOpenInstantTranslation: {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                speaker.setSpeakerUIMode(.conversation)
+            },
+            onOpenTaikaPlus: {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                overlay.presentPro(reason: .speakerBreakdown, courseId: speaker.speakerContextCourseId ?? "")
+            }
         )
         .onChange(of: speakerFilterState.selectedFilterId) { _, newId in
             if let id = newId {

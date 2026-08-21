@@ -2483,3 +2483,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Inspect full Step action helper and modifiers around line 1172 | Done — failure was builder-level, not only label overload |
 | Explicitly type the full action surface expression | Done — both helpers return `AnyView` |
 | Run source check and push corrected compile state | In progress |
+
+
+# Speaker course practice — player rail and attempt-limit recovery
+
+| Task | Status |
+|---|---|
+| Audit course Speaker controls, attempt-limit state, and Instant Translation/Taika+ routes | Done |
+| Replace scattered icon captions with one horizontal native player rail | Done — strict rail with compact labels and primary record action |
+| Add guided recovery state when daily attempts are exhausted | Done — Instant Translation + Taika+ actions |
+| Preserve card navigation, playback, recording-disabled, and session scope semantics | Done — callbacks preserved; persisted quota passed reactively |
+| Run source check and push Speaker refinement | In progress |
