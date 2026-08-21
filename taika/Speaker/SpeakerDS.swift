@@ -861,12 +861,8 @@ public struct SpeakerDSRoot: View {
                         .padding(.top, 10)
                         .padding(.bottom, ToolBar.recommendedBottomInset + 12)
                 } else {
-                    VStack(spacing: 10) {
-                            conversationIdleModeRail
-                            Color.clear
-                                .frame(height: ToolBar.recommendedBottomInset + 52)
-                        }
-                        .padding(.horizontal, padH)
+                    Color.clear
+                        .frame(height: ToolBar.recommendedBottomInset + 52)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -969,6 +965,7 @@ public struct SpeakerDSRoot: View {
                         .padding(.bottom, ToolBar.recommendedBottomInset + 12)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, 44)
                 .transition(.opacity)
             }
         }

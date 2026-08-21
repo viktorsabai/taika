@@ -2951,8 +2951,18 @@ Keep three independent state axes: course completion, lesson completion, and rei
 
 | Task | Status |
 |---|---|
-| Inspect result center and action footer composition | [ ] |
-| Keep Thai/reference in one compact phrase row | [ ] |
-| Move tone breakdown to its own dedicated row | [ ] |
-| Separate action icons and remove duplicate instant translation CTA | [ ] |
-| Protect bottom toolbar spacing and push device handoff | [ ] |
+| Inspect result center and action footer composition | [x] |
+| Keep Thai/reference in one compact phrase row | [x] |
+| Move tone breakdown to its own dedicated row | [x] |
+| Separate action icons and remove duplicate instant translation CTA | [x] |
+| Protect bottom toolbar spacing and push device handoff | [x] — 91d0df333d70c1dc4b26a589b3c85f3fd61b4209 |
+
+
+# Speaker duplicate rail critical fix
+
+| Task | Status |
+|---|---|
+| Trace duplicate rail paths and overlay stacking | [ ] |
+| Keep exactly one Voice/Text rail in the rendered canvas | [ ] |
+| Re-anchor sphere below header within one stable stage | [ ] |
+| Run checks, commit, push, and provide device handoff | [ ] |
