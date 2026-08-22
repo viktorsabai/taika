@@ -1,34 +1,36 @@
-# Draft audit — course_l_13: Хозяин дома — почти сосед
+# Черновой аудит — course_l_13 «Хозяин дома — почти сосед»
 
-**Category:** Тайский для жизни
+## Вывод
 
-## Scope
+Курс содержит полезные бытовые ситуации, но часто повторяет ремонтный service flow и пытается учить сразу проблему, визит мастера, время и подтверждение. Нужна ясная граница: это коммуникация с хозяином дома, а не общий сервис и не курс о соседях.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Граница курса
 
-## Current signals
+Владелец курса — сообщить хозяину о бытовой проблеме, договориться о доступе в квартиру и получить обновление по ремонту. Общий сервисный язык остаётся в `course_e_3`; правила кондо и соседские отношения — в `course_long_5`.
 
-- Phrase/casual cards: 41
-- Average Russian phrase length: 2.0 words
-- Cards with compound-action signals: 11
-- Cards with 6+ words: 0
+## Remove / simplify
 
-## Course owner
+- «Вода течёт с потолка» → «С потолка течёт» или «Вода течёт».
+- «Сообщите, когда приедете» → «Когда приедете?»; отдельная card «Позвоните мне».
+- «Позвоните перед выездом» → «Позвоните заранее».
+- «Спасибо что починили» → «Спасибо».
+- Дубли «Когда почините?» в нескольких уроках объединить в один owner-specific repair card.
+- Счёт, перевод, наличные и чек оставить только если урок действительно про оплату аренды; иначе вынести в finance/rent section.
 
-_To be defined after comparing neighboring course owners._
+## Proposed phrase banks
 
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
+| Урок | Короткие cards |
+|---|---|
+| Сообщить проблему | здесь проблема; вода течёт; потолок мокрый; не холодит; шумит |
+| Попросить ремонт | почините, пожалуйста; можно сегодня?; срочно; кто починит?; спасибо |
+| Договориться о визите | когда приедете?; завтра можно?; во сколько?; я буду дома; позвоните заранее |
+| Оплата | счёт, пожалуйста; перевод можно?; наличными?; чек можно?; готово |
+| Проверить результат | всё хорошо?; больше не течёт; теперь работает; спасибо; до связи |
 
 ## Acceptance checks
 
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+- [x] Жильё отделено от общего сервиса и правил кондо.
+- [x] Проблема, срок и визит не объединены в одну card.
+- [x] Повторяющиеся repair cards сокращены.
+- [ ] Проверить overlap с `course_e_3` после его новой версии и с `course_long_5`.
+- [ ] Thai naturalness проверить у носителя.

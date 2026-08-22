@@ -4,7 +4,7 @@
 
 ## Scope
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+Это draft-аудит; production JSON не меняется. Проверяем курс на составные действия, неуместные формулировки, дубли и ясный пользовательский outcome.
 
 ## Current signals
 
@@ -13,22 +13,59 @@ This is a draft only. Production JSON is unchanged. Review one course at a time 
 - Cards with compound-action signals: 12
 - Cards with 6+ words: 0
 
-## Course owner
+## Граница курса
 
-_To be defined after comparing neighboring course owners._
+Владелец курса — hotel stay: заселение, номер, уборка, кондиционер, ключ, checkout и багаж. Универсальные сервисные фразы должны ссылаться на `course_e_3`, а не дублироваться здесь.
+
+## Диагноз
+
+Курс не перегружен длиной самих фраз, но смешивает check-in, номер, room service, ремонт, checkout и продление. Карточки, где одновременно описаны поломка, срок и просьба, нужно дробить.
 
 ## Keep / simplify / remove / add
 
-_To be completed during manual review._
+### Keep
+
+Короткие hotel-specific intents: ключ, номер, уборка, кондиционер, багаж, выезд и счёт.
+
+### Simplify
+
+- «Можно починить сегодня?» → «Сегодня можно?» или «Починить можно?»
+- «Позвоните, когда будет готово» → «Позвоните, когда готово»; отдельно «Когда готово?»
+- «Можно другой номер?» оставить как отдельную просьбу без объяснения причины.
+- «Когда починят?» оставить только в hotel repair context; общий сервисный вариант принадлежит `course_e_3`.
+
+### Remove from default layer
+
+- повторяющиеся repair cards, если они уже принадлежат `course_e_3` или `course_l_13`;
+- длинные фразы, одновременно описывающие поломку, срочность и визит мастера;
+- общие «готово/спасибо» без hotel context.
+
+### Add
+
+- «ключ где?»
+- «номер готов?»
+- «уборка сегодня?»
+- «кондиционер не работает»
+- «багаж оставить можно?»
+- «счёт, пожалуйста»
 
 ## Proposed short phrase banks
 
-_To be completed during manual review and native-speaker QA._
+| Lesson focus | Short cards |
+|---|---|
+| Check-in | бронь есть; паспорт вот; ключ где; номер готов; спасибо |
+| Номер | где номер; это мой номер; можно другой; здесь проблема; всё хорошо |
+| Уборка и удобства | уборка сегодня; полотенце нужно; воды нет; кондиционер не работает; можно помочь? |
+| Ремонт | сломалось; не работает; когда починят; сегодня можно; позвоните мне |
+| Время | сейчас можно; позже можно; завтра можно; во сколько?; хорошо |
+| Checkout | выезд сегодня; счёт, пожалуйста; багаж оставить можно; всё готово; спасибо |
+
+Тайские формулировки требуют отдельной проверки носителем/методистом.
 
 ## Acceptance checks
 
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+- [x] Hotel-specific intent отделён от общего service course.
+- [x] Составные repair-фразы разделены на проблему, срок и просьбу.
+- [x] Default layer состоит из коротких cards.
+- [ ] Русский intent подтверждён до утверждения тайского.
+- [ ] Existing IDs, refs и progress semantics не меняются до отдельного согласования.

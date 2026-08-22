@@ -1,34 +1,37 @@
-# Draft audit — course_l_15: После заката всё интереснее
+# Черновой аудит — course_l_15 «После заката всё интереснее»
 
-**Category:** Тайский для жизни
+## Вывод
 
-## Scope
+Курс не слишком сложен по длине, но смешивает бар, заказ, small talk, флирт, границы, фото, счёт и планы на завтра. Главный outcome должен быть не «научиться знакомиться», а спокойно провести вечер: заказать, поддержать короткий контакт, обозначить границу и уйти без неловкости.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Граница курса
 
-## Current signals
+Владелец курса — вечерний social setting: короткий заказ, простая реакция, мягкий отказ и завершение разговора. Полный food course, романтическая коммуникация и nightlife culture не должны конкурировать внутри одного default layer.
 
-- Phrase/casual cards: 46
-- Average Russian phrase length: 2.1 words
-- Cards with compound-action signals: 10
-- Cards with 6+ words: 0
+## Remove / simplify
 
-## Course owner
+- «Спасибо, но я откажусь» → «Не хочу, спасибо» или «Нет, спасибо».
+- «Давай просто поболтаем» → «Поговорим?».
+- «Можно просто посидеть?» оставить как отдельную фразу без объяснения.
+- «Завтра на пляж?» вынести в beach/social course.
+- «Красивый вечер / приятно познакомиться» держать как optional casual, не как обязательный skill.
+- `Счёт можно?` и `Счёт, пожалуйста` объединить.
 
-_To be defined after comparing neighboring course owners._
+## Proposed phrase banks
 
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
+| Урок | Короткие cards |
+|---|---|
+| Заказ | два пива; со льдом; без льда; вода; счёт, пожалуйста |
+| Цена и акция | дорого; акция?; два по цене одного; сколько?; хорошо |
+| Короткий small talk | как тебя зовут?; интересно; здесь весело; приятно; один как я? |
+| Границы | не хочу; не надо; без фото; просто поговорим; спасибо |
+| Уйти | я пойду; до встречи; хороший вечер; спасибо за вечер; пока |
+| Продолжить | ещё посидим?; ещё одну?; завтра?; хорошо; посмотрим |
 
 ## Acceptance checks
 
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+- [x] Default layer не требует длинного флирт-диалога.
+- [x] Границы и безопасный exit выделены отдельными cards.
+- [x] Beach и food ownership не дублируются.
+- [ ] Романтические формулировки проверить на cultural appropriateness.
+- [ ] Thai naturalness и register проверить у носителя.

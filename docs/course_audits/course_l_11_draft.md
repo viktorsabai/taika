@@ -1,34 +1,37 @@
-# Draft audit — course_l_11: Сезон Сонгкрана и не только
+# Черновой аудит — course_l_11 «Сезон Сонгкрана и не только»
 
-**Category:** Тайский для жизни
+## Вывод
 
-## Scope
+Курс перегружен не столько длиной фраз, сколько количеством праздников и действий: вода, фестиваль, ярмарка, фото, костюмы, поздравления и Лой Кратонг. В основном слое нужен набор коротких фраз для участия в празднике, а не энциклопедия тайских фестивалей.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Граница курса
 
-## Current signals
+Владелец курса — сезонные праздники и безопасное участие: поздравить, спросить, можно ли присоединиться, сделать фото и попрощаться. Еда на ярмарке, рынок, транспорт и подробный культурный контекст не должны становиться основой уроков.
 
-- Phrase/casual cards: 48
-- Average Russian phrase length: 2.0 words
-- Cards with compound-action signals: 11
-- Cards with 6+ words: 0
+## Remove / simplify
 
-## Course owner
+- «Я не буду участвовать, спасибо» → «Не буду, спасибо».
+- «До встречи на празднике» → «До встречи».
+- «Фото без вспышки можно?» → «Фото можно?» или отдельный optional card «Без вспышки можно?».
+- «Увидимся в следующем году» → «До встречи»; годовой контекст можно оставить в cultural note.
+- «Лой Кратонг красивый» → «Красиво».
+- «Еда на ярмарке» — вынести в food/market owner.
 
-_To be defined after comparing neighboring course owners._
+## Proposed phrase banks
 
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
+| Урок | Короткие cards |
+|---|---|
+| Поздравить | с праздником; с Новым годом; хорошего праздника; весело; спасибо |
+| Присоединиться | что делаем?; можно посмотреть?; можно участвовать?; я готов; хорошо |
+| Вода и Сонгкран | облить можно?; осторожно; ещё раз; весело; достаточно |
+| Фото | фото можно?; вместе фото?; красиво; без вспышки; спасибо |
+| Ярмарка | где праздник?; что это?; посмотреть можно?; сюда?; спасибо |
+| Закончить | я пойду; до встречи; хороший праздник; спасибо; увидимся |
 
 ## Acceptance checks
 
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+- [x] Основной слой — короткие речевые действия.
+- [x] Food/market flow отделён.
+- [x] Культурные объяснения вынесены в notes, а не в learnable phrase.
+- [ ] Thai naturalness и tone проверить у носителя.
+- [ ] IDs, refs и progress не менять до утверждения.

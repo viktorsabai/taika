@@ -3188,3 +3188,21 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Create per-course draft template and quality gates | [x] — 31 draft files |
 | Save each draft separately; do not batch-edit production JSON | [x] |
 | Build draft index and progress ledger | [x] — docs/nonbase_course_audit_queue.md |
+
+# Canonical branch
+
+| Decision | Status |
+|---|---|
+| Use only origin/HEAD → 2026-01-21-k7hb-d2004 for testing and future commits | [x] |
+| Do not use origin/agent/overlay-epic-consolidated-test | [x] |
+| Do not use origin/agent/p2-course-hub-combined | [x] |
+
+# All non-base phrase complexity audit
+
+| Task | Status |
+|---|---|
+| Audit every course outside «База от Тайки» | [ ] |
+| Flag compound sentences and multiple actions per card | [ ] |
+| Flag inappropriate wording and semantic duplicates | [ ] |
+| Write per-course drafts without production JSON changes | [ ] |
+| Produce cumulative summary and priority order | [ ] |

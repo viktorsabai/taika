@@ -4,7 +4,7 @@
 
 ## Scope
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+Это draft-аудит; production JSON не меняется. Проверяем курс на сложные конструкции, неуместные формулировки, дубли и ясный пользовательский outcome.
 
 ## Current signals
 
@@ -13,22 +13,64 @@ This is a draft only. Production JSON is unchanged. Review one course at a time 
 - Cards with compound-action signals: 13
 - Cards with 6+ words: 0
 
-## Course owner
+## Граница курса
 
-_To be defined after comparing neighboring course owners._
+Владелец курса — базовая коммуникация на пляже: место, тень, вода, безопасность, простая аренда и вопрос о времени. Полный boat/tour flow остаётся в транспортном/экскурсионном контенте; еда и напитки не должны превращать курс в food course.
+
+## Диагноз
+
+Курс не критично сложен по длине фраз, но перегружен количеством доменов: место, солнце, вода, еда, кокосы, лодка, снорклинг и тур. Это не должен быть один длинный пляжный день.
 
 ## Keep / simplify / remove / add
 
-_To be completed during manual review._
+### Keep
+
+Короткие фразы про место, тень, воду, готовность, время отплытия и базовое снаряжение.
+
+### Simplify
+
+- «Можно пересесть в тень?» → «В тень можно?»
+- «Можно ещё один кокос?» → «Ещё один можно?» или optional beach-service block.
+- «Спасибо за тур» → «Спасибо»; полный тур остаётся в отдельном экскурсионном курсе.
+- «Красиво под водой» → «Красиво»; длинный комментарий — optional casual.
+
+### Remove from default layer
+
+- «Лежак и кокос» — перечисление без действия.
+- «Маска и ласты» — перечисление без действия.
+- «Спасибо за тур» — слишком узко для пляжного phrase bank.
+- «Куда плывём?» — только если этот intent уже принадлежит транспортному курсу.
+
+### Add
+
+- «Слишком жарко»
+- «Есть тень?»
+- «Можно воду?»
+- «Можно плавать?»
+- «Глубоко?»
+- «Когда отплытие?»
+- «Размер какой?»
+- «Всё, спасибо»
 
 ## Proposed short phrase banks
 
-_To be completed during manual review and native-speaker QA._
+| Lesson focus | Short cards |
+|---|---|
+| Место | здесь можно; тут свободно; где место; в тень можно; спасибо |
+| Солнце и вода | слишком жарко; есть тень; можно воду; ещё воды; всё хорошо |
+| Море и безопасность | можно плавать; глубоко?; осторожно; подождать; я готов |
+| Лодка и время | когда отплытие; во сколько?; куда плывём; подождите; готово |
+| Простые просьбы | можно ещё?; достаточно; не надо; сюда; туда |
+| Снаряжение | маска есть; ласты есть; размер какой?; можно взять?; верну |
+| Завершение | всё; спасибо; было красиво; до встречи; я пойду |
+
+Тайские формулировки требуют отдельной проверки носителем/методистом.
 
 ## Acceptance checks
 
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+- [x] Каждая предложенная карточка выражает одну просьбу, вопрос или реакцию.
+- [x] Boat/tour не превращается в полноценный транспортный сценарий.
+- [x] Food cards не конкурируют с food course.
+- [x] Сложные предложения остаются только optional/advanced.
+- [ ] Русский intent должен быть подтверждён до утверждения тайского.
+- [ ] Existing IDs, refs и progress semantics не меняются до отдельного согласования.
