@@ -1,34 +1,26 @@
-# Draft audit — course_long_5: Соседи, кондо, правила дома
+# Черновой аудит — course_long_5 «Соседи, кондо, правила дома»
 
-**Category:** Тайский для долгожителей
+## Вывод
 
-## Scope
+Курс смешивает бытовой шум, правила кондо, мусор, бассейн, парковку, собрания и конфликт. Нужна последовательность: мягко сообщить проблему → найти правило → обратиться в management → решить мирно. Длинные policy phrases лучше вынести в notes.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Извините за беспокойство» оставить как polite opener; «спасибо, что учли» — отдельный close.
+- «Штраф за мусор мимо бака» → «Штраф есть?» и «Куда мусор?».
+- «Повестка собрания» и «протокол собрания» — labels; phrases: «О чём собрание?» / «Протокол можно?».
+- «Соседи снизу жалуются» → «Снизу жалуются».
+- «Жить без конфликтов» и «решить мирно» — notes/lesson outcomes.
 
-- Phrase/casual cards: 29
-- Average Russian phrase length: 2.2 words
-- Cards with compound-action signals: 3
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Шум | после десяти; громко; стены тонкие; можно тише?; спасибо |
+| Правила | можно?; нельзя?; правило какое?; штраф есть?; где правила? |
+| Общие зоны | бассейн до скольки?; парковка где?; лифт; мусор куда?; спасибо |
+| Management | condo chat; офис где?; позвонить в офис; камера есть?; помогите |
+| Собрание | собрание когда?; завтра в десять?; о чём?; участвовать можно?; протокол можно? |
+| Конфликт | снизу жалуются; давайте спокойно; решим мирно; понял; вопрос решён |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Кондо rules, legal/penalty wording и polite register требуют проверки по реальному local usage.

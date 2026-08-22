@@ -1,34 +1,25 @@
-# Draft audit — course_e_4: Разговоры без конфликта
+# Черновой аудит — course_e_4 «Разговоры без конфликта»
 
-**Category:** На одной волне
+## Вывод
 
-## Scope
+Курс должен обучать не «идеальной гармонии», а коротким шагам деэскалации: остановить напряжение, сказать о проблеме, попросить паузу, предложить решение и завершить разговор. Метаформулы вроде «сохранить лицо» — notes.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Не обвинять», «говорить мягко», «держать лицо» — tips.
+- «Объяснить → извинение → решение» — flow label; разбить на отдельные cards.
+- «Проехали (забыли)» оставить как casual exit только после native QA.
+- Длинные apology+explanation sentences не держать в default layer.
 
-- Phrase/casual cards: 23
-- Average Russian phrase length: 2.4 words
-- Cards with compound-action signals: 2
-- Cards with 6+ words: 1
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Пауза | давай спокойно; подожди; минуту; не сейчас; хорошо |
+| Проблема | есть проблема; я не понял; это не так; можно уточнить?; помогите |
+| Извинение | извините; моя ошибка; прости; всё хорошо; спасибо |
+| Решение | что делать?; давай так; можно иначе?; договорились; хорошо |
+| Граница | не кричи; мне нужно время; остановимся; не хочу; потом |
+| Завершение | вопрос решён; всё нормально; проехали; спасибо; до связи |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Культурные и конфликтные стратегии требуют native-speaker review; safety/abuse situations не должны сводиться к «будь мягче».

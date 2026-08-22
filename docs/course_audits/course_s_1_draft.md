@@ -1,34 +1,26 @@
-# Draft audit — course_s_1: Тайский для блогинга
+# Черновой аудит — course_s_1 «Тайский для блогинга»
 
-**Category:** Тайский для души
+## Вывод
 
-## Scope
+Курс должен учить создателя контента коротким действиям: подписать сторис, опубликовать, ответить на комментарий/директ и сохранить пост. Сейчас много meta-labels вроде «живые подписи», «идеальный свет» и «от съёмки до ответа», которые нужно вынести в notes.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Для сторис», «живые подписи», «вайб дня» — labels; добавить реальные короткие captions.
+- «Огонь пост!» оставить как reaction card, а «оценки в сторис» — note.
+- «Живые подписи к фото» → короткие варианты: «здесь красиво», «сегодня хорошо», «мой день».
+- «Без гугл-переводчика» — course promise/tip, не phrase.
+- «От съёмки до ответа» и «сторис сценка» — flow labels.
 
-- Phrase/casual cards: 35
-- Average Russian phrase length: 2.2 words
-- Cards with compound-action signals: 2
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Сторис | мой день; сегодня красиво; здесь круто; настроение ок; смотрите |
+| Reaction | огонь; классно; очень красиво; спасибо; люблю |
+| Фото | здесь красиво; хорошее фото; свет хороший; вместе?; готово |
+| Комментарии | спасибо; отвечу позже; что думаешь?; да; точно |
+| Директ | напиши мне; отвечу позже; спасибо за сообщение; можно уточнить?; до связи |
+| Post | сохранить; опубликовать; подпись готова; хэштег?; готово |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Контентные claims, slang, emoji conventions и Thai online register требуют native-speaker/social-media QA.

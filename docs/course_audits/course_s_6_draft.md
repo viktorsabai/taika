@@ -1,34 +1,26 @@
-# Draft audit — course_s_6: Тай кидс
+# Черновой аудит — course_s_6 «Тай кидс»
 
-**Category:** Тайский для души
+## Вывод
 
-## Scope
+Курс смешивает игру с ребёнком, похвалу, границы, родителей, кафе и пляж. В основном слое нужно оставить короткие безопасные фразы взрослого: предложить игру, похвалить, мягко остановить и обратиться к родителю. Полные child-care scenarios — notes.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Похвала детям», «границы для детей», «игра похвала границы» — labels.
+- «Мягко остановить» → «Стоп, пожалуйста» / «Осторожно» как отдельные cards.
+- «Ваш ребёнок» → «Ваш ребёнок» только в parent context; не использовать как standalone lesson outcome.
+- «Игры и еда с детьми» разделить на игру и еду; food ordering owner — `course_l_4`.
+- «Тай кидс сценка» — remove from learnable layer.
 
-- Phrase/casual cards: 32
-- Average Russian phrase length: 2.3 words
-- Cards with compound-action signals: 2
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Игра | играть?; давай играть; твоя очередь; моя очередь; ещё раз |
+| Похвала | умница; молодец; хорошо; очень хорошо; какой милый |
+| Безопасность | осторожно; стоп; не трогай; держись за руку; всё хорошо |
+| Родители | ваш ребёнок; можно?; он/она играет; спасибо; извините |
+| Кафе/пляж | вода; сюда нельзя; жарко; пойдём; готово |
+| Завершить | пора домой; пора спать; ещё пять минут; всё; до свидания |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Child-directed language, politeness and safety commands требуют native-speaker/cultural QA. Не добавлять медицинские или parenting claims.

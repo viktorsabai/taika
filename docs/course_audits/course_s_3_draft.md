@@ -1,34 +1,25 @@
-# Draft audit — course_s_3: О чём говорят на самом деле
+# Черновой аудит — course_s_3 «О чём говорят на самом деле»
 
-**Category:** Тайский для души
+## Вывод
 
-## Scope
+Курс про разговорный сленг, юмор и подтекст. Сейчас много labels вроде «мем», «идиомы», «не фаранг-вайб» и «сценка», которые не являются фразами. Нужен optional conversational layer: короткие реакции, понимание шутки и безопасный ответ без попытки выучить весь сленг.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Мемы из тиктока», «сленг бара», «идиомы и сленг» — labels/notes.
+- «Очень вкусно / сексуально» разделить и проверить: не смешивать food compliment и sexual register в default layer.
+- «Уловил намёк» → реальная card «Понял» или «Это шутка?».
+- «От сленга к диалогу» и «неформальная сценка» — course notes, не learnable cards.
 
-- Phrase/casual cards: 32
-- Average Russian phrase length: 2.4 words
-- Cards with compound-action signals: 3
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Реакция | серьёзно?; правда?; реально?; шутка?; понятно |
+| Юмор | смешно; не понял; ещё раз; ты шутишь?; понял |
+| Чат | ага; точно; да ладно; жесть; хорошо |
+| Подтекст | что значит?; ты серьёзно?; это намёк?; понял; не знаю |
+| Ответ | смешно; согласен; не уверен; расскажи; спасибо |
+| Exit | ладно; проехали; всё хорошо; потом; до связи |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Сленг, sexual register и cultural idioms требуют native-speaker QA; slang cards лучше показывать как optional, а не как обязательный beginner layer.

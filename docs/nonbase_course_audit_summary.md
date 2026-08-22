@@ -58,3 +58,13 @@ After the first five drafts, continue with `course_l_3`, `course_l_12`, `course_
 | `course_long_1` — Виза, продление, иммиграция | Drafted | Keep administrative survival questions; move rules and eligibility into notes. |
 | `course_l_4` — Вселенная тайской еды | Drafted | Keep food ordering, spice, restrictions and payment as separate actions. |
 | `course_s_2` — Хобби и движ по-тайски | Drafted | Keep light social/hobby phrases; remove meta labels and compound activity requests. |
+
+## Fifth wave completed
+
+| Course | Status | Main finding |
+|---|---|---|
+| `course_s_3` — О чём говорят на самом деле | Drafted | Make slang/implicit meaning optional; keep short reactions and safe clarification phrases. |
+| `course_long_5` — Соседи, кондо, правила дома | Drafted | Separate noise, rules, management, meetings and conflict into single actions. |
+| `course_e_4` — Разговоры без конфликта | Drafted | Keep de-escalation steps as short phrases; move strategy labels to tips. |
+| `course_s_6` — Тай кидс | Drafted | Keep safe child-directed phrases, praise, boundaries and parent contact; separate food. |
+| `course_s_1` — Тайский для блогинга | Drafted | Replace content-production labels with real captions, reactions, comments and direct replies. |
