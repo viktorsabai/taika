@@ -1,34 +1,30 @@
-# Draft audit — course_l_5: Доктор Тайка дежурит
+# Черновой аудит — course_l_5 «Доктор Тайка дежурит»
 
-**Category:** Тайский для жизни
+## Вывод
 
-## Scope
+Курс полезный, но medical content нельзя упрощать только по длине: нужно разделить аптеку, дозировку, врача и симптомы. Нельзя превращать медицинские карточки в диагнозы или обещания лечения. Каждая card должна быть короткой и функциональной.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Утром вечером» → две отдельные cards: «утром» и «вечером».
+- «Три раза» и «дозировка» оставить только как clarification cards.
+- «Есть что-то другое?» → «Есть другое?».
+- «Вот лекарство» заменить на «Это лекарство» или убрать, если неясен communicative intent.
+- «Покажи где болит» → «Где болит?» и «Покажу» — разные roles; не смешивать.
+- «Хроническая боль» оставить как topic label только при ясном usable phrase.
 
-- Phrase/casual cards: 41
-- Average Russian phrase length: 1.8 words
-- Cards with compound-action signals: 6
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| В аптеке | мне плохо; болит; где лекарство?; это поможет?; сколько стоит? |
+| Симптомы | голова болит; горло болит; температура; кашель; аллергия |
+| Дозировка | сколько принимать?; утром; вечером; сколько раз?; после еды? |
+| Антибиотики | аллергия на антибиотики; есть другое?; это подходит?; инструкция; спасибо |
+| В клинике | врач где?; записаться можно?; паспорт вот; где болит?; покажу |
+| Продолжение | лучше; не лучше; снова болит; нужно ещё?; спасибо |
+| Safety | срочно; очень больно; дышать трудно; помощь; скорая |
 
-_To be defined after comparing neighboring course owners._
+## Boundaries
 
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Аптечные и клинические phrases принадлежат этому курсу; insurance/claims остаются в `course_long_3`; полиция/ДТП не дублируются. Medical Thai, дозировки и safety wording обязательны к проверке методистом/носителем.

@@ -1,34 +1,33 @@
-# Draft audit — course_l_14: Таиланд доставляет
+# Черновой аудит — course_l_14 «Таиланд доставляет»
 
-**Category:** Тайский для жизни
+## Вывод
 
-## Scope
+Курс — владелец полного delivery flow: заказ, адрес, трекинг, курьер, доплата, получение и проблема с доставкой. Сейчас много повторов и информационных карточек, которые пользователь не говорит сам. Основной слой должен давать короткие действия для управления доставкой.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Отследить заказ» и «Отследить» объединить.
+- «Покажите трек» оставить один раз; дубликаты удалить.
+- «Уже в сортировке» → «В сортировке».
+- «Оставьте в ячейке» оставить как отдельную просьбу; адрес не смешивать с инструкцией курьеру.
+- «Домой привезёте?» → «Домой можно?».
+- «Опоздала доставка» → «Доставка опоздала» или «Где доставка?».
+- «Курьер приехал / сейчас заберу / всё на месте» оставить отдельными статусными cards.
 
-- Phrase/casual cards: 41
-- Average Russian phrase length: 1.8 words
-- Cards with compound-action signals: 6
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Заказ | заказ; доставка; курьер; когда привезут?; отследить заказ |
+| Адрес | дом номер; этаж; улица; район; у входа |
+| Трек | где заказ?; в пути; в сортировке; трек покажите; завтра? |
+| Встреча | я еду; жду у входа; курьер где?; домой можно?; оставьте здесь |
+| Цена/доставка | включено?; доплата?; минимум заказа; завтра доставка?; заказываю |
+| Получение | курьер приехал; сейчас заберу; всё на месте; упаковка целая; спасибо |
+| Проблема | доставка опоздала; где курьер?; завтра привезёте?; перезвоните; трек покажите |
 
-_To be defined after comparing neighboring course owners._
+## Boundaries
 
-## Keep / simplify / remove / add
+Доставка принадлежит этому курсу. Магазинный checkout остаётся в `course_l_8`, food delivery details не должны превращать урок в restaurant course, а общий repair language — в `course_e_3`.
 
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Thai address/register и реальные delivery terms требуют native-speaker QA.

@@ -1,34 +1,31 @@
-# Draft audit — course_e_2: Работа с тайцами
+# Черновой аудит — course_e_2 «Работа с тайцами»
 
-**Category:** На одной волне
+## Вывод
 
-## Scope
+Сейчас часть карточек — это метаописания («без давления», «поставить задачу», «держать контакт»), а не фразы. Курс должен дать короткие рабочие действия: поставить задачу, спросить статус, уточнить срок, напомнить без обвинения и завершить контакт.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Без давления», «рабочая задача», «мягко попросить» перенести в tips.
+- «Статус проекта» → «Какой статус?».
+- «Поставить задачу» → «Можно попросить?» или «Нужно сделать…» после native QA.
+- «К какому сроку?» оставить; «напомнить» — только как note/action label.
+- «До связи по проекту» → «До связи».
+- «Если ещё не готово» — не learnable phrase без продолжения; заменить на «Ещё не готово?».
 
-- Phrase/casual cards: 32
-- Average Russian phrase length: 2.4 words
-- Cards with compound-action signals: 5
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Попросить | можно попросить?; нужна помощь; нужно сделать; когда сможете?; спасибо |
+| Статус | как статус?; уже готово?; ещё не готово?; почти готово?; понял |
+| Срок | к какому сроку?; дедлайн когда?; сегодня можно?; завтра можно?; хорошо |
+| Напомнить | напоминаю; есть новости?; всё по плану?; нужна помощь?; спасибо |
+| Команда | кто ведёт?; кто отвечает?; давайте вместе; понял; договорились |
+| Контакт | хороший день; спасибо за работу; рад работать; до завтра; до связи |
 
-_To be defined after comparing neighboring course owners._
+## Boundaries
 
-## Keep / simplify / remove / add
+Курс — рабочие короткие interactions, не полноценный business Thai и не конфликтный курс. Cultural explanations — tips; конфликтные repair flows — `course_e_4`.
 
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Thai business register и politeness level требуют native-speaker QA.

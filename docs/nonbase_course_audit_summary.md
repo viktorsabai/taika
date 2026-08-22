@@ -38,3 +38,13 @@ After the first five drafts, continue with `course_l_3`, `course_l_12`, `course_
 | `course_l_8` — Магазинные приключения | Drafted | Keep full retail ownership; simplify finding, price, package, payment, discount and exchange. |
 | `course_e_5` — Коды Таиланда | Drafted | Move cultural explanations to notes; keep only phrases the user actually says. |
 | `course_long_4` — Транспорт для своих | Drafted | Separate rental, road safety, insurance and public transport; keep legal detail out of default layer. |
+
+## Third wave completed
+
+| Course | Status | Main finding |
+|---|---|---|
+| `course_l_14` — Таиланд доставляет | Drafted | Keep delivery ownership; remove duplicated tracking cards and separate status from user requests. |
+| `course_l_5` — Доктор Тайка дежурит | Drafted | Split pharmacy, dosage, clinic and symptoms; keep safety wording medically reviewed. |
+| `course_e_2` — Работа с тайцами | Drafted | Move meta-advice to tips; keep short requests, status, deadlines and reminders. |
+| `course_long_2` — Банки, деньги, крипта | Drafted | Create a short bank survival layer and move legal/financial detail to advanced notes. |
+| `course_l_2` — Таксист, вези меня домой | Drafted | Keep a minimal taxi survival kit; separate rental, police and delivery ownership. |

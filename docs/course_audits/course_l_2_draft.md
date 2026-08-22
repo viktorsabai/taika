@@ -1,34 +1,30 @@
-# Draft audit — course_l_2: Таксист, вези меня домой
+# Черновой аудит — course_l_2 «Таксист, вези меня домой»
 
-**Category:** Тайский для жизни
+## Вывод
 
-## Scope
+Курс должен быть самым простым транспортным survival-kit: сказать адрес/направление, уточнить цену, попросить остановиться, дождаться и завершить поездку. Полные Grab, байк, сонгтео и дорожные правила не должны смешиваться в одном default layer.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «До аэропорта, пожалуйста» заменить на отдельные cards: «аэропорт» и «пожалуйста» либо короткое «В аэропорт».
+- «Сдачи не надо» оставить только в payment lesson.
+- «Подождите, сейчас» разделить на «подождите» и «сейчас».
+- Повторы «налево/направо/здесь» оставить один раз в navigation owner.
+- «Дёшево можно?» — bargaining phrase; если курс не учит торг, заменить на «Сколько стоит?».
 
-- Phrase/casual cards: 55
-- Average Russian phrase length: 1.9 words
-- Cards with compound-action signals: 5
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Вызвать | такси; Grab; водитель; сюда; пожалуйста |
+| Адрес | аэропорт; отель; домой; вот адрес; сюда |
+| Маршрут | налево; направо; прямо; здесь; дальше |
+| Цена | сколько стоит?; по счётчику?; дорого; хорошо; оплата картой? |
+| В пути | подождите; сейчас; ещё немного; остановите здесь; готово |
+| Завершить | здесь хорошо; остановите; сдачи не надо; спасибо; до свидания |
 
-_To be defined after comparing neighboring course owners._
+## Boundaries
 
-## Keep / simplify / remove / add
+Taxi owner остаётся здесь. Аренда байка и страховка — `course_long_4`; полиция и штрафы — `course_l_1`; доставка — `course_l_14`. Не дублировать полный transport catalog.
 
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Thai address and driver register требуют native-speaker QA.
