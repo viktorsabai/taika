@@ -3284,3 +3284,25 @@ Production JSON remains unchanged during this audit wave.
 | Build 30-course ownership matrix | [ ] |
 | Separate unresolved QA candidates | [ ] |
 | Update summary without production migration | [ ] |
+
+
+# Full non-base compound-card simplification
+
+| Task | Status |
+|---|---|
+| Inventory original compound cards and context | [ ] |
+| Split each overloaded card into atomic phrase targets | [ ] |
+| Deduplicate targets after decomposition | [ ] |
+| Build migration-ready map by course | [ ] |
+| Migrate production JSON only after approval and QA | [ ] |
+
+
+# Full overloaded-card decomposition
+
+| Task | Status |
+|---|---|
+| Inventory all non-base cards and screening flags | [x] — 68 flagged cards across 29 of 30 non-base courses |
+| Decompose overloaded cards into atomic replacements | [x] — migration-ready draft generated; 13 compound-action, 1 long-question, 15 noun-list, 2 choice-list, 15 review cases |
+| Assign owner, shared IDs and notes treatment | [x] — owner follows course context; shared IDs remain TBD until canonical phrase migration |
+| Run post-decomposition dedup and consistency QA | [x] — exact overlap inventory/classification run; native/domain QA remains required |
+| Produce migration-ready report without production JSON changes | [x] — docs/TSV only; production JSON untouched |
