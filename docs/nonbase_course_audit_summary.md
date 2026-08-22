@@ -28,3 +28,13 @@ A flagged phrase is not automatically wrong because it has a question mark or tw
 ## Next queue
 
 After the first five drafts, continue with `course_l_3`, `course_l_12`, `course_l_8`, `course_e_5` and `course_long_4`, while checking overlap owners before proposing changes.
+
+## Second wave completed
+
+| Course | Status | Main finding |
+|---|---|---|
+| `course_l_3` — Король рынка | Drafted | Keep market bargaining and purchase ownership; split price, quantity, packing and payment into single actions. |
+| `course_l_12` — Новый тайский образ | Drafted | Separate haircut, massage, beard, booking and payment; split safety phrases into short cards. |
+| `course_l_8` — Магазинные приключения | Drafted | Keep full retail ownership; simplify finding, price, package, payment, discount and exchange. |
+| `course_e_5` — Коды Таиланда | Drafted | Move cultural explanations to notes; keep only phrases the user actually says. |
+| `course_long_4` — Транспорт для своих | Drafted | Separate rental, road safety, insurance and public transport; keep legal detail out of default layer. |

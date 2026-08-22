@@ -1,34 +1,31 @@
-# Draft audit — course_l_8: Магазинные приключения
+# Черновой аудит — course_l_8 «Магазинные приключения»
 
-**Category:** Тайский для жизни
+## Вывод
 
-## Scope
+Это владелец полноценного retail flow: найти товар, узнать цену, акцию, оплатить, вернуть или обменять. Поэтому его нужно не превращать в mini-dialogue course, а упростить каждую retail-задачу до одной короткой карточки.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Я хочу обменять товар» → «Обменять можно?».
+- «Размер не подходит» оставить как проблему; отдельно «Другой размер есть?».
+- «Где акционные?» → «Где акция?».
+- «Сколько с меня?» и «Счёт можно?» не дублировать: оставить «Сколько с меня?» для checkout.
+- «Спасибо за обмен» → «Спасибо».
+- Списки «пакет/экопакет/маленький пакет» заменить действиями: «Пакет нужен?», «Маленький пакет, пожалуйста».
 
-- Phrase/casual cards: 46
-- Average Russian phrase length: 2.0 words
-- Cards with compound-action signals: 9
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Найти товар | где это?; есть такой?; другой размер; другой цвет; покажите |
+| Цена | сколько?; дорого; цена какая?; акция?; скидка есть? |
+| Пакет | пакет; маленький пакет; без пакета; экопакет; спасибо |
+| Оплата | карта можно?; наличные; сколько с меня?; чек; всё |
+| Акция | сегодня скидка?; где акция?; два по цене одного; хорошо; беру |
+| Обмен | обменять можно?; размер не подходит; чек вот; другой размер; спасибо |
 
-_To be defined after comparing neighboring course owners._
+## Boundaries
 
-## Keep / simplify / remove / add
+Полный shopping owner остаётся здесь. Не копировать из `course_b_7` «этого нет/заменить» как отдельный repair course; market bargaining принадлежит `course_l_3`; food order — `course_l_4`.
 
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Thai retail terminology и naturalness требуют проверки носителем.

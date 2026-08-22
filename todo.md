@@ -3206,3 +3206,14 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Flag inappropriate wording and semantic duplicates | [ ] |
 | Write per-course drafts without production JSON changes | [ ] |
 | Produce cumulative summary and priority order | [ ] |
+
+# Next five non-base course drafts
+
+| Task | Status |
+|---|---|
+| Audit course_l_3 Король рынка | [ ] |
+| Audit course_l_12 Новый тайский образ | [ ] |
+| Audit course_l_8 Магазинные приключения | [ ] |
+| Audit course_e_5 Коды Таиланда | [ ] |
+| Audit course_long_4 Транспорт для своих | [ ] |
+| Update queue and cumulative summary without production JSON changes | [ ] |

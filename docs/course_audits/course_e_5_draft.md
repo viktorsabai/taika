@@ -1,34 +1,38 @@
-# Draft audit — course_e_5: Коды Таиланда
+# Черновой аудит — course_e_5 «Коды Таиланда»
 
-**Category:** На одной волне
+## Вывод
 
-## Scope
+Главная проблема — не длина карточек, а то, что мета-объяснения представлены как будто их нужно произносить. «Так работает культурный код», «смотри на контекст» и «прямой отказ — не единственный вариант» — это notes, а не learnable phrases.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Решение
 
-## Current signals
+Разделить курс на:
 
-- Phrase/casual cards: 31
-- Average Russian phrase length: 3.1 words
-- Cards with compound-action signals: 7
-- Cards with 6+ words: 1
+1. короткие фразы, которые пользователь реально говорит;
+2. культурные объяснения, которые показываются как tip/context и не входят в card denominator.
 
-## Course owner
+## Simplify / remove
 
-_To be defined after comparing neighboring course owners._
+- «Не хочу мешать» оставить как реальную мягкую просьбу.
+- «Не хочу давить» оставить только после native-speaker проверки: intent может быть неестественным без контекста.
+- «Не показывать злость» и «держать лицо» перенести в cultural note.
+- «Когда что сказать», «смотри на контекст», «уловить момент» — только notes.
+- «Прямой отказ — не единственный вариант» → phrase bank «не сейчас» / «потом».
+- «Сохранить гармонию» и «джай-йен решает всё» — explanatory notes, не обязательные cards.
 
-## Keep / simplify / remove / add
+## Proposed phrase banks
 
-_To be completed during manual review._
+| Урок | Короткие cards |
+|---|---|
+| Мягко попросить | можно попросить?; пожалуйста; если можно; не хочу мешать; спасибо |
+| Пауза | не сейчас; потом; давайте спокойно; подождите; хорошо |
+| Уточнить | что значит?; правильно?; можно уточнить?; понял; не понял |
+| Мягко отказать | нет, спасибо; не надо; в другой раз; я подумаю; хорошо |
+| Подтвердить | понял вас; всё хорошо; да; хорошо; спасибо |
+| Контекст | улыбка не всегда да; уточнить лучше; не угадывать; спокойно; мягко |
 
-## Proposed short phrase banks
+## Boundaries
 
-_To be completed during manual review and native-speaker QA._
+Это course about pragmatic interpretation, не обычный phrase-bank и не полная конфликтная коммуникация. Не дублировать `course_e_1` в части «не понял/повторите» и `course_e_4` в части реального конфликта.
 
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Нужен обязательный native-speaker review: культурные советы нельзя утверждать только по буквальному русскому переводу.

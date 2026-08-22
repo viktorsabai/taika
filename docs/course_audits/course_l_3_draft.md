@@ -1,34 +1,30 @@
-# Draft audit — course_l_3: Король рынка
+# Черновой аудит — course_l_3 «Король рынка»
 
-**Category:** Тайский для жизни
+## Вывод
 
-## Scope
+Курс полезен, но часть карточек пытается одновременно учить цену, торг, количество, упаковку и оплату. Его owner — market purchase and bargaining; не переносим сюда общий магазинный checkout или мини-диалоги замены из `course_b_7`.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Цена не та, что на табличке» → «Цена другая?».
+- «Давайте пересчитаем» оставить только как отдельную card, без объяснения причины.
+- «Можно чуть дешевле?» оставить как основной bargaining intent; не дублировать в соседних shop courses.
+- «Вот столько, правильно?» → «Правильно?» или «Вот столько».
+- «Две штуки», «упакуйте», «сдача» оставить: это market-specific actions.
 
-- Phrase/casual cards: 49
-- Average Russian phrase length: 1.8 words
-- Cards with compound-action signals: 10
-- Cards with 6+ words: 1
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Цена | сколько?; дорого; цена другая?; дешевле можно?; хорошо |
+| Количество | один; два; ещё один; достаточно; больше не надо |
+| Торг | скидка есть?; чуть дешевле?; последняя цена?; хорошо; беру |
+| Взвесить/упаковать | взвесить можно?; упакуйте; отдельно; вместе; пакет |
+| Оплата | наличные; карта можно?; сдача; чек; спасибо |
+| Завершить | всё; беру; не надо; спасибо; до свидания |
 
-_To be defined after comparing neighboring course owners._
+## Boundaries
 
-## Keep / simplify / remove / add
+Не переносить сюда: поиск товара, возврат и чек как полноценный shop flow (`course_l_8`); food nouns и заказ блюда (`course_l_4`); универсальные «заменить/этого нет» (`course_b_7`).
 
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Thai naturalness, bargaining register и cultural appropriateness требуют native-speaker QA.

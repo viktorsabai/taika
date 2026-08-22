@@ -1,34 +1,31 @@
-# Draft audit — course_l_12: Новый тайский образ
+# Черновой аудит — course_l_12 «Новый тайский образ»
 
-**Category:** Тайский для жизни
+## Вывод
 
-## Scope
+Курс в целом практичный, но смешивает стрижку, массаж, бритьё, оплату и запись. Основной слой должен обучать коротким запросам в салоне; массаж и barber-specific details лучше разделить по урокам.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Как вы хотите подстричь?» → «Как стричь?» или «Как на фото?».
+- «Сделайте мягче, пожалуйста» → «Мягче, пожалуйста».
+- «Больно, остановитесь» → две cards: «Больно» и «Остановитесь».
+- «Я не так имел в виду» → «Не так» или «Я хотел иначе».
+- «Когда вам удобно?» и «Записать на завтра?» оставить как отдельные booking cards.
+- «Всё вместе» и «отдельно» оставить только в payment/package context.
 
-- Phrase/casual cards: 40
-- Average Russian phrase length: 2.0 words
-- Cards with compound-action signals: 9
-- Cards with 6+ words: 1
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Стрижка | как стричь?; как на фото; короче; оставить длину; подровнять |
+| Детали | короче с боков; чёлка; сзади короче; немного; как в прошлый раз |
+| Массаж | массаж плеч; мягче; больно; остановитесь; сколько минут? |
+| Борода | только усы; оставить усы; аккуратно; форма; брить |
+| Цена и время | сколько стоит?; сколько по времени?; скидка?; завтра можно?; хорошо |
+| Исправить | не так; вот так; ещё немного; достаточно; спасибо |
 
-_To be defined after comparing neighboring course owners._
+## Boundaries
 
-## Keep / simplify / remove / add
+Salon-specific service остаётся здесь. Общая сервисная просьба «помогите/когда готово» — `course_e_3`; medical pain language не расширять за пределы safety cards; payment cards не превращать в finance course.
 
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Thai register, gendered politeness и massage safety wording требуют native-speaker QA.

@@ -1,34 +1,31 @@
-# Draft audit — course_long_4: Транспорт для своих
+# Черновой аудит — course_long_4 «Транспорт для своих»
 
-**Category:** Тайский для долгожителей
+## Вывод
 
-## Scope
+Курс долгожителя смешивает мототакси, аренду байка, страховку, метро, сонгтео и ДТП. Его нельзя просто сократить до одного транспортного сценария: нужно разделить безопасный default layer и advanced/legal layer.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Подъедет через 5 минут» — это incoming/info card, не обязательная фраза пользователя.
+- «Полная страховка» и «Что не покрывает страховка» разделить: короткий вопрос «Что покрывает?»; подробности — note.
+- «Угон и ДТП» — не phrase, а topic label; заменить на «ДТП» и «Угон» в safety section.
+- «Полный бак при возврате» → «Вернуть полный бак».
+- «Расход бензина в день» → «Бензин сколько в день?» или вынести в advanced cost note.
+- «От аренды до сонгтео» и «ехать как местный» — course descriptions, не learnable cards.
 
-- Phrase/casual cards: 35
-- Average Russian phrase length: 2.4 words
-- Cards with compound-action signals: 7
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Мототакси | до … сколько?; сюда; подождите; едем; спасибо |
+| Аренда | залог; документы; права; на сколько дней?; вернуть когда? |
+| Безопасность | шлем; два шлема; осторожно; зеркало работает?; другой байк |
+| Страховка | страховка есть?; что покрывает?; ДТП; ущерб кому?; оформить можно? |
+| Маршрут | прямо; остановка; сколько до …?; здесь выйти; спасибо |
+| Возврат | полный бак; ключи вот; документы вот; всё готово; спасибо |
 
-_To be defined after comparing neighboring course owners._
+## Boundaries
 
-## Keep / simplify / remove / add
+Такси-маршрут и airport/hotel flow принадлежат `course_l_2`; rental/road ownership здесь; полиция и штрафы — `course_l_1`; медицинские consequences ДТП — не расширять в этом курсе.
 
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Safety-critical Thai wording, insurance terminology и legal implications требуют отдельной проверки носителем/методистом.
