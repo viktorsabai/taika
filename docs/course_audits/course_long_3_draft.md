@@ -1,34 +1,27 @@
-# Draft audit — course_long_3: Полная медицина и страховка
+# Черновой аудит — course_long_3 «Полная медицина и страховка»
 
-**Category:** Тайский для долгожителей
+## Вывод
 
-## Scope
+Это high-risk курс. В основном слое должны остаться короткие фразы для описания симптомов, записи, страховки и следующего шага. Страховые процедуры, эвакуация и документы — advanced notes, а не длинные обязательные карточки.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Сначала оплатить потом вернут?» → «Сначала платить?» и «Страховка вернёт?».
+- «Прямая оплата страховкой» → «Страховка платит?».
+- «Эвакуация в другую больницу» — topic/note, не базовая phrase.
+- «От симптомов до выписки» — course description, не learnable card.
+- «Принимать три раза в день» → «Три раза в день»; dosage подтверждать врачом.
+- «Список лекарств с собой» → «Лекарства вот».
 
-- Phrase/casual cards: 36
-- Average Russian phrase length: 2.3 words
-- Cards with compound-action signals: 4
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Симптомы | температура; тошнит; кружится голова; слабость; болит с утра |
+| Анализы | направление; анализы где?; когда результат?; результат готов?; спасибо |
+| Лекарства | аллергия; другое лекарство можно?; реакция; хроническая болезнь; лекарства вот |
+| Страховка | номер полиса; страховка платит?; лимит какой?; копия заключения; позвонить в страховую |
+| Помощь | срочно; экстренная помощь; больница где?; переводчик нужен; номер линии |
+| Выписка | выписка; повторный приём; больничный; копия документов; спасибо |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Safety-critical medical and insurance wording требует методиста/носителя и не должна обещать покрытие или результат.

@@ -1,34 +1,26 @@
-# Draft audit — course_long_1: Виза, продление, иммиграция
+# Черновой аудит — course_long_1 «Виза, продление, иммиграция»
 
-**Category:** Тайский для долгожителей
+## Вывод
 
-## Scope
+Курс должен помогать спокойно пройти административный контакт: спросить, какие документы нужны, понять срок, оплату и следующий шаг. Юридические правила и eligibility нельзя превращать в длинные карточки или обещания.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Не просрочить» и «штраф» — warning/note, не phrase.
+- «Донести и вернуться» → «Донести документы?» и «Вернуться когда?».
+- «Наличные или карта» оставить как короткий payment question.
+- «Следующая проверка через 90 дней» — informational note; phrase «Когда следующая проверка?».
+- «Готово, свободен» заменить на нейтральное «Готово?» / «Спасибо».
 
-- Phrase/casual cards: 34
-- Average Russian phrase length: 2.2 words
-- Cards with compound-action signals: 4
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Начать | онлайн; лично; документы; форма; паспорт вот |
+| Документы | что нужно?; фото нужно?; справка нужна?; срок какой?; очередь где? |
+| Фото | фото на документы; фото здесь?; фотобудка где?; паспорт вот; готово |
+| Ошибка | что не так?; не хватает документов; донести документы?; перевод нужен? |
+| Оплата | квитанция; окно оплаты; наличные или карта?; онлайн можно?; чек |
+| Финал | окно номер; офицер где?; печать в паспорт; готово?; следующая проверка когда? |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Visa/legal content требует актуальной проверки и не должен обещать решение миграционной службы.

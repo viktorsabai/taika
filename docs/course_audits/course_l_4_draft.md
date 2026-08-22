@@ -1,34 +1,25 @@
-# Draft audit — course_l_4: Вселенная тайской еды
+# Черновой аудит — course_l_4 «Вселенная тайской еды»
 
-**Category:** Тайский для жизни
+## Вывод
 
-## Scope
+Курс должен быть владельцем заказа еды: выбрать блюдо, уточнить остроту и ограничения, попросить убрать/добавить, получить счёт. Культурные пояснения и длинные описания блюд лучше сделать notes.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- Списки блюд оставить как vocabulary, а не как сложные phrase cards.
+- «Остро, но не слишком» разделить: «не остро» / «немного остро».
+- Аллергии и ограничения вынести в safety block с максимально точной проверкой.
+- «Счёт, пожалуйста» оставить один раз; не дублировать в bar/market flows.
 
-- Phrase/casual cards: 43
-- Average Russian phrase length: 2.0 words
-- Cards with compound-action signals: 4
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Выбрать | это что?; это остро?; не остро; это можно?; беру это |
+| Заказать | это, пожалуйста; ещё одно; без этого; добавить это; достаточно |
+| Ограничения | аллергия; без арахиса; без молока; нельзя остро; проверить можно? |
+| Количество | один; два; мало; ещё; хватит |
+| Напитки | вода; лёд; без льда; сладко; не сладко |
+| Оплата | счёт, пожалуйста; карта можно?; сколько?; чек; спасибо |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Food Thai, allergens and ingredient claims требуют native-speaker/methodist QA; приложение не должно гарантировать отсутствие аллергена.

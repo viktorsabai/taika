@@ -1,34 +1,25 @@
-# Draft audit — course_s_2: Хобби и движ по-тайски
+# Черновой аудит — course_s_2 «Хобби и движ по-тайски»
 
-**Category:** Тайский для души
+## Вывод
 
-## Scope
+Курс смешивает список хобби, расписание, пробную тренировку, тренера и поиск единомышленников. В основном слое нужен лёгкий social/hobby phrase bank: сказать, что нравится, спросить где и когда, присоединиться.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Движ по-тайски», «найти единомышленников», «с тренером сценка» — lesson labels/notes.
+- «Записаться и обсудить» → «Записаться можно?» и «Обсудим?».
+- «Тренировка и пробное бесплатно» разделить на «Пробное есть?» и «Сколько стоит?».
+- «Обсудить прогресс» → «Как мой прогресс?».
 
-- Phrase/casual cards: 30
-- Average Russian phrase length: 1.9 words
-- Cards with compound-action signals: 4
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Интересы | люблю музыку; люблю спорт; нравится танцевать; моё хобби; а ты? |
+| Найти занятие | где занятие?; когда занятие?; расписание где?; пробное есть?; сколько стоит? |
+| Присоединиться | можно с вами?; я новичок; пойдём вместе?; ещё хобби?; хорошо |
+| Время | сегодня; на выходных; через неделю; во сколько?; до встречи |
+| Снаряжение | коврик нужен?; взять коврик; форма нужна?; вода есть?; спасибо |
+| Группа | тренер хороший?; записаться можно?; вместе?; как прогресс?; до связи |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Thai hobby/social register и названия активностей требуют native-speaker QA.

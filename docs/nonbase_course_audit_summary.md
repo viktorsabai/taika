@@ -48,3 +48,13 @@ After the first five drafts, continue with `course_l_3`, `course_l_12`, `course_
 | `course_e_2` — Работа с тайцами | Drafted | Move meta-advice to tips; keep short requests, status, deadlines and reminders. |
 | `course_long_2` — Банки, деньги, крипта | Drafted | Create a short bank survival layer and move legal/financial detail to advanced notes. |
 | `course_l_2` — Таксист, вези меня домой | Drafted | Keep a minimal taxi survival kit; separate rental, police and delivery ownership. |
+
+## Fourth wave completed
+
+| Course | Status | Main finding |
+|---|---|---|
+| `course_long_3` — Полная медицина и страховка | Drafted | Keep a short symptom/next-step layer; move insurance/legal complexity to advanced notes. |
+| `course_s_5` — Романтика по-тайски | Drafted | Replace meta-labels with simple expressions of interest, invitations, status and boundaries. |
+| `course_long_1` — Виза, продление, иммиграция | Drafted | Keep administrative survival questions; move rules and eligibility into notes. |
+| `course_l_4` — Вселенная тайской еды | Drafted | Keep food ordering, spice, restrictions and payment as separate actions. |
+| `course_s_2` — Хобби и движ по-тайски | Drafted | Keep light social/hobby phrases; remove meta labels and compound activity requests. |

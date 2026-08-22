@@ -3217,3 +3217,16 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | Audit course_e_5 Коды Таиланда | [ ] |
 | Audit course_long_4 Транспорт для своих | [ ] |
 | Update queue and cumulative summary without production JSON changes | [ ] |
+
+# Curriculum audit process
+
+| Stage | Rule | Status |
+|---|---|---|
+| 1. Inventory | Extract actual lessons, steps and metadata on canonical branch | [x] |
+| 2. Screening | Flag compound, multi-action, inappropriate and duplicate phrases | [x] |
+| 3. Qualitative drafts | Review one course at a time; define owner and short phrase banks | [ ] ongoing |
+| 4. Approval | Review the consolidated map before touching production JSON | [ ] |
+| 5. Migration | Change steps/lessons/metadata only by approved course cluster | [ ] |
+| 6. QA | Validate refs, orders, card_count, progress, Speaker and native-language QA | [ ] |
+
+Production JSON must remain unchanged during stages 1–3 unless a separate migration is explicitly approved.
