@@ -9,6 +9,7 @@ struct taikaApp: App {
 
     init() {
         RevenueCatBootstrap.configureIfNeeded()
+        _ = TaikaAnalytics.shared
         if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
             FirebaseApp.configure()
         }
@@ -35,10 +36,12 @@ struct taikaApp: App {
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .active:
+                TaikaAnalytics.shared.flush()
                 if let uid = AuthService.shared.currentUserID {
                     SyncManager.shared.restoreIfNeeded(userId: uid)
                 }
             case .background:
+                TaikaAnalytics.shared.flush()
                 SyncManager.shared.schedulePush()
             default:
                 break
