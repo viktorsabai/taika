@@ -3243,3 +3243,44 @@ Production JSON must remain unchanged during stages 1–3 unless a separate migr
 | Commit and push docs-only audit wave | [ ] |
 
 Production JSON remains unchanged during this audit wave.
+
+
+# Non-base curriculum audit summary presentation
+
+| Task | Status |
+|---|---|
+| Read audit summary, queue and per-course drafts | [ ] |
+| Build factual 30-course synthesis and wave map | [ ] |
+| Prepare slide content and visual narrative | [ ] |
+| Generate and present slide deck | [ ] |
+
+
+# Detailed 30-course before/after presentation
+
+| Task | Status |
+|---|---|
+| Extract factual current cards and course drafts | [ ] |
+| Build course-by-course keep/simplify/remove/add map | [ ] |
+| Prepare detailed slide content grouped by waves | [ ] |
+| Generate and present detailed deck | [ ] |
+
+
+# Non-base course deduplication audit
+
+| Task | Status |
+|---|---|
+| Extract proposed phrases and source contexts | [ ] |
+| Classify exact, functional and contextual overlaps | [ ] |
+| Build deduplication/ownership map | [ ] |
+| Update drafts and summary without production migration | [ ] |
+
+
+# Final course ownership map
+
+| Task | Status |
+|---|---|
+| Extract drafts and overlap inventory | [ ] |
+| Assign canonical owners and shared phrase rules | [ ] |
+| Build 30-course ownership matrix | [ ] |
+| Separate unresolved QA candidates | [ ] |
+| Update summary without production migration | [ ] |
