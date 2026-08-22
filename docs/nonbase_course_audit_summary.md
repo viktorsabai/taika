@@ -68,3 +68,13 @@ After the first five drafts, continue with `course_l_3`, `course_l_12`, `course_
 | `course_e_4` — Разговоры без конфликта | Drafted | Keep de-escalation steps as short phrases; move strategy labels to tips. |
 | `course_s_6` — Тай кидс | Drafted | Keep safe child-directed phrases, praise, boundaries and parent contact; separate food. |
 | `course_s_1` — Тайский для блогинга | Drafted | Replace content-production labels with real captions, reactions, comments and direct replies. |
+
+## Sixth wave completed
+
+| Course | Status | Main finding |
+|---|---|---|
+| `course_long_6` — Питомцы в Таиланде | Drafted | Separate vet clinic, symptoms, grooming, pet-friendly travel and advanced flight documents. |
+| `course_e_1` — Понятный тайский | Drafted | Replace meta grammar labels with repeat, slow down, clarify and confirm phrases. |
+| `course_l_9` — Срочная помощь | Drafted | Keep minimal emergency commands and location/help phrases; require current safety validation. |
+| `course_long_7` — Тайский юмор, мемы, поп-культура | Drafted | Make trends optional and keep reactions, clarification, joking and safe exit phrases. |
+| `course_s_4` — Ретрит и внутренний сабай | Drafted | Keep respectful questions and logistics; move spiritual concepts into cultural notes. |

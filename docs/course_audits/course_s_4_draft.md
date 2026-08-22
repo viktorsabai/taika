@@ -1,34 +1,26 @@
-# Draft audit — course_s_4: Ретрит и внутренний сабай
+# Черновой аудит — course_s_4 «Ретрит и внутренний сабай»
 
-**Category:** Тайский для души
+## Вывод
 
-## Scope
+Курс смешивает правила ретрита, расписание, практику, храм и разговоры с монахами. В основном слое нужны короткие вопросы и уважительные действия; буддийские concepts и cultural explanations должны быть notes.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Правила молчания» → «Молчание?» или «Здесь молчание?».
+- «Внутренний сабай» — concept/note, не обязательная phrase.
+- «От правил до благодарности», «ретрит сценка» и «внутренний покой» — remove from learnable layer.
+- «Дхарма» оставить как vocabulary only, если нет ясной communicative action.
+- «Спасибо за учение» оставить после native-speaker review как context-specific phrase.
 
-- Phrase/casual cards: 33
-- Average Russian phrase length: 2.1 words
-- Cards with compound-action signals: 1
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Правила | правила где?; молчание?; можно говорить?; спасибо; понятно |
+| Расписание | медитация когда?; утром; вечером; свободное время; расписание где? |
+| Практика | практика где?; участвовать можно?; дышать спокойно; готово; спасибо |
+| Ориентиры | храм где?; зал где?; сюда?; туда?; спасибо |
+| Монахи | можно спросить?; вопрос можно?; спасибо; извините; понятно |
+| Завершить | всё понятно; спасибо за учение; до свидания; я пойду; хорошо |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Retreat etiquette, Buddhist terminology and monk interaction require cultural/native-speaker QA; do not turn spiritual concepts into guaranteed outcomes.

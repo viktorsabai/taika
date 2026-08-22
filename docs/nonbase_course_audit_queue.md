@@ -29,11 +29,11 @@
 | 23 | `course_e_4` — Разговоры без конфликта | На одной волне | 23 | 2.4 | 2 | drafted — qualitative review |
 | 24 | `course_s_6` — Тай кидс | Тайский для души | 32 | 2.3 | 2 | drafted — qualitative review |
 | 25 | `course_s_1` — Тайский для блогинга | Тайский для души | 35 | 2.2 | 2 | drafted — qualitative review |
-| 26 | `course_long_6` — Питомцы в Таиланде | Тайский для долгожителей | 28 | 2.1 | 2 | pending |
-| 27 | `course_e_1` — Понятный тайский | На одной волне | 36 | 2.1 | 2 | pending |
-| 28 | `course_l_9` — Срочная помощь | Тайский для жизни | 42 | 1.6 | 2 | pending |
-| 29 | `course_long_7` — Тайский юмор, мемы, поп-культура | Тайский для долгожителей | 30 | 2.4 | 1 | pending |
-| 30 | `course_s_4` — Ретрит и внутренний сабай | Тайский для души | 33 | 2.1 | 1 | pending |
+| 26 | `course_long_6` — Питомцы в Таиланде | Тайский для долгожителей | 28 | 2.1 | 2 | drafted — qualitative review |
+| 27 | `course_e_1` — Понятный тайский | На одной волне | 36 | 2.1 | 2 | drafted — qualitative review |
+| 28 | `course_l_9` — Срочная помощь | Тайский для жизни | 42 | 1.6 | 2 | drafted — qualitative review |
+| 29 | `course_long_7` — Тайский юмор, мемы, поп-культура | Тайский для долгожителей | 30 | 2.4 | 1 | drafted — qualitative review |
+| 30 | `course_s_4` — Ретрит и внутренний сабай | Тайский для души | 33 | 2.1 | 1 | drafted — qualitative review |
 | 31 | `course_e_6` — Мягкий тайский твой | На одной волне | 31 | 2.5 | 0 | pending |
 | 32 | `course_e_3` — Сервис и персонал | На одной волне | 30 | 2.1 | 20 | implemented — service survival rewrite |
 | 33 | `course_l_10` — Между подходами | Тайский для жизни | 47 | 1.9 | 18 | drafted — gym phrase-bank proposal |

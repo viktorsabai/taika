@@ -3230,3 +3230,16 @@ Keep three independent state axes: course completion, lesson completion, and rei
 | 6. QA | Validate refs, orders, card_count, progress, Speaker and native-language QA | [ ] |
 
 Production JSON must remain unchanged during stages 1–3 unless a separate migration is explicitly approved.
+
+
+# Next five non-base course audit wave
+
+| Task | Status |
+|---|---|
+| Identify next five pending courses on canonical branch | [ ] |
+| Check background execution availability | [ ] |
+| Prepare five qualitative drafts without production JSON edits | [ ] |
+| Update queue and cumulative summary | [ ] |
+| Commit and push docs-only audit wave | [ ] |
+
+Production JSON remains unchanged during this audit wave.

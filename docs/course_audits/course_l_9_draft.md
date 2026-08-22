@@ -1,34 +1,26 @@
-# Draft audit — course_l_9: Срочная помощь
+# Черновой аудит — course_l_9 «Срочная помощь»
 
-**Category:** Тайский для жизни
+## Вывод
 
-## Scope
+Это safety-critical course. В default layer должны быть короткие команды для вызова помощи, описания места и опасности. Длинные emergency explanations, medical/legal interpretation и «что делать дальше» — notes, не карточки.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Мне нужна срочная медицинская помощь» → «Нужна помощь» и «Срочно».
+- «Позвоните в полицию/скорую» разделить на «Полиция» и «Скорая».
+- «Я нахожусь…» → «Я здесь» и отдельная location card.
+- «Объяснить, что произошло» → «Произошла авария» / «Мне нужна помощь».
+- Не обучать обещанию результата; фразы должны вызвать помощь, а не заменить emergency services.
 
-- Phrase/casual cards: 42
-- Average Russian phrase length: 1.6 words
-- Cards with compound-action signals: 2
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Срочно | помощь; срочно; опасно; остановитесь; подождите |
+| Медицинская помощь | скорая; больница; врач; больно; дышать трудно |
+| Полиция | полиция; авария; нужна помощь; документы вот; подождите |
+| Место | я здесь; вот адрес; где мы?; вход здесь; позвоните мне |
+| Связь | не понимаю; повторите; медленнее; переводчик нужен; ещё раз |
+| Завершить | помощь едет?; спасибо; я жду; здесь; хорошо |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Emergency wording, local numbers and safety instructions require a native-speaker/methodist review and current factual validation.

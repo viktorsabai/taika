@@ -1,34 +1,26 @@
-# Draft audit — course_long_7: Тайский юмор, мемы, поп-культура
+# Черновой аудит — course_long_7 «Тайский юмор, мемы, поп-культура»
 
-**Category:** Тайский для долгожителей
+## Вывод
 
-## Scope
+Курс быстро устаревает и смешивает мемы, сериалы, TikTok, подколы и чёрный юмор. Нельзя делать актуальные references обязательными карточками. Основной слой должен учить понять шутку, отреагировать и не обидеть человека; трендовые examples — optional notes.
 
-This is a draft only. Production JSON is unchanged. Review one course at a time for compound phrasing, inappropriate wording, semantic duplicates and a clear user outcome.
+## Simplify / remove
 
-## Current signals
+- «Мемы 2025–2026», «TikTok-тренды 2026» и названия сериалов — replaceable examples/notes.
+- «Кайф полный», «настроение топ» оставить как optional casual reactions.
+- «Чёрный юмор» — note with warning, not default learnable content.
+- «Как шутить по-тайски» → real cards: «Шучу», «Это шутка», «Не обижайся».
+- «Не устареть» — course promise, not phrase.
 
-- Phrase/casual cards: 30
-- Average Russian phrase length: 2.4 words
-- Cards with compound-action signals: 1
-- Cards with 6+ words: 0
+## Proposed phrase banks
 
-## Course owner
+| Урок | Короткие cards |
+|---|---|
+| Реакция | смешно; очень смешно; правда?; серьёзно?; ладно |
+| Чат | 555; ага; точно; кайф; понял |
+| Контекст | это шутка?; что значит?; из какого сериала?; видел; не видел |
+| Подкол | шучу; не обижайся; просто шутка; правда?; всё хорошо |
+| Поп-культура | тикток?; сериал?; песня?; челлендж; вирусное видео |
+| Exit | не понял; потом объяснишь?; ладно; спасибо; до связи |
 
-_To be defined after comparing neighboring course owners._
-
-## Keep / simplify / remove / add
-
-_To be completed during manual review._
-
-## Proposed short phrase banks
-
-_To be completed during manual review and native-speaker QA._
-
-## Acceptance checks
-
-- [ ] One card expresses one action.
-- [ ] No semantic duplicate with another course owner.
-- [ ] No long compound sentence in the beginner/default layer.
-- [ ] Russian intent is clear before Thai translation is approved.
-- [ ] Existing IDs, refs and progress semantics remain untouched until approved.
+Trendy slang and humor require native-speaker/social-context QA; updateable examples should not alter progress denominator.
