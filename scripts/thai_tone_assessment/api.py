@@ -348,12 +348,28 @@ class ThaiPhoneticReq(BaseModel):
     text_th: str
 
 
+class SemanticCoachReq(BaseModel):
+    expected_thai: str
+    expected_ru: str = ""
+    expected_phonetic: str = ""
+    heard_thai: str = ""
+    heard_phonetic: str = ""
+    text_score: int = 0
+    tone_score: int | None = None
+    weak_syllables: list[dict[str, Any]] | None = None
+
+
+class SemanticCoachResp(BaseModel):
+    headline: str
+    detail: str | None = None
+
+
 # --- Smart Speaker: SQLite cache для переводов (экономия API-запросов) ---
 
 # Bump this whenever the LLM system prompt changes meaning-affecting behavior:
 # it namespaces cache keys so old (possibly wrong) cached translations become
 # unreachable instead of being served forever via INSERT OR REPLACE.
-_SMART_CACHE_PROMPT_VERSION = "v2"
+_SMART_CACHE_PROMPT_VERSION = "v3"
 
 
 def _cache_db_path() -> Path:
@@ -372,10 +388,14 @@ def _init_cache_db() -> None:
                 politeness TEXT NOT NULL,
                 thai TEXT NOT NULL,
                 phonetic TEXT NOT NULL,
+                parts_json TEXT NOT NULL DEFAULT '[]',
                 created_at INTEGER DEFAULT (strftime('%s', 'now')),
                 PRIMARY KEY (text_ru_norm, politeness)
             )
         """)
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(translations)").fetchall()}
+        if "parts_json" not in cols:
+            conn.execute("ALTER TABLE translations ADD COLUMN parts_json TEXT NOT NULL DEFAULT '[]'")
         conn.commit()
 
 
@@ -384,36 +404,81 @@ def _cache_key(text_ru_norm: str) -> str:
     return f"{_SMART_CACHE_PROMPT_VERSION}:{text_ru_norm}"
 
 
-def _cache_get(text_ru_norm: str, politeness: str) -> tuple[str, str] | None:
+def _cache_get(text_ru_norm: str, politeness: str) -> tuple[str, str, list[dict[str, str]]] | None:
     p = (politeness or "female").strip().lower()
     if p not in ("male", "female", "kathoey"):
         p = "female"
     try:
         with sqlite3.connect(_cache_db_path()) as conn:
             row = conn.execute(
-                "SELECT thai, phonetic FROM translations WHERE text_ru_norm = ? AND politeness = ?",
+                "SELECT thai, phonetic, parts_json FROM translations WHERE text_ru_norm = ? AND politeness = ?",
                 (_cache_key(text_ru_norm), p),
             ).fetchone()
             if row:
-                return (row[0], row[1])
+                return (row[0], row[1], _parse_parts_json(row[2] if len(row) > 2 else "[]"))
     except Exception as e:
         print(f"[smart_speaker] cache get error: {e}", file=sys.stderr, flush=True)
     return None
 
 
-def _cache_set(text_ru_norm: str, politeness: str, thai: str, phonetic: str) -> None:
+def _cache_set(
+    text_ru_norm: str,
+    politeness: str,
+    thai: str,
+    phonetic: str,
+    parts: list[dict[str, str]] | None = None,
+) -> None:
     p = (politeness or "female").strip().lower()
     if p not in ("male", "female", "kathoey"):
         p = "female"
+    parts_json = json.dumps(parts or [], ensure_ascii=False)
     try:
         with sqlite3.connect(_cache_db_path()) as conn:
             conn.execute(
-                "INSERT OR REPLACE INTO translations (text_ru_norm, politeness, thai, phonetic) VALUES (?, ?, ?, ?)",
-                (_cache_key(text_ru_norm), p, thai, phonetic),
+                "INSERT OR REPLACE INTO translations "
+                "(text_ru_norm, politeness, thai, phonetic, parts_json) VALUES (?, ?, ?, ?, ?)",
+                (_cache_key(text_ru_norm), p, thai, phonetic, parts_json),
             )
             conn.commit()
     except Exception as e:
         print(f"[smart_speaker] cache set error: {e}", file=sys.stderr, flush=True)
+
+
+def _parse_parts_json(raw: Any) -> list[dict[str, str]]:
+    if isinstance(raw, list):
+        return _normalize_parts(raw)
+    if not isinstance(raw, str) or not raw.strip():
+        return []
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return []
+    return _normalize_parts(data if isinstance(data, list) else [])
+
+
+def _normalize_parts(raw: list[Any]) -> list[dict[str, str]]:
+    """Teaching chunks: [{p, m}] — Cyrillic chunk + short Russian gloss."""
+    out: list[dict[str, str]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        p = str(item.get("p") or item.get("phonetic") or "").strip()
+        m = str(item.get("m") or item.get("meaning") or item.get("ru") or "").strip()
+        if not p or not m:
+            continue
+        # Drop tone arrows from teaching chunk (tones live in full phonetic line).
+        for a in ARROWS:
+            p = p.replace(a, "")
+        p = re.sub(r"\s+", " ", p).strip(" -–—")
+        m = re.sub(r"\s+", " ", m).strip()
+        if not p or not m:
+            continue
+        if _has_thai_script(p):
+            continue
+        out.append({"p": p, "m": m})
+        if len(out) >= 12:
+            break
+    return out
 
 
 # Инициализация при импорте
@@ -423,11 +488,11 @@ OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip()
 OPENAI_MODEL = (os.getenv("TAIKA_SMART_MODEL") or "gpt-4o-mini").strip()
 
 
-def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] | None:
+def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str, list[dict[str, str]]] | None:
     """
     Fallback when нет точного совпадения в steps.json.
     Использует OpenAI Chat API, если задан OPENAI_API_KEY.
-    Возвращает (thai, phonetic) или None при ошибке.
+    Возвращает (thai, phonetic, parts) или None при ошибке.
     """
     if not OPENAI_API_KEY:
         return None
@@ -437,11 +502,18 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] 
         p = "female"
 
     system = (
-        "You are a Thai teacher for Russian speakers. You output JSON with two DIFFERENT things:\n\n"
+        "You are a Thai teacher for Russian speakers. You output JSON with THREE things:\n\n"
         "1) \"thai\" — the answer in Thai script (what a Thai person would say).\n"
         "2) \"phonetic\" — ONLY the pronunciation of THAT Thai sentence written in Russian Cyrillic letters + tone arrows. "
         "This is **Thai-to-Cyrillic**: each **Thai syllable** (by Thai spelling) becomes one Cyrillic chunk + one arrow (→↓↘↑↗). "
-        "It must sound like Thai, NOT like Russian. It must NOT repeat, spell, or syllabify the original Russian prompt.\n\n"
+        "It must sound like Thai, NOT like Russian. It must NOT repeat, spell, or syllabify the original Russian prompt.\n"
+        "3) \"parts\" — teaching word gloss for learners: array of {\"p\": \"...\", \"m\": \"...\"}. "
+        "Each item is ONE meaningful Thai WORD (or tight multi-syllable word), NOT every syllable. "
+        "\"p\" = Cyrillic how that word is said (NO tone arrows). \"m\" = short Russian gloss (1–4 words). "
+        "Example for «Что это?»: "
+        "[{\"p\":\"ни\",\"m\":\"это / вот\"},{\"p\":\"кху\",\"m\":\"являться\"},{\"p\":\"а-рай\",\"m\":\"что\"}]. "
+        "Skip final politeness particles ครับ/ค่ะ (кхрап/кха) OR mark m as \"вежливость\". "
+        "Do NOT invent words that are not in \"thai\". Order left-to-right as in the Thai sentence.\n\n"
         "CRITICAL — translate the EXACT meaning, do not substitute a more \"familiar\" app-domain sentence:\n"
         "- Translate ONLY the literal meaning of the given Russian sentence: same subject (я/ты/вы/он...), "
         "same verb tense/mood (statement vs question), same object/language named.\n"
@@ -462,17 +534,18 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] 
         "- Do NOT add ครับ/ค่ะ or кхрап/кха in output — we append politeness on the server.\n\n"
         "Workflow: first re-read the Russian sentence carefully (who is the subject, is it a question, which language/topic "
         "is named), then choose the correct \"thai\" with the SAME meaning, then write \"phonetic\" by reading "
-        "**left-to-right through \"thai\"** (Thai syllable boundaries), transcribing each syllable’s Thai pronunciation into Cyrillic.\n"
+        "**left-to-right through \"thai\"** (Thai syllable boundaries), then write \"parts\" as word glosses.\n"
         "If the Russian input is a question (?), \"thai\" should be a natural Thai question; \"phonetic\" still reflects only that Thai.\n\n"
-        "Return JSON: {\"thai\": \"...\", \"phonetic\": \"...\"}."
+        "Return JSON: {\"thai\": \"...\", \"phonetic\": \"...\", \"parts\": [{\"p\":\"...\",\"m\":\"...\"}, ...]}."
     )
 
     is_question = (ru.rstrip()).endswith("?")
     hint = " (question)" if is_question else ""
     user = (
         f"Russian phrase: {ru!r}{hint}.\n"
-        "Return thai + phonetic. Remember: phonetic = how to pronounce the **Thai** words you put in \"thai\", "
-        "syllable by syllable in Cyrillic — not a transliteration of this Russian sentence."
+        "Return thai + phonetic + parts. Remember: phonetic = how to pronounce the **Thai** words you put in \"thai\", "
+        "syllable by syllable in Cyrillic — not a transliteration of this Russian sentence. "
+        "parts = word-level gloss (not every syllable)."
     )
 
     try:
@@ -507,6 +580,7 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] 
         data = json.loads(content)
         thai = str(data.get("thai", "")).strip()
         phon = str(data.get("phonetic", "")).strip()
+        parts = _normalize_parts(data.get("parts") if isinstance(data.get("parts"), list) else [])
         if not thai or not phon:
             return None
         # Retry once if LLM put Thai script in phonetic (must be Cyrillic only)
@@ -526,17 +600,78 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str] 
             if p2:
                 p2n = _normalize_phonetic(p2)
                 if p2n and not _phonetic_is_spelled_russian_source(ru, p2n):
-                    return thai, p2n
+                    if not parts:
+                        parts = _llm_phrase_parts(ru, thai, p2n) or []
+                    return thai, p2n, parts
             retried2 = _llm_translate_ru_to_th_retry(thai)
             if retried2:
                 _, p3 = retried2
                 p3n = _normalize_phonetic(p3)
                 if p3n and not _phonetic_is_spelled_russian_source(ru, p3n):
-                    return thai, p3n
-            return thai, ""
-        return thai, phon
+                    if not parts:
+                        parts = _llm_phrase_parts(ru, thai, p3n) or []
+                    return thai, p3n, parts
+            return thai, "", parts
+        if not parts:
+            parts = _llm_phrase_parts(ru, thai, phon) or []
+        return thai, phon, parts
     except Exception as e:  # pragma: no cover - defensive
         print(f"[smart_speaker] parse error: {e}", file=sys.stderr, flush=True)
+        return None
+
+
+def _llm_phrase_parts(ru: str, thai: str, phonetic: str) -> list[dict[str, str]] | None:
+    """Word-level gloss when translate path had no parts (steps.json / cache backfill)."""
+    if not OPENAI_API_KEY:
+        return None
+    t = (thai or "").strip()
+    ph = (phonetic or "").strip()
+    if not t:
+        return None
+    system = (
+        "You teach Thai to Russian speakers. Return JSON only: "
+        "{\"parts\":[{\"p\":\"...\",\"m\":\"...\"},...]}.\n"
+        "parts = word-level gloss of the Thai sentence (NOT every syllable).\n"
+        "p = Cyrillic pronunciation chunk WITHOUT tone arrows; m = short Russian meaning (1–4 words).\n"
+        "Follow Thai word order left-to-right. Skip or mark politeness ครับ/ค่ะ as m=\"вежливость\".\n"
+        "Do not invent words absent from the Thai. Example: Thai นี่คืออะไร → "
+        "[{\"p\":\"ни\",\"m\":\"это\"},{\"p\":\"кху\",\"m\":\"являться\"},{\"p\":\"а-рай\",\"m\":\"что\"}]."
+    )
+    user = (
+        f"Russian meaning: {ru!r}\n"
+        f"Thai: {t!r}\n"
+        f"Phonetic (reference, may include tone arrows): {ph!r}\n"
+        "Return parts only."
+    )
+    try:
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": OPENAI_MODEL,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "temperature": 0.3,
+                "response_format": {"type": "json_object"},
+            },
+            timeout=15,
+        )
+    except Exception as e:
+        print(f"[smart_speaker] parts request failed: {e}", file=sys.stderr, flush=True)
+        return None
+    if resp.status_code >= 300:
+        return None
+    try:
+        content = resp.json()["choices"][0]["message"]["content"]
+        data = json.loads(content)
+        return _normalize_parts(data.get("parts") if isinstance(data.get("parts"), list) else [])
+    except Exception as e:
+        print(f"[smart_speaker] parts parse error: {e}", file=sys.stderr, flush=True)
         return None
 
 
@@ -661,21 +796,28 @@ async def smart_speaker(req: SmartSpeakerReq):
     politeness = req.politeness or "female"
     print(f"[smart_speaker] ru={ru!r} ru_norm={ru_norm!r} politeness={politeness}", file=sys.stderr, flush=True)
 
+    parts: list[dict[str, str]] = []
+
     # 1. Cache lookup — если уже переводили, возвращаем из кэша (нормализуем на всякий случай)
     cached = _cache_get(ru_norm, politeness)
     if cached:
-        thai, phonetic = cached
+        thai, phonetic, parts = cached
         phonetic = _normalize_phonetic(phonetic)
         phonetic = _sanitize_phonetic_not_russian_spellout(ru, thai, phonetic)
         thai, phonetic = _strip_trailing_politeness(thai, phonetic)
         thai, phonetic = _apply_politeness(thai, phonetic, politeness)
-        return {"thai": thai, "phonetic": phonetic}
+        if not parts:
+            parts = _llm_phrase_parts(ru, thai, phonetic) or []
+            if parts:
+                _cache_set(ru_norm, politeness, thai, phonetic, parts)
+        return {"thai": thai, "phonetic": phonetic, "parts": parts}
 
     # 2. Steps.json — точное совпадение
     idx = _load_steps_index()
     hit = idx.get(ru_norm)
     if hit:
         thai, phonetic = hit
+        parts = []
     else:
         # 3. LLM — генерация (если настроен OPENAI_API_KEY)
         if not OPENAI_API_KEY:
@@ -687,16 +829,37 @@ async def smart_speaker(req: SmartSpeakerReq):
                 status_code=404,
                 detail="LLM translation failed. Check Railway logs for OpenAI errors. Model=" + OPENAI_MODEL,
             )
-        thai, phonetic = llm
+        thai, phonetic, parts = llm
 
     phonetic = _normalize_phonetic(phonetic)
     phonetic = _sanitize_phonetic_not_russian_spellout(ru, thai, phonetic)
     thai, phonetic = _apply_politeness(thai, phonetic, politeness)
 
-    # 4. Сохраняем в кэш (с учётом politeness — результат уже с кхрап/кха)
-    _cache_set(ru_norm, politeness, thai, phonetic)
+    if not parts:
+        parts = _llm_phrase_parts(ru, thai, phonetic) or []
 
-    return {"thai": thai, "phonetic": phonetic}
+    # 4. Сохраняем в кэш (с учётом politeness — результат уже с кхрап/кха)
+    _cache_set(ru_norm, politeness, thai, phonetic, parts)
+
+    return {"thai": thai, "phonetic": phonetic, "parts": parts}
+
+
+class PhrasePartsReq(BaseModel):
+    text_ru: str | None = None
+    text_th: str | None = None
+    phonetic: str | None = None
+
+
+@app.post("/phrase_parts")
+async def phrase_parts(req: PhrasePartsReq):
+    """Word-level gloss for an already-translated Smart Speaker phrase."""
+    ru = (req.text_ru or "").strip()
+    thai = (req.text_th or "").strip()
+    phonetic = (req.phonetic or "").strip()
+    if not thai and not phonetic:
+        raise HTTPException(status_code=400, detail="text_th or phonetic required")
+    parts = _llm_phrase_parts(ru, thai, phonetic) or []
+    return {"parts": parts}
 
 
 @app.post("/thai_phonetic")
@@ -720,6 +883,76 @@ async def thai_phonetic(req: ThaiPhoneticReq):
     if not phonetic.strip() or _has_thai_script(phonetic):
         raise HTTPException(status_code=503, detail="phonetic invalid after normalize")
     return {"phonetic": phonetic}
+
+
+def _llm_semantic_coach(req: SemanticCoachReq) -> SemanticCoachResp | None:
+    if not OPENAI_API_KEY:
+        return None
+    weak = req.weak_syllables or []
+    weak_txt = json.dumps(weak[:6], ensure_ascii=False) if weak else "[]"
+    system = (
+        "You are a Thai pronunciation coach for Russian-speaking learners. "
+        "Return JSON {\"headline\": \"...\", \"detail\": \"...\"} in Russian.\n"
+        "headline: one short line (max 8 words) — the ONE main fix.\n"
+        "detail: 1-2 sentences — concrete: wrong word vs wrong tone vs wrong syllable. "
+        "If heard_thai differs from expected_thai, explain the semantic difference when expected_ru is given. "
+        "Never invent Thai words not in the input. No markdown."
+    )
+    user = (
+        f"expected_ru: {req.expected_ru!r}\n"
+        f"expected_thai: {req.expected_thai!r}\n"
+        f"expected_phonetic: {req.expected_phonetic!r}\n"
+        f"heard_thai (ASR): {req.heard_thai!r}\n"
+        f"heard_phonetic: {req.heard_phonetic!r}\n"
+        f"text_score: {req.text_score}\n"
+        f"tone_score: {req.tone_score}\n"
+        f"weak_syllables: {weak_txt}\n"
+        "Explain what the user should fix for self-study."
+    )
+    try:
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": OPENAI_MODEL,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "temperature": 0.35,
+                "response_format": {"type": "json_object"},
+            },
+            timeout=16,
+        )
+    except Exception as e:
+        print(f"[semantic_coach] openai request failed: {e}", file=sys.stderr, flush=True)
+        return None
+    if resp.status_code >= 300:
+        return None
+    try:
+        content = resp.json()["choices"][0]["message"]["content"]
+        data = json.loads(content)
+        headline = str(data.get("headline", "")).strip()
+        detail = str(data.get("detail", "")).strip() or None
+        if not headline:
+            return None
+        return SemanticCoachResp(headline=headline, detail=detail)
+    except Exception:
+        return None
+
+
+@app.post("/semantic_coach")
+async def semantic_coach(req: SemanticCoachReq):
+    """Russian coaching hint: semantic diff + tone focus for Speaker self-study."""
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=404, detail="OPENAI_API_KEY not set")
+    out = _llm_semantic_coach(req)
+    if not out:
+        raise HTTPException(status_code=503, detail="semantic coach generation failed")
+    return out.model_dump()
 
 
 @app.get("/health")
