@@ -369,7 +369,7 @@ class SemanticCoachResp(BaseModel):
 # Bump this whenever the LLM system prompt changes meaning-affecting behavior:
 # it namespaces cache keys so old (possibly wrong) cached translations become
 # unreachable instead of being served forever via INSERT OR REPLACE.
-_SMART_CACHE_PROMPT_VERSION = "v3"
+_SMART_CACHE_PROMPT_VERSION = "v4"
 
 
 def _cache_db_path() -> Path:
@@ -508,11 +508,16 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str, 
         "This is **Thai-to-Cyrillic**: each **Thai syllable** (by Thai spelling) becomes one Cyrillic chunk + one arrow (→↓↘↑↗). "
         "It must sound like Thai, NOT like Russian. It must NOT repeat, spell, or syllabify the original Russian prompt.\n"
         "3) \"parts\" — teaching word gloss for learners: array of {\"p\": \"...\", \"m\": \"...\"}. "
-        "Each item is ONE meaningful Thai WORD (or tight multi-syllable word), NOT every syllable. "
-        "\"p\" = Cyrillic how that word is said (NO tone arrows). \"m\" = short Russian gloss (1–4 words). "
-        "Example for «Что это?»: "
-        "[{\"p\":\"ни\",\"m\":\"это / вот\"},{\"p\":\"кху\",\"m\":\"являться\"},{\"p\":\"а-рай\",\"m\":\"что\"}]. "
-        "Skip final politeness particles ครับ/ค่ะ (кхрап/кха) OR mark m as \"вежливость\". "
+        "Each item is ONE meaningful Thai WORD (by Thai spelling), NOT every syllable and NOT Russian words. "
+        "\"p\" = Cyrillic pronunciation of that whole Thai word, hyphens inside multi-syllable words (NO tone arrows). "
+        "\"m\" = short Russian gloss (1–4 words). "
+        "BAD parts (forbidden): splitting สบาย into {\"p\":\"са\"},{\"p\":\"бай\"} — that is syllables. "
+        "GOOD: {\"p\":\"са-бай\",\"m\":\"в порядке / комфортно\"}. "
+        "Example «Как дела?» → thai «สบายดีไหม» → parts "
+        "[{\"p\":\"са-бай\",\"m\":\"в порядке\"},{\"p\":\"ди\",\"m\":\"хорошо\"},{\"p\":\"май\",\"m\":\"ли? (вопрос)\"}]. "
+        "Example «Как ваше настроение?» → parts "
+        "[{\"p\":\"кхун\",\"m\":\"вы\"},{\"p\":\"ру-сык\",\"m\":\"чувствовать\"},{\"p\":\"янг-рай\",\"m\":\"как\"}]. "
+        "Skip final ครับ/ค่ะ OR mark as {\"p\":\"кхрап\",\"m\":\"вежливость (м)\"}. "
         "Do NOT invent words that are not in \"thai\". Order left-to-right as in the Thai sentence.\n\n"
         "CRITICAL — translate the EXACT meaning, do not substitute a more \"familiar\" app-domain sentence:\n"
         "- Translate ONLY the literal meaning of the given Russian sentence: same subject (я/ты/вы/он...), "
@@ -632,10 +637,12 @@ def _llm_phrase_parts(ru: str, thai: str, phonetic: str) -> list[dict[str, str]]
         "You teach Thai to Russian speakers. Return JSON only: "
         "{\"parts\":[{\"p\":\"...\",\"m\":\"...\"},...]}.\n"
         "parts = word-level gloss of the Thai sentence (NOT every syllable).\n"
-        "p = Cyrillic pronunciation chunk WITHOUT tone arrows; m = short Russian meaning (1–4 words).\n"
+        "p = Cyrillic pronunciation of each whole Thai word (hyphens inside multi-syllable words), NO tone arrows.\n"
+        "m = short Russian meaning (1–4 words).\n"
+        "BAD: splitting สบาย into са + бай. GOOD: {\"p\":\"са-бай\",\"m\":\"в порядке\"}.\n"
+        "Example สบายดีไหม → [{\"p\":\"са-бай\",\"m\":\"в порядке\"},{\"p\":\"ди\",\"m\":\"хорошо\"},{\"p\":\"май\",\"m\":\"ли?\"}].\n"
         "Follow Thai word order left-to-right. Skip or mark politeness ครับ/ค่ะ as m=\"вежливость\".\n"
-        "Do not invent words absent from the Thai. Example: Thai นี่คืออะไร → "
-        "[{\"p\":\"ни\",\"m\":\"это\"},{\"p\":\"кху\",\"m\":\"являться\"},{\"p\":\"а-рай\",\"m\":\"что\"}]."
+        "Do not invent words absent from the Thai."
     )
     user = (
         f"Russian meaning: {ru!r}\n"
