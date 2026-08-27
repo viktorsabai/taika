@@ -1,0 +1,28 @@
+name: Steps JSON contract
+
+on:
+  push:
+    paths:
+      - "steps.json"
+      - "lessons.json"
+      - "scripts/check_steps_json.py"
+      - ".github/workflows/steps-json-check.yml"
+  pull_request:
+    paths:
+      - "steps.json"
+      - "lessons.json"
+      - "scripts/check_steps_json.py"
+      - ".github/workflows/steps-json-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check-steps-json:
+    name: Validate steps JSON contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Validate steps.json and lessons.json
+        run: python3 scripts/check_steps_json.py --root .
