@@ -319,7 +319,22 @@ def _normalize_phonetic(phonetic: str) -> str:
     out = _fix_latin_i_in_phonetic(out)
     out = re.sub(r"\s+", " ", out).strip()
     out = _collapse_letter_space_arrow(out)
+    out = _normalize_phonetic_word_spaces(out)
     return out
+
+
+def _normalize_phonetic_word_spaces(phonetic: str) -> str:
+    """
+    LLM often hyphenates EVERY syllable: «кун-ю↘-тхи↗-ни↘ кхрап↘».
+    Teaching contract splits on spaces → that becomes ONE mega-chunk + politeness.
+    After a tone arrow, a hyphen is a word boundary → turn into a space.
+    Keeps in-word hyphens like «кун-ю» (no arrow between).
+    """
+    s = phonetic or ""
+    for a in ARROWS + ("↕", "↔", "⇕"):
+        s = s.replace(f"{a}-", f"{a} ")
+        s = s.replace(f"{a} -", f"{a} ")
+    return re.sub(r"\s+", " ", s).strip()
 
 
 def _apply_politeness(thai: str, phonetic: str, politeness: str) -> tuple[str, str]:
@@ -369,7 +384,7 @@ class SemanticCoachResp(BaseModel):
 # Bump this whenever the LLM system prompt changes meaning-affecting behavior:
 # it namespaces cache keys so old (possibly wrong) cached translations become
 # unreachable instead of being served forever via INSERT OR REPLACE.
-_SMART_CACHE_PROMPT_VERSION = "v5"
+_SMART_CACHE_PROMPT_VERSION = "v6"
 
 
 def _cache_db_path() -> Path:
@@ -512,6 +527,26 @@ def _is_weak_gloss(m: str) -> bool:
     return False
 
 
+def _gloss_key(s: str) -> str:
+    t = re.sub(r"\s+", " ", (s or "").strip().lower())
+    t = re.sub(r"[?!.,;:«»\"']+", "", t)
+    return t.strip()
+
+
+def _is_whole_phrase_gloss(m: str, ru: str) -> bool:
+    """True when m dumps the full Russian sentence onto one chunk (useless for teaching)."""
+    mk = _gloss_key(m)
+    rk = _gloss_key(ru)
+    if not mk or not rk or len(rk) < 3:
+        return False
+    if mk == rk:
+        return True
+    # «Ты здесь.» / «ты здесь» / contains full RU as the whole gloss
+    if rk in mk and len(mk) <= len(rk) + 4:
+        return True
+    return False
+
+
 def _align_parts_to_phonetic(parts: list[dict[str, str]], phonetic: str) -> list[dict[str, str]]:
     """Universal contract: one gloss per phonetic space-chunk. Drop leftovers."""
     groups = _phonetic_word_groups(phonetic)
@@ -556,11 +591,21 @@ def _align_parts_to_phonetic(parts: list[dict[str, str]], phonetic: str) -> list
 
 
 def _finalize_parts(ru: str, thai: str, phonetic: str, parts: list[dict[str, str]]) -> list[dict[str, str]]:
-    aligned = _align_parts_to_phonetic(parts, phonetic)
-    groups = _phonetic_word_groups(phonetic)
+    ph = _normalize_phonetic_word_spaces(phonetic)
+    groups = _phonetic_word_groups(ph)
+    aligned = _align_parts_to_phonetic(parts, ph)
+
+    if groups and len(groups) > 1:
+        aligned = [p for p in aligned if not _is_whole_phrase_gloss(str(p.get("m") or ""), ru)]
+
     if groups and len(aligned) < len(groups):
-        filled = _llm_phrase_parts(ru, thai, phonetic) or []
-        aligned = _align_parts_to_phonetic(filled, phonetic) or aligned
+        filled = _llm_phrase_parts(ru, thai, ph) or []
+        realigned = _align_parts_to_phonetic(filled + aligned, ph)
+        if len(groups) > 1:
+            realigned = [p for p in realigned if not _is_whole_phrase_gloss(str(p.get("m") or ""), ru)]
+        if len(realigned) >= len(aligned):
+            aligned = realigned
+
     return aligned
 
 
@@ -591,7 +636,11 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str, 
         "This is **Thai-to-Cyrillic**: each **Thai syllable** (by Thai spelling) becomes one Cyrillic chunk + one arrow (→↓↘↑↗). "
         "It must sound like Thai, NOT like Russian. It must NOT repeat, spell, or syllabify the original Russian prompt.\n"
         "3) \"parts\" — teaching gloss locked to \"phonetic\" (UNIVERSAL CONTRACT):\n"
+        "   - After each tone arrow, start a NEW space-separated chunk (do not chain with hyphens across tones).\n"
         "   - Split \"phonetic\" by spaces (ignore tone arrows). That list IS \"parts\".\n"
+        "   - Same count, same order. Hyphens only INSIDE a chunk (са-бай), never instead of spaces between words.\n"
+        "   - Do NOT add items that are not a phonetic space-chunk. Do NOT split one chunk into two parts.\n"
+        "   - m = that chunk's role in the sentence (1–5 Russian words). NEVER put the full Russian prompt into one m.\n"
         "   - Same COUNT, same ORDER. Each \"p\" = that chunk WITHOUT tone arrows (hyphens stay).\n"
         "   - Do NOT add items that are not a phonetic space-chunk. Do NOT split one chunk into two parts.\n"
         "   - \"m\" = what that chunk means IN THIS SENTENCE (Russian, 1–5 words). "
@@ -718,9 +767,11 @@ def _llm_phrase_parts(ru: str, thai: str, phonetic: str) -> list[dict[str, str]]
         "You teach Thai to Russian speakers. Return JSON only: "
         "{\"parts\":[{\"p\":\"...\",\"m\":\"...\"},...]}.\n"
         "UNIVERSAL CONTRACT: parts are a 1:1 gloss of the phonetic space-chunks "
-        "(strip tone arrows; keep hyphens). Same count, same order. No extra items.\n"
+        "(strip tone arrows; keep hyphens inside a chunk). Same count, same order. No extra items.\n"
         "p = exact phonetic chunk without arrows. "
-        "m = meaning IN THIS SENTENCE (Russian, 1–5 words), not a dictionary dump of all senses.\n"
+        "m = meaning of THAT chunk IN THIS SENTENCE (Russian, 1–5 words).\n"
+        "CRITICAL: Never copy the full Russian sentence into any single m when there are 2+ chunks.\n"
+        "Bad: p«кун-ю» m«Ты здесь». Good: p«кун-ю» m«ты находишься»; p«тхи» m«в»; p«ни» m«здесь».\n"
         "Politeness ครับ/ค่ะ → m «вежливость»."
     )
     chunks = _phonetic_word_groups(ph)
@@ -951,7 +1002,7 @@ async def phrase_parts(req: PhrasePartsReq):
     """Word-level gloss for an already-translated Smart Speaker phrase."""
     ru = (req.text_ru or "").strip()
     thai = (req.text_th or "").strip()
-    phonetic = (req.phonetic or "").strip()
+    phonetic = _normalize_phonetic((req.phonetic or "").strip())
     if not thai and not phonetic:
         raise HTTPException(status_code=400, detail="text_th or phonetic required")
     parts = _finalize_parts(ru, thai, phonetic, _llm_phrase_parts(ru, thai, phonetic) or [])
