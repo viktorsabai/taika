@@ -201,12 +201,46 @@ def _load_steps_index() -> dict[str, tuple[str, str]]:
     return idx
 
 
+# Trailing gender particle (ครับ/ค่ะ). LLM often adds its own; server owns the single final one.
+_THAI_POLITENESS_TRAIL_RE = re.compile(r"\s*(ครับ|ค่ะ|คะ)\s*$")
+# Any tone arrow (incl. typos) optional after stem. Longer stems first.
+_PHONETIC_POLITENESS_TRAIL_RE = re.compile(
+    r"(?i)\s*(?:кхрап|крап|кха)\s*[→↓↘↑↗↕↔⇕⇅]?\s*$"
+)
+
+
 def _strip_trailing_politeness(thai: str, phonetic: str) -> tuple[str, str]:
-    """Убирает ครับ/ค่ะ и кхрап/кха с конца, чтобы не дублировать при _apply_politeness."""
-    for _ in range(2):  # макс 2 итерации (на случай двойного кхрап)
-        thai = re.sub(r"\s*(ครับ|ค่ะ)\s*$", "", thai).strip()
-        phonetic = re.sub(r"\s*(кхрап↘|кхрап\s*↘|кха↘|кха\s*↘)\s*$", "", phonetic).strip()
-    return thai, phonetic
+    """
+    Убирает ВСЕ хвостовые ครับ/ค่ะ и кхрап/крап/кха (любая стрелка тона),
+    чтобы _apply_politeness дописал ровно одну частицу по politeness.
+    """
+    th = (thai or "").strip()
+    ph = (phonetic or "").strip()
+    for _ in range(8):
+        th2 = _THAI_POLITENESS_TRAIL_RE.sub("", th).strip()
+        ph2 = _PHONETIC_POLITENESS_TRAIL_RE.sub("", ph).strip()
+        if th2 == th and ph2 == ph:
+            break
+        th, ph = th2, ph2
+    return th, ph
+
+
+def _norm_politeness(politeness: str | None) -> str:
+    p = (politeness or "female").strip().lower()
+    return p if p in ("male", "female", "kathoey") else "female"
+
+
+def _is_politeness_chunk(p: str) -> bool:
+    return _part_key(p) in ("кхрап", "крап", "кха")
+
+
+def _politeness_gloss_for_chunk(p: str) -> str:
+    k = _part_key(p)
+    if k in ("кхрап", "крап"):
+        return "вежливость (м)"
+    if k == "кха":
+        return "вежливость (ж)"
+    return "вежливость"
 
 
 # Thai script range: U+0E00–U+0E7F (буквы тайского алфавита)
@@ -339,17 +373,16 @@ def _normalize_phonetic_word_spaces(phonetic: str) -> str:
 
 def _apply_politeness(thai: str, phonetic: str, politeness: str) -> tuple[str, str]:
     thai, phonetic = _strip_trailing_politeness(thai, phonetic)
-    p = (politeness or "female").strip().lower()
+    p = _norm_politeness(politeness)
     ph = phonetic.strip()
     if p == "male":
         th2 = (thai + " ครับ").strip()
         ph2 = (ph + " кхрап↘").strip() if ph else ""
         return th2, ph2
-    if p in ("female", "kathoey"):
-        th2 = (thai + " ค่ะ").strip()
-        ph2 = (ph + " кха↘").strip() if ph else ""
-        return th2, ph2
-    return thai, phonetic
+    # female + kathoey → ค่ะ
+    th2 = (thai + " ค่ะ").strip()
+    ph2 = (ph + " кха↘").strip() if ph else ""
+    return th2, ph2
 
 
 class SmartSpeakerReq(BaseModel):
@@ -384,7 +417,7 @@ class SemanticCoachResp(BaseModel):
 # Bump this whenever the LLM system prompt changes meaning-affecting behavior:
 # it namespaces cache keys so old (possibly wrong) cached translations become
 # unreachable instead of being served forever via INSERT OR REPLACE.
-_SMART_CACHE_PROMPT_VERSION = "v6"
+_SMART_CACHE_PROMPT_VERSION = "v7"
 
 
 def _cache_db_path() -> Path:
@@ -420,9 +453,7 @@ def _cache_key(text_ru_norm: str) -> str:
 
 
 def _cache_get(text_ru_norm: str, politeness: str) -> tuple[str, str, list[dict[str, str]]] | None:
-    p = (politeness or "female").strip().lower()
-    if p not in ("male", "female", "kathoey"):
-        p = "female"
+    p = _norm_politeness(politeness)
     try:
         with sqlite3.connect(_cache_db_path()) as conn:
             row = conn.execute(
@@ -443,9 +474,7 @@ def _cache_set(
     phonetic: str,
     parts: list[dict[str, str]] | None = None,
 ) -> None:
-    p = (politeness or "female").strip().lower()
-    if p not in ("male", "female", "kathoey"):
-        p = "female"
+    p = _norm_politeness(politeness)
     parts_json = json.dumps(parts or [], ensure_ascii=False)
     try:
         with sqlite3.connect(_cache_db_path()) as conn:
@@ -606,6 +635,13 @@ def _finalize_parts(ru: str, thai: str, phonetic: str, parts: list[dict[str, str
         if len(realigned) >= len(aligned):
             aligned = realigned
 
+    # Canonical gloss for the single trailing gender particle (server-owned).
+    if aligned and _is_politeness_chunk(str(aligned[-1].get("p") or "")):
+        aligned[-1] = {
+            "p": aligned[-1]["p"],
+            "m": _politeness_gloss_for_chunk(aligned[-1]["p"]),
+        }
+
     return aligned
 
 
@@ -625,9 +661,22 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str, 
     if not OPENAI_API_KEY:
         return None
 
-    p = (politeness or "female").strip().lower()
-    if p not in ("male", "female", "kathoey"):
-        p = "female"
+    p = _norm_politeness(politeness)
+    if p == "male":
+        politeness_rule = (
+            "Speaker politeness (FIXED attribute from the app): male.\n"
+            "Do NOT write ครับ / ค่ะ / кхрап / крап / кха anywhere in thai, phonetic, or parts. "
+            "The server appends exactly one final ครับ / кхрап↘ after your output."
+        )
+        particle_example = "ฉันพูดภาษารัสเซีย"
+    else:
+        label = "female" if p == "female" else "kathoey (use female particle)"
+        politeness_rule = (
+            f"Speaker politeness (FIXED attribute from the app): {label}.\n"
+            "Do NOT write ครับ / ค่ะ / кхрап / крап / кха anywhere in thai, phonetic, or parts. "
+            "The server appends exactly one final ค่ะ / кха↘ after your output."
+        )
+        particle_example = "ฉันพูดภาษารัสเซีย"
 
     system = (
         "You are a Thai teacher for Russian speakers. You output JSON with THREE things:\n\n"
@@ -645,17 +694,19 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str, 
         "   - Do NOT add items that are not a phonetic space-chunk. Do NOT split one chunk into two parts.\n"
         "   - \"m\" = what that chunk means IN THIS SENTENCE (Russian, 1–5 words). "
         "Not a dictionary dump of all senses (e.g. do not gloss ที่ as «в / у» when it is part of ที่จะ «чтобы»).\n"
-        "   - Politeness ครับ/ค่ะ → m «вежливость (м)» / «вежливость (ж)».\n"
+        "   - Softener นะ / «на» is NOT the gender particle — gloss it as «смягчение» or «мягко», never as «вежливость».\n"
+        "   - Do NOT include gender politeness particles in parts (server adds them).\n"
         "   Example: phonetic «са-бай↘ ди↗-май↗» → parts "
         "[{\"p\":\"са-бай\",\"m\":\"в порядке\"},{\"p\":\"ди-май\",\"m\":\"хорошо? (вопрос)\"}] "
         "OR if phonetic has three chunks «са-бай↘ ди↗ май↗» → three parts.\n\n"
+        f"{politeness_rule}\n\n"
         "CRITICAL — translate the EXACT meaning, do not substitute a more \"familiar\" app-domain sentence:\n"
         "- Translate ONLY the literal meaning of the given Russian sentence: same subject (я/ты/вы/он...), "
         "same verb tense/mood (statement vs question), same object/language named.\n"
         "- If the Russian sentence names a language (русский/тайский/английский...), keep that EXACT language in \"thai\" — "
         "never swap it for another language just because this app is about learning Thai.\n"
-        "- Example: «Я говорю по-русски» (statement, language=Russian) → thai «ฉันพูดภาษารัสเซีย ครับ/ค่ะ» "
-        "(chan phuut phaasaa rasia, i.e. \"I speak Russian\"). This is NOT «คุณพูดภาษาไทยได้ไหม» (\"Do you speak Thai?\") — "
+        f"- Example: «Я говорю по-русски» (statement, language=Russian) → thai «{particle_example}» "
+        "(without ครับ/ค่ะ — server adds it). This is NOT «คุณพูดภาษาไทยได้ไหม» (\"Do you speak Thai?\") — "
         "do not default to that stock phrase just because it's common in Thai-learning apps.\n"
         "- Example: «Ты говоришь по-русски?» (question, 2nd person, language=Russian) → thai should ask "
         "whether the listener speaks Russian, not Thai.\n\n"
@@ -666,7 +717,7 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str, 
         "Use ONLY these five: → ↓ ↘ ↑ ↗ (mid/low/falling/rising/high). Never ↕ ↔ or other arrows.\n"
         "- Good example: Russian «Как дела?» → thai might be «สบายดีไหม» → phonetic like «са-бай↘ ди↗-май↗» (sounds of Thai words).\n"
         "- BAD: any phonetic whose letters read as the Russian question (e.g. «как→ де→ла») — forbidden.\n"
-        "- Do NOT add ครับ/ค่ะ or кхрап/кха in output — we append politeness on the server.\n\n"
+        "- NEVER add ครับ/ค่ะ or кхрап/крап/кха — even once. Server appends the single particle for this speaker.\n\n"
         "Workflow: first re-read the Russian sentence carefully (who is the subject, is it a question, which language/topic "
         "is named), then choose the correct \"thai\" with the SAME meaning, then write \"phonetic\" by reading "
         "**left-to-right through \"thai\"**, then write \"parts\" as a 1:1 gloss of those phonetic space-chunks.\n"
@@ -678,7 +729,8 @@ def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str, 
     hint = " (question)" if is_question else ""
     user = (
         f"Russian phrase: {ru!r}{hint}.\n"
-        "Return thai + phonetic + parts. "
+        f"Speaker politeness: {p}.\n"
+        "Return thai + phonetic + parts WITHOUT any ครับ/ค่ะ/кхрап/крап/кха. "
         "phonetic = how to pronounce the **Thai** words (Cyrillic + tone arrows), not a spelling of the Russian. "
         "parts = 1:1 with phonetic space-chunks (same count/order; no extra tokens)."
     )
@@ -772,7 +824,8 @@ def _llm_phrase_parts(ru: str, thai: str, phonetic: str) -> list[dict[str, str]]
         "m = meaning of THAT chunk IN THIS SENTENCE (Russian, 1–5 words).\n"
         "CRITICAL: Never copy the full Russian sentence into any single m when there are 2+ chunks.\n"
         "Bad: p«кун-ю» m«Ты здесь». Good: p«кун-ю» m«ты находишься»; p«тхи» m«в»; p«ни» m«здесь».\n"
-        "Politeness ครับ/ค่ะ → m «вежливость»."
+        "Gender particle кхрап/кха → m «вежливость (м)» / «вежливость (ж)». "
+        "Softener «на» (นะ) → «смягчение», NEVER «вежливость»."
     )
     chunks = _phonetic_word_groups(ph)
     chunk_hint = (
@@ -842,8 +895,8 @@ def _llm_phonetic_from_thai_script(thai: str) -> str | None:
         "- Hyphens inside a chunk for multi-letter syllable parts. NO Thai characters in phonetic. NO Latin. NO IPA.\n"
         "- Vowel [i] = Cyrillic и/И only, never Latin I or i.\n"
         "- Do NOT transcribe any language other than what is written in Thai in the user message.\n"
-        "- Omit final ครับ/ค่ะ from your mental syllable count if you transcribe them as separate particles — "
-        "server may strip them; you may still write кхрап/кха if those appear in the Thai string.\n"
+        "- Omit final ครับ/ค่ะ from phonetic when present — server owns the single gender particle "
+        "(do not write кхрап/кха unless the rest of the sentence requires another sense).\n"
         "Example: Thai 'สวัสดี' → 'са-ват-ди↘' or similar (Thai sounds, not English/Russian words)."
     )
     user = f"Thai sentence:\n{t}"
@@ -940,7 +993,7 @@ async def smart_speaker(req: SmartSpeakerReq):
         raise HTTPException(status_code=413, detail="text_ru too long")
 
     ru_norm = _norm_ru(ru)
-    politeness = req.politeness or "female"
+    politeness = _norm_politeness(req.politeness)
     print(f"[smart_speaker] ru={ru!r} ru_norm={ru_norm!r} politeness={politeness}", file=sys.stderr, flush=True)
 
     parts: list[dict[str, str]] = []
