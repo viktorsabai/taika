@@ -279,7 +279,7 @@ def main() -> int:
                 if les.get("preview_phrase") != preview:
                     les["preview_phrase"] = preview
                     stats["preview"] += 1
-            n = learnable_count(items)
+            n = len(items)
             if n and les.get("card_count") != n:
                 les["card_count"] = n
                 stats["card_count"] += 1
