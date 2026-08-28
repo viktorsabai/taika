@@ -2,11 +2,11 @@
 //  AuthSoftWallView.swift
 //  taika
 //
-//  Мягкое окно «Закрепи результат» — bottom sheet с копи, статистикой и кнопками входа.
+//  Soft wall «Закрепи результат» — sheet в текущей айдентике (как paywall auth).
 //
 //  Логика показа (AuthSoftWallState.tryPresentSoftWall):
-//  - Только если пользователь НЕ залогинен и есть прогресс (хотя бы один выученный шаг или урок).
-//  - Триггер 1: закрытие экрана успеха урока (X или тап по фону) в StepView.
+//  - Только если пользователь НЕ залогинен и есть прогресс.
+//  - Триггер 1: закрытие экрана успеха урока в StepView.
 //  - Триггер 2: открытие вкладки Профиль (onAppear в ProfileView).
 //  - Не чаще одного раза в 7 дней (cooldown в UserDefaults).
 //
@@ -14,20 +14,6 @@
 import SwiftUI
 import UIKit
 import AuthenticationServices
-
-// MARK: - Системная кнопка Sign in with Apple (UIViewRepresentable)
-
-private struct AppleSignInButtonRepresentable: UIViewRepresentable {
-    func makeUIView(context: Context) -> ASAuthorizationAppleIDButton {
-        let button = ASAuthorizationAppleIDButton(
-            authorizationButtonType: .signIn,
-            authorizationButtonStyle: .black
-        )
-        return button
-    }
-
-    func updateUIView(_ uiView: ASAuthorizationAppleIDButton, context: Context) {}
-}
 
 // MARK: - Контент шторки
 
@@ -37,10 +23,10 @@ struct AuthSoftWallView: View {
     let onDismiss: () -> Void
 
     @ObservedObject private var auth = AuthService.shared
+    @ObservedObject private var theme = ThemeManager.shared
     @State private var authInProgress = false
     @State private var authErrorMessage: String?
     @State private var showSuccess = false
-    @EnvironmentObject private var theme: ThemeManager
 
     private let legalText = "Нажимая, ты соглашаешься с условиями использования и политикой конфиденциальности."
 
@@ -52,97 +38,131 @@ struct AuthSoftWallView: View {
                 mainContent
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(PD.ColorToken.background)
-        .padding(.horizontal, PD.Spacing.screen)
-        .padding(.top, 8)
-        .padding(.bottom, 24)
+        .frame(maxWidth: .infinity)
+        .background(Theme.Colors.backgroundPrimary.ignoresSafeArea())
     }
 
     private var successView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(AnyShapeStyle(theme.currentAccentFill))
-            Text("Данные синхронизированы")
-                .font(PD.FontToken.body(18, weight: .semibold))
+                .font(.system(size: 48, weight: .semibold))
+                .foregroundStyle(theme.currentAccentFill)
+            Text("Прогресс сохранён")
+                .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(PD.ColorToken.text)
+            Text("Аккаунт привязан — результат не пропадёт при смене телефона.")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
+        .padding(.horizontal, 22)
+        .padding(.vertical, 48)
     }
 
     private var mainContent: some View {
-        TaikaRootVerticalScroll {
-            VStack(alignment: .leading, spacing: 24) {
-                Text("Закрепи свой результат")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(PD.ColorToken.text)
-                    .frame(maxWidth: .infinity, alignment: .center)
+        VStack(spacing: 18) {
+            Capsule()
+                .fill(PD.ColorToken.textSecondary.opacity(0.35))
+                .frame(width: 36, height: 5)
+                .padding(.top, 10)
+                .accessibilityHidden(true)
 
-                Text("Твой прогресс пока хранится только на этом телефоне. Привяжи аккаунт, чтобы не потерять достигнутые \(masteryPercent)% Mastery и Streak.")
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .multilineTextAlignment(.leading)
+            Image(systemName: "icloud.and.arrow.up")
+                .font(.system(size: 34, weight: .semibold))
+                .foregroundStyle(theme.currentAccentFill)
+                .padding(.top, 4)
 
-                HStack(spacing: 24) {
-                    statPill(label: "Мастерство", value: "\(masteryPercent)%")
-                    statPill(label: "Стрик", value: "\(streakDays) дн.")
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .frame(maxWidth: .infinity)
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(PD.ColorToken.card))
-                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(PD.ColorToken.stroke, lineWidth: 1))
+            Text("Закрепи свой результат")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(PD.ColorToken.text)
+                .multilineTextAlignment(.center)
 
-                VStack(spacing: 12) {
-                    Button {
-                        startSignInWithApple()
-                    } label: {
-                        AppleSignInButtonRepresentable()
-                            .frame(height: 50)
-                            .frame(maxWidth: .infinity)
-                            .allowsHitTesting(false)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(authInProgress)
+            Text("Прогресс пока только на этом телефоне. Привяжи аккаунт — \(masteryPercent)% мастерства и стрик не потеряются.")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 6)
 
-                    // Telegram CTA скрыт для TF (нет бэкенда входа).
-                }
-
-                if authInProgress {
-                    TaikaLoadingView(label: "Вход…", compact: true)
-                        .frame(maxWidth: .infinity)
-                }
-
-                if let msg = authErrorMessage {
-                    Text(msg)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                }
-
-                Text(legalText)
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
+            HStack(spacing: 12) {
+                softStat(label: "Мастерство", value: "\(masteryPercent)%")
+                softStat(label: "Стрик", value: "\(max(streakDays, 0)) дн.")
             }
-            .padding(.horizontal, 4)
+
+            if let msg = authErrorMessage {
+                Text(msg)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(theme.currentAccentFill)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button {
+                startSignInWithApple()
+            } label: {
+                HStack(spacing: 8) {
+                    if authInProgress {
+                        ProgressView().tint(.white)
+                    }
+                    Image(systemName: "apple.logo")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text(authInProgress ? "Входим…" : "Sign in with Apple")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundStyle(Color.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Capsule(style: .continuous).fill(Color.black))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
+            }
+            .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+            .disabled(authInProgress)
+            .accessibilityLabel("Войти с Apple")
+
+            Button("Позже") {
+                onDismiss()
+            }
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(PD.ColorToken.textSecondary)
+            .disabled(authInProgress)
+            .buttonStyle(.plain)
+
+            Text(legalText)
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.75))
+                .multilineTextAlignment(.center)
+                .padding(.top, 2)
+
+            Spacer(minLength: 8)
         }
+        .padding(.horizontal, 22)
+        .padding(.bottom, 18)
     }
 
-    private func statPill(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(PD.FontToken.caption(12, weight: .medium))
-                .foregroundStyle(PD.ColorToken.textSecondary)
+    private func softStat(label: String, value: String) -> some View {
+        VStack(spacing: 6) {
+            Text(label.uppercased())
+                .font(.system(size: 10, weight: .bold))
+                .tracking(0.8)
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
             Text(value)
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(AnyShapeStyle(theme.currentAccentFill))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(theme.currentAccentFill)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(theme.currentAccentFill.opacity(0.22), lineWidth: 1)
+        )
     }
 
     private func startSignInWithApple() {
@@ -190,21 +210,10 @@ struct AuthSoftWallSheetHost: View {
                     }
                 )
                 .environmentObject(ThemeManager.shared)
-                .presentationDetents([.fraction(0.6), .large])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(PD.Radius.card)
-                .presentationBackground {
-                    ZStack {
-                        Rectangle().fill(.ultraThinMaterial)
-                        Color.black.opacity(0.78)
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.10), Color.clear],
-                            startPoint: .top,
-                            endPoint: .center
-                        )
-                        .blendMode(.plusLighter)
-                    }
-                }
+                .presentationDetents([.fraction(0.58), .medium])
+                .presentationDragIndicator(.hidden)
+                .presentationCornerRadius(28)
+                .presentationBackground(Theme.Colors.backgroundPrimary)
             }
             .onChange(of: showSheet) { _, new in
                 if !new { onDismiss() }

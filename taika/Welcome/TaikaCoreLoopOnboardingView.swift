@@ -1,15 +1,7 @@
 import SwiftUI
 
 /// First-entry proof-of-value flow.
-/// Attention choreography around one VoiceOrb: craft → reveal → speak → score.
-private enum PracticeOrbMode: Equatable {
-    case idle
-    case cooking
-    case speaking
-    case listening
-    case result
-}
-
+/// Attention choreography around one TaikaVoicePlanet: craft → reveal → speak → score.
 struct TaikaCoreLoopOnboardingView: View {
     let onFinished: (_ courseId: String) -> Void
     let onRequestPro: () -> Void
@@ -83,7 +75,7 @@ struct TaikaCoreLoopOnboardingView: View {
         }
     }
 
-    private var orbMode: PracticeOrbMode {
+    private var orbMode: TaikaVoicePlanetMode {
         if phase == .crafting { return .cooking }
         if phase == .listen { return .speaking }
         if phase == .feedback { return .result }
@@ -93,6 +85,11 @@ struct TaikaCoreLoopOnboardingView: View {
             return .listening
         }
         return .idle
+    }
+
+    private var onboardingOrbAudioLevel: CGFloat {
+        if speaker.phase == .recording { return CGFloat(speaker.recordingMeter) }
+        return 0
     }
 
     private var phraseThai: String {
@@ -514,14 +511,14 @@ struct TaikaCoreLoopOnboardingView: View {
             Spacer(minLength: 0)
 
             ZStack {
-                VoiceOrb(
+                TaikaVoicePlanet(
                     mode: orbMode,
-                    tint: theme.currentAccentTintColor,
-                    fill: theme.currentAccentFill
+                    scale: orbScale * 0.87,
+                    lite: orbMode == .idle,
+                    audioLevel: onboardingOrbAudioLevel
                 )
-                .matchedGeometryEffect(id: "core-orb", in: heroNamespace)
-                .frame(width: 260, height: 260)
-                .scaleEffect(orbScale)
+                    .matchedGeometryEffect(id: "core-orb", in: heroNamespace)
+                    .frame(width: 260, height: 260)
 
                 practiceOrbCenterMark
                     .transition(.opacity.combined(with: .scale(scale: 0.88)))
@@ -1439,126 +1436,5 @@ private struct OfferMarqueeWidthKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())
-    }
-}
-
-private struct VoiceOrb: View {
-    let mode: PracticeOrbMode
-    let tint: Color
-    let fill: LinearGradient
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var breathing = false
-    @State private var rotation: Double = 0
-
-    private var isWaveActive: Bool {
-        switch mode {
-        case .speaking, .listening, .cooking: return true
-        case .idle, .result: return false
-        }
-    }
-
-    private var rotationDuration: Double {
-        switch mode {
-        case .cooking: return 7
-        case .speaking: return 11
-        case .listening: return 14
-        default: return 18
-        }
-    }
-
-    private var waveAmpBoost: Bool {
-        mode == .speaking || mode == .listening
-    }
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(fill.opacity(mode == .speaking ? 0.34 : 0.22))
-                .blur(radius: 28)
-                .scaleEffect(breathing ? 1.18 : 0.92)
-            Circle()
-                .fill(fill.opacity(0.12))
-                .frame(width: 230, height: 230)
-                .blur(radius: 2)
-                .overlay(Circle().stroke(AnyShapeStyle(fill.opacity(0.35)), lineWidth: 1))
-            Circle()
-                .fill(RadialGradient(colors: [Color.white.opacity(0.14), tint.opacity(0.10), .black.opacity(0.78)], center: UnitPoint(x: 0.35, y: 0.28), startRadius: 4, endRadius: 118))
-                .frame(width: 192, height: 192)
-                .overlay(Circle().stroke(AnyShapeStyle(fill), lineWidth: mode == .speaking ? 2.0 : 1.4).opacity(0.85))
-                .shadow(color: tint.opacity(mode == .cooking ? 0.5 : (mode == .result ? 0.48 : 0.34)), radius: mode == .cooking || mode == .result ? 34 : 26)
-            Circle()
-                .fill(RadialGradient(colors: [.white.opacity(0.16), .clear], center: .center, startRadius: 2, endRadius: 66))
-                .frame(width: 132, height: 132)
-                .blur(radius: 8)
-            ForEach(0..<4, id: \.self) { index in
-                Circle()
-                    .trim(from: 0.06 + CGFloat(index) * 0.17, to: 0.27 + CGFloat(index) * 0.17)
-                    .stroke(AnyShapeStyle(fill.opacity(0.55 - Double(index) * 0.08)), style: StrokeStyle(lineWidth: index == 0 ? 2.2 : 1.1, lineCap: .round))
-                    .frame(width: 208 + CGFloat(index) * 18, height: 208 + CGFloat(index) * 18)
-                    .rotationEffect(.degrees(rotation + Double(index) * 92))
-            }
-            ForEach(0..<7, id: \.self) { index in
-                Circle()
-                    .fill(fill)
-                    .frame(width: index == 0 ? 5 : 2.5, height: index == 0 ? 5 : 2.5)
-                    .shadow(color: tint.opacity(0.9), radius: 7)
-                    .offset(y: -122)
-                    .rotationEffect(.degrees(Double(index) * 51.4 + rotation * 0.35))
-                    .opacity(index.isMultiple(of: 2) ? 0.82 : 0.38)
-            }
-            ForEach(0..<5, id: \.self) { index in
-                WaveformLine(tint: tint, active: isWaveActive, intense: waveAmpBoost)
-                    .frame(height: 92 + CGFloat(index) * 15)
-                    .opacity(0.20 + Double(index) * 0.14)
-                    .scaleEffect(x: 0.92 + CGFloat(index) * 0.06, y: mode == .speaking ? 1.12 : 1, anchor: .center)
-            }
-            Circle()
-                .fill(fill)
-                .frame(width: 8, height: 8)
-                .shadow(color: tint.opacity(0.95), radius: 14)
-        }
-        .frame(width: 300, height: 300)
-        .onAppear { startMotion() }
-        .onChange(of: mode) { _, _ in startMotion() }
-    }
-
-    private func startMotion() {
-        guard !reduceMotion else { return }
-        breathing = false
-        rotation = 0
-        withAnimation(.easeInOut(duration: mode == .speaking ? 1.4 : 2.4).repeatForever(autoreverses: true)) {
-            breathing = true
-        }
-        withAnimation(.linear(duration: rotationDuration).repeatForever(autoreverses: false)) {
-            rotation = 360
-        }
-    }
-}
-
-private struct WaveformLine: View {
-    let tint: Color
-    let active: Bool
-    var intense: Bool = false
-
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            Canvas { context, size in
-                var path = Path()
-                let mid = size.height / 2
-                let amp = active ? size.height * (intense ? 0.36 : 0.26) : size.height * 0.14
-                let time = CGFloat(timeline.date.timeIntervalSinceReferenceDate)
-                let speed: CGFloat = intense ? 3.1 : (active ? 2.0 : 0.75)
-                path.move(to: CGPoint(x: 0, y: mid))
-                for x in stride(from: CGFloat(0), through: size.width, by: 3) {
-                    let t = x / size.width
-                    let carrier = sin(t * .pi * 4 + time * speed)
-                    let shimmer = sin(t * .pi * 9 - time * 1.35) * 0.16
-                    let y = mid + (carrier + shimmer) * amp * (0.42 + 0.58 * sin(t * .pi))
-                    path.addLine(to: CGPoint(x: x, y: y))
-                }
-                context.stroke(path, with: .color(tint.opacity(0.9)), lineWidth: active ? (intense ? 2.6 : 2.1) : 1.5)
-            }
-        }
     }
 }

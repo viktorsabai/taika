@@ -889,8 +889,8 @@ public struct MDDailyPicksComposite: View {
 
 // MARK: - Портретные карусели Main (как Favorites / Подборка дня)
 public enum MDPortraitCarouselMetrics {
-    public static let cardWidth: CGFloat = 200
-    public static let cardHeight: CGFloat = 286
+    public static let cardWidth: CGFloat = 184
+    public static let cardHeight: CGFloat = 258
     public static let spacing: CGFloat = 14
     public static let slotHeight: CGFloat = cardHeight + 36
 }
@@ -1637,10 +1637,37 @@ public struct MDCyclingTypewriter: View {
 
 /// Canonical Taika voice sphere shared by Main and Speaker.
 /// Keep this as the single source of truth for the hero geometry and pulse treatment.
+public enum MDVoiceSphereSize {
+    /// Onboarding / Main hero.
+    case hero
+    /// Compact Speaker «Скажи сам» — та же визуальная идентичность, меньше.
+    case compact
+
+    var ellipse: CGSize {
+        switch self {
+        case .hero: return CGSize(width: 280, height: 120)
+        case .compact: return CGSize(width: 210, height: 90)
+        }
+    }
+
+    var ringInner: CGFloat { self == .hero ? 148 : 112 }
+    var ringOuter: CGFloat { self == .hero ? 172 : 130 }
+    var glow: CGFloat { self == .hero ? 190 : 144 }
+    var core: CGFloat { self == .hero ? 96 : 72 }
+    var icon: CGFloat { self == .hero ? 34 : 26 }
+    var height: CGFloat { self == .hero ? 200 : 168 }
+    var glowEndRadius: CGFloat { self == .hero ? 90 : 68 }
+    var ellipseEndRadius: CGFloat { self == .hero ? 150 : 110 }
+    var shadowRadius: CGFloat { self == .hero ? 24 : 18 }
+}
+
 public struct MDVoiceSphere: View {
     public let symbol: String
     public let accessibilityLabel: String
     public let meter: Double
+    public let size: MDVoiceSphereSize
+    /// Idle pulse rings. Recording/processing can intensify via meter alone.
+    public let pulseEnabled: Bool
     public let action: () -> Void
 
     @ObservedObject private var theme = ThemeManager.shared
@@ -1651,11 +1678,15 @@ public struct MDVoiceSphere: View {
         symbol: String = "mic.fill",
         accessibilityLabel: String = "Открыть спикер и начать запись",
         meter: Double = 0,
+        size: MDVoiceSphereSize = .hero,
+        pulseEnabled: Bool = true,
         action: @escaping () -> Void
     ) {
         self.symbol = symbol
         self.accessibilityLabel = accessibilityLabel
         self.meter = meter
+        self.size = size
+        self.pulseEnabled = pulseEnabled
         self.action = action
     }
 
@@ -1663,6 +1694,7 @@ public struct MDVoiceSphere: View {
         let accent = theme.currentAccentFill
         let tint = theme.currentAccentTintColor
         let voiceLevel = reduceMotion ? 0 : min(max(meter, 0), 1)
+        let listeningBoost = 1.0 + voiceLevel * 0.06
 
         Button {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -1675,22 +1707,23 @@ public struct MDVoiceSphere: View {
                             colors: [tint.opacity(0.35), tint.opacity(0.08), .clear],
                             center: .center,
                             startRadius: 10,
-                            endRadius: 150
+                            endRadius: size.ellipseEndRadius
                         )
                     )
-                    .frame(width: 280, height: 120)
+                    .frame(width: size.ellipse.width, height: size.ellipse.height)
                     .blur(radius: 8)
                     .opacity(0.9)
+                    .scaleEffect(listeningBoost)
 
                 ZStack {
                     Circle()
-                        .stroke(tint.opacity(pulseOut ? 0 : 0.55), lineWidth: 1.4)
-                        .frame(width: 148, height: 148)
+                        .stroke(tint.opacity(pulseOut ? 0 : 0.55), lineWidth: size == .hero ? 1.4 : 1.2)
+                        .frame(width: size.ringInner, height: size.ringInner)
                         .scaleEffect(pulseOut ? 1.28 : 1.0)
 
                     Circle()
                         .stroke(tint.opacity(pulseOut ? 0 : 0.28), lineWidth: 1)
-                        .frame(width: 172, height: 172)
+                        .frame(width: size.ringOuter, height: size.ringOuter)
                         .scaleEffect(pulseOut ? 1.18 : 1.0)
 
                     Circle()
@@ -1699,91 +1732,201 @@ public struct MDVoiceSphere: View {
                                 colors: [tint.opacity(0.55), tint.opacity(0.12), tint.opacity(0)],
                                 center: .center,
                                 startRadius: 2,
-                                endRadius: 90
+                                endRadius: size.glowEndRadius
                             )
                         )
-                        .frame(width: 190, height: 190)
+                        .frame(width: size.glow, height: size.glow)
+                        .scaleEffect(listeningBoost)
 
                     Circle()
                         .fill(accent)
-                        .frame(width: 96, height: 96)
-                        .shadow(color: tint.opacity(0.65 + voiceLevel * 0.12), radius: 24, y: 8)
+                        .frame(width: size.core, height: size.core)
+                        .shadow(
+                            color: tint.opacity(0.65 + voiceLevel * 0.12),
+                            radius: size.shadowRadius,
+                            y: size == .hero ? 8 : 6
+                        )
+                        .scaleEffect(1.0 + voiceLevel * 0.04)
 
                     Image(systemName: symbol)
-                        .font(.system(size: 34, weight: .bold))
+                        .font(.system(size: size.icon, weight: .bold))
                         .foregroundStyle(Color.black)
+                        .contentTransition(.symbolEffect(.replace))
                 }
                 .animation(.easeOut(duration: 0.12), value: meter)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 200)
+            .frame(height: size.height)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
         .accessibilityLabel(accessibilityLabel)
         .onAppear {
+            guard pulseEnabled, !reduceMotion else { return }
             withAnimation(.easeOut(duration: 2.1).repeatForever(autoreverses: false)) {
                 pulseOut = true
+            }
+        }
+        .onChange(of: pulseEnabled) { _, enabled in
+            if enabled, !reduceMotion {
+                pulseOut = false
+                withAnimation(.easeOut(duration: 2.1).repeatForever(autoreverses: false)) {
+                    pulseOut = true
+                }
+            } else {
+                pulseOut = false
             }
         }
     }
 }
 
-/// Главный сценарий Main: живой typewriter-заголовок от Taika + микрофон как главный wow.
+/// Главный сценарий Main: кун кру Тайки — одно поле входа в Спикер (без card chrome).
 public struct MDPromptHero: View {
     public var greeting: String
-    public var tagline: String
-    public var onOpenSpeaker: () -> Void
+    @Binding public var composeText: String
+    public var onSubmit: (String) -> Void
+
+    @FocusState private var composeFocused: Bool
 
     public init(
         greeting: String,
-        tagline: String = "Говори. Учись. Живи по-тайски.",
-        onOpenSpeaker: @escaping () -> Void
+        tagline: String = "Скажи по-русски — покажу, как по-тайски",
+        composeText: Binding<String>,
+        onSubmit: @escaping (String) -> Void
     ) {
         self.greeting = greeting
-        self.tagline = tagline
-        self.onOpenSpeaker = onOpenSpeaker
+        self._composeText = composeText
+        self.onSubmit = onSubmit
+        _ = tagline // kept in API for call-site stability; hero shows one line only
     }
 
     private var headlineLines: [String] {
         [
             greeting,
-            "Скажи по-русски — я переведу",
-            "Учись короткими курсами",
-            "Разминка — фразы на сегодня",
-            "Жми на микрофон и говори"
+            "Чем помочь сегодня?",
+            "Скажи по-русски — я переведу"
         ]
     }
 
+    private var canSubmit: Bool {
+        !composeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     public var body: some View {
-        VStack(spacing: 18) {
-            VStack(alignment: .leading, spacing: 8) {
-                MDCyclingTypewriter(
-                    lines: headlineLines,
-                    font: .system(size: 24, weight: .bold)
-                )
-                Text(tagline)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        VStack(spacing: 16) {
+            MDCyclingTypewriter(
+                lines: headlineLines,
+                font: .system(size: 22, weight: .bold),
+                minHeight: 48
+            )
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            MDVoiceSphere(
-                symbol: "mic.fill",
-                accessibilityLabel: "Открыть спикер и начать запись",
-                action: onOpenSpeaker
-            )
+            kunKruComposeSurface
 
-            MDExamplePhraseMarquee(onTapPhrase: onOpenSpeaker)
+            if !composeFocused {
+                MDExamplePhraseMarquee { phrase in
+                    onSubmit(phrase)
+                }
+                .transition(.opacity)
+            }
         }
         .padding(.horizontal, Theme.Layout.pageHorizontal)
+        .animation(.easeOut(duration: 0.18), value: composeFocused)
+    }
+
+    /// Главный вход кун кру. Поле ввода само по себе не действие — розовым здесь горит
+    /// только кнопка отправки; рамка и подпись нейтральные, иначе главный экран рябит.
+    private var kunKruComposeSurface: some View {
+        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+        let accent = ThemeManager.shared.currentAccentTintColor
+
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "character.bubble")
+                    .font(.system(size: 11, weight: .bold))
+                Text("СКАЖИ ПО-РУССКИ")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(0.65)
+            }
+            .foregroundStyle(PD.ColorToken.textSecondary.opacity(composeFocused ? 0.9 : 0.7))
+
+            HStack(alignment: .center, spacing: 10) {
+                TextField("Напиши фразу — переведу по-тайски", text: $composeText, axis: .vertical)
+                    .font(.system(size: 18, weight: .medium, design: .rounded))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(1...3)
+                    .focused($composeFocused)
+                    .textInputAutocapitalization(.sentences)
+                    .submitLabel(.go)
+                    .onSubmit { submitCompose() }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .tint(ThemeManager.shared.currentAccentTintColor)
+                    .accessibilityLabel("Фраза по-русски")
+
+                Button {
+                    submitCompose()
+                } label: {
+                    // Empty state stays an accent outline — an invitation, not a dead grey button.
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(
+                            canSubmit
+                            ? AnyShapeStyle(Color.black)
+                            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                        )
+                        .frame(width: 38, height: 38)
+                        .background(
+                            Circle()
+                                .fill(
+                                    canSubmit
+                                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                                    : AnyShapeStyle(Color.white.opacity(0.06))
+                                )
+                        )
+                        .overlay(
+                            Circle()
+                                .stroke(accent.opacity(canSubmit ? 0 : 0.38), lineWidth: 1)
+                        )
+                        .shadow(
+                            color: canSubmit ? accent.opacity(0.28) : .clear,
+                            radius: canSubmit ? 10 : 0,
+                            y: canSubmit ? 3 : 0
+                        )
+                }
+                .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+                .disabled(!canSubmit)
+                .accessibilityLabel("Перевести")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background {
+            shape.fill(Color.white.opacity(composeFocused ? 0.09 : 0.06))
+        }
+        .overlay(
+            shape.stroke(
+                composeFocused
+                ? AnyShapeStyle(accent.opacity(0.42))
+                : AnyShapeStyle(Theme.Strokes.strokeSubtle),
+                lineWidth: composeFocused ? 1.2 : 1
+            )
+        )
+        .shadow(color: .black.opacity(0.22), radius: 14, y: 5)
+    }
+
+    private func submitCompose() {
+        let text = composeText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        composeFocused = false
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        onSubmit(text)
     }
 }
 
 /// Бесконечная карусель чипов с примерами фраз — лёгкий marquee без паузы.
 public struct MDExamplePhraseMarquee: View {
-    public var onTapPhrase: () -> Void
+    public var onTapPhrase: (String) -> Void
 
     private static let phrases: [String] = [
         "Можно счёт, пожалуйста",
@@ -1805,7 +1948,7 @@ public struct MDExamplePhraseMarquee: View {
 
     @State private var rowWidth: CGFloat = 0
 
-    public init(onTapPhrase: @escaping () -> Void) {
+    public init(onTapPhrase: @escaping (String) -> Void) {
         self.onTapPhrase = onTapPhrase
     }
 
@@ -1859,21 +2002,21 @@ public struct MDExamplePhraseMarquee: View {
     private func phraseChip(_ phrase: String) -> some View {
         Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            onTapPhrase()
+            onTapPhrase(phrase)
         } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 10, weight: .semibold))
-                Text(phrase)
-                    .font(.system(size: 12, weight: .medium))
-                    .lineLimit(1)
-            }
-            .foregroundStyle(PD.ColorToken.textSecondary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Capsule(style: .continuous).fill(PD.ColorToken.chip))
+            Text(phrase)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.88))
+                .lineLimit(1)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(Color.white.opacity(0.05))
+                )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(phrase)
     }
 }
 
@@ -1997,76 +2140,89 @@ public struct MDMainOutlinePillCTA: View {
     }
 }
 
-/// Daily warmup entry point: one centered copy slot with icon-only lightning motion.
-/// The slot alternates between the action name and one short value explanation, never both at once.
+/// Secondary funnel chip — half-width, so «Продолжить» stays the only full-width CTA.
+private struct MDSecondaryFunnelChip: View {
+    let icon: String
+    let title: String
+    var isEnabled: Bool = true
+    let action: () -> Void
+
+    var body: some View {
+        // Не акцент, а обычная вторичная кнопка системного вида: плотная поверхность,
+        // светлая подпись и обводка. Нажать хочется от того, что она выглядит кнопкой,
+        // а не от того, что она розовая — розовое остаётся за «Продолжить».
+        let label: AnyShapeStyle = isEnabled
+            ? AnyShapeStyle(PD.ColorToken.text)
+            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.42))
+        let glyph: AnyShapeStyle = isEnabled
+            ? AnyShapeStyle(PD.ColorToken.textSecondary)
+            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35))
+
+        Button {
+            guard isEnabled else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(glyph)
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .foregroundStyle(label)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.white.opacity(isEnabled ? 0.08 : 0.03))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: isEnabled ? 1 : 0)
+            )
+        }
+        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+        .disabled(!isEnabled)
+    }
+}
+
+/// Daily warmup entry point — compact chip; the value copy lives inside the overlay it opens.
 public struct MDDailyWarmupPillCTA: View {
     public let action: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private let messages = [
-        "случайная подборка на сегодня",
-        "пара фраз — разогреть речь",
-        "бесплатная практика каждый день"
-    ]
 
     public init(action: @escaping () -> Void) {
         self.action = action
     }
 
     public var body: some View {
-        let accent = ThemeManager.shared.currentAccentFill
-
-        TimelineView(.periodic(from: .now, by: reduceMotion ? 60 : 0.12)) { context in
-            let elapsed = context.date.timeIntervalSinceReferenceDate
-            let messageIndex = Int(elapsed / 4.5) % (messages.count + 1)
-            let pulse = reduceMotion ? 0.0 : max(0, sin(elapsed * 2.8))
-            let copy = messageIndex == 0 ? "Разминка" : messages[messageIndex - 1]
-
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                action()
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(accent)
-                        .scaleEffect(1.0 + pulse * 0.18)
-                        .opacity(0.82 + pulse * 0.18)
-                        .frame(width: 28, height: 28)
-
-                    ZStack {
-                        Text(copy)
-                            .font(.system(size: 15, weight: .semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.78)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .contentTransition(.opacity)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 20, maxHeight: 20)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: messageIndex)
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .opacity(0.72)
-                        .frame(width: 28, height: 20, alignment: .center)
-                }
-                .foregroundStyle(accent)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 13)
-                .padding(.horizontal, 16)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(PD.ColorToken.chip.opacity(0.54))
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(accent.opacity(0.78), lineWidth: 1.2)
-                        )
-                )
-            }
-            .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+        MDSecondaryFunnelChip(icon: "bolt.fill", title: "Разминка", action: action)
             .accessibilityLabel("Разминка, ежедневная подборка фраз")
             .accessibilityHint("Открыть бесплатную практику на сегодня")
-        }
+    }
+}
+
+/// Закрепление пройденного — вторая половина строки; неактивна, пока нечего закреплять.
+public struct MDMainReinforcePillCTA: View {
+    public var isEnabled: Bool
+    public var action: () -> Void
+
+    public init(isEnabled: Bool, action: @escaping () -> Void) {
+        self.isEnabled = isEnabled
+        self.action = action
+    }
+
+    public var body: some View {
+        MDSecondaryFunnelChip(
+            icon: "gamecontroller.fill",
+            title: "Закрепить",
+            isEnabled: isEnabled,
+            action: action
+        )
+        .accessibilityLabel("Закрепить пройденное")
+        .accessibilityHint(isEnabled ? "Выбрать курс или выученные фразы для закрепления" : "Пока нечего закреплять")
     }
 }
 

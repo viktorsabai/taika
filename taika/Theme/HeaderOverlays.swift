@@ -100,6 +100,12 @@ enum OverlayEtalonCardRole {
     case workbench
 }
 
+/// Compact = узкая карточка; hub = почти fullscreen центр (закрепление / park).
+enum OverlayEtalonLayout {
+    case compact
+    case hub
+}
+
 struct OverlayEtalonCard<Content: View>: View {
     let title: String
     let onDismiss: () -> Void
@@ -107,6 +113,7 @@ struct OverlayEtalonCard<Content: View>: View {
     /// Game Park uses the surrounding canvas as its placement context; legacy
     /// overlays keep the root-header clearance for compatibility.
     var usesContextPlacement: Bool = false
+    var layout: OverlayEtalonLayout = .compact
     @ViewBuilder let content: () -> Content
 
     init(
@@ -114,12 +121,14 @@ struct OverlayEtalonCard<Content: View>: View {
         onDismiss: @escaping () -> Void,
         role: OverlayEtalonCardRole = .message,
         usesContextPlacement: Bool = false,
+        layout: OverlayEtalonLayout = .compact,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.title = title
         self.onDismiss = onDismiss
         self.role = role
         self.usesContextPlacement = usesContextPlacement
+        self.layout = layout
         self.content = content
     }
 
@@ -152,6 +161,11 @@ struct OverlayEtalonCard<Content: View>: View {
             .padding(.bottom, 14)
 
             content()
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: layout == .hub ? .infinity : nil,
+                    alignment: .top
+                )
         }
         .background {
             RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous)
@@ -166,9 +180,17 @@ struct OverlayEtalonCard<Content: View>: View {
                 }
         }
         .clipShape(RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous))
-        .frame(maxWidth: 420)
-        .padding(.horizontal, 20)
-        .padding(.top, usesContextPlacement ? 0 : Theme.Layout.rootHeaderClearance)
+        .frame(maxWidth: layout == .hub ? .infinity : 420)
+        .frame(maxHeight: layout == .hub ? .infinity : nil)
+        .padding(.horizontal, layout == .hub ? 12 : 20)
+        .padding(
+            .top,
+            layout == .hub
+                ? max(10, Theme.Layout.rootHeaderClearance * 0.45)
+                : (usesContextPlacement ? 0 : Theme.Layout.rootHeaderClearance)
+        )
+        .padding(.bottom, layout == .hub ? 10 : 0)
+        .safeAreaPadding(.bottom, layout == .hub ? 6 : 0)
     }
 }
 
@@ -1084,15 +1106,26 @@ enum GameParkSource {
     case dictionary
 }
 
-// MARK: - Game Park Overlay (random game from completed lesson or from favorites, or CTA)
+// MARK: - Game Park Overlay → единый «Выбери режим» (без отдельного «Игрового парка»)
 struct GameParkOverlayView: View {
     var source: GameParkSource = .main
+    /// When set (from Main reinforce pick), park uses this course instead of «all learned».
+    var courseId: String? = nil
     @State private var selectedMode: GameModeType = .match
-    @State private var lockedMode: GameModeType?
     @EnvironmentObject private var nav: NavigationIntent
-    @EnvironmentObject private var overlay: OverlayPresenter
     var onDismiss: () -> Void
     var onOpenCourses: () -> Void
+
+    private var resolvedCourseId: String {
+        if let courseId, !courseId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return courseId
+        }
+        switch source {
+        case .main: return LearnedGameSource.pseudoCourseId
+        case .favorites: return "__favorites__"
+        case .dictionary: return DictionaryGameSource.courseId
+        }
+    }
 
     private var hasLearnedCards: Bool {
         LearnedGameSource.hasPlayableCards
@@ -1102,7 +1135,22 @@ struct GameParkOverlayView: View {
         !FavoritesGameSource.triples().isEmpty
     }
 
+    private var hasCourseCards: Bool {
+        guard let courseId, !courseId.isEmpty else { return false }
+        var lessons = LessonsData.shared.lessons(for: courseId)
+        if lessons.isEmpty {
+            lessons = LessonsData.shared.lessons(for: courseId.replacingOccurrences(of: "_", with: "-"))
+        }
+        if lessons.isEmpty {
+            lessons = LessonsData.shared.lessons(for: courseId.replacingOccurrences(of: "-", with: "_"))
+        }
+        let lessonIds = lessons.map(\.lessonID)
+        guard !lessonIds.isEmpty else { return false }
+        return !HomeTaskManager().userTriplesForCourse(courseId: courseId, lessonIds: lessonIds).isEmpty
+    }
+
     private var hasCards: Bool {
+        if courseId != nil { return hasCourseCards }
         switch source {
         case .main: return hasLearnedCards
         case .favorites: return hasFavoriteCards
@@ -1110,349 +1158,462 @@ struct GameParkOverlayView: View {
         }
     }
 
-    private var sourceSubtitle: String {
-        switch source {
-        case .main: return "Закрепи выученные фразы в игре"
-        case .favorites: return "Закрепи свои сохранённые фразы"
-        case .dictionary: return "Закрепи фразы из личного словаря"
+    var body: some View {
+        if hasCards {
+            GameModePickerDS(
+                selected: $selectedMode,
+                isProUser: ProManager.shared.isPro,
+                onStart: { mode in
+                    onDismiss()
+                    nav.go(.game(
+                        courseId: resolvedCourseId,
+                        lessonId: nil,
+                        gameType: mode.rawValue
+                    ))
+                },
+                onClose: onDismiss,
+                onLockedTap: { mode in
+                    if mode.isPro && !ProManager.shared.isPro {
+                        onDismiss()
+                        OverlayPresenter.shared.presentPro(reason: .games)
+                    }
+                },
+                modes: GameModeType.modesLessonAndPark,
+                onSpeaker: speakerAction
+            )
+        } else {
+            gameParkEmptyState
         }
     }
+
+    private var speakerAction: (() -> Void)? {
+        switch source {
+        case .main:
+            if let courseId, !courseId.isEmpty, !LearnedGameSource.isPseudoCourseId(courseId) {
+                return {
+                    onDismiss()
+                    SpeakerManager.shared.setSpeakerUIMode(.training)
+                    SpeakerRequestedCourseId.shared.set(courseId)
+                    SpeakerReturnContext.shared.saveFromRootTab(0)
+                    nav.requestTab(2)
+                }
+            }
+            return {
+                onDismiss()
+                SpeakerManager.shared.setSpeakerUIMode(.conversation)
+                SpeakerRequestedCourseId.shared.set(nil)
+                SpeakerReturnContext.shared.saveFromRootTab(0)
+                nav.requestTab(2)
+            }
+        case .favorites:
+            return {
+                onDismiss()
+                SpeakerManager.shared.setSpeakerUIMode(.training)
+                SpeakerRequestedCourseId.shared.set("__favorites__")
+                SpeakerManager.shared.startSpecialTraining(poolId: "__favorites__")
+                SpeakerReturnContext.shared.saveFromRootTab(3)
+                nav.requestTab(2)
+            }
+        case .dictionary:
+            return {
+                onDismiss()
+                SpeakerManager.shared.setSpeakerUIMode(.training)
+                SpeakerRequestedCourseId.shared.set("__dictionary__")
+                DictionarySessionSelection.shared.activate(nil)
+                SpeakerManager.shared.startSpecialTraining(poolId: "__dictionary__")
+                SpeakerReturnContext.shared.saveFromRootTab(3)
+                nav.requestTab(2)
+            }
+        }
+    }
+
+    private var gameParkEmptyState: some View {
+        ZStack {
+            OverlayEtalonBackground(onDismiss: onDismiss)
+            OverlayEtalonCard(title: "Закрепление", onDismiss: onDismiss, role: .message) {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text(emptyCopy)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Button(action: {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        onDismiss()
+                        onOpenCourses()
+                    }) {
+                        Text(source == .main ? "К курсам" : "К карточкам")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(Color.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(ThemeManager.shared.currentAccentFill)
+                            )
+                    }
+                    .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+
+                    Button("Позже") {
+                        onDismiss()
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, CD.Spacing.screen)
+                .padding(.bottom, 20)
+            }
+        }
+    }
+
+    private var emptyCopy: String {
+        switch source {
+        case .main:
+            return "Пока мало выученных фраз для игры. Пройди урок — и возвращайся закрепить."
+        case .favorites:
+            return "В избранном пока пусто. Сохрани фразы — и можно тренироваться."
+        case .dictionary:
+            return "В словаре пока пусто. Добавь фразы из «Скажи сам»."
+        }
+    }
+}
+
+// MARK: - Reinforce hub (Main): fullscreen park — pool / speaker / games
+
+struct ReinforcePickOverlayView: View {
+    struct CourseRow: Identifiable, Equatable {
+        let id: String
+        let title: String
+        let subtitle: String
+    }
+
+    private enum Pool: Equatable {
+        case allLearned
+        case course(String)
+    }
+
+    let courses: [CourseRow]
+    var hasAllLearnedPool: Bool
+    var onDismiss: () -> Void
+    /// courseId for `nav.go(.game)` — `LearnedGameSource.pseudoCourseId` for all learned.
+    var onStartGame: (String, GameModeType) -> Void
+    /// Speaker reinforcement for the selected pool (`nil` courseId → open free conversation).
+    var onStartSpeaker: (String?) -> Void
+    var onOpenCourses: () -> Void
+
+    @ObservedObject private var theme = ThemeManager.shared
+    @State private var selectedPool: Pool?
+
+    private var isEmpty: Bool {
+        !hasAllLearnedPool && courses.isEmpty
+    }
+
+    private var resolvedCourseId: String? {
+        switch selectedPool {
+        case .allLearned: return LearnedGameSource.pseudoCourseId
+        case .course(let id): return id
+        case .none: return nil
+        }
+    }
+
+    /// Real catalog course for Speaker training; all-learned opens conversation without scope.
+    private var speakerCourseId: String? {
+        switch selectedPool {
+        case .course(let id): return id
+        case .allLearned, .none: return nil
+        }
+    }
+
+    private var poolHasCards: Bool {
+        switch selectedPool {
+        case .allLearned:
+            return LearnedGameSource.hasPlayableCards
+        case .course(let courseId):
+            return Self.courseHasPlayableCards(courseId)
+        case .none:
+            return false
+        }
+    }
+
+    private var isProUser: Bool { ProManager.shared.isPro }
 
     var body: some View {
         ZStack {
             OverlayEtalonBackground(onDismiss: onDismiss)
+            OverlayEtalonCard(
+                title: "Закрепление",
+                onDismiss: onDismiss,
+                role: .workbench,
+                layout: .hub
+            ) {
+                if isEmpty {
+                    emptyBody
+                } else {
+                    hubBody
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear { seedDefaultPool() }
+    }
 
-            VStack {
-                Spacer(minLength: 0)
+    private var emptyBody: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Сначала пройди курс или отметь карточки выученными — потом здесь появятся варианты закрепления.")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
 
-                OverlayEtalonCard(
-                    title: "Игровой парк",
-                    onDismiss: onDismiss,
-                    role: .choice,
-                    usesContextPlacement: true
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                onDismiss()
+                onOpenCourses()
+            } label: {
+                Text("К курсам")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Capsule(style: .continuous).fill(theme.currentAccentFill))
+            }
+            .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, CD.Spacing.screen)
+        .padding(.bottom, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var hubBody: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 22) {
+                Text("Выбери набор и способ — голос или игра")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // A — scope (selection stays on screen)
+                reinforceZone(
+                    title: "Что повторить",
+                    caption: "Набор карточек для закрепления"
                 ) {
-                    VStack(alignment: .leading, spacing: 18) {
-                        Text(sourceSubtitle)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(CD.ColorToken.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                    VStack(spacing: 10) {
+                        if hasAllLearnedPool {
+                            poolRow(
+                                title: "Все выученные",
+                                subtitle: "Карточки из всех курсов",
+                                isSelected: selectedPool == .allLearned
+                            ) {
+                                selectedPool = .allLearned
+                            }
+                        }
 
-                        if hasCards {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Выбери тренировку")
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(CD.ColorToken.textSecondary)
-                                    .textCase(.uppercase)
-                                    .tracking(0.8)
+                        ForEach(courses) { course in
+                            poolRow(
+                                title: course.title,
+                                subtitle: course.subtitle.isEmpty ? "Пройденный курс" : course.subtitle,
+                                isSelected: selectedPool == .course(course.id)
+                            ) {
+                                selectedPool = .course(course.id)
+                            }
+                        }
+                    }
+                }
+
+                if selectedPool != nil {
+                    // B — Speaker as separate feature
+                    reinforceZone(
+                        title: "Спикер",
+                        caption: "Отдельная фича · голос, не игра"
+                    ) {
+                        speakerFeatureCard
+                    }
+
+                    // C — Games park
+                    reinforceZone(
+                        title: "Игры",
+                        caption: poolHasCards
+                            ? "Режимы на выбранном наборе"
+                            : "Пока мало карточек — сначала Спикер"
+                    ) {
+                        if poolHasCards {
+                            VStack(spacing: 10) {
                                 ForEach(GameModeType.modesLessonAndPark, id: \.self) { mode in
-                                    gameModeCard(mode)
+                                    gameModeRow(mode)
                                 }
                             }
                         } else {
-                            emptyState
+                            Text("В этом наборе ещё мало фраз для игр.")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(PD.ColorToken.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 8)
                         }
                     }
-                    .padding(.horizontal, CD.Spacing.screen)
-                    .padding(.top, 2)
-                    .padding(.bottom, 24)
-                    .fixedSize(horizontal: false, vertical: true)
                 }
-
-                Spacer(minLength: 0)
             }
-            .padding(.vertical, 24)
-
-            if let lockedMode {
-                VStack {
-                    Spacer(minLength: 0)
-                    lockedModePeek(for: lockedMode)
-                        .padding(.horizontal, CD.Spacing.screen)
-                        .padding(.bottom, CD.Spacing.screen)
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .zIndex(2)
-            }
+            .padding(.horizontal, CD.Spacing.screen)
+            .padding(.bottom, 28)
         }
-        .animation(.easeOut(duration: 0.22), value: lockedMode)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    private func gameModeDescription(_ mode: GameModeType) -> String {
-        switch mode {
-        case .match:
-            return "Закрепи пары слов и фраз из уже выученного."
-        case .recall:
-            return "Быстрый раунд для повторения без лишних настроек."
-        case .audioRecall:
-            return "Услышь реплику и выбери правильный ответ на слух."
-        case .grandDialogue:
-            return "Собери полноценную сцену из материалов курса."
+    private func reinforceZone<Content: View>(
+        title: String,
+        caption: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                ReinforceSectionLabel(title)
+                Text(caption)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.88))
+            }
+            content()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    @ViewBuilder
-    private func gameModeCard(_ mode: GameModeType) -> some View {
-        let isLocked: Bool = mode.isPro && !ProManager.shared.isPro
-        let iconFill: Color = isLocked
-            ? Color.white.opacity(0.06)
-            : ThemeManager.shared.currentAccentTintColor.opacity(0.18)
-        let iconStyle: AnyShapeStyle = isLocked
-            ? AnyShapeStyle(CD.ColorToken.textSecondary)
-            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-        let trailingStyle: AnyShapeStyle = isLocked
-            ? AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.72))
-            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-        let borderStyle: AnyShapeStyle = isLocked
-            ? AnyShapeStyle(Color.white.opacity(0.07))
-            : AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.22))
-
+    private var speakerFeatureCard: some View {
         Button {
-            if isLocked {
-                lockedMode = mode
-#if os(iOS)
-                UINotificationFeedbackGenerator().notificationOccurred(.warning)
-#endif
-            } else {
-                onDismiss()
-                switch source {
-                case .main:
-                    nav.go(.game(
-                        courseId: LearnedGameSource.pseudoCourseId,
-                        lessonId: nil,
-                        gameType: mode.rawValue
-                    ))
-                case .favorites:
-                    nav.go(.game(courseId: "__favorites__", lessonId: nil, gameType: mode.rawValue))
-                case .dictionary:
-                    nav.go(.game(courseId: DictionaryGameSource.courseId, lessonId: nil, gameType: mode.rawValue))
-                }
-            }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            onDismiss()
+            onStartSpeaker(speakerCourseId)
         } label: {
             HStack(spacing: 14) {
                 ZStack {
                     Circle()
-                        .fill(iconFill)
-                    Image(systemName: isLocked ? "lock.fill" : "gamecontroller.fill")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(iconStyle)
+                        .fill(theme.currentAccentFill.opacity(0.18))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(theme.currentAccentFill)
                 }
-                .frame(width: 44, height: 44)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 7) {
-                        Text(mode.title)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundStyle(CD.ColorToken.text)
-                        if mode.isPro {
-                            Image(systemName: "crown.fill")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                        }
-                    }
-                    Text(gameModeDescription(mode))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Тренировка вслух")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                    Text("Произношение и тоны по выбранному набору")
+                        .font(.system(size: 13))
+                        .foregroundColor(.white.opacity(0.6))
+                        .lineLimit(2)
                 }
 
                 Spacer(minLength: 0)
-                Image(systemName: isLocked ? "lock.fill" : "chevron.right")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(trailingStyle)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(theme.currentAccentFill)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 13)
-            .background {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color.white.opacity(isLocked ? 0.035 : 0.06))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .strokeBorder(borderStyle, lineWidth: 1)
-                    }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(PD.ColorToken.card.opacity(0.88))
+            )
+            .overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 1.0, green: 0.42, blue: 0.78),
+                                Color(red: 0.68, green: 0.42, blue: 1.0).opacity(0.68)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 3)
+                    .padding(.vertical, 12)
             }
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(theme.currentAccentFill.opacity(0.42), lineWidth: 1.2)
+            )
+        }
+        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+        .accessibilityLabel("Спикер: закрепить произношение и тоны")
+    }
+
+    private func poolRow(
+        title: String,
+        subtitle: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            ReinforceOptionRow(
+                title: title,
+                subtitle: subtitle,
+                isSelected: isSelected,
+                trailing: .selection
+            )
+        }
+        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private func gameModeRow(_ mode: GameModeType) -> some View {
+        let locked = mode.isPro && !isProUser
+        Button {
+            if locked {
+                onDismiss()
+                OverlayPresenter.shared.presentPro(reason: .games)
+                return
+            }
+            guard let courseId = resolvedCourseId else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            onDismiss()
+            onStartGame(courseId, mode)
+        } label: {
+            ReinforceOptionRow(
+                title: mode.title,
+                subtitle: locked ? "нужен PRO" : gameSubtitle(mode),
+                isLocked: locked,
+                showsProCrown: mode.isPro,
+                trailing: locked ? .none : .chevron
+            )
         }
         .buttonStyle(.plain)
-        .opacity(isLocked ? 0.78 : 1)
-        .accessibilityHint(isLocked ? "Открыть информацию о доступе" : "Запустить игру")
     }
 
-    @ViewBuilder
-    private func lockedModePeek(for mode: GameModeType) -> some View {
-        GlassSurface(cornerRadius: TaikaOverlayTokens.Layout.cardRadius) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    Image(systemName: mode.isPro ? "lock.fill" : "clock.arrow.circlepath")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(mode.isPro ? "Режим доступен в Taika+" : "Режим пока закрыт")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(CD.ColorToken.text)
-                        Text(mode.title)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(CD.ColorToken.textSecondary)
-                    }
-                    Spacer(minLength: 0)
-                    Button {
-                        lockedMode = nil
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(CD.ColorToken.textSecondary)
-                            .frame(width: 30, height: 30)
-                            .background(Circle().fill(Color.white.opacity(0.07)))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Закрыть объяснение")
-                }
-
-                Text(lockedModeDetail(for: mode))
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if mode.isPro && !ProManager.shared.isPro {
-                    OverlayGlassPrimaryButton(title: "Посмотреть Taika+") {
-                        lockedMode = nil
-                        onDismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                            overlay.presentPro(reason: .games)
-                        }
-                    }
-                }
-
-                Button {
-                    lockedMode = nil
-                } label: {
-                    Text("Не сейчас")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Не сейчас, вернуться в игровой парк")
-            }
-            .padding(16)
-        }
-        .accessibilityElement(children: .contain)
-    }
-
-    private func lockedModeDetail(for mode: GameModeType) -> String {
-        if mode.isPro && !ProManager.shared.isPro {
-            return "Открой больше игровых раундов и продолжай закреплять фразы в разных форматах."
-        }
-        return "Сначала заверши нужную часть курса — после этого этот режим откроется здесь автоматически."
-    }
-
-    @ViewBuilder
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                Image(systemName: "gamecontroller.fill")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                    .frame(width: 48, height: 48)
-                    .background(Circle().fill(ThemeManager.shared.currentAccentTintColor.opacity(0.18)))
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(emptyTitle)
-                        .font(.system(size: 19, weight: .semibold, design: .rounded))
-                        .foregroundStyle(CD.ColorToken.text)
-                    Text(emptyMessage)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                emptyStep(number: 1, text: emptyStepOne)
-                emptyStep(number: 2, text: emptyStepTwo)
-            }
-
-            Button {
-#if os(iOS)
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-#endif
-                onOpenCourses()
-            } label: {
-                HStack(spacing: 8) {
-                    Text(emptyButtonTitle)
-                    Image(systemName: "arrow.right")
-                }
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(ThemeManager.shared.currentAccentFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(18)
-        .background {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white.opacity(0.045))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
-                }
+    private func gameSubtitle(_ mode: GameModeType) -> String {
+        switch mode {
+        case .match: return "закрепление через поиск пар"
+        case .recall: return "активное вспоминание в формате sprint"
+        case .audioRecall: return "слушай реплику, собери перевод"
+        case .grandDialogue: return "полный диалог курса"
         }
     }
 
-    private func emptyStep(number: Int, text: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Text("\(number)")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color.black.opacity(0.88))
-                .frame(width: 22, height: 22)
-                .background(Circle().fill(ThemeManager.shared.currentAccentFill))
-            Text(text)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(CD.ColorToken.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+    private func seedDefaultPool() {
+        guard selectedPool == nil else { return }
+        if hasAllLearnedPool {
+            selectedPool = .allLearned
+        } else if let first = courses.first {
+            selectedPool = .course(first.id)
         }
     }
 
-    private var emptyTitle: String {
-        switch source {
-        case .main: return "Сначала выучи пару фраз"
-        case .favorites: return "В избранном пока пусто"
-        case .dictionary: return "Словарь пока пуст"
+    private static func courseHasPlayableCards(_ courseId: String) -> Bool {
+        var lessons = LessonsData.shared.lessons(for: courseId)
+        if lessons.isEmpty {
+            lessons = LessonsData.shared.lessons(for: courseId.replacingOccurrences(of: "_", with: "-"))
         }
-    }
-
-    private var emptyMessage: String {
-        switch source {
-        case .main:
-            return "Парк собирает выученные карточки из уроков. Пока их нет — играть не с чем."
-        case .favorites:
-            return "Добавь слова или фразы в избранное в уроках — здесь появятся режимы для практики."
-        case .dictionary:
-            return "Добавь фразы в личный словарь — здесь появятся режимы для практики."
+        if lessons.isEmpty {
+            lessons = LessonsData.shared.lessons(for: courseId.replacingOccurrences(of: "-", with: "_"))
         }
-    }
-
-    private var emptyStepOne: String {
-        switch source {
-        case .main: return "Открой любой курс и отметь карточки как «запомнил»."
-        case .favorites: return "В уроке нажми сердце на фразе."
-        case .dictionary: return "Добавь нужную фразу в личный словарь."
-        }
-    }
-
-    private var emptyStepTwo: String {
-        switch source {
-        case .main: return "Вернись сюда — режимы откроются сами."
-        case .favorites: return "Снова открой консоль из избранного и выбери игру."
-        case .dictionary: return "Вернись сюда — режимы словаря откроются сами."
-        }
-    }
-
-    private var emptyButtonTitle: String {
-        switch source {
-        case .main: return "К курсам"
-        case .favorites: return "К курсам"
-        case .dictionary: return "К словарю"
-        }
+        let lessonIds = lessons.map(\.lessonID)
+        guard !lessonIds.isEmpty else { return false }
+        return !HomeTaskManager().userTriplesForCourse(courseId: courseId, lessonIds: lessonIds).isEmpty
     }
 }
 

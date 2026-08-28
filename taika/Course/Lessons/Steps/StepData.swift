@@ -123,15 +123,18 @@ final class StepData {
         return invalid
     }
 
-    /// Total learnable (word+phrase+casual) and lifehack (tip+dialog) counts for a lesson. Source of truth for progress denominator.
+    /// Total learnable (word+phrase+casual, valid for progress) and lifehack (tip+dialog) counts for a lesson.
+    /// Source of truth for progress denominator — invalid learnable steps excluded (same as ProgressManager.totalEffectiveCount).
     public func progressCounts(for lessonId: String) -> (learnable: Int, lifehack: Int) {
         preload()
         let itemsList = stepsetsByLessonId[lessonId]?.items.sorted(by: { $0.order < $1.order }) ?? []
         var learnable = 0, lifehack = 0
         for item in itemsList {
             switch item.kind {
-            case .word, .phrase, .casual: learnable += 1
-            case .tip, .dialog: lifehack += 1
+            case .word, .phrase, .casual:
+                if Self.isValidForProgress(item) { learnable += 1 }
+            case .tip, .dialog:
+                lifehack += 1
             }
         }
         return (learnable, lifehack)

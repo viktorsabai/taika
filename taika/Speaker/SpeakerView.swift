@@ -18,7 +18,6 @@ struct SpeakerView: View {
     @ObservedObject private var returnContext = SpeakerReturnContext.shared
     private let pro = ProManager.shared
     @State private var showSpeakerBreakdown = false
-    @State private var isRecordingFromBreakdown = false
     /// When non-nil, shell switched to Speaker tab from course card; we load this course and clear. (Fixes onAppear not running in time.)
     @Binding var pendingCourseId: String?
     /// Optional single-lesson scope when opened from Step summary / lesson CTA.
@@ -74,11 +73,10 @@ struct SpeakerView: View {
         }
     }
 
-    private func openConversationBreakdownIfNeeded(force: Bool) {
-        guard force || !showSpeakerBreakdown else { return }
-        showSpeakerBreakdown = true
-        speaker.refreshConversationUserPhoneticFromASRIfNeeded()
+    private func requestToneBreakdownData() {
+        speaker.refreshUserPhoneticFromASRIfNeeded()
         guard hasFullToneBreakdownAccess else { return }
+        if speaker.hasBreakdownForCurrentAttempt() { return }
         let thaiSnap = speaker.conversationExpectedThai?.trimmingCharacters(in: .whitespacesAndNewlines)
         let phSnap = speaker.conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines)
             ?? speaker.current.map { $0.face.phonetic }?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -92,6 +90,12 @@ struct SpeakerView: View {
             expectedPhoneticForTones: (phSnap?.isEmpty == false) ? phSnap : nil,
             completion: {}
         )
+    }
+
+    private func openConversationBreakdownIfNeeded(force: Bool) {
+        guard force || !showSpeakerBreakdown else { return }
+        showSpeakerBreakdown = true
+        requestToneBreakdownData()
     }
 
     /// Full tone breakdown: Pro, or still inside today's free attempts (incl. the last used one).
@@ -118,6 +122,14 @@ struct SpeakerView: View {
 
     private func onPlayAttempt() {
         speaker.playAttempt()
+    }
+
+    private func onPlaySyllable(at index: Int) {
+        speaker.playAttemptSyllable(at: index)
+    }
+
+    private func onPlayReferenceSyllable(at index: Int) {
+        speaker.playReferenceSyllable(at: index)
     }
 
     private func onMicTap() {
@@ -162,6 +174,15 @@ struct SpeakerView: View {
         _ = speaker.consumePendingConversationAutoRecord()
     }
 
+    /// Main kun-kru composer → translate this RU phrase in conversation mode.
+    private func consumePendingConversationDemoIfNeeded() {
+        guard speaker.speakerUIMode == .conversation else { return }
+        guard let ru = speaker.consumePendingConversationDemoRU() else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
+            self.speaker.startConversationDemoPhrase(ru)
+        }
+    }
+
     var body: some View {
         SpeakerDSRoot(
             current: speaker.current,
@@ -172,6 +193,9 @@ struct SpeakerView: View {
             heardThai: speaker.heardThai,
             heardRU: speaker.heardRU,
             heardTranslit: speaker.heardTranslit,
+            heardPhraseParts: speaker.heardPhraseParts,
+            trainingHeardThaiASR: speaker.trainingHeardThaiASR,
+            trainingHeardPhoneticFromASR: speaker.trainingHeardPhoneticFromASR,
             heardConfidence: speaker.heardConfidence,
             displayScore: speaker.displayScore,
             toneAverageScore: speaker.toneAverageScore,
@@ -189,6 +213,8 @@ struct SpeakerView: View {
             lastPlayed: speaker.lastPlayed,
             onPlayReference: onPlayReference,
             onPlayAttempt: onPlayAttempt,
+            onPlaySyllableAtIndex: onPlaySyllable,
+            onPlayReferenceSyllableAtIndex: onPlayReferenceSyllable,
             onPlayReferenceForId: { id in
                 speaker.playReference(for: id)
             },
@@ -231,21 +257,18 @@ struct SpeakerView: View {
                 openConversationBreakdownIfNeeded(force: true)
             },
             onRecordAgainFromBreakdown: {
-                isRecordingFromBreakdown = true
-                if speaker.conversationExpectedThai != nil {
-                    speaker.startConversationPronunciationCheck()
-                } else {
-                    speaker.startAttempt()
+                // Запись — на экране тренировки под шитом, не внутри «Разбор».
+                showSpeakerBreakdown = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                    if speaker.speakerUIMode == .conversation, speaker.conversationExpectedThai != nil {
+                        speaker.startConversationPronunciationCheck()
+                    } else {
+                        speaker.startAttempt()
+                    }
                 }
             },
-            isRecordingFromBreakdown: isRecordingFromBreakdown,
-            onStopRecordingFromBreakdown: {
-                if speaker.conversationExpectedThai != nil {
-                    speaker.stopConversationPronunciationCheck()
-                } else {
-                    speaker.stopAttemptAndAnalyze()
-                }
-            },
+            isRecordingFromBreakdown: false,
+            onStopRecordingFromBreakdown: nil,
             onClearAttempt: { speaker.clearAttemptsInCurrentQueue() },
             onClearConversationResult: { speaker.clearConversationResult() },
             learnedLessonIds: speaker.learnedLessonIds,
@@ -315,10 +338,15 @@ struct SpeakerView: View {
             conversationExpectedTranslitForFeedback: speaker.conversationExpectedTranslitForFeedback,
             conversationHeardThaiASR: speaker.conversationHeardThaiASR,
             conversationHeardPhoneticFromASR: speaker.conversationHeardPhoneticFromASR,
+            conversationCoachHeadline: speaker.conversationCoachHeadline,
+            conversationCoachDetail: speaker.conversationCoachDetail,
+            conversationCoachInFlight: speaker.conversationCoachInFlight,
+            phrasePartsInFlight: speaker.phrasePartsInFlight,
             onConversationRepeatAndCheck: { speaker.startConversationPronunciationCheck() },
             smartSpeakerPoliteness: speaker.smartSpeakerPoliteness,
             onSetSmartSpeakerPoliteness: { speaker.setSmartSpeakerPoliteness($0) },
             referencePlaybackProgress: speaker.referencePlaybackProgress,
+            attemptPlaybackProgress: speaker.attemptPlaybackProgress,
             onBreakdownAppear: { speaker.resetReferenceProgress() },
             onOpenInstantTranslation: {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -335,15 +363,17 @@ struct SpeakerView: View {
             }
         }
         .onChange(of: speaker.phase) { _, newPhase in
-            if isRecordingFromBreakdown, case .feedback = newPhase {
-                isRecordingFromBreakdown = false
-            }
-            // Score-first gate: после записи показываем feedback score.
-            // Полный разбор открывается только по явному действию пользователя.
+            guard newPhase.isFeedback else { return }
+            requestToneBreakdownData()
         }
         .onChange(of: speaker.conversationHeardThaiASR) { _, newVal in
             if newVal != nil {
-                speaker.refreshConversationUserPhoneticFromASRIfNeeded()
+                speaker.refreshUserPhoneticFromASRIfNeeded()
+            }
+        }
+        .onChange(of: speaker.trainingHeardThaiASR) { _, newVal in
+            if newVal != nil {
+                speaker.refreshUserPhoneticFromASRIfNeeded()
             }
         }
         .onChange(of: pendingCourseId) { _, newValue in
@@ -374,6 +404,7 @@ struct SpeakerView: View {
             speaker.sanitizeConversationHistory()
 
             clearPendingConversationAutoRecord()
+            consumePendingConversationDemoIfNeeded()
 
             UserSession.shared.logActivity(
                 .speakerOpened,
@@ -383,6 +414,25 @@ struct SpeakerView: View {
                 refId: "speaker:mvp"
             )
         }
+        .onChange(of: speaker.pendingConversationDemoRU) { _, newVal in
+            guard newVal != nil else { return }
+            consumePendingConversationDemoIfNeeded()
+        }
+        .overlay {
+            // Итог круга — только для тренировки по очереди: в «Своей речи» очереди нет.
+            if let summary = speaker.trainingSessionSummary, speaker.speakerUIMode == .training {
+                SpeakerSessionSummaryView(
+                    summary: summary,
+                    onNextLap: { speaker.startNextTrainingLap() },
+                    onFinish: {
+                        speaker.startNextTrainingLap()
+                        speaker.returnToTrainingHome()
+                    }
+                )
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.22), value: speaker.trainingSessionSummary)
     }
 
     private func returnToLearning() {

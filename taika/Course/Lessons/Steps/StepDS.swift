@@ -373,7 +373,6 @@ fileprivate func phoneticStyledText(_ s: String) -> Text {
 
     var result = Text("")
     var currentChunk = ""
-    var currentSeparator: Character? = nil
 
     func flushChunk() {
         guard !currentChunk.isEmpty else { return }
@@ -395,9 +394,7 @@ fileprivate func phoneticStyledText(_ s: String) -> Text {
             let sepText = Text(String(ch))
                 .foregroundStyle(PD.ColorToken.text)
             result = result + sepText
-            currentSeparator = ch
         } else {
-            currentSeparator = nil
             currentChunk.append(ch)
         }
     }

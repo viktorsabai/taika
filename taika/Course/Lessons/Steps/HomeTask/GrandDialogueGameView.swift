@@ -813,6 +813,10 @@ struct GrandDialogueGameView: View {
                             reloadSession()
                             GameHeaderStore.shared.config = headerConfig()
                         },
+                        errorCount: 0,
+                        queueErrorCount: isCourseReinforcement
+                            ? ReinforcementStore.shared.failedCardKeys(courseId: courseId).count
+                            : 0,
                         onNextGame: onNextGame,
                         onSpeakerPractice: onSpeakerPractice,
                         onContinueLearning: onContinueLearning,

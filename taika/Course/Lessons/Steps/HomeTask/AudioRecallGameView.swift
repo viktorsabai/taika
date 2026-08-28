@@ -76,6 +76,7 @@ struct AudioRecallGameView: View {
     var continueLearningTitle: String? = nil
 
     @EnvironmentObject private var theme: ThemeManager
+    @ObservedObject private var stars = TaikaStarsStore.shared
 
     @State private var rounds: [AudioRecallRound] = []
     @State private var roundIndex: Int = 0
@@ -101,6 +102,9 @@ struct AudioRecallGameView: View {
     /// Успех карточки — как в «Быстром повторении».
     @State private var successScale: CGFloat = 1.0
     @State private var successGlow: Double = 0
+    @State private var audioHintUsedThisRound = false
+    @State private var audioFreeListenUsedThisRound = false
+    @State private var hiddenChoicePhrases: Set<String> = []
 
     private var isAnswerLocked: Bool {
         lastPickCorrect == true
@@ -113,7 +117,10 @@ struct AudioRecallGameView: View {
 
     private var currentChoices: [String] {
         guard roundIndex < rounds.count else { return [] }
-        return rounds[roundIndex].choices
+        return rounds[roundIndex].choices.filter { phrase in
+            let norm = AudioRecallModel.normalizePhrase(phrase).lowercased()
+            return !hiddenChoicePhrases.contains(norm)
+        }
     }
 
     private var currentItem: StepItem? {
@@ -253,7 +260,6 @@ struct AudioRecallGameView: View {
                     score: percent,
                     sourceCardKeys: sourceCardKeys,
                     failedCardKeys: failedKeys,
-                    // Не очищаем общий error queue после одного из трёх режимов.
                     lessonIds: reinforcementLessonIds ?? (lessonId.isEmpty ? [] : [lessonId])
                 )
             }
@@ -273,7 +279,7 @@ struct AudioRecallGameView: View {
     @ViewBuilder
     private var activePlayLayout: some View {
         VStack(spacing: 10) {
-            TaikaGameStatusStrip(
+            TaikaGameTopChrome(
                 timeText: formattedElapsedTime,
                 progressText: {
                     let total = rounds.count
@@ -282,19 +288,18 @@ struct AudioRecallGameView: View {
                     return "\(progress)/\(total)"
                 }(),
                 mistakes: mistakes,
-                score: score
+                score: score,
+                hints: audioHintActions
             )
             .padding(.horizontal, CD.Spacing.screen)
 
-            // Два Spacer — воздух сверху/снизу, карточка склеена с вариантами.
-            Spacer(minLength: 6)
-
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 audioRoundCoverflow
                 audioUnderCardControl
                 audioPlayfield
             }
             .padding(.horizontal, CD.Spacing.screen)
+            .padding(.top, 4)
 
             Spacer(minLength: 0)
         }
@@ -361,7 +366,7 @@ struct AudioRecallGameView: View {
             TaikaGameBareSpeakerButton(
                 disabled: thai.isEmpty || lastPickCorrect == true,
                 action: {
-                    if let item = currentItem { speakPrompt(item) }
+                    if let item = currentItem { speakPromptWithStars(item) }
                 }
             )
             if !choicesUnlocked {
@@ -370,9 +375,74 @@ struct AudioRecallGameView: View {
                     .foregroundStyle(ThemeManager.shared.currentAccentFill.opacity(0.85))
                     .accessibilityLabel("Слушай")
                     .transition(.opacity)
+            } else if !audioFreeListenUsedThisRound {
+                Text("слушай")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.72))
+            } else {
+                TaikaGameHintButton(
+                    title: "ещё раз",
+                    cost: TaikaStarsStore.costBuilderListen,
+                    isEnabled: !thai.isEmpty
+                        && lastPickCorrect != true
+                        && stars.canAfford(TaikaStarsStore.costBuilderListen),
+                    action: {
+                        if let item = currentItem { speakPromptWithStars(item) }
+                    }
+                )
             }
         }
         .animation(.easeOut(duration: 0.2), value: choicesUnlocked)
+    }
+
+    private var audioHintActions: [TaikaGameHintAction] {
+        let wrongCount = max(0, currentChoices.count - 1)
+        let canUse = !audioHintUsedThisRound
+            && !finished
+            && choicesUnlocked
+            && lastPickCorrect != true
+            && wrongCount >= 2
+            && stars.canAfford(TaikaStarsStore.costAudioRecallFiftyFifty)
+        return [
+            TaikaGameHintAction(
+                id: "audio_fifty",
+                title: "50/50",
+                cost: TaikaStarsStore.costAudioRecallFiftyFifty,
+                isEnabled: canUse,
+                action: applyAudioFiftyFiftyHint
+            )
+        ]
+    }
+
+    private func applyAudioFiftyFiftyHint() {
+        guard !audioHintUsedThisRound else { return }
+        guard TaikaStarsStore.shared.spend(TaikaStarsStore.costAudioRecallFiftyFifty, hint: .audioRecallFiftyFifty) else { return }
+        guard roundIndex < rounds.count else { return }
+        let targetNorm = AudioRecallModel.normalizePhrase(currentTargetRU).lowercased()
+        let wrong = rounds[roundIndex].choices.filter {
+            AudioRecallModel.normalizePhrase($0).lowercased() != targetNorm
+        }
+        guard wrong.count >= 2 else { return }
+        let removeCount = wrong.count / 2
+        let toRemove = Set(wrong.shuffled().prefix(removeCount).map {
+            AudioRecallModel.normalizePhrase($0).lowercased()
+        })
+        hiddenChoicePhrases.formUnion(toRemove)
+        audioHintUsedThisRound = true
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    private func speakPromptWithStars(_ item: StepItem) {
+        let text = (item.thai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        if !audioFreeListenUsedThisRound {
+            audioFreeListenUsedThisRound = true
+            StepAudio.shared.speakThai(text)
+            return
+        }
+        if TaikaStarsStore.shared.spend(TaikaStarsStore.costBuilderListen, hint: .builderListen) {
+            StepAudio.shared.speakThai(text)
+        }
     }
 
     private func audioRoundCard(item: StepItem, isActive: Bool, succeeded: Bool) -> some View {
@@ -633,6 +703,7 @@ struct AudioRecallGameView: View {
         }
         if ok {
             score += 1
+            TaikaStarsStore.shared.earn()
             TaikaGameFeedbackHaptics.answerCorrect()
             TaikaVoice.shared.play(.success)
             scheduleAutoAdvance()
@@ -662,6 +733,7 @@ struct AudioRecallGameView: View {
         withAnimation(.easeInOut(duration: 0.18)) {
             lastPickedPhrase = nil
             lastPickCorrect = nil
+            hiddenChoicePhrases = []
             reshuffleCurrentChoices()
             staggerRevealChoices()
         }
@@ -686,6 +758,9 @@ struct AudioRecallGameView: View {
         successScale = 1.0
         successGlow = 0
         advanceToken += 1
+        audioHintUsedThisRound = false
+        audioFreeListenUsedThisRound = false
+        hiddenChoicePhrases = []
         scheduleHeroReveal(for: rounds[index].item)
     }
 
@@ -914,7 +989,10 @@ struct AudioRecallGameView: View {
     private var completionOverlay: some View {
         ZStack {
             OverlayEtalonBackground(onDismiss: onClose)
-            OverlayEtalonCard(title: "Урок закреплён", onDismiss: onClose) {
+            OverlayEtalonCard(
+                title: isCourseReinforcement ? "Закрепление" : "Урок закреплён",
+                onDismiss: onClose
+            ) {
                 VStack(spacing: 16) {
                     completionOverlayStats
                     completionOverlayActionButtons
@@ -937,7 +1015,11 @@ struct AudioRecallGameView: View {
     }
 
     private var completionOverlayActionButtons: some View {
-        GameCompletionActions(
+        let scopeLessonIds = reinforcementLessonIds ?? (lessonId.isEmpty ? [] : [lessonId])
+        let queueCount = isCourseReinforcement
+            ? ReinforcementStore.shared.failedCardKeys(courseId: courseId, lessonIds: scopeLessonIds).count
+            : 0
+        return GameCompletionActions(
             isFromLessonStep: !isCourseReinforcement && HomeTaskView.isLessonStepOrigin(courseId: courseId, lessonId: lessonId),
             isCourseReinforcement: isCourseReinforcement,
             isProUser: isProUser,
@@ -950,10 +1032,30 @@ struct AudioRecallGameView: View {
                 GameHeaderStore.shared.config = headerConfig()
             },
             errorCount: sessionFailedTargetRUs.count,
-            onRepeatErrors: sessionFailedTargetRUs.isEmpty ? nil : {
-                let failed = rounds.filter {
-                    sessionFailedTargetRUs.contains(AudioRecallModel.normalizePhrase($0.targetRU).lowercased())
-                }
+            queueErrorCount: queueCount,
+            onRepeatErrors: {
+                let queueKeys = ReinforcementStore.shared.failedCardKeys(
+                    courseId: courseId,
+                    lessonIds: scopeLessonIds
+                )
+                let failedFromQueue: [AudioRecallRound] = {
+                    guard !queueKeys.isEmpty else { return [] }
+                    return rounds.filter { round in
+                        guard let lid = round.lessonId?.trimmingCharacters(in: .whitespacesAndNewlines),
+                              !lid.isEmpty else { return false }
+                        let phrase = AudioRecallModel.normalizePhrase(round.targetRU).lowercased()
+                        let key = "\(lid)|\(phrase)"
+                        return queueKeys.contains(key)
+                            || queueKeys.contains {
+                                $0.split(separator: "|", maxSplits: 1).last.map(String.init)?.lowercased() == phrase
+                            }
+                    }
+                }()
+                let failed = failedFromQueue.isEmpty
+                    ? rounds.filter {
+                        sessionFailedTargetRUs.contains(AudioRecallModel.normalizePhrase($0.targetRU).lowercased())
+                    }
+                    : failedFromQueue
                 guard !failed.isEmpty else { return }
                 rounds = AudioRecallModel.buildRounds(
                     from: failed.map { (item: $0.item, lessonId: $0.lessonId) },

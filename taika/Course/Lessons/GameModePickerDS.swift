@@ -73,6 +73,8 @@ public struct GameModePickerDS: View {
     public var contentHorizontalInset: CGFloat = 20
     /// Нижний отступ под кнопкой «Начать».
     public var contentBottomInset: CGFloat = 24
+    /// «Голос» / «Игры» — выключить, если родитель уже даёт одну секцию «Как закрепить».
+    public var showsSectionLabels: Bool = true
 
     public init(
         selected: Binding<GameModeType>,
@@ -85,7 +87,8 @@ public struct GameModePickerDS: View {
         embedInEtalon: Bool = true,
         contentHorizontalInset: CGFloat = 20,
         contentBottomInset: CGFloat = 24,
-        onSpeaker: (() -> Void)? = nil
+        onSpeaker: (() -> Void)? = nil,
+        showsSectionLabels: Bool = true
     ) {
         self._selected = selected
         self.isProUser = isProUser
@@ -98,6 +101,7 @@ public struct GameModePickerDS: View {
         self.contentHorizontalInset = contentHorizontalInset
         self.contentBottomInset = contentBottomInset
         self.onSpeaker = onSpeaker
+        self.showsSectionLabels = showsSectionLabels
     }
 
     public var body: some View {
@@ -132,23 +136,51 @@ public struct GameModePickerDS: View {
 
     @ViewBuilder
     private var pickerBody: some View {
-        VStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 10) {
             if let onSpeaker {
-                speakerModeRow(action: onSpeaker)
+                if showsSectionLabels {
+                    ReinforceSectionLabel("Голос")
+                }
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onSpeaker()
+                } label: {
+                    ReinforceOptionRow(
+                        title: "Спикер",
+                        subtitle: "произношение и тоны вслух",
+                        trailing: .chevron,
+                        leadingIcon: "mic.fill"
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Спикер: закрепить произношение и тоны")
+
+                if showsSectionLabels {
+                    ReinforceSectionLabel("Игры")
+                        .padding(.top, 4)
+                }
             }
 
             ForEach(modes, id: \.self) { mode in
-                modeRow(mode)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        guard !isModeLocked(mode) else {
-                            onLockedTap(mode)
-                            return
-                        }
-                        selected = mode
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        onStart(mode)
+                let locked = isModeLocked(mode)
+                Button {
+                    guard !locked else {
+                        onLockedTap(mode)
+                        return
                     }
+                    selected = mode
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onStart(mode)
+                } label: {
+                    ReinforceOptionRow(
+                        title: mode.title,
+                        subtitle: locked ? lockedDescription(for: mode) : description(for: mode),
+                        isLocked: locked,
+                        showsProCrown: mode.isPro,
+                        trailing: locked ? .none : .chevron
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, contentHorizontalInset)
@@ -159,122 +191,6 @@ public struct GameModePickerDS: View {
                 selected = firstUnlocked
             }
         }
-    }
-
-    private func speakerModeRow(action: @escaping () -> Void) -> some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            action()
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "waveform.path.ecg")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                    .frame(width: 24)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Спикер")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text("закрепить произношение и тоны")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(PD.ColorToken.card.opacity(0.82))
-            )
-            .overlay(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                    .frame(width: 3)
-                    .padding(.vertical, 10)
-            }
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(PD.ColorToken.stroke.opacity(0.72), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Спикер: закрепить произношение и тоны")
-    }
-
-    @ViewBuilder
-    private func modeRow(_ mode: GameModeType) -> some View {
-        let isLocked = isModeLocked(mode)
-        HStack(spacing: 14) {
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(mode.title)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-
-                    if mode.isPro {
-                        Image(systemName: "crown.fill")
-                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                            .font(.system(size: 13))
-                    }
-
-                    if isLocked {
-                        Image(systemName: "lock.fill")
-                            .foregroundStyle(Color.white.opacity(0.7))
-                            .font(.system(size: 13))
-                    }
-                }
-
-                Text(isLocked ? lockedDescription(for: mode) : description(for: mode))
-                    .font(.system(size: 13))
-                    .foregroundColor(.white.opacity(isLocked ? 0.52 : 0.6))
-            }
-
-            Spacer()
-
-            if !isLocked {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(PD.ColorToken.card.opacity(isLocked ? 0.42 : 0.82))
-        )
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(
-                    isLocked
-                        ? AnyShapeStyle(PD.ColorToken.stroke.opacity(0.42))
-                        : AnyShapeStyle(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 1.0, green: 0.42, blue: 0.78),
-                                    Color(red: 0.68, green: 0.42, blue: 1.0).opacity(0.68)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                )
-                .frame(width: 3)
-                .padding(.vertical, 10)
-        }
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(PD.ColorToken.stroke.opacity(isLocked ? 0.34 : 0.72), lineWidth: 1)
-        )
-        .opacity(isLocked ? 0.72 : 1)
     }
 
     private func lockedDescription(for mode: GameModeType) -> String {
@@ -300,5 +216,151 @@ public struct GameModePickerDS: View {
         case .grandDialogue:
             return "полный диалог курса: ответы голосом, как в Спикере"
         }
+    }
+}
+
+// MARK: - Shared reinforce choice row (pool + speaker + games)
+
+public struct ReinforceSectionLabel: View {
+    let title: String
+
+    public init(_ title: String) {
+        self.title = title
+    }
+
+    public var body: some View {
+        Text(title)
+            .font(.system(size: 12, weight: .bold))
+            .tracking(0.8)
+            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
+            .textCase(.uppercase)
+            .padding(.leading, 2)
+    }
+}
+
+/// Единый ряд для выбора курса / спикера / игры в оверлеях закрепления.
+public struct ReinforceOptionRow: View {
+    public enum Trailing {
+        case chevron
+        case selection
+        case none
+    }
+
+    let title: String
+    let subtitle: String
+    var isSelected: Bool = false
+    var isLocked: Bool = false
+    var showsProCrown: Bool = false
+    var trailing: Trailing = .chevron
+    var leadingIcon: String? = nil
+
+    @ObservedObject private var theme = ThemeManager.shared
+
+    private var accentBar: AnyShapeStyle {
+        if isLocked {
+            return AnyShapeStyle(PD.ColorToken.stroke.opacity(0.42))
+        }
+        if trailing == .selection && !isSelected {
+            return AnyShapeStyle(PD.ColorToken.stroke.opacity(0.42))
+        }
+        return AnyShapeStyle(
+            LinearGradient(
+                colors: [
+                    Color(red: 1.0, green: 0.42, blue: 0.78),
+                    Color(red: 0.68, green: 0.42, blue: 1.0).opacity(0.68)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
+
+    public var body: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+
+                    if let leadingIcon {
+                        Image(systemName: leadingIcon)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(theme.currentAccentFill)
+                    }
+
+                    if showsProCrown {
+                        Image(systemName: "crown.fill")
+                            .foregroundStyle(theme.currentAccentFill)
+                            .font(.system(size: 13))
+                    }
+
+                    if isLocked {
+                        Image(systemName: "lock.fill")
+                            .foregroundStyle(Color.white.opacity(0.7))
+                            .font(.system(size: 13))
+                    }
+                }
+
+                Text(subtitle)
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(isLocked ? 0.52 : (isSelected || trailing != .selection ? 0.6 : 0.55)))
+                    .lineLimit(2)
+            }
+
+            Spacer(minLength: 0)
+
+            switch trailing {
+            case .chevron:
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(theme.currentAccentFill)
+            case .selection:
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(
+                        isSelected
+                        ? AnyShapeStyle(theme.currentAccentFill)
+                        : AnyShapeStyle(Color.white.opacity(0.35))
+                    )
+            case .none:
+                EmptyView()
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(PD.ColorToken.card.opacity(rowFillOpacity))
+        )
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(accentBar)
+                .frame(width: 3)
+                .padding(.vertical, 10)
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(PD.ColorToken.stroke.opacity(strokeOpacity), lineWidth: 1)
+        )
+        .opacity(isLocked ? 0.72 : 1)
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private var rowFillOpacity: Double {
+        if isLocked { return 0.42 }
+        if trailing == .selection {
+            return isSelected ? 0.92 : 0.72
+        }
+        return 0.82
+    }
+
+    private var strokeOpacity: Double {
+        if isLocked { return 0.34 }
+        if trailing == .selection {
+            return isSelected ? 0.72 : 0.42
+        }
+        return 0.72
     }
 }

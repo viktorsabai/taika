@@ -10,12 +10,15 @@ public struct RecallSyllableItem: Identifiable {
     public let isSelectable: Bool
     /// Этот экземпляр чипа уже стоит в сборке (визуально «выбран», повторный тап снимает).
     public let isInUse: Bool
+    /// Слог стоит в неверном слоте — подсветка красным в пуле и в маске.
+    public let isWrong: Bool
 
-    public init(id: Int, text: String, isSelectable: Bool, isInUse: Bool = false) {
+    public init(id: Int, text: String, isSelectable: Bool, isInUse: Bool = false, isWrong: Bool = false) {
         self.id = id
         self.text = text
         self.isSelectable = isSelectable
         self.isInUse = isInUse
+        self.isWrong = isWrong
     }
 }
 
@@ -68,6 +71,11 @@ public struct RecallGameView: View {
     public let statusProgressText: String?
     public let statusMistakes: Int
     public let statusScore: Int
+    public let hintActions: [TaikaGameHintAction]
+    /// Показывать кнопку «слушать за звёзды» рядом с динамиком (после бесплатного прослушивания).
+    public let listenHintCost: Int?
+    public let listenHintFreeAvailable: Bool
+    public let onListenHint: (() -> Void)?
 
     public init(
         question: String,
@@ -99,7 +107,11 @@ public struct RecallGameView: View {
         statusTimeText: String? = nil,
         statusProgressText: String? = nil,
         statusMistakes: Int = 0,
-        statusScore: Int = 0
+        statusScore: Int = 0,
+        hintActions: [TaikaGameHintAction] = [],
+        listenHintCost: Int? = nil,
+        listenHintFreeAvailable: Bool = true,
+        onListenHint: (() -> Void)? = nil
     ) {
         self.question = question
         self.phoneticDisplay = phoneticDisplay
@@ -131,6 +143,10 @@ public struct RecallGameView: View {
         self.statusProgressText = statusProgressText
         self.statusMistakes = statusMistakes
         self.statusScore = statusScore
+        self.hintActions = hintActions
+        self.listenHintCost = listenHintCost
+        self.listenHintFreeAvailable = listenHintFreeAvailable
+        self.onListenHint = onListenHint
     }
 
     /// Единый brand accent (как стрелки слогов) — не смешиваем tint и fill.
@@ -141,24 +157,23 @@ public struct RecallGameView: View {
     public var body: some View {
         VStack(spacing: 10) {
             if let time = statusTimeText {
-                TaikaGameStatusStrip(
+                TaikaGameTopChrome(
                     timeText: time,
                     progressText: statusProgressText,
                     mistakes: statusMistakes,
-                    score: statusScore
+                    score: statusScore,
+                    hints: hintActions
                 )
                 .padding(.horizontal, CD.Spacing.screen)
             }
 
-            // Два Spacer делят воздух сверху/снизу — без дыры между карточкой и сборкой.
-            Spacer(minLength: 6)
-
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 roundCardCoverflow
                 recallAudioControl
                 playfield
             }
             .padding(.horizontal, CD.Spacing.screen)
+            .padding(.top, 4)
 
             Spacer(minLength: 0)
         }
@@ -249,14 +264,34 @@ public struct RecallGameView: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: assembleSuccessScale)
     }
 
-    /// Аудио под карточкой — как панель спикера, не внутри chrome карточки.
+    /// Аудио под карточкой — бесплатно один раз, дальше за звёзды.
     private var recallAudioControl: some View {
-        TaikaGameBareSpeakerButton(
-            disabled: audioText?.isEmpty ?? true,
-            action: { onPlayAudio?() }
-        )
-        .opacity(isLocked ? 0.35 : 1)
-        .accessibilityHint("Прослушать фразу")
+        HStack(spacing: 10) {
+            TaikaGameBareSpeakerButton(
+                disabled: audioText?.isEmpty ?? true || isLocked,
+                action: {
+                    if listenHintFreeAvailable {
+                        onPlayAudio?()
+                    } else if let onListenHint {
+                        onListenHint()
+                    } else {
+                        onPlayAudio?()
+                    }
+                }
+            )
+            .opacity(isLocked ? 0.35 : 1)
+
+            if let cost = listenHintCost, !listenHintFreeAvailable, let onListenHint {
+                TaikaGameHintButton(
+                    title: "слушать",
+                    cost: cost,
+                    isEnabled: !isLocked && !(audioText?.isEmpty ?? true),
+                    action: onListenHint
+                )
+                .opacity(isLocked ? 0.35 : 1)
+            }
+        }
+        .accessibilityHint(listenHintFreeAvailable ? "Прослушать фразу бесплатно" : "Прослушать за звёзды")
     }
 
     private func recallRoundCard(display: RecallRoundDisplay, isActive: Bool, succeeded: Bool) -> some View {
@@ -486,7 +521,12 @@ public struct RecallGameView: View {
         return Button {
             onTapSyllable(item.text, item.isInUse)
         } label: {
-            recallSyllableChipLabel(text: item.text, inUse: item.isInUse, selectable: selectable)
+            recallSyllableChipLabel(
+                text: item.text,
+                inUse: item.isInUse,
+                selectable: selectable,
+                isWrong: item.isWrong
+            )
         }
         .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
         .disabled(!selectable)
@@ -523,36 +563,36 @@ public struct RecallGameView: View {
         }
     }
 
-    private func recallSyllableChipLabel(text: String, inUse: Bool, selectable: Bool) -> some View {
+    private func recallSyllableChipLabel(text: String, inUse: Bool, selectable: Bool, isWrong: Bool = false) -> some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let fg: AnyShapeStyle = {
+            if isWrong { return AnyShapeStyle(Color.red.opacity(0.92)) }
+            if inUse { return brandAccent }
+            return AnyShapeStyle(selectable ? CD.ColorToken.text : CD.ColorToken.textSecondary.opacity(0.7))
+        }()
+        let fill: AnyShapeStyle = {
+            if isWrong { return AnyShapeStyle(Color.red.opacity(0.14)) }
+            if inUse { return AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.18)) }
+            return AnyShapeStyle(CD.ColorToken.card.opacity(0.96))
+        }()
+        let stroke: AnyShapeStyle = {
+            if isWrong { return AnyShapeStyle(Color.red.opacity(0.52)) }
+            if inUse { return brandAccent }
+            return AnyShapeStyle(Theme.Strokes.strokeSubtle)
+        }()
         return Text(text)
             .font(.system(size: 17, weight: .semibold))
             .lineLimit(1)
             .minimumScaleFactor(0.72)
-            .foregroundStyle(
-                inUse
-                ? brandAccent
-                : AnyShapeStyle(selectable ? CD.ColorToken.text : CD.ColorToken.textSecondary.opacity(0.7))
-            )
+            .foregroundStyle(fg)
             .frame(maxWidth: .infinity)
             .frame(height: syllableChipHeight)
-            .background(
-                shape.fill(
-                    inUse
-                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.18))
-                    : AnyShapeStyle(CD.ColorToken.card.opacity(0.96))
-                )
-            )
-            .overlay(
-                shape.stroke(
-                    inUse ? brandAccent : AnyShapeStyle(Theme.Strokes.strokeSubtle),
-                    lineWidth: inUse ? 1.4 : Theme.Strokes.strokeLineWidth
-                )
-            )
+            .background(shape.fill(fill))
+            .overlay(shape.stroke(stroke, lineWidth: isWrong ? 1.4 : (inUse ? 1.4 : Theme.Strokes.strokeLineWidth)))
             .shadow(
-                color: Color.black.opacity(inUse ? 0.16 : 0.12),
-                radius: inUse ? 8 : 4,
-                y: inUse ? 2 : 1
+                color: Color.black.opacity(isWrong ? 0.14 : (inUse ? 0.16 : 0.12)),
+                radius: isWrong ? 6 : (inUse ? 8 : 4),
+                y: isWrong ? 1 : (inUse ? 2 : 1)
             )
             .contentShape(shape)
     }

@@ -68,6 +68,28 @@ public struct FDCardDTO: Identifiable, Equatable {
     public let lessonTitle: String   // резолв из LessonsData, fallback "урок"
     public let tagText: String?      // "фраза" / "слово"
     public let addedAt: Date
+    /// Smart Speaker gloss (РАЗБОР), if saved with the phrase.
+    public let phraseParts: [FavoritePhrasePart]?
+
+    public init(
+        sourceId: String,
+        title: String,
+        subtitle: String,
+        meta: String,
+        lessonTitle: String,
+        tagText: String?,
+        addedAt: Date,
+        phraseParts: [FavoritePhrasePart]? = nil
+    ) {
+        self.sourceId = sourceId
+        self.title = title
+        self.subtitle = subtitle
+        self.meta = meta
+        self.lessonTitle = lessonTitle
+        self.tagText = tagText
+        self.addedAt = addedAt
+        self.phraseParts = phraseParts
+    }
 }
 
 /// Лайфхак для избранного — отдельный DTO
@@ -300,7 +322,8 @@ public final class FavoriteData {
                 courseId: normCourse,
                 lessonId: normLesson,
                 lessonTitle: title,
-                createdAt: it.createdAt
+                createdAt: it.createdAt,
+                phraseParts: it.phraseParts
             )
             result.append(rebuilt)
         }

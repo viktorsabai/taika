@@ -1174,6 +1174,37 @@ speaker:
 
 lesson completion не зависит от game mastery.
 
+### 8.1 taika stars (подсказки в играх)
+
+**новая персистентная валюта** — не путать с progress stars на карточке урока.
+
+| что | правило |
+|-----|---------|
+| заработок | +1 звезда за каждый **верный** ответ в match / builder / audioRecall |
+| кошелёк | `TaikaStarsStore` в UserDefaults — **не сбрасывается** при новой сессии закрепления или «повторить ошибки» |
+| сброс | только «Сбросить прогресс» в профиле (`AppResetAll`) |
+| ошибки | по-прежнему в `ReinforcementStore.failedCardKeys` — звёзды **не заменяют** error queue |
+
+стоимость подсказок (MVP):
+
+| игра | подсказка | звёзды |
+|------|-----------|--------|
+| match | оставить 3 пары на экране (50/50 доска) | 3 |
+| builder / recall | повторное «слушать» после 1 бесплатного прослушивания на раунд | 1 |
+| audioRecall | 50/50 — убрать половину неверных переводов | 2 |
+| audioRecall | повторное прослушивание после 1 бесплатного на раунд | 1 |
+
+UX:
+- золотой chip кошелька в `TaikaGameStatusStrip` (глобальный balance)
+- chip ✓N — верные ответы **текущей** сессии
+- кнопки подсказок — `TaikaGameHintBar` под статус-полосой
+- builder: неверные слоги **красные** и в слотах, и в пуле; тап снимает синхронно
+
+файлы:
+- `Session/TaikaStarsStore.swift` — earn/spend/clearAll
+- `HomeTask/HomeTaskDS.swift` — gold UI + hint buttons (TaikaGameHintBar)
+- wiring: `HomeTaskView`, `AudioRecallGameView`, `RecallGameDS`
+
 ---
 
 ## 9. pro gating
@@ -1241,6 +1272,12 @@ pro:
 
 **2026-02-21 (EPIC 5 — Main)**  
 - Main «Продолжить»: CDLessonCarousel, anchor .leading, slot height под depth. Поиск: оверлей в AppShell (SearchOverlayView), поиск из вкладки Курсы открывается поверх текущего экрана. «Подборка для тебя» (Кун Кру) вместо «План на неделю».
+
+**2026-08-22 (EPIC — Taika Stars & game hints)**  
+- Персистентные звёзды за верные ответы в match / builder / audioRecall (`TaikaStarsStore`).  
+- Подсказки: match «3 пары» (3⭐), builder/audio повторное слушание (1⭐), audioRecall 50/50 (2⭐).  
+- Золотой кошелёк в статус-полосе игр; ошибки по-прежнему в reinforcement queue.  
+- Builder: красная подсветка неверных слогов в пуле + tap-to-remove.
 
 ---
 

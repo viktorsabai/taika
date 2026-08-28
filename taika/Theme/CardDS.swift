@@ -291,6 +291,9 @@ public struct StepLifehackCardVisual: View {
     public let isFavorite: Bool
     public let onFavorite: () -> Void
     public let onNext: (() -> Void)?
+    /// Theory-bonus course rail: only the heart, centered.
+    public let favoriteOnly: Bool
+    public let showsLabelChip: Bool
 
     public init(
         item: SDStepItem,
@@ -301,7 +304,9 @@ public struct StepLifehackCardVisual: View {
         chromeStyle: CardDS.ChromeStyle = .cards,
         isFavorite: Bool = false,
         onFavorite: @escaping () -> Void = {},
-        onNext: (() -> Void)? = nil
+        onNext: (() -> Void)? = nil,
+        favoriteOnly: Bool = false,
+        showsLabelChip: Bool = true
     ) {
         self.item = item
         if let label {
@@ -320,6 +325,8 @@ public struct StepLifehackCardVisual: View {
         self.isFavorite = isFavorite
         self.onFavorite = onFavorite
         self.onNext = onNext
+        self.favoriteOnly = favoriteOnly
+        self.showsLabelChip = showsLabelChip
     }
 
     public var body: some View {
@@ -336,7 +343,9 @@ public struct StepLifehackCardVisual: View {
             chromeStyle: chromeStyle,
             isFavorite: isFavorite,
             onFavorite: onFavorite,
-            onNext: onNext
+            onNext: onNext,
+            favoriteOnly: favoriteOnly,
+            showsLabelChip: showsLabelChip
         )
     }
 }
@@ -358,6 +367,10 @@ public struct StepLifehackCardLegacy: View {
     public let onFavorite: () -> Void
     public let onLearn: () -> Void
     public let onNext: (() -> Void)?
+    /// Только сердце по центру (теория-only курс).
+    public let favoriteOnly: Bool
+    public let showsLabelChip: Bool
+    @State private var showExpand = false
 
     public init(
         headline: String? = nil,
@@ -373,7 +386,9 @@ public struct StepLifehackCardLegacy: View {
         tipShowsLearnSlot: Bool = false,
         onFavorite: @escaping () -> Void = {},
         onLearn: @escaping () -> Void = {},
-        onNext: (() -> Void)? = nil
+        onNext: (() -> Void)? = nil,
+        favoriteOnly: Bool = false,
+        showsLabelChip: Bool = true
     ) {
         self.headline = headline
         self.bodyText = body
@@ -388,6 +403,8 @@ public struct StepLifehackCardLegacy: View {
         self.onFavorite = onFavorite
         self.onLearn = onLearn
         self.onNext = onNext
+        self.favoriteOnly = favoriteOnly
+        self.showsLabelChip = showsLabelChip
     }
 
     private var parsedBody: (main: String, tip: String?) {
@@ -416,31 +433,37 @@ public struct StepLifehackCardLegacy: View {
 
     public var body: some View {
         let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
-        let tint = ThemeManager.shared.currentAccentTintColor
+        let lilac = TaikaLifehackCrayonPalette.primary
         let parts = parsedBody
+        let seed = TaikaOrganicCardSeed.value(for: "lifehack.\(bodyText.prefix(48))")
 
         ZStack {
             shape.fill(CD.ColorToken.card)
 
-            // Лёгкий brand wash — без тяжёлой обводки и «рамки в рамке».
-            LinearGradient(
-                colors: [
-                    tint.opacity(0.14),
-                    Color.clear
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .clipShape(shape)
+            TaikaLifehackCrayonPalette.wash
+                .clipShape(shape)
+
+            TaikaLifehackOrganicLinesOverlay(cardSeed: seed, intensity: 1.0)
+                .opacity(0.95)
+                .mask(
+                    LinearGradient(
+                        colors: [.clear, .white.opacity(0.4), .white.opacity(0.9)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .clipShape(shape)
 
             VStack(spacing: 0) {
                 HStack(alignment: .center, spacing: 10) {
                     StepCardInlineWordmarkSlot()
                     Spacer(minLength: 8)
-                    AppMiniChip(
-                        title: label.lowercased(),
-                        style: stepCardTypeChipStyle(forLabel: label)
-                    ) { }
+                    if showsLabelChip {
+                        AppMiniChip(
+                            title: label.lowercased(),
+                            style: .neutral
+                        ) { }
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 18)
@@ -467,7 +490,7 @@ public struct StepLifehackCardLegacy: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     if let tip = parts.tip {
-                        taikaFMStyledText(tip, baseColor: tint)
+                        taikaFMStyledText(tip, baseColor: lilac)
                             .font(.system(size: Theme.StepCardText.lifehackTipFontSize, weight: .semibold))
                             .multilineTextAlignment(.center)
                             .lineSpacing(5)
@@ -481,17 +504,38 @@ public struct StepLifehackCardLegacy: View {
 
                 Spacer(minLength: 12)
 
-                StepIconCircleButton(
-                    systemName: isFavorite ? "heart.fill" : "heart",
-                    isActive: isFavorite,
-                    caption: "в избранное",
-                    action: onFavorite
+                StepCardActionBar(
+                    isFavorite: isFavorite,
+                    isLearned: isLearned,
+                    allowLearn: allowLearn && tipShowsLearnSlot,
+                    isTip: true,
+                    tipShowsLearnSlot: tipShowsLearnSlot,
+                    showsPlayAndFavorite: true,
+                    favoriteOnly: favoriteOnly,
+                    isAudioPlaying: false,
+                    onPlay: nil,
+                    onFavorite: onFavorite,
+                    onLearn: onLearn,
+                    onNext: onNext,
+                    onExpand: favoriteOnly ? nil : {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showExpand = true
+                    }
                 )
-                .padding(.bottom, 16)
+                .padding(.horizontal, 8)
+                .padding(.bottom, 10)
             }
         }
         .frame(width: size.width, height: size.height)
         .shadow(color: Color.black.opacity(0.28), radius: 16, y: 10)
+        .sheet(isPresented: $showExpand) {
+            StepLifehackExpandSheet(bodyText: bodyText) {
+                showExpand = false
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel([headline, parts.main, parts.tip].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ". "))
     }
@@ -512,7 +556,7 @@ private struct StepLifehackExpandSheet: View {
             HStack {
                 TaikaWordmarkLockup(fontSize: 16)
                 Spacer(minLength: 0)
-                AppMiniChip(title: "лайфхак", style: .accent) { }
+                AppMiniChip(title: "лайфхак", style: .neutral) { }
             }
             .padding(.horizontal, CardDS.Metrics.contentX)
             .padding(.top, 12)
@@ -1020,6 +1064,8 @@ public struct StepCardActionBar: View {
     /// В зачётке: у лайфхака те же действия, что у слова (без шеврона «далее») — раскрыть, сердце, запомнил.
     public let tipShowsLearnSlot: Bool
     public let showsPlayAndFavorite: Bool
+    /// Только сердце по центру (без «ещё» / «далее» / «запомнить»).
+    public let favoriteOnly: Bool
     /// Highlights the speaker control while TTS for this card is playing.
     public let isAudioPlaying: Bool
     public let onPlay: (() -> Void)?
@@ -1038,6 +1084,7 @@ public struct StepCardActionBar: View {
         isTip: Bool = false,
         tipShowsLearnSlot: Bool = false,
         showsPlayAndFavorite: Bool = true,
+        favoriteOnly: Bool = false,
         isAudioPlaying: Bool = false,
         onPlay: (() -> Void)? = nil,
         onFavorite: @escaping () -> Void,
@@ -1052,6 +1099,7 @@ public struct StepCardActionBar: View {
         self.isTip = isTip
         self.tipShowsLearnSlot = tipShowsLearnSlot
         self.showsPlayAndFavorite = showsPlayAndFavorite
+        self.favoriteOnly = favoriteOnly
         self.isAudioPlaying = isAudioPlaying
         self.onPlay = onPlay
         self.onFavorite = onFavorite
@@ -1062,140 +1110,99 @@ public struct StepCardActionBar: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if isTip && !tipShowsLearnSlot {
-                primaryActionButton(
-                    systemName: "arrow.up.right",
-                    title: "Открыть лайфхак",
-                    isActive: false,
-                    action: { onExpand?() }
+        if favoriteOnly {
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                actionSlot(
+                    systemName: isFavorite ? "heart.fill" : "heart",
+                    title: isFavorite ? "в избранном" : "в избранное",
+                    isActive: isFavorite,
+                    action: onFavorite
                 )
-            } else if miniLearnedCheckmarkOnly && isLearned {
-                primaryActionButton(
-                    systemName: "checkmark",
-                    title: "Выучено",
-                    isActive: true,
-                    isEnabled: false,
-                    action: {}
-                )
-            } else {
-                primaryActionButton(
-                    systemName: "checkmark",
-                    title: isLearned ? "Запомнено" : "Запомнить",
-                    isActive: isLearned,
-                    isEnabled: allowLearn,
-                    action: onLearn
-                )
+                .frame(maxWidth: 120)
+                Spacer(minLength: 0)
             }
-
-            HStack(spacing: 18) {
-                if !isTip && showsPlayAndFavorite {
-                    quietActionButton(
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .accessibilityElement(children: .contain)
+        } else {
+            // Три равных действия прямо на карточке — без серой «панели» и толстых делителей.
+            HStack(spacing: 0) {
+                if isTip {
+                    actionSlot(
+                        systemName: "rectangle.expand.vertical",
+                        title: "ещё",
+                        isActive: false,
+                        action: { onExpand?() }
+                    )
+                } else if showsPlayAndFavorite {
+                    actionSlot(
                         systemName: "speaker.wave.2.fill",
-                        title: "Слушать",
-                        isActive: isAudioPlaying,
+                        title: "слушать",
+                        isActive: false,
+                        playbackActive: isAudioPlaying,
                         action: { onPlay?() }
                     )
+                } else {
+                    Color.clear.frame(maxWidth: .infinity, minHeight: 48)
                 }
 
-                if !isTip && showsPlayAndFavorite {
-                    quietActionButton(
+                if showsPlayAndFavorite {
+                    actionSlot(
                         systemName: isFavorite ? "heart.fill" : "heart",
-                        title: isFavorite ? "В избранном" : "В избранное",
+                        title: isFavorite ? "в избранном" : "в избранное",
                         isActive: isFavorite,
                         action: onFavorite
                     )
+                } else {
+                    Color.clear.frame(maxWidth: .infinity, minHeight: 48)
                 }
 
-                Spacer(minLength: 0)
-
                 if isTip && !tipShowsLearnSlot {
-                    quietActionButton(
-                        systemName: "arrow.right",
-                        title: "Далее",
+                    actionSlot(
+                        systemName: "chevron.right",
+                        title: "далее",
                         isActive: false,
                         action: { onNext?() }
                     )
+                } else if miniLearnedCheckmarkOnly && isLearned {
+                    actionSlot(
+                        systemName: "checkmark",
+                        title: "выучено",
+                        isActive: true,
+                        isEnabled: false,
+                        action: {}
+                    )
+                } else {
+                    actionSlot(
+                        systemName: isLearned ? "checkmark.circle.fill" : "checkmark.circle",
+                        title: isLearned ? "запомнил" : "запомнить",
+                        isActive: isLearned,
+                        isEnabled: allowLearn,
+                        action: onLearn
+                    )
                 }
             }
-            .padding(.horizontal, 4)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .accessibilityElement(children: .contain)
         }
-        .padding(.horizontal, 6)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
-        .frame(maxWidth: .infinity, minHeight: 90, alignment: .topLeading)
-        .accessibilityElement(children: .contain)
     }
 
-    private func primaryActionButton(
+    private func actionSlot(
         systemName: String,
         title: String,
         isActive: Bool,
         isEnabled: Bool = true,
+        playbackActive: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            AnyView(
-                HStack(spacing: 10) {
-                Image(systemName: systemName)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(isActive ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.text))
-                    .frame(width: 20)
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(isEnabled ? PD.ColorToken.text : PD.ColorToken.textSecondary.opacity(0.45))
-                Spacer(minLength: 0)
-                Image(systemName: isActive ? "checkmark.circle.fill" : "sparkles")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(isEnabled ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(isActive ? 0.95 : 0.72)) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35)))
-            }
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, minHeight: 42)
-            .background {
-                LinearGradient(
-                    colors: [
-                        ThemeManager.shared.currentAccentTintColor.opacity(isActive ? 0.18 : 0.07),
-                        PD.ColorToken.card.opacity(0.66)
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            }
-            .overlay(alignment: .leading) {
-                Rectangle()
-                    .fill(ThemeManager.shared.currentAccentFill.opacity(isEnabled ? 0.92 : 0.22))
-                    .frame(width: 3)
-            }
-                .contentShape(Rectangle())
-            )
-        }
-        .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.96, useBouncySpring: false, flashOpacity: 0.05))
-        .disabled(!isEnabled)
-    }
-
-    private func quietActionButton(
-        systemName: String,
-        title: String,
-        isActive: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            AnyView(
-                HStack(spacing: 6) {
-                Image(systemName: systemName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(isActive ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary))
-                    .frame(width: 18, height: 18)
-                Text(title)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(isActive ? PD.ColorToken.text : PD.ColorToken.textSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
-            }
-                .contentShape(Rectangle())
-            )
-        }
-        .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.94, useBouncySpring: false, flashOpacity: 0.03))
+        TaikaListenActionSlot(
+            systemName: systemName,
+            title: title,
+            isActive: isActive,
+            isEnabled: isEnabled,
+            playbackActive: playbackActive,
+            action: action
+        )
     }
 }
 // MARK: - StepCardBase (shared shell for step cards – layout only, no logic)
@@ -2385,22 +2392,17 @@ struct CourseInlineProgressView: View {
 }
 
 // MARK: - Pro wash (как Main «подборка дня»)
-/// Split into tiny views + method-ref TimelineView so the type-checker stays fast.
+/// Static wash — animated TimelineView on every Pro card was hammering carousel FPS.
 private struct CourseProCardWash: View {
     var cornerRadius: CGFloat
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { context in
-            washLayers(at: context.date)
-        }
-    }
-
-    private func washLayers(at date: Date) -> CourseProCardWashLayers {
         CourseProCardWashLayers(
             cornerRadius: cornerRadius,
-            phase: date.timeIntervalSinceReferenceDate * 0.22,
+            phase: 0.35,
             tint: ThemeManager.shared.currentAccentTintColor
         )
+        .drawingGroup(opaque: false)
     }
 }
 
@@ -2453,8 +2455,8 @@ private enum CourseProCardWashDrawer {
         phase: Double,
         tint: Color
     ) {
-        for i in 0..<6 {
-            let t = Double(i) / 5.0
+        for i in 0..<4 {
+            let t = Double(i) / 3.0
             var path = Path()
             let y0 = size.height * (0.35 + t * 0.45)
             let amp = 8.0 + t * 10.0
@@ -2468,7 +2470,7 @@ private enum CourseProCardWashDrawer {
                 } else {
                     path.addLine(to: pt)
                 }
-                x += 4
+                x += 6
             }
             let opacity = 0.10 + (1 - t) * 0.12
             context.stroke(path, with: .color(tint.opacity(opacity)), lineWidth: 0.9)
@@ -2544,112 +2546,24 @@ private struct CardBackActionButtonStyle: ButtonStyle {
     }
 }
 
-fileprivate struct CDOrganicWaveShape: Shape {
-    var phase: CGFloat
-    var seed: CGFloat
-
-    var animatableData: CGFloat {
-        get { phase }
-        set { phase = newValue }
-    }
-
-    func path(in rect: CGRect) -> Path {
-        let shift = sin(phase * .pi * 2 + seed) * 18
-        let y = rect.height * (0.68 + 0.08 * sin(seed))
-        var path = Path()
-        path.move(to: CGPoint(x: -28, y: y + shift))
-        path.addCurve(
-            to: CGPoint(x: rect.width * 0.42, y: rect.height * 0.54 + shift * 0.35),
-            control1: CGPoint(x: rect.width * 0.14, y: rect.height * 0.42 - shift),
-            control2: CGPoint(x: rect.width * 0.20, y: rect.height * 0.82 + shift)
-        )
-        path.addCurve(
-            to: CGPoint(x: rect.width + 28, y: rect.height * 0.34 - shift * 0.25),
-            control1: CGPoint(x: rect.width * 0.60, y: rect.height * 0.28 + shift),
-            control2: CGPoint(x: rect.width * 0.78, y: rect.height * 0.56 - shift)
-        )
-        return path
-    }
-}
-
 fileprivate struct CDOrganicLearnedTreatment: View {
+    /// Soft radial wash color (status base: green / sky / pink) — kept for line tint fallback.
     let glow: Color
+    /// Stroke style for status waves. Favorites never replace this — they add pink on top.
+    var lineStyle: AnyShapeStyle? = nil
     let isFavorite: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var phase: CGFloat = 0
+    /// Deterministic salt from course/lesson id — vines look different per card.
+    var cardSeed: CGFloat = 1.7
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous)
-                .fill(Color.black.opacity(0.12))
-
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [glow.opacity(0.16), glow.opacity(0.035), Color.clear],
-                        center: .center,
-                        startRadius: 8,
-                        endRadius: 132
-                    )
-                )
-                .frame(width: 210, height: 150)
-                .blur(radius: 18)
-                .offset(x: 70, y: -70)
-
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [glow.opacity(0.09), Color.clear],
-                        center: .center,
-                        startRadius: 4,
-                        endRadius: 118
-                    )
-                )
-                .frame(width: 180, height: 130)
-                .blur(radius: 22)
-                .offset(x: -74, y: 78)
-
-            if isFavorite {
-                ForEach(Array([0.55, 1.7, 3.1].enumerated()), id: \.offset) { index, seed in
-                    CDOrganicWaveShape(
-                        phase: reduceMotion ? 0 : phase,
-                        seed: seed
-                    )
-                    .stroke(
-                        AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(index == 1 ? 0.34 : 0.18)),
-                        style: StrokeStyle(lineWidth: index == 1 ? 1.2 : 0.72, lineCap: .round, lineJoin: .round)
-                    )
-                    .blur(radius: index == 1 ? 0.1 : 0.45)
-                    .offset(x: CGFloat(index - 1) * 14, y: CGFloat(index - 1) * 14)
-                }
-            }
-
-            ForEach(Array([0.2, 1.35, 2.5, 3.7, 4.9].enumerated()), id: \.offset) { index, seed in
-                CDOrganicWaveShape(
-                    phase: reduceMotion ? 0 : phase,
-                    seed: seed
-                )
-                .stroke(
-                    glow.opacity(index == 2 ? 0.36 : 0.16),
-                    style: StrokeStyle(
-                        lineWidth: index == 2 ? 1.45 : 0.82,
-                        lineCap: .round,
-                        lineJoin: .round
-                    )
-                )
-                .blur(radius: index == 2 ? 0.12 : 0.5)
-                .scaleEffect(1 + CGFloat(index - 2) * 0.028)
-                .offset(x: index.isMultiple(of: 2) ? -10 : 10, y: CGFloat(index - 2) * 6)
-            }
-        }
+        TaikaOrganicCardLinesOverlay(
+            cardSeed: cardSeed,
+            intensity: 1.0,
+            glow: glow,
+            lineStyle: lineStyle,
+            isFavorite: isFavorite
+        )
         .clipShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
-        .allowsHitTesting(false)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 14).repeatForever(autoreverses: true)) {
-                phase = 1
-            }
-        }
     }
 }
 
@@ -2657,39 +2571,51 @@ private struct CDCourseStatusPill: View {
     let title: String
     let icon: String
     let trailingIcon: String
+    var fill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient)
+    var shadowColor: Color = TaikaMasteryTokens.green
 
-    init(title: String, icon: String, trailingIcon: String = "arrow.right") {
+    init(
+        title: String,
+        icon: String,
+        trailingIcon: String = "arrow.right",
+        fill: AnyShapeStyle = AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient),
+        shadowColor: Color = TaikaMasteryTokens.green
+    ) {
         self.title = title
         self.icon = icon
         self.trailingIcon = trailingIcon
+        self.fill = fill
+        self.shadowColor = shadowColor
     }
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 5) {
             if !icon.isEmpty {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 10, weight: .bold))
             }
             Text(title)
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: 11, weight: .semibold))
                 .lineLimit(1)
-                .minimumScaleFactor(0.68)
+                .minimumScaleFactor(0.78)
                 .allowsTightening(true)
                 .layoutPriority(1)
-            Image(systemName: trailingIcon)
-                .font(.system(size: 11, weight: .bold))
+            if !trailingIcon.isEmpty {
+                Image(systemName: trailingIcon)
+                    .font(.system(size: 9, weight: .bold))
+            }
         }
-        .foregroundStyle(Color.black.opacity(0.92))
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .foregroundStyle(Color.black.opacity(0.90))
+        .fixedSize(horizontal: true, vertical: false)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
         .background(
             Capsule(style: .continuous)
-                .fill(AnyShapeStyle(TaikaMasteryTokens.greenBadgeGradient))
+                .fill(fill)
         )
         .shadow(
-            color: TaikaMasteryTokens.green.opacity(0.28),
-            radius: 8,
+            color: shadowColor.opacity(0.22),
+            radius: 6,
             y: 2
         )
     }
@@ -2897,7 +2823,11 @@ public struct CourseLessonCard: View {
     @State private var isFlipped: Bool = false
     @State private var lockedActionHint: String? = nil
     @State private var lockedHintHideTask: DispatchWorkItem? = nil
+    /// Optimistic heart + pink organic lines; synced from `isFavoriteActive`.
+    @State private var favoriteLit: Bool = false
     @Environment(\.stepCarouselCellSize) private var stepCarouselCellSize
+
+    private var favoriteOn: Bool { favoriteLit }
 
     private func showLockedActionHint(_ text: String) {
         lockedHintHideTask?.cancel()
@@ -2911,6 +2841,13 @@ public struct CourseLessonCard: View {
         }
         lockedHintHideTask = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2, execute: work)
+    }
+
+    private func handleFavoriteTap() {
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+            favoriteLit.toggle()
+        }
+        onFavoriteTap?()
     }
 
     private var showsProWash: Bool { isPro || showProCrown }
@@ -2932,6 +2869,7 @@ public struct CourseLessonCard: View {
     private var courseProShadowY: CGFloat { showsProWash ? 5 : 0 }
 
     private var effectiveAccentTreatment: CardDS.AccentTreatment {
+        // Status wash is never replaced by favorite pink — favorite only adds pink lines on top.
         if case .none = accentTreatment {
             if statusKind == .completed {
                 return .taikaValues(
@@ -2939,7 +2877,13 @@ public struct CourseLessonCard: View {
                     glow: TaikaMasteryTokens.greenGlow
                 )
             }
-            if isFavoriteActive {
+            if statusKind == .inProgress {
+                return .taikaValues(
+                    fill: AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient),
+                    glow: TaikaMasteryTokens.continueSkyGlow
+                )
+            }
+            if favoriteOn {
                 return .taikaValues(
                     fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
                     glow: ThemeManager.shared.currentAccentTintColor
@@ -2947,6 +2891,23 @@ public struct CourseLessonCard: View {
             }
         }
         return accentTreatment
+    }
+
+    private var statusWaveLineStyle: AnyShapeStyle? {
+        switch statusKind {
+        case .completed:
+            return AnyShapeStyle(TaikaMasteryTokens.greenGradient)
+        case .inProgress:
+            return AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient)
+        default:
+            return nil
+        }
+    }
+
+    /// Stable vine salt from course/lesson identity — same card always, different cards ≠ same pattern.
+    private var organicCardSeed: CGFloat {
+        let key = (courseKey?.isEmpty == false ? courseKey! : title)
+        return TaikaOrganicCardSeed.value(for: key)
     }
 
     @ViewBuilder
@@ -2960,7 +2921,9 @@ public struct CourseLessonCard: View {
             case let .taikaValues(_, glow):
                 CDOrganicLearnedTreatment(
                     glow: glow,
-                    isFavorite: isFavoriteActive
+                    lineStyle: statusWaveLineStyle,
+                    isFavorite: favoriteOn,
+                    cardSeed: organicCardSeed
                 )
             }
         }
@@ -2976,7 +2939,7 @@ public struct CourseLessonCard: View {
             || statusKind == .inProgress
             || statusKind == .completed
         let showProTeaserChip = isPro && !showProCrown && !courseOpened
-        let showStatusOnFace = !showProCrown && !showProTeaserChip && statusKind != nil
+        let showStatusOnFace = !showProCrown && !showProTeaserChip && (statusKind != nil || !(statusChipTitle?.isEmpty ?? true))
         let progressFraction: Double? = {
             guard showsInlineProgress else { return nil }
             if showProCrown || showProTeaserChip { return nil }
@@ -2996,24 +2959,40 @@ public struct CourseLessonCard: View {
                 } label: {
                     if statusKind == .completed && backFaceKind == .courseGradeSheet {
                         CDCourseStatusPill(
-                            title: isBack ? "ЗАКРЕПЛЕНИЕ" : "КУРС ПРОЙДЕН",
+                            title: isBack ? "закрепление" : "курс пройден",
                             icon: "",
                             trailingIcon: isBack ? "arrow.left" : "arrow.right"
                         )
                     } else if statusKind == .completed && backFaceKind == .lessonCompletion {
                         CDCourseStatusPill(
-                            title: "УРОК ПРОЙДЕН",
+                            title: "урок пройден",
                             icon: "checkmark",
                             trailingIcon: isBack ? "arrow.left" : "arrow.right"
                         )
                     } else if statusKind == .completed {
-                        AppStatusChip(kind: .completed, title: "УРОК ПРОЙДЕН")
+                        AppStatusChip(kind: .completed, title: "пройден")
+                    } else if statusKind == .inProgress {
+                        CDCourseStatusPill(
+                            title: statusChipTitle?.isEmpty == false ? (statusChipTitle ?? "в процессе") : "в процессе",
+                            icon: "",
+                            trailingIcon: "",
+                            fill: AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient),
+                            shadowColor: TaikaMasteryTokens.continueSky
+                        )
                     } else {
                         AppStatusChip(kind: statusKind, title: statusChipTitle)
                     }
                 }
                 .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
                 .accessibilityLabel(isBack ? "Вернуться к лицевой стороне урока" : "Открыть зачёт урока")
+            } else if showStatusOnFace, let badge = statusChipTitle?.trimmingCharacters(in: .whitespacesAndNewlines), !badge.isEmpty {
+                Text(badge)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule(style: .continuous).fill(PD.ColorToken.chip.opacity(0.92)))
+                    .accessibilityLabel(badge)
             }
         }
 
@@ -3027,8 +3006,11 @@ public struct CourseLessonCard: View {
                 .padding(.top, 18)
                 .padding(.bottom, 0)
             } else {
+                let statusOwnsTopLeading =
+                    statusKind == .inProgress
+                    || (statusKind == .completed && (backFaceKind == .courseGradeSheet || backFaceKind == .lessonCompletion))
                 HStack(alignment: .center, spacing: 8) {
-                    if statusKind == .completed && (backFaceKind == .courseGradeSheet || backFaceKind == .lessonCompletion) {
+                    if statusOwnsTopLeading {
                         statusControl(isBack: false)
                         Spacer(minLength: 0)
                     } else {
@@ -3053,7 +3035,7 @@ public struct CourseLessonCard: View {
                             CourseProAnimatedCrown(onTap: { onPrimaryTap?() })
                         } else if showProTeaserChip {
                             CourseProAnimatedCrown(onTap: nil)
-                        } else if !(statusKind == .completed && (backFaceKind == .courseGradeSheet || backFaceKind == .lessonCompletion)) {
+                        } else if !statusOwnsTopLeading {
                             statusControl(isBack: false)
                         }
                     }
@@ -3116,8 +3098,8 @@ public struct CourseLessonCard: View {
                         } else {
                             AppCardIconButton(
                                 kind: .favorite,
-                                isActive: isFavoriteActive,
-                                onTap: { onFavoriteTap?() }
+                                isActive: favoriteOn,
+                                onTap: { handleFavoriteTap() }
                             )
                         }
                     }
@@ -3440,11 +3422,9 @@ public struct CourseLessonCard: View {
                         backCard
                             .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
                     } else {
+                        // No whole-card tap: it stole taps from heart/play/console Buttons.
+                        // Open course via the play control in the action row.
                         frontCard
-                            .contentShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
-                            .onTapGesture {
-                                onPrimaryTap?()
-                            }
                     }
                 }
                 // Internal card treatment belongs to the same rotating surface as the face.
@@ -3457,11 +3437,9 @@ public struct CourseLessonCard: View {
                 .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0), perspective: 0.9)
                 .animation(.spring(response: 0.55, dampingFraction: 0.82), value: isFlipped)
             } else {
+                // No whole-card tap: it stole taps from heart/play/console Buttons.
+                // Open course via the play control in the action row.
                 frontCard
-                    .contentShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
-                    .onTapGesture {
-                        onPrimaryTap?()
-                    }
                     .overlay { accentTreatmentOverlay }
                     .overlay { courseProWashOverlay }
             }
@@ -3478,9 +3456,20 @@ public struct CourseLessonCard: View {
         .opacity(visualOpacity)
         .padding(.horizontal, 0)
         // Prevent state leak between reused carousel cells.
+        .onAppear { favoriteLit = isFavoriteActive }
+        .onChange(of: isFavoriteActive) { _, newValue in
+            favoriteLit = newValue
+        }
         .onChange(of: flipEnabled) { _, _ in isFlipped = false }
-        .onChange(of: title) { _, _ in isFlipped = false }
-        .onChange(of: courseKey) { _, _ in isFlipped = false }
+        .onChange(of: title) { _, _ in
+            isFlipped = false
+            favoriteLit = isFavoriteActive
+        }
+        .onChange(of: courseKey) { _, _ in
+            isFlipped = false
+            favoriteLit = isFavoriteActive
+        }
+        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: favoriteOn)
     }
 }
 
@@ -4699,6 +4688,13 @@ public struct StepProTeaserCard: View {
 /// Убираем дефисы между слогами для отображения (разделитель — стрелка тона и пробел).
 fileprivate func phoneticDisplayWithoutHyphens(_ s: String) -> String {
     var result = s.trimmingCharacters(in: .whitespacesAndNewlines)
+    let emojiMap: [(String, String)] = [
+        ("↘️", "↘"), ("↗️", "↗"), ("➡️", "→"), ("⬇️", "↓"), ("⬆️", "↑"),
+        ("➡︎", "→"), ("⬇︎", "↓"), ("⬆︎", "↑"), ("↘︎", "↘"), ("↗︎", "↗")
+    ]
+    for (from, to) in emojiMap {
+        result = result.replacingOccurrences(of: from, with: to)
+    }
     for arrow in ["→", "↓", "↘", "↑", "↗"] {
         result = result.replacingOccurrences(of: arrow + "-", with: arrow + " ")
     }

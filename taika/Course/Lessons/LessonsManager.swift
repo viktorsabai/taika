@@ -341,10 +341,17 @@ extension LessonProgress {
 
     // MARK: - Main integration helpers
 
-    /// Удобный доступ к проценту прогресса по уроку (0.0 ... 1.0)
-    @inlinable
+    /// Удобный доступ к проценту прогресса по уроку (0.0 ... 1.0).
+    /// Считаем из ProgressManager напрямую — не из потенциально устаревшего агрегата `progress`.
     public func lessonPercent(courseId: String, lessonId: String) -> Double {
-        lessonProgress(courseId: courseId, lessonId: lessonId)?.percent ?? 0.0
+        let cid = catalogCourseId(for: courseId)
+        let lid = catalogLessonId(courseId: cid, lessonId: lessonId)
+        let learned = ProgressManager.shared.learnedEffectiveCount(courseId: cid, lessonId: lid)
+        let total = ProgressManager.shared.totalEffectiveCount(courseId: cid, lessonId: lid)
+        guard total > 0 else {
+            return lessonProgress(courseId: cid, lessonId: lid)?.percent ?? 0.0
+        }
+        return min(1.0, Double(min(learned, total)) / Double(total))
     }
 
     /// Возвращает статус и прогресс по уроку (0.0...1.0)
@@ -365,24 +372,33 @@ extension LessonProgress {
     }
 
     /// Returns the overall status for a course:
-    /// - .completed if all lessons are completed and at least one exists,
-    /// - .inProgress if any lesson is in progress or any lesson is started,
-    /// - .locked otherwise (no progress or all locked).
+    /// - .completed if all catalog lessons are completed and at least one exists,
+    /// - .inProgress if any lesson is in progress, completed (but not all), or started,
+    /// - .locked otherwise (no progress).
     public func courseStatus(for courseId: String) -> LessonStatus {
         let cid = catalogCourseId(for: courseId)
+        let catalogIds = lessonsData.lessons(for: cid).map(\.lessonID)
         let byLesson = progress[cid] ?? [:]
-        let statuses = byLesson.values.map { $0.status }
-
-        // Если хотя бы один урок отмечен как «начатый», курс считается в процессе
         let startedLessons = started[cid] ?? []
+
+        let statuses: [LessonStatus]
+        if !catalogIds.isEmpty {
+            // Считаем по актуальному каталогу — иначе «все записи completed»
+            // при частично начатом курсе даёт ложный .completed.
+            statuses = catalogIds.map { byLesson[$0]?.status ?? .locked }
+        } else {
+            statuses = byLesson.values.map(\.status)
+        }
 
         if statuses.isEmpty && startedLessons.isEmpty {
             return .locked
         }
-        if statuses.allSatisfy({ $0 == .completed }) && !statuses.isEmpty {
+        if !statuses.isEmpty, statuses.allSatisfy({ $0 == .completed }) {
             return .completed
         }
-        if statuses.contains(.inProgress) || !startedLessons.isEmpty {
+        if statuses.contains(.inProgress)
+            || statuses.contains(.completed)
+            || !startedLessons.isEmpty {
             return .inProgress
         }
         return .locked

@@ -45,11 +45,8 @@ final class TaikaVoice {
         switch reaction {
 
         case .success:
-            return random(from: [
-                "taika_success_1",
-                "taika_success_2",
-                "taika_success_3"
-            ])
+            // Один звук успеха — короткий «хихи» (match_success_2). Длинный match_success — удивление, не для win.
+            return "match_success_2"
 
         case .fail:
             return random(from: [
@@ -89,10 +86,9 @@ final class TaikaVoice {
         }
     }
 
-    /// Звук при верном матче — случайно один из доступных.
+    /// Звук при верном матче / правильном ответе в играх.
     func playMatchSuccess() {
-        let name = random(from: ["match_success", "match_success_2"])
-        playSound(named: name)
+        playSound(named: "match_success_2")
     }
 
     /// Звук при неверном матче (annoyed / match_fail.mp3).

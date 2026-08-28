@@ -53,6 +53,10 @@ final class OverlayPresenter: ObservableObject {
         case gamePark
         case gameParkFromFavorites
         case gameParkFromDictionary
+        /// Main «Закрепление»: курс + режим игры в одном экране.
+        case reinforcePick
+        /// Game park for a specific completed course (legacy / other entry points).
+        case gameParkForCourse(courseId: String)
         case favoritesFilters
         /// Поиск по избранным фразам (вкладка «Карточки»).
         case favoritesSearch

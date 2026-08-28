@@ -53,12 +53,12 @@ extension ProManager {
     func introTrialEligible(for package: Package) async -> Bool {
         guard RevenueCatBootstrap.isConfigured else { return false }
         let productId = package.storeProduct.productIdentifier
-        do {
-            let map = try await Purchases.shared.checkTrialOrIntroDiscountEligibility(productIdentifiers: [productId])
-            return map[productId]?.status == .eligible
-        } catch {
-            // Если StoreProduct уже несёт intro — считаем потенциально eligible.
-            return package.storeProduct.introductoryDiscount != nil
+        // RC API здесь не throws — eligibility читаем напрямую.
+        let map = await Purchases.shared.checkTrialOrIntroDiscountEligibility(productIdentifiers: [productId])
+        if let status = map[productId]?.status {
+            return status == .eligible
         }
+        // Fallback: если StoreProduct уже несёт intro — считаем потенциально eligible.
+        return package.storeProduct.introductoryDiscount != nil
     }
 }

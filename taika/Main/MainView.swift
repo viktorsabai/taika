@@ -60,10 +60,14 @@ struct MainView: View {
     @State private var kunKruCourses: [MainManager.CourseCardModel] = []
     /// Умная подборка курсов: показывается в секции «ПОДБОРКА ДНЯ».
     @State private var forYouCourses: [MainManager.CourseCardModel] = []
+    /// Пройденные курсы для закрепления (отдельный ряд на Main).
+    @State private var reinforcementCourses: [MainManager.CourseCardModel] = []
     @State private var didCenterForYouCarousel = false
     @State private var forYouAutoIndex: Int = 0
     @State private var forYouAutoScrollPausedUntil: Date = .distantPast
     private let forYouAutoScrollTimer = Timer.publish(every: 3.6, on: .main, in: .common).autoconnect()
+    /// Kun-kru composer on Main → handoff to Speaker conversation.
+    @State private var kunKruComposeText: String = ""
     /// Нативный индикатор при «Начни обучение» — без кастомного «случайный курс…» оверлея.
     @State private var isStartingRandomCourse = false
 
@@ -304,24 +308,14 @@ struct MainView: View {
         }
     }
 
-    private var dictionaryMainButton: some View {
-        let count = FavoriteManager.shared.smartSpeakerDictionaryCardsDTO.count
-        let title = count > 0 ? "Мой словарь · \(count)" : "Мой словарь"
-        return MDMainOutlinePillCTA(
-            title: title,
-            icon: "bookmark.fill"
-        ) {
-            overlay.present(.dictionaryQuickDrawer)
-        }
-        .accessibilityLabel("Мой словарь")
+    private var canReinforce: Bool {
+        !reinforcementCourses.isEmpty || LearnedGameSource.hasPlayableCards
     }
 
-    private var mainUtilityRow: some View {
-        VStack(spacing: 10) {
-            warmupRow
-            dictionaryMainButton
+    private var reinforceRow: some View {
+        MDMainReinforcePillCTA(isEnabled: canReinforce) {
+            overlay.present(.reinforcePick)
         }
-        .padding(.horizontal, Theme.Layout.pageHorizontal)
     }
 
     private func dayWord(_ n: Int) -> String {
@@ -435,7 +429,7 @@ struct MainView: View {
                     nav.openCourseCatalog(tab: .scenarios)
                 } label: {
                     Text("ВСЕ КУРСЫ")
-                        .taikaSubsectionStyle(accent: true)
+                        .taikaSubsectionStyle(accent: false)
                 }
                 .buttonStyle(.plain)
             }
@@ -481,7 +475,7 @@ struct MainView: View {
                     nav.openCourseCatalog(tab: .scenarios)
                 }) {
                     Text("ВСЕ КУРСЫ")
-                        .taikaSubsectionStyle(accent: true)
+                        .taikaSubsectionStyle(accent: false)
                 }
                 .buttonStyle(.plain)
             }
@@ -498,12 +492,20 @@ struct MainView: View {
                                 let dto = dtos[baseIdx]
                                 forYouCarouselCell(idx: baseIdx, dto: dto, dtos: dtos)
                                     .id(renderIdx)
+                                    // Depth cue: gentle and symmetric — a strong fade reads as a glitch.
+                                    .scrollTransition(.interactive, axis: .horizontal) { view, phase in
+                                        let off = min(abs(phase.value), 1)
+                                        return view
+                                            .opacity(1 - off * 0.22)
+                                            .scaleEffect(1 - off * 0.04)
+                                    }
                             }
                         }
                         .padding(.horizontal, allowsPeek ? sideInset : singleSideInset)
                         .padding(.vertical, 4)
                         .frame(height: MDPortraitCarouselMetrics.cardHeight + 36)
                     }
+                    .mask(forYouCarouselEdgeMask)
                     .scrollDisabled(!allowsPeek)
                     .simultaneousGesture(
                         DragGesture(minimumDistance: 8)
@@ -560,6 +562,20 @@ struct MainView: View {
         }
     }
 
+    /// Cards dissolve at the screen edges instead of being cut by a hard crop.
+    private var forYouCarouselEdgeMask: some View {
+        LinearGradient(
+            stops: [
+                .init(color: .clear, location: 0),
+                .init(color: .white, location: 0.07),
+                .init(color: .white, location: 0.93),
+                .init(color: .clear, location: 1)
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
     private func forYouDTOs() -> [FDCourseDTO] {
         forYouCourses.map { model in
             FDCourseDTO(
@@ -571,21 +587,40 @@ struct MainView: View {
         }
     }
 
+    private func miniCourseCardStyle(for model: MainManager.CourseCardModel) -> FDMiniCourseCardStyle {
+        switch model.displayStyle {
+        case .discovery: return .discovery
+        case .proShowcase: return .proShowcase
+        case .reinforcement: return .reinforcement
+        }
+    }
+
     private func forYouCarouselCell(idx: Int, dto: FDCourseDTO, dtos: [FDCourseDTO]) -> some View {
         let baseIndex = idx
         let model = forYouCourses[baseIndex]
-        return FDMiniCourseCard(
+        return courseCarouselCell(model: model, dto: dto) {
+            openCourse(model.courseId)
+        }
+        .frame(width: MDPortraitCarouselMetrics.cardWidth, height: MDPortraitCarouselMetrics.cardHeight)
+    }
+
+    private func courseCarouselCell(
+        model: MainManager.CourseCardModel,
+        dto: FDCourseDTO,
+        onOpen: @escaping () -> Void
+    ) -> some View {
+        FDMiniCourseCard(
             item: dto,
             layoutWidth: MDPortraitCarouselMetrics.cardWidth,
             layoutHeight: MDPortraitCarouselMetrics.cardHeight,
+            cardStyle: miniCourseCardStyle(for: model),
             isPro: model.isPro,
             categoryChip: model.categoryChip,
             learningOutcomes: model.learningOutcomes,
             lessonCount: model.lessonCount,
             durationMinutes: model.durationMinutes,
-            onOpen: { openCourse(model.courseId) }
+            onOpen: onOpen
         )
-        .frame(width: MDPortraitCarouselMetrics.cardWidth, height: MDPortraitCarouselMetrics.cardHeight)
     }
 
     private func startRandomCourseQuickstart() {
@@ -814,34 +849,53 @@ struct MainView: View {
     }
 
     private var continueSection: some View {
+        continueSectionContent
+            .padding(.horizontal, Theme.Layout.pageHorizontal)
+    }
+
+    private var continueSectionContent: some View {
         MDMainFilledPillCTA(
             title: continuePillTitle(),
             icon: "graduationcap.fill"
         ) {
             handleContinueCardTap()
         }
-        .padding(.horizontal, Theme.Layout.pageHorizontal)
+    }
+
+    private var mainUtilityRow: some View {
+        mainUtilityRowContent
+            .padding(.horizontal, Theme.Layout.pageHorizontal)
+    }
+
+    private var mainUtilityRowContent: some View {
+        warmupRow
     }
 
     private var mainScrollBlock: some View {
         let isModalPresented = overlay.isPresented
 
-        // Главная: герой → продолжить → разминка → подборка курсов.
-        let sectionBreath: CGFloat = 32
+        // Главная: кун кру → воронка обучения → подборка.
+        let sectionBreath: CGFloat = 36
 
         return TaikaRootVerticalScroll {
             VStack(spacing: 0) {
                 MDPromptHero(
                     greeting: heroGreetingText,
-                    onOpenSpeaker: openSpeakerConversationFromSandbox
+                    composeText: $kunKruComposeText,
+                    onSubmit: openSpeakerConversationWithPhrase
                 )
                 .padding(.top, 6)
 
-                continueSection
-                    .padding(.top, sectionBreath)
-
-                mainUtilityRow
-                    .padding(.top, 12)
+                // Одна воронка: один primary во всю ширину + два вторичных чипа строкой.
+                VStack(spacing: 10) {
+                    continueSectionContent
+                    HStack(spacing: 10) {
+                        mainUtilityRowContent
+                        reinforceRow
+                    }
+                }
+                .padding(.horizontal, Theme.Layout.pageHorizontal)
+                .padding(.top, 36)
 
                 forYouSection
                     .padding(.top, sectionBreath)
@@ -861,7 +915,12 @@ struct MainView: View {
             progress.refreshProfileState()
             weekProgressState = progress.publishedState
             rebuildLearnedState()
-            Task { await main.refresh() }
+            Task {
+                await main.reloadDailyCoursePicks()
+                await main.reloadReinforcementCourseCards()
+                forYouCourses = main.dailyCourseCards
+                reinforcementCourses = main.reinforcementCourseCards
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("FavoritesDidChange"))) { _ in
             guard allowReactiveRefresh(minInterval: 0.22) else { return }
@@ -891,7 +950,9 @@ struct MainView: View {
             Task { @MainActor in
                 await main.reloadDailyPicks()
                 await main.reloadDailyCoursePicks()
+                await main.reloadReinforcementCourseCards()
                 forYouCourses = main.dailyCourseCards
+                reinforcementCourses = main.reinforcementCourseCards
                 let targetIndex: Int = (main.dailyPicks.items.first?.isPro == true && main.dailyPicks.items.count > 1) ? 1 : 0
                 dailyIndex = min(targetIndex, max(0, main.dailyPicks.items.count - 1))
                 rebuildLearnedState()
@@ -910,7 +971,9 @@ struct MainView: View {
                     await main.rebuildWeekSummary()
                 }
                 await main.reloadDailyCoursePicks()
+                await main.reloadReinforcementCourseCards()
                 forYouCourses = main.dailyCourseCards
+                reinforcementCourses = main.reinforcementCourseCards
                 rebuildLearnedState()
                 rebuildFavoritesState()
                 return
@@ -934,7 +997,9 @@ struct MainView: View {
 
             // Daily course picks: stable set for the current Bangkok day (prepared by MainManager).
             await main.reloadDailyCoursePicks()
+            await main.reloadReinforcementCourseCards()
             forYouCourses = main.dailyCourseCards
+            reinforcementCourses = main.reinforcementCourseCards
 
             // Прогрев индекса поиска в фоне: к первому открытию оверлея данные чаще уже собраны.
             Task(priority: .utility) {
@@ -1685,6 +1750,8 @@ var body: some View {
                     addOverlayReloadToken &+= 1
                 case .continue:
                     openCourse(model.courseId)
+                case .reinforce:
+                    openCourseForReinforcement(model.courseId)
                 }
 
                 if case .continue = model.cta {
@@ -2036,14 +2103,18 @@ var body: some View {
 
 // MARK: - Navigation intents (scoped to MainView)
 extension MainView {
-    /// Deep link: вкладка Спикер + режим «Скажи сам» + сразу запись (мы же зовём говорить).
-    private func openSpeakerConversationFromSandbox() {
+    /// Deep link: вкладка Спикер + «Скажи сам» + перевод фразы с Main kun-kru composer.
+    private func openSpeakerConversationWithPhrase(_ phrase: String) {
+        let ru = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !ru.isEmpty else { return }
         withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
             overlay.dismiss()
         }
+        kunKruComposeText = ""
         SpeakerReturnContext.shared.clear()
         SpeakerManager.shared.setSpeakerUIMode(.conversation)
-        SpeakerManager.shared.pendingConversationAutoRecord = true
+        SpeakerManager.shared.pendingConversationAutoRecord = false
+        SpeakerManager.shared.pendingConversationDemoRU = ru
         nav.popToRoot()
         nav.requestTab(2)
     }
@@ -2071,6 +2142,17 @@ extension MainView {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                 navPushInFlight = false
             }
+        }
+    }
+
+    private func openCourseForReinforcement(_ courseId: String) {
+        openCourse(courseId)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            NotificationCenter.default.post(
+                name: Notification.Name("OpenReinforcementFromMain"),
+                object: nil,
+                userInfo: ["courseId": courseId]
+            )
         }
     }
 

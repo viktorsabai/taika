@@ -34,16 +34,27 @@ final class MainManager: ObservableObject {
         static let empty = DailyCoursePicksPayload(courses: [])
     }
 
+    enum CourseCardDisplayStyle: Equatable {
+        /// Подборка дня — free discovery, organic lines.
+        case discovery
+        /// Подборка дня — PRO-витрина (розовый wash).
+        case proShowcase
+        /// Пройденный курс — закрепление, без PRO-sell chrome.
+        case reinforcement
+    }
+
     // Calendar overlay models (MainView uses these for .add(date) and .activity(date) modes)
     struct CourseCardModel: Identifiable, Equatable {
         enum CTA: Equatable {
             case add
             case `continue`
+            case reinforce
 
             var title: String {
                 switch self {
                 case .add: return "добавить"
                 case .continue: return "продолжить"
+                case .reinforce: return "закрепить"
                 }
             }
 
@@ -51,6 +62,7 @@ final class MainManager: ObservableObject {
                 switch self {
                 case .add: return "тап → добавить в план"
                 case .continue: return "тап → открыть курс"
+                case .reinforce: return "тап → закрепить курс"
                 }
             }
 
@@ -58,12 +70,13 @@ final class MainManager: ObservableObject {
                 switch self {
                 case .add: return "add"
                 case .continue: return "continue"
+                case .reinforce: return "reinforce"
                 }
             }
         }
 
-        private static func makeId(courseId: String, cta: CTA) -> String {
-            "\(courseId)|\(cta.idKey)"
+        private static func makeId(courseId: String, cta: CTA, displayStyle: CourseCardDisplayStyle) -> String {
+            "\(courseId)|\(cta.idKey)|\(displayStyle)"
         }
 
         let id: String
@@ -75,6 +88,9 @@ final class MainManager: ObservableObject {
         let durationMinutes: Int?
         let learningOutcomes: [String]
         let isPro: Bool
+        let displayStyle: CourseCardDisplayStyle
+        let reinforcementScore: Int?
+        let reinforcementErrorCount: Int
 
         // Optional progress (0…1). `nil` means we intentionally don't show progress for this scenario.
         let progress: Double?
@@ -91,10 +107,13 @@ final class MainManager: ObservableObject {
             durationMinutes: Int? = nil,
             learningOutcomes: [String] = [],
             isPro: Bool,
+            displayStyle: CourseCardDisplayStyle = .discovery,
+            reinforcementScore: Int? = nil,
+            reinforcementErrorCount: Int = 0,
             progress: Double? = nil,
             cta: CTA
         ) {
-            self.id = Self.makeId(courseId: courseId, cta: cta)
+            self.id = Self.makeId(courseId: courseId, cta: cta, displayStyle: displayStyle)
             self.courseId = courseId
             self.title = title
             self.subtitle = subtitle
@@ -103,6 +122,9 @@ final class MainManager: ObservableObject {
             self.durationMinutes = durationMinutes
             self.learningOutcomes = learningOutcomes
             self.isPro = isPro
+            self.displayStyle = displayStyle
+            self.reinforcementScore = reinforcementScore
+            self.reinforcementErrorCount = reinforcementErrorCount
             self.progress = progress
             self.cta = cta
         }
@@ -112,6 +134,8 @@ final class MainManager: ObservableObject {
     @Published var dailyCoursePicks: DailyCoursePicksPayload = .empty
     /// Prepared UI models for "ПОДБОРКА ДНЯ" course reel (stable per day).
     @Published var dailyCourseCards: [CourseCardModel] = []
+    /// Пройденные курсы для ряда «Закрепление» на Main (без дневного кэша).
+    @Published var reinforcementCourseCards: [CourseCardModel] = []
     @Published var dailyFavMask: [Bool] = []
     @Published var resumeItems: [MainBannerItem] = []
     @Published var weekSummary: [DaySummary] = []   // 7 items, Sun..Sat (or locale order)
@@ -121,6 +145,8 @@ final class MainManager: ObservableObject {
     private var dailyKeysCacheCount: Int = 0
     private var dailyCourseCache: [Course] = []
     private var dailyCourseCacheCount: Int = 0
+    /// Snapshot of completed ids when daily cache was built — invalidate when it changes.
+    private var dailyCourseCompletedSnapshot: Set<String> = []
     private var dailyCacheDay: Date = MainManager.bangkokCal.startOfDay(for: Date())
 
     private func invalidateDailyCacheIfDayChanged() {
@@ -128,10 +154,15 @@ final class MainManager: ObservableObject {
         if today > dailyCacheDay { // new day → drop cache
             dailyKeysCache.removeAll()
             dailyKeysCacheCount = 0
-            dailyCourseCache.removeAll()
-            dailyCourseCacheCount = 0
+            invalidateDailyCourseCache()
             dailyCacheDay = today
         }
+    }
+
+    private func invalidateDailyCourseCache() {
+        dailyCourseCache.removeAll()
+        dailyCourseCacheCount = 0
+        dailyCourseCompletedSnapshot.removeAll()
     }
     private let freeDailyPicksLimit: Int = 5
     private let proDailyPicksLimit: Int = 10
@@ -363,6 +394,8 @@ final class MainManager: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 await self.reloadDailyPicks()
+                await self.reloadDailyCoursePicks()
+                await self.reloadReinforcementCourseCards()
             }
         }
         dailyReloadWork = work
@@ -1333,83 +1366,210 @@ extension MainManager {
             ? min(max(1, count), proDailyCoursePicksLimit)
             : freeDailyCoursePicksLimit
 
-        // keep today's course picks stable: rebuild only when cache is empty or day changed or count changes
         invalidateDailyCacheIfDayChanged()
 
+        let all = CourseData.shared.featuredCourses
+        if all.isEmpty {
+            dailyCoursePicks = .empty
+            dailyCourseCards = []
+            return
+        }
+
+        let completedNow = Set(all.filter { isCourseCompleted($0) }.map(\.id))
+        if !dailyCourseCache.isEmpty,
+           (dailyCourseCacheCount != cappedCount || completedNow != dailyCourseCompletedSnapshot) {
+            invalidateDailyCourseCache()
+        }
+
         if dailyCourseCache.isEmpty || dailyCourseCacheCount != cappedCount {
-            let all = CourseData.shared.featuredCourses
-            if all.isEmpty {
-                dailyCoursePicks = .empty
-                dailyCourseCards = []
-                return
-            }
             let limited = Self.pickDailyCourses(
                 from: all,
                 count: cappedCount,
                 isProUser: hasExtraDailyPicks(),
+                isCompleted: { [weak self] c in
+                    self?.isCourseCompleted(c) ?? false
+                },
                 isProCourse: { [weak self] c in
                     self?.resolveIsProCourse(c) ?? c.isPro
                 }
             )
             dailyCourseCache = limited
             dailyCourseCacheCount = cappedCount
+            dailyCourseCompletedSnapshot = completedNow
         }
 
         let payload = DailyCoursePicksPayload(courses: dailyCourseCache)
         dailyCoursePicks = payload
 
-        // Prepare UI cards once here (MainView must only render).
         let snap = UserSession.shared.snapshot
         let started = snap.startedCourses
         var out: [CourseCardModel] = []
         out.reserveCapacity(dailyCourseCache.count)
         for c in dailyCourseCache {
-            let cid = c.id
-            let title = await shortCourseName(cid)
-            let subtitle: String = {
-                if let outcome = courseOutcomePreview(cid) { return outcome }
-                let s = shortCourseSubtitle(cid, course: c)
-                return s.isEmpty ? CourseCardModel.CTA.continue.hint : s
-            }()
             let isProCourse = resolveIsProCourse(c)
-            let categoryChip = resolveCourseCategoryChip(c)
-            let meta = resolveCourseMeta(c)
-            let p = await courseProgressFraction(courseId: cid)
-            let cta: CourseCardModel.CTA = started.contains(cid) ? .continue : .add
             out.append(
-                CourseCardModel(
-                    courseId: cid,
-                    title: title,
-                    subtitle: subtitle,
-                    categoryChip: categoryChip,
-                    lessonCount: meta.lessonCount,
-                    durationMinutes: meta.durationMinutes,
-                    learningOutcomes: meta.outcomes,
-                    isPro: isProCourse,
-                    progress: p,
-                    cta: cta
+                await makeDiscoveryCourseCard(
+                    from: c,
+                    displayStyle: isProCourse ? .proShowcase : .discovery,
+                    cta: started.contains(c.id) ? .continue : .add
                 )
             )
         }
         dailyCourseCards = out
     }
 
+    @MainActor
+    func reloadReinforcementCourseCards(limit: Int = 8) async {
+        let all = CourseData.shared.featuredCourses
+        guard !all.isEmpty else {
+            reinforcementCourseCards = []
+            return
+        }
+
+        let completed = all.filter { isCourseCompleted($0) }
+        guard !completed.isEmpty else {
+            reinforcementCourseCards = []
+            return
+        }
+
+        let sorted = sortedReinforcementCourses(completed)
+        let capped = Array(sorted.prefix(max(1, limit)))
+        var out: [CourseCardModel] = []
+        out.reserveCapacity(capped.count)
+        for c in capped {
+            out.append(await makeReinforcementCourseCard(from: c))
+        }
+        reinforcementCourseCards = out
+    }
+
+    /// Единая проверка завершения курса (как в CourseView).
+    @MainActor
+    func isCourseCompleted(_ course: Course) -> Bool {
+        let ids = [
+            course.id,
+            course.id.replacingOccurrences(of: "_", with: "-"),
+            course.id.replacingOccurrences(of: "-", with: "_")
+        ]
+        for cid in ids {
+            let lessonsTotal = max(course.lessonCount, LessonsData.shared.lessons(for: cid).count)
+            let (done, total) = LessonsManager.shared.headerCounts(for: cid, lessonsTotal: lessonsTotal)
+            if total > 0, done >= total { return true }
+            if LessonsManager.shared.courseStatus(for: cid) == .completed { return true }
+        }
+        return false
+    }
+
+    @MainActor
+    private func sortedReinforcementCourses(_ courses: [Course]) -> [Course] {
+        courses.sorted { lhs, rhs in
+            let failedA = ReinforcementStore.shared.failedCardKeys(courseId: lhs.id).count
+            let failedB = ReinforcementStore.shared.failedCardKeys(courseId: rhs.id).count
+            if failedA != failedB { return failedA > failedB }
+
+            let scoreA = ReinforcementStore.shared.overallScore(courseId: lhs.id) ?? 100
+            let scoreB = ReinforcementStore.shared.overallScore(courseId: rhs.id) ?? 100
+            if scoreA != scoreB { return scoreA < scoreB }
+
+            let sessionsA = ReinforcementStore.shared.gameSessions(courseId: lhs.id)
+            let sessionsB = ReinforcementStore.shared.gameSessions(courseId: rhs.id)
+            if sessionsA != sessionsB { return sessionsA < sessionsB }
+
+            return lhs.id < rhs.id
+        }
+    }
+
+    @MainActor
+    private func makeDiscoveryCourseCard(
+        from course: Course,
+        displayStyle: CourseCardDisplayStyle,
+        cta: CourseCardModel.CTA
+    ) async -> CourseCardModel {
+        let cid = course.id
+        let title = await shortCourseName(cid)
+        let subtitle: String = {
+            if let outcome = courseOutcomePreview(cid) { return outcome }
+            let s = shortCourseSubtitle(cid, course: course)
+            return s.isEmpty ? CourseCardModel.CTA.continue.hint : s
+        }()
+        let meta = resolveCourseMeta(course)
+        let p = await courseProgressFraction(courseId: cid)
+        return CourseCardModel(
+            courseId: cid,
+            title: title,
+            subtitle: subtitle,
+            categoryChip: resolveCourseCategoryChip(course),
+            lessonCount: meta.lessonCount,
+            durationMinutes: meta.durationMinutes,
+            learningOutcomes: meta.outcomes,
+            isPro: resolveIsProCourse(course),
+            displayStyle: displayStyle,
+            progress: p,
+            cta: cta
+        )
+    }
+
+    @MainActor
+    private func makeReinforcementCourseCard(from course: Course) async -> CourseCardModel {
+        let cid = course.id
+        let title = await shortCourseName(cid)
+        let score = ReinforcementStore.shared.overallScore(courseId: cid)
+        let errors = ReinforcementStore.shared.failedCardKeys(courseId: cid).count
+        let sessions = ReinforcementStore.shared.gameSessions(courseId: cid)
+        let subtitle: String = {
+            if errors > 0 {
+                return "\(errors) \(ruCardWord(errors, one: "ошибка", few: "ошибки", many: "ошибок")) · повторить"
+            }
+            if let score {
+                return "закрепление \(score)% · \(sessions) \(ruCardWord(sessions, one: "игра", few: "игры", many: "игр"))"
+            }
+            return "курс пройден · закрепить в играх"
+        }()
+        let meta = resolveCourseMeta(course)
+        return CourseCardModel(
+            courseId: cid,
+            title: title,
+            subtitle: subtitle,
+            categoryChip: resolveCourseCategoryChip(course),
+            lessonCount: meta.lessonCount,
+            durationMinutes: meta.durationMinutes,
+            learningOutcomes: meta.outcomes,
+            isPro: resolveIsProCourse(course),
+            displayStyle: .reinforcement,
+            reinforcementScore: score,
+            reinforcementErrorCount: errors,
+            progress: 1.0,
+            cta: .reinforce
+        )
+    }
+
+    private func ruCardWord(_ count: Int, one: String, few: String, many: String) -> String {
+        let n = abs(count)
+        let m10 = n % 10
+        let m100 = n % 100
+        if m10 == 1, m100 != 11 { return one }
+        if (2...4).contains(m10), !(12...14).contains(m100) { return few }
+        return many
+    }
+
 
     /// Free: сначала бесплатные (шанс начать), затем PRO-витрина.
     /// PRO: случайная выборка из всего каталога.
+    /// Пройденные курсы не попадают в подборку дня.
     private static func pickDailyCourses(
         from all: [Course],
         count: Int,
         isProUser: Bool,
+        isCompleted: (Course) -> Bool,
         isProCourse: (Course) -> Bool
     ) -> [Course] {
-        guard count > 0, !all.isEmpty else { return [] }
+        let pool = all.filter { !isCompleted($0) }
+        guard count > 0, !pool.isEmpty else { return [] }
         if isProUser {
-            return Array(all.shuffled().prefix(count))
+            return Array(pool.shuffled().prefix(count))
         }
 
-        let free = all.filter { !isProCourse($0) }.shuffled()
-        let pro = all.filter { isProCourse($0) }.shuffled()
+        let free = pool.filter { !isProCourse($0) }.shuffled()
+        let pro = pool.filter { isProCourse($0) }.shuffled()
 
         // Цель: минимум 2 free (если есть), остальное — PRO-витрина; иначе добиваем free.
         let freeTarget: Int = {

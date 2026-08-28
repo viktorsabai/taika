@@ -202,7 +202,9 @@ struct StepView: View {
     /// Оригинальные индексы шагов tip/dialog в `steps.json` (для зачёта урока и счётчиков).
     @State private var tipOriginalIndicesStored: Set<Int> = []
     @State private var lessonStartedAt: Date = Date()
+    @State private var studySecondsCommitted: Int = 0
     @State private var frozenLessonDurationText: String? = nil
+    @Environment(\.scenePhase) private var scenePhase
     @State private var resolvedTitle: String? = nil
     @State private var resolvedLessonId: String = ""
     @State private var resolvedCourseId: String = ""
@@ -661,6 +663,10 @@ struct StepView: View {
             }
             return
         }
+        // Commit seat-time for the lesson we're leaving before switching ids/timer.
+        if !self.resolvedCourseId.isEmpty {
+            flushStudyTime(courseId: self.resolvedCourseId, lessonId: self.resolvedLessonId)
+        }
         // debug print removed
         self.resolvedLessonId = lid
         self.resolvedCourseId = self.courseId ?? {
@@ -669,6 +675,7 @@ struct StepView: View {
             return ""
         }()
         self.lessonStartedAt = Date()
+        self.studySecondsCommitted = 0
         // Always resolve from current lid — init `lessonTitle` is only a cold-start fallback
         // (otherwise in-place next-lesson keeps the first lesson's header title).
         self.resolvedTitle = LessonsData.shared.lessonTitle(for: lid) ?? self.lessonTitle
@@ -1296,6 +1303,21 @@ struct StepView: View {
         return String(format: "%d:%02d", minutes, seconds)
     }
 
+    /// Commit elapsed lesson seat-time into UserSession (real minutes for «Твой ритм»).
+    private func flushStudyTime(
+        courseId: String? = nil,
+        lessonId: String? = nil
+    ) {
+        let cid = (courseId ?? resolvedCourseId).trimmingCharacters(in: .whitespacesAndNewlines)
+        let lid = (lessonId ?? resolvedLessonId).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cid.isEmpty else { return }
+        let elapsed = max(0, Int(Date().timeIntervalSince(lessonStartedAt)))
+        let delta = max(0, elapsed - studySecondsCommitted)
+        guard delta > 0 else { return }
+        UserSession.shared.recordStudySeconds(delta, courseId: cid, lessonId: lid.isEmpty ? nil : lid)
+        studySecondsCommitted = elapsed
+    }
+
     private func overallProgressTextValue(courseId: String, lessonId: String) -> String? {
         let trimmed = lessonId.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -1390,84 +1412,146 @@ struct StepView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            ZStack {
-                if useInternalBackground && !isOverlay {
-                    PD.ColorToken.background
-                        .ignoresSafeArea()
-                }
-                stepMainContent(proxy)
-                if shouldRenderLessonSummary {
-                    summaryOverlayView()
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .sheet(isPresented: $showGamePaywallSheet) {
-                StepGameMiniPaywall(
-                    onClose: {
-                        showGamePaywallSheet = false
-                    },
-                    onOpenPro: {
-                        showGamePaywallSheet = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
-                            overlay.presentPro(reason: .games)
-                        }
-                    }
+            applyStepProgressObservers(
+                to: applyStepSegmentAndIndexObservers(
+                    to: applyStepCoreLifecycle(
+                        to: stepRootCanvas(proxy: proxy)
+                    )
                 )
-                .presentationDetents([.fraction(0.42), .medium])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(28)
-                .presentationBackground {
-                    ZStack {
-                        Rectangle().fill(.ultraThinMaterial)
-                        PD.ColorToken.background.opacity(0.94)
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func stepRootCanvas(proxy: GeometryProxy) -> some View {
+        ZStack {
+            if useInternalBackground && !isOverlay {
+                PD.ColorToken.background
+                    .ignoresSafeArea()
+            }
+            stepMainContent(proxy)
+            if shouldRenderLessonSummary {
+                summaryOverlayView()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .sheet(isPresented: $showGamePaywallSheet) {
+            stepGamePaywallSheet
+        }
+        .safeAreaInset(edge: .top) {
+            // Показывать по флагу даже при scope == .overlay: локальные navigationDestination не в nav.path,
+            // иначе нет ни системного back, ни строки AppHeader «назад».
+            if showInternalHeader {
+                AppBackHeader {
+                    if let onBack {
+                        onBack()
+                    } else {
+                        dismiss()
                     }
+                }
+                .padding(.horizontal, PD.Spacing.inner)
+                .padding(.top, 8)
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private var stepGamePaywallSheet: some View {
+        StepGameMiniPaywall(
+            onClose: {
+                showGamePaywallSheet = false
+            },
+            onOpenPro: {
+                showGamePaywallSheet = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+                    overlay.presentPro(reason: .games)
                 }
             }
+        )
+        .presentationDetents([.fraction(0.42), .medium])
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(28)
+        .presentationBackground {
+            ZStack {
+                Rectangle().fill(.ultraThinMaterial)
+                PD.ColorToken.background.opacity(0.94)
+            }
+        }
+    }
+
+    private func applyStepCoreLifecycle<Content: View>(to content: Content) -> some View {
+        content
             .onChange(of: showLessonSummary) { _, isOn in
-                if isOn {
-                    frozenLessonDurationText = lessonDurationTextValue()
-                    stepManager.stepHeaderTimerText = frozenLessonDurationText ?? "0:00"
-                    summaryGameMode = .match
-                    summaryOverlaySettled = false
-#if os(iOS)
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
-#endif
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
-                        if showLessonSummary {
-                            summaryOverlaySettled = true
-                        }
-                    }
-                } else {
-                    frozenLessonDurationText = nil
-                    summaryOverlaySettled = false
-                }
+                handleShowLessonSummaryChange(isOn)
             }
             .onAppear {
-                GameHeaderStore.shared.config = nil
-                isMounted = true
-                summaryOverlaySettled = !showLessonSummary
-                // A direct open from LessonsView starts in the normal learning flow even when
-                // every card was previously learned. If the user changes progress afterwards,
-                // the existing completion transition is allowed to work again.
-                // Do not mark the summary as shown here. A direct-start lesson only suppresses
-                // the hydration-time overlay; the first real user progress mutation must still
-                // be able to present the completion result.
-                // debug print removed
-                loadFromStepData()
-                if !isOverlay && !resolvedCourseId.isEmpty {
-                    UserSession.shared.markActive(courseId: resolvedCourseId, lessonId: resolvedLessonId)
-                }
-                needsPostResetHydrate = false
-                // Hydration now handled inside loadFromStepData()
-                // DispatchQueue.main.async { hydrateLearnedFromSession() }
-                // DispatchQueue.main.async { hydrateFavoritesFromManager() }
-                // Safety net: ensure snapshot after appear
-                syncStepHeaderSegmentState()
+                handleStepAppear()
             }
             .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
                 guard !isOverlay, isMounted, !showLessonSummary else { return }
                 stepManager.stepHeaderTimerText = lessonDurationTextValue()
             }
+            .onDisappear {
+                flushStudyTime()
+                GameHeaderStore.shared.config = nil
+                isMounted = false
+                pendingFavoriteHydrate?.cancel()
+                stepManager.stepHeaderShowsSegment = false
+                stepManager.stepHeaderTipCount = 0
+                stepManager.stepHeaderCardCount = 0
+                stepManager.stepHeaderLessonTitle = ""
+                stepManager.stepHeaderTimerText = ""
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active {
+                    flushStudyTime()
+                }
+            }
+    }
+
+    private func handleShowLessonSummaryChange(_ isOn: Bool) {
+        if isOn {
+            flushStudyTime()
+            frozenLessonDurationText = lessonDurationTextValue()
+            stepManager.stepHeaderTimerText = frozenLessonDurationText ?? "0:00"
+            summaryGameMode = .match
+            summaryOverlaySettled = false
+#if os(iOS)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+#endif
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                if showLessonSummary {
+                    summaryOverlaySettled = true
+                }
+            }
+        } else {
+            frozenLessonDurationText = nil
+            summaryOverlaySettled = false
+        }
+    }
+
+    private func handleStepAppear() {
+        GameHeaderStore.shared.config = nil
+        isMounted = true
+        summaryOverlaySettled = !showLessonSummary
+        // A direct open from LessonsView starts in the normal learning flow even when
+        // every card was previously learned. If the user changes progress afterwards,
+        // the existing completion transition is allowed to work again.
+        // Do not mark the summary as shown here. A direct-start lesson only suppresses
+        // the hydration-time overlay; the first real user progress mutation must still
+        // be able to present the completion result.
+        loadFromStepData()
+        if !isOverlay && !resolvedCourseId.isEmpty {
+            UserSession.shared.markActive(courseId: resolvedCourseId, lessonId: resolvedLessonId)
+        }
+        needsPostResetHydrate = false
+        syncStepHeaderSegmentState()
+    }
+
+    private func applyStepSegmentAndIndexObservers<Content: View>(to content: Content) -> some View {
+        content
             .onChange(of: hasTwoSegments) { _, _ in
                 syncStepHeaderSegmentState()
             }
@@ -1506,76 +1590,52 @@ struct StepView: View {
                 }
             }
             .onChange(of: anim.activeIndex) { _, newValue in
-                guard isMounted else { return }
-                guard didSetInitialIndex else { return }
-                guard progressReady else { return }
-                guard !items.isEmpty else { return }
-                if !isOverlay {
-                    // Debounce persisting last step index to avoid chatty writes while scrolling
-                    pendingIndexPersist?.cancel()
-                    let clamped: Int = {
-                        if hasTwoSegments, stepSegment == 1, cardIndices.indices.contains(activeIndexCards) {
-                            return cardIndices[activeIndexCards]
-                        }
-                        return max(0, min(newValue, max(0, items.count - 1)))
-                    }()
-                    let work = DispatchWorkItem {
-                        let cid: String = {
-                            if !resolvedCourseId.isEmpty { return resolvedCourseId }
-                            let parts = resolvedLessonId.split(separator: "_")
-                            if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
-                            return resolvedLessonId
-                        }()
-                        UserSession.shared.setLastStepIndex(courseId: cid, lessonId: resolvedLessonId, index: clamped)
-                    }
-                    pendingIndexPersist = work
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: work)
-                }
+                handleActiveIndexChange(newValue)
             }
-            .safeAreaInset(edge: .top) {
-                // Показывать по флагу даже при scope == .overlay: локальные navigationDestination не в nav.path,
-                // иначе нет ни системного back, ни строки AppHeader «назад».
-                if showInternalHeader {
-                    AppBackHeader {
-                        if let onBack {
-                            onBack()
-                        } else {
-                            dismiss()
-                        }
-                    }
-                    .padding(.horizontal, PD.Spacing.inner)
-                    .padding(.top, 8)
-                    .frame(maxWidth: .infinity)
-                }
+    }
+
+    private func handleActiveIndexChange(_ newValue: Int) {
+        guard isMounted else { return }
+        guard didSetInitialIndex else { return }
+        guard progressReady else { return }
+        guard !items.isEmpty else { return }
+        guard !isOverlay else { return }
+        // Debounce persisting last step index to avoid chatty writes while scrolling
+        pendingIndexPersist?.cancel()
+        let clamped: Int = {
+            if hasTwoSegments, stepSegment == 1, cardIndices.indices.contains(activeIndexCards) {
+                return cardIndices[activeIndexCards]
             }
-            .navigationBarBackButtonHidden(true)
-            .onDisappear {
-                GameHeaderStore.shared.config = nil
-                isMounted = false
-                pendingFavoriteHydrate?.cancel()
-                stepManager.stepHeaderShowsSegment = false
-                stepManager.stepHeaderTipCount = 0
-                stepManager.stepHeaderCardCount = 0
-                stepManager.stepHeaderLessonTitle = ""
-                stepManager.stepHeaderTimerText = ""
-            }
-            .toolbar(.hidden, for: .navigationBar)
+            return max(0, min(newValue, max(0, items.count - 1)))
+        }()
+        let work = DispatchWorkItem {
+            let cid: String = {
+                if !resolvedCourseId.isEmpty { return resolvedCourseId }
+                let parts = resolvedLessonId.split(separator: "_")
+                if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
+                return resolvedLessonId
+            }()
+            UserSession.shared.setLastStepIndex(courseId: cid, lessonId: resolvedLessonId, index: clamped)
+        }
+        pendingIndexPersist = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: work)
+    }
+
+    private func applyStepProgressObservers<Content: View>(to content: Content) -> some View {
+        content
             .onReceive(NotificationCenter.default.publisher(for: .lessonProgressDidReset)) { note in
                 guard noteMatchesCurrentLesson(note) else { return }
                 applyLocalLessonResetVisuals()
             }
-            // Listen to namespaced course progress reset notification
             .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LessonsManager.courseProgressDidReset"))) { note in
                 guard noteMatchesCurrentCourse(note) else { return }
                 applyLocalLessonResetVisuals()
             }
-            // Listen to namespaced lesson progress reset notification
             .onReceive(NotificationCenter.default.publisher(for: Notification.Name("LessonsManager.lessonProgressDidReset"))) { note in
                 guard noteMatchesCurrentLesson(note) else { return }
                 applyLocalLessonResetVisuals()
             }
             .onReceive(NotificationCenter.default.publisher(for: Notification.Name("stepLocalStateShouldReset"))) { note in
-                // scope: "all" | "course" | "lesson"
                 let scope = (note.userInfo?["scope"] as? String) ?? "all"
                 switch scope {
                 case "lesson":
@@ -1605,8 +1665,7 @@ struct StepView: View {
                 applyLocalLessonResetVisuals()
             }
             .onReceive(NotificationCenter.default.publisher(for: .progressDidChange)) { _ in
-                // No-op on in-lesson progress changes to avoid resetting the carousel and causing a jump-from-first illusion.
-                // We already keep local `anim.learned` in sync on toggle; progress strip reads from it directly.
+                // No-op on in-lesson progress changes to avoid resetting the carousel.
             }
             .onReceive(NotificationCenter.default.publisher(for: .progressCourseDidReset)) { note in
                 guard noteMatchesCurrentCourse(note) else { return }
@@ -1616,7 +1675,6 @@ struct StepView: View {
                 guard noteMatchesCurrentLesson(note) else { return }
                 applyLocalLessonResetVisuals()
             }
-            // Только $items: и так обновляется при любом изменении избранного; второй подписчик дублировал hydrate и давал лишний кадр лагов.
             .onReceive(favManager.$items) { _ in
                 guard isMounted else { return }
                 if Date() >= suppressFavoriteHydrationUntil {
@@ -1624,59 +1682,61 @@ struct StepView: View {
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .stepProgressDidChange)) { note in
-                guard !isOverlay else { return }
-                // Global notification: only react for this lesson (avoids summary/layout work on every tap app-wide).
-                if let u = note.userInfo as? [String: Any],
-                   let nCourse = u["courseId"] as? String,
-                   let nLesson = u["lessonId"] as? String,
-                   !resolvedLessonId.isEmpty {
-                    let myCourse = resolvedCourseId.isEmpty ? {
-                        let parts = resolvedLessonId.split(separator: "_")
-                        if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
-                        return resolvedLessonId
-                    }() : resolvedCourseId
-                    func norm(_ s: String) -> String {
-                        s.trimmingCharacters(in: .whitespacesAndNewlines)
-                            .replacingOccurrences(of: "_", with: "-")
-                            .lowercased()
-                    }
-                    if norm(nCourse) != norm(myCourse) || norm(nLesson) != norm(resolvedLessonId) {
-                        return
-                    }
+                handleStepProgressDidChange(note)
+            }
+    }
+
+    private func handleStepProgressDidChange(_ note: Notification) {
+        guard !isOverlay else { return }
+        // Global notification: only react for this lesson (avoids summary/layout work on every tap app-wide).
+        if let u = note.userInfo as? [String: Any],
+           let nCourse = u["courseId"] as? String,
+           let nLesson = u["lessonId"] as? String,
+           !resolvedLessonId.isEmpty {
+            let myCourse = resolvedCourseId.isEmpty ? {
+                let parts = resolvedLessonId.split(separator: "_")
+                if parts.count > 1 { return parts.dropLast().joined(separator: "_") }
+                return resolvedLessonId
+            }() : resolvedCourseId
+            func norm(_ s: String) -> String {
+                s.trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: "_", with: "-")
+                    .lowercased()
+            }
+            if norm(nCourse) != norm(myCourse) || norm(nLesson) != norm(resolvedLessonId) {
+                return
+            }
+        }
+        let totalLearnable = learnableCount
+        guard totalLearnable > 0 else { return }
+        let learnedNowCount = anim.learned.filter { idx in
+            guard idx >= 0 && idx < items.count else { return false }
+            switch items[idx].kind {
+            case .word, .phrase, .casual:
+                return true
+            default:
+                return false
+            }
+        }.count
+        if learnedNowCount >= totalLearnable {
+            // A direct-start lesson may hydrate as already complete, but only a real
+            // user mutation is allowed to present the result overlay in that flow.
+            guard !suppressInitialCompletionSummary || didMutateLearningProgress else { return }
+            if !didShowSummaryOnce {
+                didShowSummaryOnce = true
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+                    showLessonSummary = true
                 }
-                // If all learnable cards are done, show the canonical summary overlay
-                let totalLearnable = learnableCount
-                if totalLearnable > 0 {
-                    let learnedNowCount = anim.learned.filter { idx in
-                        guard idx >= 0 && idx < items.count else { return false }
-                        switch items[idx].kind {
-                        case .word, .phrase, .casual:
-                            return true
-                        default:
-                            return false
-                        }
-                    }.count
-                    if learnedNowCount >= totalLearnable {
-                        // A direct-start lesson may hydrate as already complete, but only a real
-                        // user mutation is allowed to present the result overlay in that flow.
-                        guard !suppressInitialCompletionSummary || didMutateLearningProgress else { return }
-                        if !didShowSummaryOnce {
-                            didShowSummaryOnce = true
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
-                                showLessonSummary = true
-                            }
-                        }
-                    } else {
-                        // Progress is no longer full → allow the summary to appear again on the next completion
-                        didShowSummaryOnce = false
-                        if showLessonSummary {
-                            withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
-                        }
-                    }
-                }
+            }
+        } else {
+            // Progress is no longer full → allow the summary to appear again on the next completion
+            didShowSummaryOnce = false
+            if showLessonSummary {
+                withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
             }
         }
     }
+
 
     private func syncStepHeaderSegmentState() {
         guard !isOverlay else {

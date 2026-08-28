@@ -103,3 +103,46 @@ public struct HGameResult: Equatable {
         self.score = score
     }
 }
+
+// MARK: - Lightweight done-status persistence (task ids only — no game state)
+
+enum HomeTaskDoneStore {
+    private static let key = "taika.homeTask.done.v1"
+
+    private static func loadAll() -> [String: [String]] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let decoded = try? JSONDecoder().decode([String: [String]].self, from: data) else {
+            return [:]
+        }
+        return decoded
+    }
+
+    private static func saveAll(_ map: [String: [String]]) {
+        guard let data = try? JSONEncoder().encode(map) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    static func doneIds(for courseId: String) -> Set<String> {
+        Set(loadAll()[courseId] ?? [])
+    }
+
+    static func markDone(taskId: String, courseId: String) {
+        var map = loadAll()
+        var ids = Set(map[courseId] ?? [])
+        ids.insert(taskId)
+        map[courseId] = Array(ids)
+        saveAll(map)
+    }
+
+    static func applyDoneStatus(to tasks: inout [HTask], courseId: String) {
+        let done = doneIds(for: courseId)
+        guard !done.isEmpty else { return }
+        for idx in tasks.indices where done.contains(tasks[idx].id) {
+            tasks[idx].status = .done
+        }
+    }
+
+    static func clearAll() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+}

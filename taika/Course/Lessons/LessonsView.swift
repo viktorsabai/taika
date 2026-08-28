@@ -196,18 +196,158 @@ private extension LessonsView {
         return Array(selected.intersection(available)).sorted()
     }
 
+    private struct ReinforcementLaunchScope {
+        let lessonIds: [String]
+        let cardKeys: [String]?
+        let cardCount: Int
+        let isErrorScope: Bool
+    }
+
+    private func reinforcementCardCount(courseId: String, lessonIds: [String]) -> Int {
+        lessonIds.reduce(0) { total, lid in
+            let fromSteps = ProgressManager.shared.totalEffectiveCount(courseId: courseId, lessonId: lid)
+            if fromSteps > 0 { return total + fromSteps }
+            let counts = StepData.shared.progressCounts(for: lid)
+            if counts.learnable > 0 { return total + counts.learnable }
+            if let lesson = lessonsSorted.first(where: { $0.lessonID == lid }) {
+                return total + max(0, lesson.cardCount)
+            }
+            return total + StepData.shared.items(for: lid).count
+        }
+    }
+
+    private func currentReinforcementScope() -> ReinforcementLaunchScope {
+        guard let cid = currentCourse?.courseID else {
+            return ReinforcementLaunchScope(lessonIds: [], cardKeys: nil, cardCount: 0, isErrorScope: false)
+        }
+        if reinforcementListFocus == .errors {
+            let lessonIds = Array(Set(effectiveReinforcementLessonIds).intersection(weakCompletedLessonIds)).sorted()
+            let keys = ReinforcementStore.shared.failedCardKeys(courseId: cid, lessonIds: lessonIds)
+            let sortedKeys = Array(keys).sorted()
+            return ReinforcementLaunchScope(
+                lessonIds: lessonIds,
+                cardKeys: sortedKeys.isEmpty ? nil : sortedKeys,
+                cardCount: sortedKeys.count,
+                isErrorScope: true
+            )
+        }
+        let lessonIds = effectiveReinforcementLessonIds
+        return ReinforcementLaunchScope(
+            lessonIds: lessonIds,
+            cardKeys: nil,
+            cardCount: reinforcementCardCount(courseId: cid, lessonIds: lessonIds),
+            isErrorScope: false
+        )
+    }
+
+    private var reinforcementSelectedCardCount: Int {
+        guard let cid = currentCourse?.courseID else { return 0 }
+        return reinforcementCardCount(courseId: cid, lessonIds: effectiveReinforcementLessonIds)
+    }
+
+    private var reinforcementSelectedErrorCardCount: Int {
+        guard let cid = currentCourse?.courseID else { return 0 }
+        let ids = Array(Set(effectiveReinforcementLessonIds).intersection(weakCompletedLessonIds))
+        return ReinforcementStore.shared.failedCardKeys(courseId: cid, lessonIds: ids).count
+    }
+
+    private var reinforcementFocusCaption: String {
+        let scope = currentReinforcementScope()
+        if scope.cardCount == 0 {
+            return scope.isErrorScope ? "выбери ошибки ниже" : "выбери уроки ниже"
+        }
+        if scope.isErrorScope {
+            return "\(scope.cardCount) \(ruReinforcementCardLabel(scope.cardCount, error: true)) в очереди"
+        }
+        return "\(scope.cardCount) \(ruReinforcementCardLabel(scope.cardCount, error: false)) к закреплению"
+    }
+
+    private func ruReinforcementCardLabel(_ count: Int, error: Bool) -> String {
+        let mod10 = count % 10
+        let mod100 = count % 100
+        if error {
+            if mod10 == 1 && mod100 != 11 { return "ошибка" }
+            if (2...4).contains(mod10) && !(12...14).contains(mod100) { return "ошибки" }
+            return "ошибок"
+        }
+        if mod10 == 1 && mod100 != 11 { return "карточка" }
+        if (2...4).contains(mod10) && !(12...14).contains(mod100) { return "карточки" }
+        return "карточек"
+    }
+
+    private func seedReinforcementSelectionIfNeeded() {
+        guard isCompletedCourse, !didSeedReinforcementSelection else { return }
+        didSeedReinforcementSelection = true
+        guard !weakCompletedLessonIds.isEmpty else {
+            scheduleReinforcementScopeSave()
+            return
+        }
+        updateReinforcementSelection(weakCompletedLessonIds)
+        reinforcementListFocus = .errors
+        scheduleReinforcementScopeSave()
+    }
+
+    private func syncReinforcementScopeForListFocus() {
+        guard reinforcementListFocus == .errors, !weakCompletedLessonIds.isEmpty else { return }
+        let current = Set(effectiveReinforcementLessonIds)
+        let scoped = current.intersection(weakCompletedLessonIds)
+        if scoped.isEmpty {
+            updateReinforcementSelection(weakCompletedLessonIds)
+        } else if scoped != current {
+            updateReinforcementSelection(scoped)
+        }
+    }
+
     private var showsCompletedTrainingBar: Bool {
-        isCompletedCourse && courseContentMode == .lessons && !isTheoryBonusCourse && !effectiveReinforcementLessonIds.isEmpty && !showGameOverlay
+        guard isCompletedCourse, courseContentMode == .lessons, !isTheoryBonusCourse, !showGameOverlay else { return false }
+        let scope = currentReinforcementScope()
+        return !scope.lessonIds.isEmpty && scope.cardCount > 0
     }
 
     private func updateReinforcementSelection(_ ids: Set<String>?) {
         let available = Set(completedLessonOptions.map(\.id))
         guard let ids else {
             selectedReinforcementLessonIds = nil
+            scheduleReinforcementScopeSave()
             return
         }
         let scoped = ids.intersection(available)
         selectedReinforcementLessonIds = scoped.count == available.count ? nil : scoped
+        scheduleReinforcementScopeSave()
+    }
+
+    private func restoreReinforcementScope(for courseId: String) {
+        guard let snap = ReinforcementScopeStore.load(courseId: courseId) else {
+            didSeedReinforcementSelection = false
+            reinforcementListFocus = .lessons
+            selectedReinforcementLessonIds = nil
+            return
+        }
+        didSeedReinforcementSelection = snap.didSeed
+        reinforcementListFocus = snap.focus == "errors" ? .errors : .lessons
+        if let ids = snap.lessonIds {
+            selectedReinforcementLessonIds = Set(ids)
+        } else {
+            selectedReinforcementLessonIds = nil
+        }
+        let available = Set(completedLessonOptions.map(\.id))
+        if let ids = selectedReinforcementLessonIds {
+            let scoped = ids.intersection(available)
+            selectedReinforcementLessonIds = scoped.count == available.count ? nil : scoped
+        }
+    }
+
+    private func scheduleReinforcementScopeSave() {
+        guard let cid = currentCourse?.courseID else { return }
+        reinforcementScopeSaveWork?.cancel()
+        let focus = reinforcementListFocus == .errors ? "errors" : "lessons"
+        let ids = selectedReinforcementLessonIds
+        let seeded = didSeedReinforcementSelection
+        let work = DispatchWorkItem {
+            ReinforcementScopeStore.save(courseId: cid, lessonIds: ids, focus: focus, didSeed: seeded)
+        }
+        reinforcementScopeSaveWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
     }
 
     /// Теория-only бонус (`course_b_0`): без игр/спикера в хедере и на карточках.
@@ -216,24 +356,27 @@ private extension LessonsView {
         return courseExperienceKind(for: cid) == .theoryBonus
     }
 
+    /// «Тайский без паники»: только лайфхаки, без переключения на уроки.
+    private var showsLessonsContent: Bool { !isTheoryBonusCourse }
+
+    private var resolvedCourseContentMode: LSCourseContentMode {
+        showsLessonsContent ? courseContentMode : .lifehacks
+    }
+
     /// Course-level stats for Итоги курса: learned words, favorites, spent minutes.
-    /// Spent minutes are estimated from lesson duration * lesson progress percent.
+    /// Minutes = real StepView seat-time for this course (not planned duration × progress).
     private var courseOverviewStats: (learnedWords: Int, favorites: Int, spentMinutes: Int) {
         guard let cid = currentCourse?.courseID else { return (0, 0, 0) }
+        _ = userSession.snapshot.lastEventAt
         let ids = lessonsSorted.map(\.lessonID)
         let words = ids.reduce(0) { acc, lid in acc + ProgressManager.shared.learnedEffectiveCount(courseId: cid, lessonId: lid) }
         let favs = ids.reduce(0) { acc, lid in acc + lessonsManager.lessonFavoriteCount(courseId: cid, lessonId: lid) }
-        let spent = lessonsSorted.reduce(0.0) { acc, lesson in
-            let p = lessonsManager.lessonProgress(courseId: cid, lessonId: lesson.lessonID)?.percent ?? 0.0
-            let clamped = max(0.0, min(1.0, p))
-            return acc + (Double(lesson.durationMinutes) * clamped)
-        }
-        return (words, favs, Int(spent.rounded()))
+        let spent = userSession.studyMinutes(courseId: cid)
+        return (words, favs, spent)
     }
 
     private var reinforcementSkills: [LSReinforcementSkill] {
-        guard let cid = currentCourse?.courseID,
-              let metrics = ReinforcementStore.shared.metrics(courseId: cid) else {
+        guard let cid = currentCourse?.courseID else {
             return [
                 LSReinforcementSkill(id: "speaker", title: "Спикер", subtitle: "Произношение и тоны", icon: "speaker.wave.2.fill", isSpeaker: true),
                 LSReinforcementSkill(id: "match", title: "Память", subtitle: "Найди пару", icon: "brain.head.profile", modeRawValue: GameModeType.match.rawValue),
@@ -241,6 +384,8 @@ private extension LessonsView {
                 LSReinforcementSkill(id: "audioRecall", title: "На слух", subtitle: "Распознай фразу", icon: "ear", modeRawValue: GameModeType.audioRecall.rawValue, isProLocked: !pro.isPro)
             ]
         }
+        let metrics = ReinforcementStore.shared.metrics(courseId: cid)
+        let speakerAvg = courseSpeakerAverageScore(courseId: cid)
         let definitions: [(String, String, String, String, Bool)] = [
             ("speaker", "Спикер", "Произношение и тоны", "speaker.wave.2.fill", true),
             ("match", "Память", "Найди пару", "brain.head.profile", false),
@@ -248,7 +393,20 @@ private extension LessonsView {
             ("audioRecall", "На слух", "Распознай фразу", "ear", false)
         ]
         return definitions.map { id, title, subtitle, icon, isSpeaker in
-            let mode = metrics.byMode[id]
+            if isSpeaker {
+                return LSReinforcementSkill(
+                    id: id,
+                    title: title,
+                    subtitle: subtitle,
+                    icon: icon,
+                    score: speakerAvg,
+                    sessions: speakerAvg == nil ? 0 : 1,
+                    isSpeaker: true,
+                    modeRawValue: nil,
+                    isProLocked: false
+                )
+            }
+            let mode = metrics?.byMode[id]
             return LSReinforcementSkill(
                 id: id,
                 title: title,
@@ -256,11 +414,23 @@ private extension LessonsView {
                 icon: icon,
                 score: mode?.averageScore,
                 sessions: mode?.sessions ?? 0,
-                isSpeaker: isSpeaker,
-                modeRawValue: isSpeaker ? nil : id,
-                isProLocked: !isSpeaker && GameModeType(rawValue: id)?.isPro == true && !pro.isPro
+                isSpeaker: false,
+                modeRawValue: id,
+                isProLocked: GameModeType(rawValue: id)?.isPro == true && !pro.isPro
             )
         }
+    }
+
+    /// Average of per-lesson Speaker chips (same source as lesson rows), not ReinforcementStore games.
+    private func courseSpeakerAverageScore(courseId: String) -> Int? {
+        let lessonIds = currentCourse?.lessons.map(\.lessonID) ?? []
+        guard !lessonIds.isEmpty else { return nil }
+        let attempts = Array(SpeakerAttemptsStore.loadAll().values)
+        let lessonScores = lessonIds.compactMap {
+            speakerScore(courseId: courseId, lessonId: $0, attempts: attempts)
+        }
+        guard !lessonScores.isEmpty else { return nil }
+        return lessonScores.reduce(0, +) / lessonScores.count
     }
 
     private var reinforcementCourseStats: LSCourseStats {
@@ -278,15 +448,15 @@ private extension LessonsView {
         )
     }
 
-    private func launchSpeakerTraining(for scopedLessonIds: [String]? = nil) {
+    private func launchSpeakerTraining(for scopedLessonIds: [String]? = nil, cardKeys: [String]? = nil) {
         guard let cid = currentCourse?.courseID else { return }
+        let scope = currentReinforcementScope()
         let ids = scopedLessonIds?.filter { !$0.isEmpty }
-            ?? (effectiveReinforcementLessonIds.isEmpty
-                ? lessonsSorted.map { $0.lessonID }
-                : effectiveReinforcementLessonIds)
+            ?? (scope.lessonIds.isEmpty ? lessonsSorted.map { $0.lessonID } : scope.lessonIds)
+        let keys = cardKeys ?? scope.cardKeys
         guard let firstID = ids.first else { return }
         SpeakerManager.shared.setSpeakerUIMode(.training)
-        SpeakerRequestedCourseId.shared.set(cid, lessonIds: ids)
+        SpeakerRequestedCourseId.shared.set(cid, lessonIds: ids, cardKeys: keys)
         UserSession.shared.markActive(courseId: cid, lessonId: firstID, stepIndex: 0)
         NotificationCenter.default.post(name: Notification.Name("Step.progressDidChange"), object: nil)
         nav.requestTab(2)
@@ -309,33 +479,30 @@ private extension LessonsView {
     }
 
     private func launchGameTraining(for scopedLessonIds: [String]? = nil, cardKeys: [String]? = nil) {
-        if let scopedLessonIds, !scopedLessonIds.isEmpty {
-            presentGameModePicker(for: scopedLessonIds, cardKeys: cardKeys)
-        } else {
-            presentGameModePicker(cardKeys: cardKeys)
-        }
+        let scope = currentReinforcementScope()
+        let ids = scopedLessonIds ?? scope.lessonIds
+        let keys = cardKeys ?? scope.cardKeys
+        presentGameModePicker(for: ids, cardKeys: keys)
     }
 
     private func launchSelectedErrorFocus() {
+        guard let cid = currentCourse?.courseID else { return }
         let ids = Array(Set(effectiveReinforcementLessonIds).intersection(weakCompletedLessonIds)).sorted()
         guard !ids.isEmpty else { return }
-        let keys = ReinforcementStore.shared.failedCardKeys(
-            courseId: currentCourse?.courseID ?? "",
-            lessonIds: ids
-        )
+        let keys = Array(ReinforcementStore.shared.failedCardKeys(courseId: cid, lessonIds: ids)).sorted()
+        guard !keys.isEmpty else { return }
         updateReinforcementSelection(Set(ids))
-        launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
+        launchGameTraining(for: ids, cardKeys: keys)
     }
 
     /// A classified skill row opens its selected mode directly; the generic Game Park entry keeps the picker.
     private func launchClassifiedGame(modeRawValue: String) {
         guard let mode = GameModeType(rawValue: modeRawValue),
               let cid = currentCourse?.courseID else { return }
-        let ids = effectiveReinforcementLessonIds.isEmpty
-            ? lessonsSorted.map { $0.lessonID }
-            : effectiveReinforcementLessonIds
+        let scope = currentReinforcementScope()
+        let ids = scope.lessonIds.isEmpty ? lessonsSorted.map { $0.lessonID } : scope.lessonIds
         guard !ids.isEmpty else { return }
-        GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: ids)
+        GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: ids, cardKeys: scope.cardKeys)
         selectedGameLessonId = ids.count == 1 ? ids.first : nil
         selectedGameType = mode
         nav.go(.game(
@@ -400,21 +567,34 @@ private extension LessonsView {
             courseMaterialsPicker
             LSCompletedTrainingHero(
                 stats: reinforcementCourseStats,
-                selectedCount: effectiveReinforcementLessonIds.count,
+                focusCaption: reinforcementFocusCaption,
+                focusCardCount: currentReinforcementScope().cardCount,
                 totalLessons: completedLessonOptions.count,
                 weakCount: weakCompletedLessonIds.count,
-                onSpeaker: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { launchSpeakerTraining() },
-                onGamePark: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { launchGameTraining() },
-                onGameMode: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { mode in launchClassifiedGame(modeRawValue: mode) },
-                onProLocked: isTheoryBonusCourse || effectiveReinforcementLessonIds.isEmpty ? nil : { showGamesProSheet() },
+                onSpeaker: isTheoryBonusCourse ? nil : {
+                    guard currentReinforcementScope().cardCount > 0 else { return }
+                    launchSpeakerTraining()
+                },
+                onGamePark: isTheoryBonusCourse ? nil : {
+                    guard currentReinforcementScope().cardCount > 0 else { return }
+                    launchGameTraining()
+                },
+                onGameMode: isTheoryBonusCourse ? nil : { mode in
+                    guard currentReinforcementScope().cardCount > 0 else { return }
+                    launchClassifiedGame(modeRawValue: mode)
+                },
+                onProLocked: isTheoryBonusCourse ? nil : { showGamesProSheet() },
                 selectedWeakCount: Set(effectiveReinforcementLessonIds).intersection(weakCompletedLessonIds).count,
-                onFocus: isTheoryBonusCourse || Set(effectiveReinforcementLessonIds).intersection(weakCompletedLessonIds).isEmpty ? nil : { launchSelectedErrorFocus() }
+                onFocus: nil
             )
 
             LSCompletedLessonList(
                 items: lessonItems(),
                 selectedIds: Set(effectiveReinforcementLessonIds),
                 weakIds: weakCompletedLessonIds,
+                listFocus: $reinforcementListFocus,
+                selectedCardCount: reinforcementSelectedCardCount,
+                selectedErrorCardCount: reinforcementSelectedErrorCardCount,
                 scores: reinforcementLessonScores,
                 courseSessionCount: reinforcementCourseStats.gameSessions,
                 onToggle: toggleTrainingSelection,
@@ -423,6 +603,7 @@ private extension LessonsView {
                 onClearAll: clearAllTrainingLessons,
                 onSelectWeak: weakCompletedLessonIds.isEmpty ? nil : {
                     updateReinforcementSelection(weakCompletedLessonIds)
+                    reinforcementListFocus = .errors
                 },
                 onTrainWeak: weakCompletedLessonIds.isEmpty ? nil : { selectedIds in
                     let ids = Array(selectedIds.intersection(weakCompletedLessonIds)).sorted()
@@ -432,7 +613,15 @@ private extension LessonsView {
                         lessonIds: ids
                     )
                     updateReinforcementSelection(Set(ids))
+                    reinforcementListFocus = .errors
                     launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
+                },
+                onStartSelected: { selectedIds in
+                    let ids = Array(selectedIds).sorted()
+                    guard !ids.isEmpty else { return }
+                    updateReinforcementSelection(Set(ids))
+                    reinforcementListFocus = .lessons
+                    launchGameTraining(for: ids, cardKeys: nil)
                 },
                 accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
                 accentColor: TaikaMasteryTokens.greenGlow,
@@ -445,7 +634,7 @@ private extension LessonsView {
     private var remainingCourseMinutes: Int {
         guard let cid = currentCourse?.courseID else { return 0 }
         let left = lessonsSorted.reduce(0.0) { acc, lesson in
-            let p = lessonsManager.lessonProgress(courseId: cid, lessonId: lesson.lessonID)?.percent ?? 0.0
+            let p = lessonsManager.lessonPercent(courseId: cid, lessonId: lesson.lessonID)
             let remaining = max(0.0, 1.0 - min(1.0, max(0.0, p)))
             return acc + (Double(lesson.durationMinutes) * remaining)
         }
@@ -459,7 +648,7 @@ private extension LessonsView {
         // This avoids relying on an optional ProgressManager API and guarantees
         // the header reflects the real state used across the app.
         return lessonsSorted.map { l in
-            let p = lessonsManager.lessonProgress(courseId: cid, lessonId: l.lessonID)?.percent ?? 0
+            let p = lessonsManager.lessonPercent(courseId: cid, lessonId: l.lessonID)
             // Clamp to [0,1] just in case
             return max(0, min(1, p))
         }
@@ -500,8 +689,9 @@ private extension LessonsView {
         }
     }
 
-    private func speakerScore(courseId: String, lessonId: String) -> Int? {
-        let scores = SpeakerAttemptsStore.loadAll().values
+    private func speakerScore(courseId: String, lessonId: String, attempts: [SpeakerAttemptResult]? = nil) -> Int? {
+        let values = attempts ?? Array(SpeakerAttemptsStore.loadAll().values)
+        let scores = values
             .filter {
                 $0.courseId == courseId &&
                 $0.lessonId == lessonId
@@ -513,10 +703,10 @@ private extension LessonsView {
 
     func lessonItems() -> [LS.Item] {
         guard let cid = currentCourse?.courseID else { return [] }
+        let attemptsSnapshot = Array(SpeakerAttemptsStore.loadAll().values)
         return lessonsSorted.enumerated().map { (i, l) in
             {
-                let lp = lessonsManager.lessonProgress(courseId: cid, lessonId: l.lessonID)
-                let rawPercent = lp?.percent ?? 0.0
+                let rawPercent = lessonsManager.lessonPercent(courseId: cid, lessonId: l.lessonID)
                 let clamped = max(0.0, min(1.0, rawPercent))
 
                 let status = statusForLesson(l)
@@ -526,13 +716,15 @@ private extension LessonsView {
 
                 let learnableCount: Int = {
                     let counts = StepData.shared.progressCounts(for: l.lessonID)
+                    let fromSteps = ProgressManager.shared.totalEffectiveCount(courseId: cid, lessonId: l.lessonID)
+                    if fromSteps > 0 { return fromSteps }
                     return counts.learnable > 0 ? counts.learnable : l.cardCount
                 }()
-                let learnedCardCount = min(learnableCount, max(0, Int((clamped * Double(max(1, learnableCount))).rounded())))
+                let learnedCardCount = ProgressManager.shared.learnedEffectiveCount(courseId: cid, lessonId: l.lessonID)
                 let errorCardCount = ReinforcementStore.shared.failedCardKeys(courseId: cid, lessonIds: [l.lessonID]).count
                 let reinforcementScore = ReinforcementStore.shared.lessonScore(courseId: cid, lessonId: l.lessonID)
                 let reinforcementSessionCount = ReinforcementStore.shared.gameSessions(courseId: cid, lessonId: l.lessonID)
-                let speakerScore = speakerScore(courseId: cid, lessonId: l.lessonID)
+                let speakerScore = speakerScore(courseId: cid, lessonId: l.lessonID, attempts: attemptsSnapshot)
                 return LS.Item(
                     id: l.lessonID,
                     index: i,
@@ -670,6 +862,7 @@ public struct LessonsView: View {
     @EnvironmentObject private var overlay: OverlayPresenter
     @ObservedObject private var lessonsStore = LessonsData.shared
     @ObservedObject private var lessonsManager = LessonsManager.shared
+    @ObservedObject private var userSession = UserSession.shared
     @StateObject private var homeTaskManager = HomeTaskManager()
     @State private var htVersion = UUID()
     @State private var showGameModePicker: Bool = false
@@ -687,6 +880,8 @@ public struct LessonsView: View {
     /// Reinforcement queue selection is independent from the visible carousel focus.
     /// nil means all completed lessons; a non-nil set is the explicit multi-select scope.
     @State private var selectedReinforcementLessonIds: Set<String>? = nil
+    @State private var reinforcementListFocus: LSReinforcementListFocus = .lessons
+    @State private var didSeedReinforcementSelection = false
     @State private var courseContentMode: LSCourseContentMode = .lessons
     @State private var headerChipResolved: String? = nil
     @State private var headerSubtitleResolved: String = ""
@@ -695,6 +890,7 @@ public struct LessonsView: View {
     @State private var progressReloadToken: UUID = UUID()
     // Debounce work item for header refreshes
     @State private var headerRefreshWork: DispatchWorkItem? = nil
+    @State private var reinforcementScopeSaveWork: DispatchWorkItem? = nil
     @State private var frozenSnapshot: Image? = nil
     @ObservedObject private var lessonsHeaderStore = LessonsHeaderStore.shared
     @ObservedObject private var pro = ProManager.shared
@@ -758,32 +954,35 @@ public struct LessonsView: View {
                 headerSection
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
 
-                if courseContentMode == .lessons {
+                if resolvedCourseContentMode == .lessons {
                     if isCompletedCourse {
                         completedTrainingDashboard
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
                     } else {
-                        LSSectionTitle("ТАЙКА FM")
-                            .padding(.horizontal, Theme.Layout.pageHorizontal)
-                            .padding(.top, Theme.Layout.sectionTop)
+                LSSectionTitle("ТАЙКА FM")
+                    .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    .padding(.top, Theme.Layout.sectionTop)
 
                         TaikaFMRow(
                             scope: .lessons,
                             mode: .typing,
                             showBubble: false,
                             repeats: false
-                        )
-                        .padding(.horizontal, Theme.Layout.pageHorizontal)
-                        .padding(.top, Theme.Layout.sectionTitleToContent)
+                )
+                .padding(.horizontal, Theme.Layout.pageHorizontal)
+                .padding(.top, Theme.Layout.sectionTitleToContent)
 
-                        lessonsReelsSection
-                            .padding(.horizontal, Theme.Layout.pageHorizontal)
+                lessonsReelsSection
+                    .padding(.horizontal, Theme.Layout.pageHorizontal)
 
-                        if !isTheoryBonusCourse {
+                if !isTheoryBonusCourse {
                             LSCompletedLessonList(
                                 items: lessonItems().filter { $0.status == .completed },
                                 selectedIds: Set(effectiveReinforcementLessonIds),
                                 weakIds: weakCompletedLessonIds,
+                                listFocus: $reinforcementListFocus,
+                                selectedCardCount: reinforcementSelectedCardCount,
+                                selectedErrorCardCount: reinforcementSelectedErrorCardCount,
                                 scores: reinforcementLessonScores,
                                 courseSessionCount: reinforcementCourseStats.gameSessions,
                                 onToggle: toggleTrainingSelection,
@@ -792,6 +991,7 @@ public struct LessonsView: View {
                                 onClearAll: clearAllTrainingLessons,
                                 onSelectWeak: weakCompletedLessonIds.isEmpty ? nil : {
                                     updateReinforcementSelection(weakCompletedLessonIds)
+                                    reinforcementListFocus = .errors
                                 },
                                 onTrainWeak: weakCompletedLessonIds.isEmpty ? nil : { selectedIds in
                                     let ids = Array(selectedIds.intersection(weakCompletedLessonIds)).sorted()
@@ -801,18 +1001,27 @@ public struct LessonsView: View {
                                         lessonIds: ids
                                     )
                                     updateReinforcementSelection(Set(ids))
+                                    reinforcementListFocus = .errors
                                     launchGameTraining(for: ids, cardKeys: Array(keys).sorted())
+                                },
+                                onStartSelected: { selectedIds in
+                                    let ids = Array(selectedIds).sorted()
+                                    guard !ids.isEmpty else { return }
+                                    updateReinforcementSelection(Set(ids))
+                                    reinforcementListFocus = .lessons
+                                    launchGameTraining(for: ids, cardKeys: nil)
                                 },
                                 accentFill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
                                 accentColor: TaikaMasteryTokens.greenGlow,
                                 isCompletedPresentation: true,
+                                showFocusAction: false,
                                 sectionTitle: "УРОКИ КУРСА"
                             )
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
                         }
                     }
                 } else {
-                    if isCompletedCourse {
+                    if isCompletedCourse, showsLessonsContent {
                         VStack(alignment: .leading, spacing: 18) {
                             completedTaikaFMSection
                             courseMaterialsPicker
@@ -820,6 +1029,20 @@ public struct LessonsView: View {
                         }
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
                     } else {
+                        if isTheoryBonusCourse {
+                            LSSectionTitle("ТАЙКА FM")
+                                .padding(.horizontal, Theme.Layout.pageHorizontal)
+                                .padding(.top, Theme.Layout.sectionTop)
+
+                            TaikaFMRow(
+                                scope: .lessons,
+                                mode: .typing,
+                                showBubble: false,
+                                repeats: false
+                            )
+                    .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    .padding(.top, Theme.Layout.sectionTitleToContent)
+                        }
                         courseLifehacksReels
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
                     }
@@ -844,34 +1067,25 @@ public struct LessonsView: View {
     }
 
     private func completedTrainingFloatingCTA() -> some View {
-        let count = effectiveReinforcementLessonIds.count
+        let scope = currentReinforcementScope()
+        let title: String = {
+            if scope.isErrorScope {
+                return "Повторить · \(scope.cardCount) \(ruReinforcementCardLabel(scope.cardCount, error: true))"
+            }
+            return "Закрепить · \(scope.cardCount) \(ruReinforcementCardLabel(scope.cardCount, error: false))"
+        }()
         return Button {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            presentGameModePicker(for: effectiveReinforcementLessonIds)
+            presentGameModePicker(for: scope.lessonIds, cardKeys: scope.cardKeys)
         } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                Text("Начать закрепление · \(count)")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer(minLength: 0)
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 15, weight: .bold))
-            }
-            .foregroundStyle(PD.ColorToken.text)
-            .padding(.horizontal, 18)
-            .frame(maxWidth: .infinity, minHeight: 58)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(PD.ColorToken.card.opacity(0.86))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(PD.ColorToken.stroke.opacity(0.8), lineWidth: 1)
+            DictionarySoftActionLabel(
+                icon: scope.isErrorScope ? "exclamationmark.circle" : "mic.fill",
+                title: title
             )
         }
         .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
-        .accessibilityLabel("Начать закрепление, \(count) уроков")
+        .disabled(scope.cardCount == 0)
+        .accessibilityLabel(scope.isErrorScope ? "Повторить ошибки, \(scope.cardCount) карточек" : "Начать закрепление, \(scope.cardCount) карточек")
     }
 
     @ViewBuilder
@@ -972,7 +1186,8 @@ public struct LessonsView: View {
                                     }
                                 },
                                 modes: GameModeType.modesLessonAndPark,
-                                onSpeaker: {
+                                // Error-queue launch: games only — Speaker doesn't clear game errors.
+                                onSpeaker: pendingGameCardKeys == nil ? {
                                     let cid = currentCourse?.courseID ?? ""
                                     let scopedIds = pendingGameLessonIds.isEmpty
                                         ? effectiveReinforcementLessonIds
@@ -993,7 +1208,7 @@ public struct LessonsView: View {
                                     pendingGameLessonIds = []
                                     pendingGameCardKeys = nil
                                     nav.requestTab(2)
-                                }
+                                } : nil
                             )
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
@@ -1036,6 +1251,8 @@ let withTasks = base
 
         if let cid = currentCourse?.courseID {
 
+            restoreReinforcementScope(for: cid)
+
             let ids = lessonsSorted.map { $0.lessonID }
 
             homeTaskManager.regenerateTasks(for: cid, lessonIds: ids) { id, triples, index in
@@ -1055,11 +1272,18 @@ let withTasks = base
 
     }
 
-    .onChange(of: currentCourse?.courseID) { _, _ in
+    .onChange(of: currentCourse?.courseID) { _, newId in
 
         resolveHeaderMeta()
+        if let cid = newId {
+            restoreReinforcementScope(for: cid)
+        } else {
+            didSeedReinforcementSelection = false
+            reinforcementListFocus = .lessons
+            selectedReinforcementLessonIds = nil
+        }
 
-        if let cid = currentCourse?.courseID {
+        if let cid = newId {
 
             let ids = lessonsSorted.map { $0.lessonID }
 
@@ -1077,6 +1301,7 @@ let withTasks = base
         }
 
         if isTheoryBonusCourse {
+            courseContentMode = .lifehacks
             lessonsHeaderStore.setActions(onSpeaker: nil, onReinforce: nil)
         } else {
             lessonsHeaderStore.setActions(
@@ -1084,12 +1309,18 @@ let withTasks = base
                     launchSpeakerTraining()
                 },
                 onReinforce: {
-                    guard currentCourse?.courseID != nil else { return }
+                    guard let cid = currentCourse?.courseID else { return }
+                    let scope = currentReinforcementScope()
+                    guard scope.cardCount > 0 else { return }
                     selectedGameLessonId = nil
                     selectedGameType = .match
-                    if let cid = currentCourse?.courseID {
-                        GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: effectiveReinforcementLessonIds)
-                    }
+                    pendingGameLessonIds = scope.lessonIds
+                    pendingGameCardKeys = scope.cardKeys
+                    GameRequestedCourseScope.shared.set(
+                        courseId: cid,
+                        lessonIds: scope.lessonIds,
+                        cardKeys: scope.cardKeys
+                    )
                     frozenSnapshot = captureWindowSnapshot()
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
                         showGameOverlay = true
@@ -1101,13 +1332,23 @@ let withTasks = base
 
     }
 
-            .onChange(of: selectedLessonId) { _, _ in
+    .onChange(of: selectedLessonId) { _, _ in
 
-                itemsVersion = UUID()
+        itemsVersion = UUID()
 
-            }
+    }
             .onChange(of: isCompletedCourse) { _, completed in
                 lessonsHeaderStore.setCompletedCourse(completed)
+                if completed {
+                    seedReinforcementSelectionIfNeeded()
+                }
+            }
+            .onChange(of: reinforcementListFocus) { _, _ in
+                syncReinforcementScopeForListFocus()
+                scheduleReinforcementScopeSave()
+            }
+            .onAppear {
+                seedReinforcementSelectionIfNeeded()
             }
 
     .onReceive(lessonsManager.$progress) { _ in
@@ -1125,10 +1366,23 @@ let withTasks = base
 
     }
 
+    .onReceive(NotificationCenter.default.publisher(for: Notification.Name("OpenReinforcementFromMain"))) { note in
+        guard let targetId = note.userInfo?["courseId"] as? String,
+              targetId == currentCourse?.courseID,
+              isCompletedCourse else { return }
+        seedReinforcementSelectionIfNeeded()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            presentGameModePicker()
+        }
+    }
+
     .onReceive(NotificationCenter.default.publisher(for: .init("AppResetAll"))) { _ in
 
         progressReloadToken = UUID()
-
+        didSeedReinforcementSelection = false
+        reinforcementListFocus = .lessons
+        selectedReinforcementLessonIds = nil
+        reinforcementScopeSaveWork?.cancel()
         scheduleHeaderRefresh()
 
     }
@@ -1175,6 +1429,9 @@ let withTasks = base
     .onReceive(NotificationCenter.default.publisher(for: .init("TaikaReinforcementDidUpdate"))) { _ in
         itemsVersion = UUID()
         scheduleHeaderRefresh()
+        if reinforcementListFocus == .errors, weakCompletedLessonIds.isEmpty {
+            reinforcementListFocus = .lessons
+        }
     }
 
 // Navigation / chrome
@@ -1185,6 +1442,9 @@ let withTasks = base
             .onAppear {
                 GameHeaderStore.shared.config = nil
                 lessonsHeaderStore.setCompletedCourse(isCompletedCourse)
+                if isTheoryBonusCourse {
+                    courseContentMode = .lifehacks
+                }
                 // Resume the course context instead of resetting the carousel to lesson one.
                 if selectedLessonId == nil {
                     selectedLessonId = lessonId ?? smartResumeLessonId
@@ -1207,7 +1467,7 @@ let withTasks = base
                 lessonsHeaderStore.clearActions()
                 lessonsHeaderStore.setCompletedCourse(false)
             }
-                        .onChange(of: lessonsHeaderStore.resetRequested) { _, requested in
+            .onChange(of: lessonsHeaderStore.resetRequested) { _, requested in
                 if requested {
                     lessonsHeaderStore.clearResetRequest()
                     presentCourseResetOverlay()
@@ -1266,20 +1526,23 @@ extension LessonsView {
 
     // MARK: - Extracted Sections
     private var headerSection: some View {
-        let slots = perLessonPercents()
-        let count = totalLessonsCount
-        let baseSlots = !slots.isEmpty ? slots : Array(repeating: 0.0, count: count)
-        let slotsResolved: [Double] = baseSlots.isEmpty ? [0.0] : baseSlots
+        let slots = showsLessonsContent ? perLessonPercents() : []
+        let count = showsLessonsContent ? totalLessonsCount : 0
+        let baseSlots = !slots.isEmpty ? slots : (count > 0 ? Array(repeating: 0.0, count: count) : [])
+        let slotsResolved: [Double]? = showsLessonsContent
+            ? (baseSlots.isEmpty ? [0.0] : baseSlots)
+            : nil
         let courseIsCompleted = isCompletedCourse
         let subtitleResolved = headerSubtitleResolved.isEmpty ? headerSubtitle : headerSubtitleResolved
         return VStack(spacing: 10) {
             if !courseIsCompleted {
                 LSLessonHeader(
-                title: headerTitle,
+            title: headerTitle,
                 subtitle: courseIsCompleted ? "" : subtitleResolved,
+                chipText: nil,
                 progressSlots: courseIsCompleted ? nil : slotsResolved,
-                selectedIndex: activeLessonIndex,
-                onTapSlot: { idx in
+                selectedIndex: showsLessonsContent ? activeLessonIndex : nil,
+                onTapSlot: showsLessonsContent ? { idx in
                 let arr = lessonsSorted
                 if idx >= 0 && idx < arr.count {
                     let lid = arr[idx].lessonID
@@ -1298,17 +1561,17 @@ extension LessonsView {
                         ))
                     }
                 }
-            },
-                onBack: {
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                        if !nav.path.isEmpty { nav.path.removeLast() }
-                    }
+            } : nil,
+            onBack: {
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                    if !nav.path.isEmpty { nav.path.removeLast() }
+                }
                 },
                 // Reinforcement is a post-course layer. An in-progress course must keep this hero focused on learning.
                 completionSummary: courseIsCompleted ? completedCourseSummary : nil,
                 isCompletedCourse: courseIsCompleted,
                 // In completed mode the training dock owns material selection; avoid a second, oversized picker in the header card.
-                                bottomAccessory: courseIsCompleted ? nil : AnyView(courseMaterialsPicker)
+                                bottomAccessory: (courseIsCompleted || isTheoryBonusCourse) ? nil : AnyView(courseMaterialsPicker)
                 )
             }
         }
@@ -1394,8 +1657,14 @@ extension LessonsView {
             }
             selectedGameLessonId = nil
             selectedGameType = .match
-            pendingGameLessonIds = effectiveReinforcementLessonIds
-            GameRequestedCourseScope.shared.set(courseId: cid, lessonIds: effectiveReinforcementLessonIds)
+            let scope = currentReinforcementScope()
+            pendingGameLessonIds = scope.lessonIds
+            pendingGameCardKeys = scope.cardKeys
+            GameRequestedCourseScope.shared.set(
+                courseId: cid,
+                lessonIds: scope.lessonIds,
+                cardKeys: scope.cardKeys
+            )
             frozenSnapshot = captureWindowSnapshot()
             withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
                 showGameOverlay = true
@@ -1469,7 +1738,22 @@ extension LessonsView {
                 .textCase(.uppercase)
                 .kerning(0.5)
             Spacer(minLength: 8)
-            if isCompletedCourse {
+            if isTheoryBonusCourse {
+                Text(LSCourseContentMode.lifehacks.title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .padding(.horizontal, 12)
+                    .frame(height: 32)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(PD.ColorToken.card)
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(PD.ColorToken.stroke.opacity(0.72), lineWidth: 1)
+                    )
+                    .accessibilityLabel("Лайфхаки")
+            } else if isCompletedCourse {
                 Menu {
                     ForEach(Array([LSCourseContentMode.lessons.title, LSCourseContentMode.lifehacks.title].enumerated()), id: \.offset) { index, title in
                         Button {
@@ -1581,16 +1865,17 @@ extension LessonsView {
     }
 
     private var courseLifehacksReels: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let hacks = courseLifehacks
+        return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 LSSectionTitle("ЛАЙФХАКИ")
                 Spacer(minLength: 8)
-                Text("\(courseLifehacks.count)")
+                Text("\(hacks.count)")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(PD.ColorToken.textSecondary)
             }
 
-            if courseLifehacks.isEmpty {
+            if hacks.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Image(systemName: "lightbulb.slash")
                         .font(.system(size: 22, weight: .semibold))
@@ -1606,58 +1891,49 @@ extension LessonsView {
                 .padding(18)
                 .background(Theme.Surfaces.card(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)))
             } else {
-                GeometryReader { geo in
-                    let cardWidth: CGFloat = CDLessonCarouselCanonical.cardWidth
-                    let cardHeight: CGFloat = CDLessonCarouselCanonical.courseLessonCardHeight
-                    let spacing: CGFloat = CardDS.Metrics.carouselSpacing
-                    let sideInset: CGFloat = PD.Spacing.screen
-
+                // Flat rail: no per-cell GeometryReader / scale-on-scroll — that caused carousel jank.
+                GeometryReader { outer in
+                    let cardWidth = min(
+                        CDLessonCarouselCanonical.cardWidth,
+                        max(220, outer.size.width - (Theme.Layout.pageHorizontal * 2) - 48)
+                    )
+                    let cardHeight = CDLessonCarouselCanonical.courseLessonCardHeight
+                    let spacing = CDLessonCarouselCanonical.spacing
+                    let sideInset = Theme.Layout.pageHorizontal
                     TaikaCarouselScroll {
-                        HStack(alignment: .top, spacing: spacing) {
-                            ForEach(courseLifehacks) { hack in
-                                GeometryReader { itemGeo in
-                                    let midX = itemGeo.frame(in: .global).midX
-                                    let containerMidX = geo.frame(in: .global).midX
-                                    let distance = abs(midX - containerMidX)
-                                    let maxDistance = cardWidth + spacing
-                                    let t = min(distance / maxDistance, 1)
-                                    let scale: CGFloat = 0.94 + (1 - t) * 0.08
-                                    let opacity: Double = 0.76 + (1 - t) * 0.24
-                                    let yOffset: CGFloat = t * 10
-
-                                    StepLifehackCardVisual(
-                                        item: hack.step,
-                                        label: "лайфхак",
-                                        size: CGSize(width: cardWidth, height: cardHeight),
-                                        sectionChrome: .seps,
-                                        chromeStyle: .cards,
-                                        isFavorite: FavoriteManager.shared.containsHack(
+                        LazyHStack(alignment: .top, spacing: spacing) {
+                            ForEach(hacks) { hack in
+                                StepLifehackCardVisual(
+                                    item: hack.step,
+                                    label: "лайфхак",
+                                    size: CGSize(width: cardWidth, height: cardHeight),
+                                    sectionChrome: .seps,
+                                    chromeStyle: .cards,
+                                    isFavorite: FavoriteManager.shared.containsHack(
+                                        courseId: hack.courseId,
+                                        lessonId: hack.lessonId,
+                                        index: hack.order
+                                    ),
+                                    onFavorite: {
+                                        FavoriteManager.shared.toggle(
+                                            step: hack.step,
                                             courseId: hack.courseId,
                                             lessonId: hack.lessonId,
-                                            index: hack.order
-                                        ),
-                                        onFavorite: {
-                                            FavoriteManager.shared.toggle(
-                                                step: hack.step,
-                                                courseId: hack.courseId,
-                                                lessonId: hack.lessonId,
-                                                order: hack.order
-                                            )
-                                        }
-                                    )
-                                    .scaleEffect(scale)
-                                    .opacity(opacity)
-                                    .offset(y: yOffset)
-                                }
+                                            order: hack.order
+                                        )
+                                    },
+                                    favoriteOnly: isTheoryBonusCourse,
+                                    showsLabelChip: !isTheoryBonusCourse
+                                )
                                 .frame(width: cardWidth, height: cardHeight)
+                                .id(hack.id)
                             }
                         }
                         .padding(.horizontal, sideInset)
                         .padding(.vertical, 4)
-                        .frame(height: cardHeight + 36)
                     }
                 }
-                .frame(height: CDLessonCarouselCanonical.courseLessonCardHeight + 36)
+                .frame(height: CDLessonCarouselCanonical.courseLessonCardHeight + 8)
             }
         }
     }
@@ -1707,10 +1983,10 @@ extension LessonsView {
                     UserSession.shared.markActive(courseId: cid, lessonId: lid, stepIndex: 0)
                     CarouselScrollPersistence.setLessonReelIndex(courseId: cid, index: item.index)
                 }
-                selectedLessonId = lid
-                nav.go(.lesson(
-                    courseId: currentCourse?.courseID ?? "",
-                    lessonId: lid,
+                    selectedLessonId = lid
+                    nav.go(.lesson(
+                        courseId: currentCourse?.courseID ?? "",
+                        lessonId: lid,
                     presentation: .directStart
                 ))
             },

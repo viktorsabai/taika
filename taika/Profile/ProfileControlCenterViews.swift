@@ -761,7 +761,6 @@ struct ProfileRootContent: View {
     let onRestore: () -> Void
     let onTaikaPlus: () -> Void
     let onRhythm: () -> Void
-    let onSpeaker: () -> Void
     let onSupport: () -> Void
     let onLegal: () -> Void
     let onReset: () -> Void
@@ -769,14 +768,6 @@ struct ProfileRootContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            ProfileActionHero(
-                pro: pro,
-                onRhythm: onRhythm,
-                onSpeaker: onSpeaker,
-                onTaikaPlus: onTaikaPlus
-            )
-            .environmentObject(theme)
-
             rootSectionLabel("АККАУНТ")
             ProfileAccountCard(
                     isLoggedIn: auth.isLoggedIn,
@@ -793,6 +784,20 @@ struct ProfileRootContent: View {
 
             rootSectionLabel("СЕРВИС")
             VStack(spacing: 0) {
+                ProfileAppRow(
+                    title: "Твой ритм",
+                    subtitle: "Активность и прогресс за неделю",
+                    systemImage: "chart.bar.xaxis",
+                    action: onRhythm
+                )
+                Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
+                ProfileAppRow(
+                    title: "Taika+",
+                    subtitle: pro.isPro ? "Подписка открыта" : "Курсы, Speaker и игры",
+                    systemImage: "crown",
+                    action: onTaikaPlus
+                )
+                Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
                 ProfileAppRow(title: "Поддержка и обратная связь", subtitle: "Помощь, вопросы и предложения", systemImage: "questionmark.bubble", action: onSupport)
                 Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
                 ProfileAppRow(title: "Правовые документы", subtitle: "Политика и условия использования", systemImage: "doc.on.doc", action: onLegal)
@@ -820,12 +825,31 @@ struct ProfileRootContent: View {
     }
 }
 
+private enum ProfileBannerChrome {
+    /// Quiet glass surface — no mastery pink→green wash on sales banners.
+    static var surface: AnyShapeStyle {
+        AnyShapeStyle(Color.white.opacity(0.045))
+    }
+}
+
 private struct ProfileActionHero: View {
+    @EnvironmentObject private var theme: ThemeManager
     @ObservedObject var pro: ProManager
     @ObservedObject private var profile = ProfileManager.shared
     let onRhythm: () -> Void
     let onSpeaker: () -> Void
     let onTaikaPlus: () -> Void
+
+    private var weekIntensities: [CGFloat] {
+        let raw = profile.activityWeekDays.map { CGFloat($0.intensity01) }
+        if raw.count >= 7 { return Array(raw.suffix(7)) }
+        if raw.isEmpty { return Array(repeating: 0, count: 7) }
+        return raw + Array(repeating: 0, count: max(0, 7 - raw.count))
+    }
+
+    private var activeDays: Int {
+        weekIntensities.filter { $0 > 0.05 }.count
+    }
 
     private var rhythmPercent: Int {
         guard !profile.activityWeekDays.isEmpty else { return 0 }
@@ -834,24 +858,24 @@ private struct ProfileActionHero: View {
     }
 
     private var hasRhythm: Bool {
-        rhythmPercent > 0 || !profile.activityWeekDays.isEmpty
+        activeDays > 0 || profile.dashboardLearnedCount > 0 || profile.dashboardStreakDays > 0
     }
 
     private var title: String {
-        if pro.isPro { return "Продолжи свою практику" }
-        return hasRhythm ? "Продолжи свой ритм" : "Проверь свою речь"
+        if hasRhythm { return "Твой ритм за неделю" }
+        return "Начни с короткой практики"
     }
 
     private var subtitle: String {
-        if pro.isPro { return "Вернись к фразам, которые стоит закрепить." }
-        return hasRhythm
-            ? "Одна короткая практика — и ты увидишь следующий шаг."
-            : "Первая проверка покажет, над чем работать дальше."
+        if hasRhythm {
+            return "Активных дней: \(activeDays) · шагов \(profile.dashboardLearnedCount)"
+        }
+        return "Один voice check в Speaker — и здесь появится картина недели."
     }
 
     private var actionTitle: String {
-        if pro.isPro { return "Открыть мой ритм" }
-        return hasRhythm ? "Смотреть ритм" : "Открыть Speaker"
+        if pro.isPro || hasRhythm { return "Открыть ритм" }
+        return "Открыть Speaker"
     }
 
     private var action: () -> Void {
@@ -860,131 +884,122 @@ private struct ProfileActionHero: View {
     }
 
     private var actionIcon: String {
-        if pro.isPro || hasRhythm { return "waveform.path.ecg" }
+        if pro.isPro || hasRhythm { return "chart.bar.xaxis" }
         return "mic.fill"
     }
 
-    private var signalValues: [CGFloat] {
-        let values = profile.activityWeekDays.map { CGFloat($0.intensity01) }
-        return values.isEmpty ? Array(repeating: 0, count: 7) : values
-    }
-
-    private var signalLabel: String {
-        if pro.isPro { return "ПРАКТИКА · 7 ДНЕЙ" }
-        if hasRhythm { return "РИТМ · 7 ДНЕЙ" }
-        return "ПЕРВАЯ ПРОВЕРКА"
-    }
-
-    private var signalValue: String {
-        if pro.isPro { return "TAIKA+" }
-        if hasRhythm { return "\(rhythmPercent)%" }
-        return "—"
-    }
+    private var accent: AnyShapeStyle { AnyShapeStyle(theme.currentAccentFill) }
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 13) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(pro.isPro ? "TAIKA+ · NEXT STEP" : "PROFILE · NEXT STEP")
-                            .font(PD.FontToken.caption(10, weight: .bold))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .tracking(1.2)
-                        Text(title)
-                            .font(PD.FontToken.title(23, weight: .bold))
-                            .foregroundStyle(PD.ColorToken.text)
-                            .lineLimit(2)
-                        Text(subtitle)
-                            .font(PD.FontToken.caption(13, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .lineLimit(2)
-                    }
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("ТВОЙ РИТМ")
+                        .font(PD.FontToken.caption(10, weight: .bold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .tracking(1.1)
                     Spacer(minLength: 8)
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(signalValue)
-                            .font(PD.FontToken.title(20, weight: .bold))
-                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
-                        Text(signalLabel)
-                            .font(PD.FontToken.caption(9, weight: .bold))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .tracking(0.7)
-                            .multilineTextAlignment(.trailing)
+                    if rhythmPercent > 0 {
+                        Text("\(rhythmPercent)%")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(accent)
                     }
                 }
 
-                HStack(alignment: .center, spacing: 12) {
-                    ProfileActionSignalGraph(values: signalValues)
-                        .stroke(AnyShapeStyle(TaikaMasteryTokens.greenGradient), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                        .frame(height: 48)
-                    Rectangle()
-                        .fill(PD.ColorToken.stroke.opacity(0.5))
-                        .frame(width: 1, height: 42)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(pro.isPro ? "Сигнал практики" : (hasRhythm ? "Сигнал ритма" : "Сигнал появится после первой проверки"))
-                            .font(PD.FontToken.caption(11, weight: .semibold))
-                            .foregroundStyle(PD.ColorToken.text)
-                            .lineLimit(2)
-                        Text(pro.isPro ? "Продолжай без пауз" : (hasRhythm ? "Найдено, что повторить" : "Один voice check"))
-                            .font(PD.FontToken.caption(10))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .lineLimit(1)
+                ProfileWeekRhythmStrip(values: weekIntensities, accent: accent)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(PD.FontToken.title(20, weight: .bold))
+                        .foregroundStyle(PD.ColorToken.text)
+                        .lineLimit(2)
+                    Text(subtitle)
+                        .font(PD.FontToken.caption(13, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .lineLimit(2)
+                }
+
+                if hasRhythm {
+                    HStack(spacing: 8) {
+                        profileStatChip(
+                            value: "\(profile.dashboardStreakDays)",
+                            label: "дней подряд"
+                        )
+                        profileStatChip(
+                            value: profile.dashboardSpeakingScore.map(String.init) ?? "—",
+                            label: "Speaker"
+                        )
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 HStack(spacing: 9) {
                     Image(systemName: actionIcon)
-                        .font(.system(size: 15, weight: .bold))
-                    Text(actionTitle)
-                        .font(PD.FontToken.body(16, weight: .bold))
-                    Spacer(minLength: 0)
-                    Image(systemName: "arrow.up.right")
                         .font(.system(size: 14, weight: .bold))
+                    Text(actionTitle)
+                        .font(PD.FontToken.body(15, weight: .bold))
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundStyle(Color.black.opacity(0.90))
                 .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity, minHeight: 50)
-                .background(AnyShapeStyle(TaikaMasteryTokens.greenGradient), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                )
+                .frame(maxWidth: .infinity, minHeight: 46)
+                .background(accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 240, alignment: .top)
+            .frame(maxWidth: .infinity, alignment: .top)
             .background(
-                AnyShapeStyle(Color.white.opacity(0.035)),
-                in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+                ProfileBannerChrome.surface,
+                in: RoundedRectangle(cornerRadius: 22, style: .continuous)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.42)), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(PD.ColorToken.stroke.opacity(0.55), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
-        .shadow(color: Color.black.opacity(0.12), radius: 22, y: 10)
+        .shadow(color: Color.black.opacity(0.10), radius: 16, y: 8)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
         .accessibilityHint(subtitle)
     }
+
+    private func profileStatChip(value: String, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(PD.ColorToken.text)
+            Text(label)
+                .font(PD.FontToken.caption(10, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.04))
+        )
+    }
 }
 
-private struct ProfileActionSignalGraph: Shape {
+/// 7 столбиков активности — видны сразу, без тапа в sheet.
+private struct ProfileWeekRhythmStrip: View {
     let values: [CGFloat]
+    let accent: AnyShapeStyle
 
-    func path(in rect: CGRect) -> Path {
-        guard values.count > 1 else { return Path() }
-        let maxValue = max(values.max() ?? 1, 0.08)
-        let step = rect.width / CGFloat(values.count - 1)
-        var path = Path()
-        for (index, value) in values.enumerated() {
-            let x = CGFloat(index) * step
-            let normalized = min(1, max(0, value / maxValue))
-            let y = rect.maxY - (normalized * (rect.height - 8)) - 4
-            let point = CGPoint(x: x, y: y)
-            if index == 0 { path.move(to: point) } else { path.addLine(to: point) }
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 6) {
+            ForEach(Array(values.enumerated()), id: \.offset) { _, value in
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(value > 0.05 ? accent : AnyShapeStyle(Color.white.opacity(0.10)))
+                    .frame(height: max(6, 8 + 34 * min(1, max(0, value))))
+            }
         }
-        return path
+        .frame(maxWidth: .infinity)
+        .frame(height: 44, alignment: .bottom)
+        .accessibilityLabel("Активность за 7 дней")
     }
 }
 
@@ -1052,7 +1067,11 @@ private struct ProfileHeroCarousel: View {
             HStack(spacing: 6) {
                 ForEach(0..<2, id: \.self) { index in
                     Capsule(style: .continuous)
-                        .fill(index == selectedSlide ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.72)))
+                        .fill(
+                            index == selectedSlide
+                            ? AnyShapeStyle(theme.currentAccentFill)
+                            : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.72))
+                        )
                         .frame(width: index == selectedSlide ? 22 : 7, height: 5)
                 }
             }
@@ -1078,67 +1097,71 @@ private struct ProfileRhythmPreviewCard: View {
         return min(100, max(0, Int((total / Double(profile.activityWeekDays.count) * 100).rounded())))
     }
 
+    private var sky: AnyShapeStyle { AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient) }
+    private var skySolid: Color { TaikaMasteryTokens.continueSky }
+
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "waveform.path.ecg")
-                            .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
-                        Text("Твой ритм")
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text("ТВОЙ РИТМ")
+                            .font(PD.FontToken.caption(10, weight: .bold))
+                            .foregroundStyle(skySolid.opacity(0.95))
+                            .tracking(1.1)
+                        Text(percent > 0 ? "Неделя уже рисует картину" : "Собери свой недельный ритм")
                             .font(PD.FontToken.title(21, weight: .bold))
                             .foregroundStyle(PD.ColorToken.text)
+                            .lineLimit(2)
+                        Text(percent > 0
+                             ? "Где рост, где пауза — и что делать дальше."
+                             : "Активность и прогресс появятся после первых занятий.")
+                            .font(PD.FontToken.caption(13, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .lineLimit(2)
                     }
-                    Text("Прогресс, активность и следующий шаг")
-                        .font(PD.FontToken.caption(13, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .lineLimit(2)
+                    Spacer(minLength: 8)
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text(percent > 0 ? "\(percent)%" : "—")
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(sky)
+                        Text("НЕДЕЛЯ")
+                            .font(PD.FontToken.caption(10, weight: .bold))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .tracking(0.7)
+                    }
                 }
-                Spacer(minLength: 8)
-                VStack(alignment: .trailing, spacing: 7) {
-                    Text("\(percent)%")
-                        .font(PD.FontToken.title(18, weight: .bold))
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
-                    Text("РИТМ")
-                        .font(PD.FontToken.caption(10, weight: .bold))
-                        .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
-                        .tracking(0.7)
-                }
-            }
 
-            HStack(spacing: 8) {
-                Image(systemName: "chart.bar.xaxis")
-                Text("Смотреть ритм")
-                    .font(PD.FontToken.body(16, weight: .bold))
+                HStack(spacing: 8) {
+                    Image(systemName: "chart.bar.xaxis")
+                    Text(percent > 0 ? "Открыть ритм" : "Начать собирать ритм")
+                        .font(PD.FontToken.body(16, weight: .bold))
+                }
+                .foregroundStyle(Color.black.opacity(0.88))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(sky, in: Capsule())
+
+                HStack(spacing: 0) {
+                    profileRhythmCapability("waveform", "Активность")
+                    Divider().frame(height: 30).overlay(PD.ColorToken.stroke.opacity(0.35))
+                    profileRhythmCapability("chart.line.uptrend.xyaxis", "Прогресс")
+                    Divider().frame(height: 30).overlay(PD.ColorToken.stroke.opacity(0.35))
+                    profileRhythmCapability("arrow.up.right", "Следующий шаг")
+                }
+                .padding(.vertical, 9)
             }
-            .foregroundStyle(Color.black.opacity(0.88))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            .padding(16)
+            .frame(minHeight: 238, alignment: .top)
             .background(
-                AnyShapeStyle(TaikaMasteryTokens.greenGradient),
-                in: Capsule()
+                ProfileBannerChrome.surface,
+                in: RoundedRectangle(cornerRadius: 26, style: .continuous)
             )
-
-            HStack(spacing: 0) {
-                profileRhythmCapability("waveform", "Активность")
-                Divider().frame(height: 30).overlay(PD.ColorToken.stroke.opacity(0.35))
-                profileRhythmCapability("chart.line.uptrend.xyaxis", "Прогресс")
-                Divider().frame(height: 30).overlay(PD.ColorToken.stroke.opacity(0.35))
-                profileRhythmCapability("arrow.up.right", "Следующий шаг")
-            }
-            .padding(.vertical, 9)
-        }
-        .padding(16)
-        .frame(minHeight: 238, alignment: .top)
-        .background(
-            AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.12)),
-            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.36)), lineWidth: 1)
-        )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(skySolid.opacity(0.34), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
         .shadow(color: Color.black.opacity(0.10), radius: 18, y: 8)
@@ -1151,13 +1174,13 @@ private struct ProfileRhythmPreviewCard: View {
         VStack(spacing: 3) {
             Image(systemName: image)
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                .foregroundStyle(skySolid)
             Text(title)
                 .font(PD.FontToken.caption(11, weight: .medium))
                 .foregroundStyle(PD.ColorToken.textSecondary)
-            Text("готово")
+            Text("в ритме")
                 .font(PD.FontToken.caption(10, weight: .semibold))
-                .foregroundStyle(AnyShapeStyle(TaikaMasteryTokens.greenGradient))
+                .foregroundStyle(skySolid.opacity(0.92))
         }
         .frame(maxWidth: .infinity)
     }
@@ -1182,7 +1205,7 @@ private struct ProfileAccountCard: View {
 
     private var statusStyle: AnyShapeStyle {
         isLoggedIn
-            ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
+            ? AnyShapeStyle(TaikaMasteryTokens.green)
             : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.78))
     }
 
@@ -1235,36 +1258,34 @@ private struct ProfileTaikaPlusCard: View {
     let onTap: () -> Void
     let onRestore: () -> Void
 
-    private var statusTitle: String {
-        pro.isPro ? "ДОСТУП ОТКРЫТ" : "ДОСТУП ЗАКРЫТ"
+    private var brand: AnyShapeStyle { AnyShapeStyle(theme.currentAccentFill) }
+    private var brandColor: Color { theme.currentAccentTintColor }
+
+    private var headline: String {
+        pro.isPro ? "Taika+ с тобой" : "Открой весь Taika"
     }
 
-    private var statusColor: Color {
-        pro.isPro ? TaikaMasteryTokens.green : PD.ColorToken.textSecondary.opacity(0.52)
+    private var offerLine: String {
+        if pro.isPro { return pro.subscriptionStatusSubtitle }
+        return "Курсы · Speaker · игры без лимитов"
     }
 
-    private var statusStyle: AnyShapeStyle {
-        pro.isPro
-            ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
-            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.78))
-    }
-
-    private var statusSubtitle: String {
-        pro.isPro ? pro.subscriptionStatusSubtitle : "7 дней бесплатно · курсы и Speaker"
+    private var ctaTitle: String {
+        pro.isPro ? "Управление подпиской" : TaikaProConfig.introTrialCTAFree
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 7) {
-                    HStack(spacing: 8) {
-                        Image(systemName: pro.isPro ? "crown.fill" : "lock.fill")
-                            .foregroundStyle(statusStyle)
-                        Text(pro.isPro ? "Taika+ активен" : "Открыть Taika+")
-                            .font(PD.FontToken.title(21, weight: .bold))
-                            .foregroundStyle(PD.ColorToken.text)
-                    }
-                    Text(statusSubtitle)
+                    Text(pro.isPro ? "TAIKA+" : "ПРЕДЛОЖЕНИЕ")
+                        .font(PD.FontToken.caption(10, weight: .bold))
+                        .foregroundStyle(pro.isPro ? TaikaMasteryTokens.green : brandColor)
+                        .tracking(1.1)
+                    Text(headline)
+                        .font(PD.FontToken.title(21, weight: .bold))
+                        .foregroundStyle(PD.ColorToken.text)
+                    Text(offerLine)
                         .font(PD.FontToken.caption(13, weight: .medium))
                         .foregroundStyle(PD.ColorToken.textSecondary)
                         .lineLimit(2)
@@ -1272,20 +1293,33 @@ private struct ProfileTaikaPlusCard: View {
                 Spacer(minLength: 8)
                 VStack(alignment: .trailing, spacing: 7) {
                     Circle()
-                        .fill(statusColor)
+                        .fill(pro.isPro ? TaikaMasteryTokens.green : brandColor.opacity(0.85))
                         .frame(width: 9, height: 9)
-                        .shadow(color: statusColor.opacity(0.7), radius: 7)
-                    Text(statusTitle)
+                        .shadow(
+                            color: (pro.isPro ? TaikaMasteryTokens.green : brandColor).opacity(0.65),
+                            radius: 7
+                        )
+                    Text(pro.isPro ? "ОТКРЫТ" : "ЗАКРЫТ")
                         .font(PD.FontToken.caption(10, weight: .bold))
-                        .foregroundStyle(statusStyle)
+                        .foregroundStyle(
+                            pro.isPro
+                            ? AnyShapeStyle(TaikaMasteryTokens.green)
+                            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.85))
+                        )
                         .tracking(0.7)
                 }
+            }
+
+            if !pro.isPro {
+                Text("7 дней бесплатно — отмена в любой момент")
+                    .font(PD.FontToken.caption(12, weight: .semibold))
+                    .foregroundStyle(brandColor.opacity(0.95))
             }
 
             Button(action: onTap) {
                 HStack(spacing: 8) {
                     Image(systemName: pro.isPro ? "slider.horizontal.3" : "sparkles")
-                    Text(pro.isPro ? "Управление подпиской" : "Открыть Taika+")
+                    Text(ctaTitle)
                         .font(PD.FontToken.body(16, weight: .bold))
                 }
                 .foregroundStyle(Color.black.opacity(0.88))
@@ -1293,8 +1327,8 @@ private struct ProfileTaikaPlusCard: View {
                 .padding(.vertical, 12)
                 .background(
                     pro.isPro
-                        ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
-                        : AnyShapeStyle(PD.ColorToken.chip.opacity(0.72)),
+                        ? AnyShapeStyle(TaikaMasteryTokens.green)
+                        : brand,
                     in: Capsule()
                 )
             }
@@ -1304,12 +1338,12 @@ private struct ProfileTaikaPlusCard: View {
                 Button(action: onRestore) {
                     Text(restoreInFlight ? "Восстановление…" : "Восстановить покупку")
                         .font(PD.FontToken.caption(12, weight: .semibold))
-                        .foregroundStyle(theme.currentAccentFill)
+                        .foregroundStyle(brand)
                 }
                 .buttonStyle(.plain)
                 .disabled(restoreInFlight)
                 Spacer()
-                Text(pro.isPro ? "Все функции доступны" : "Есть подписка? Восстанови её")
+                Text(pro.isPro ? "Все функции доступны" : "Уже есть подписка?")
                     .font(PD.FontToken.caption(11))
                     .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
                     .lineLimit(1)
@@ -1327,17 +1361,13 @@ private struct ProfileTaikaPlusCard: View {
         .padding(16)
         .frame(minHeight: 238, alignment: .top)
         .background(
-            pro.isPro
-                ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.12))
-                : AnyShapeStyle(PD.ColorToken.card.opacity(0.72)),
+            ProfileBannerChrome.surface,
             in: RoundedRectangle(cornerRadius: 26, style: .continuous)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .stroke(
-                    pro.isPro
-                        ? AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.36))
-                        : AnyShapeStyle(PD.ColorToken.stroke.opacity(0.62)),
+                    (pro.isPro ? TaikaMasteryTokens.green : brandColor).opacity(0.32),
                     lineWidth: 1
                 )
         )
@@ -1346,7 +1376,7 @@ private struct ProfileTaikaPlusCard: View {
 
     private func profileCapability(_ image: String, _ title: String, _ available: Bool) -> some View {
         let capabilityStyle: AnyShapeStyle = available
-            ? AnyShapeStyle(TaikaMasteryTokens.greenGradient)
+            ? AnyShapeStyle(TaikaMasteryTokens.green)
             : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.62))
         return VStack(spacing: 3) {
             Image(systemName: available ? image : "lock.fill")

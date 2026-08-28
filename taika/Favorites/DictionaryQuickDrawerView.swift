@@ -10,47 +10,38 @@ import SwiftUI
 import UIKit
 #endif
 
-/// Мягкая полноширинная CTA: словарь, первый заход в курсы.
+/// Полноширинная CTA как в Избранном / Зачётке: без розовой полоски слева.
 struct DictionarySoftActionLabel: View {
     let icon: String
     let title: String
+    var trailingSystemImage: String? = "arrow.up.right"
+    var compact: Bool = false
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: compact ? 10 : 12) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: compact ? 16 : 18, weight: .semibold))
             Text(title)
-                .font(.system(size: 15, weight: .bold))
+                .font(.system(size: compact ? 15 : 17, weight: .semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
+            Spacer(minLength: 0)
+            if let trailingSystemImage {
+                Image(systemName: trailingSystemImage)
+                    .font(.system(size: compact ? 13 : 15, weight: .bold))
+            }
         }
-        .foregroundStyle(CD.ColorToken.text)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 13)
+        .foregroundStyle(PD.ColorToken.text)
+        .padding(.horizontal, compact ? 14 : 18)
+        .frame(maxWidth: .infinity, minHeight: compact ? 52 : 58)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(CD.ColorToken.card.opacity(0.84))
+                .fill(PD.ColorToken.card.opacity(0.86))
         )
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            ThemeManager.shared.currentAccentTintColor.opacity(0.68),
-                            ThemeManager.shared.currentAccentTintColor
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: 3)
-                .padding(.vertical, 10)
-        }
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(CD.ColorToken.stroke.opacity(0.72), lineWidth: 1)
+                .stroke(PD.ColorToken.stroke.opacity(0.8), lineWidth: 1)
         )
-        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.92, useBouncySpring: true, flashOpacity: 0.08))
     }
 }
 
@@ -67,7 +58,7 @@ struct DictionaryQuickDrawerView: View {
     @State private var drawerOffset: CGFloat = 0
     @State private var didAppear = false
     @State private var editingCard: DictionaryEditTarget?
-    @State private var previewCard: FDCardDTO?
+    @State private var breakdownCard: DictionaryEditTarget?
     @State private var isSelectionMode = false
     @State private var selectedIds: Set<String> = []
     @State private var gamePickerExpanded = false
@@ -123,25 +114,11 @@ struct DictionaryQuickDrawerView: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(28)
         }
-        .sheet(item: $previewCard) { card in
-            DictionaryCardPreviewSheet(
-                card: card,
-                accent: accent,
-                onEdit: {
-                    previewCard = nil
-                    editingCard = DictionaryEditTarget(card: card)
-                },
-                onDelete: {
-                    previewCard = nil
-                    favorites.remove(id: DictionaryPhraseActions.cardId(card))
-                },
-                onTrain: {
-                    previewCard = nil
-                    trainInSpeaker(selected: [card.sourceId])
-                },
-                onDismiss: { previewCard = nil }
-            )
-            .presentationDetents([.medium])
+        .sheet(item: $breakdownCard) { target in
+            DictionaryPhraseBreakdownSheet(card: target.card) {
+                breakdownCard = nil
+            }
+            .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(28)
         }
@@ -168,8 +145,12 @@ struct DictionaryQuickDrawerView: View {
                                         if isSelectionMode {
                                             toggleSelection(card)
                                         } else {
-                                            previewCard = card
+                                            DictionaryPhraseActions.play(card)
                                         }
+                                    },
+                                    onLongPress: {
+                                        guard !isSelectionMode else { return }
+                                        breakdownCard = DictionaryEditTarget(card: card)
                                     },
                                     onEdit: { editingCard = DictionaryEditTarget(card: card) },
                                     onDelete: {
@@ -268,20 +249,22 @@ struct DictionaryQuickDrawerView: View {
     }
 
     private var actionButtonsRow: some View {
-        HStack(spacing: 8) {
+        VStack(spacing: 10) {
             Button { trainInSpeaker(selected: effectiveSelection) } label: {
-                footerActionLabel(icon: "person.wave.2.fill", title: trainButtonTitle)
+                footerActionLabel(icon: "mic.fill", title: trainButtonTitle)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
             .disabled(isSelectionMode && selectedIds.isEmpty)
+            .opacity(isSelectionMode && selectedIds.isEmpty ? 0.45 : 1)
 
             Button {
                 withAnimation { gamePickerExpanded = true }
             } label: {
                 footerActionLabel(icon: "gamecontroller.fill", title: reinforceButtonTitle)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
             .disabled(isSelectionMode && selectedIds.isEmpty)
+            .opacity(isSelectionMode && selectedIds.isEmpty ? 0.45 : 1)
         }
         .padding(.horizontal, Theme.Layout.pageHorizontal)
         .padding(.vertical, 10)
@@ -444,83 +427,7 @@ struct DictionaryQuickDrawerView: View {
     }
 }
 
-// MARK: - Card preview sheet
-
-private struct DictionaryCardPreviewSheet: View {
-    let card: FDCardDTO
-    let accent: AnyShapeStyle
-    var onEdit: (() -> Void)?
-    var onDelete: (() -> Void)?
-    var onTrain: (() -> Void)?
-    let onDismiss: () -> Void
-
-    private var phonetic: String { dictionaryCardPhonetic(card) }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            if !phonetic.isEmpty {
-                TaikaPhoneticText.styled(
-                    phonetic,
-                    font: .system(size: 24, weight: .bold),
-                    baseColor: CD.ColorToken.text
-                )
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            if !card.title.isEmpty {
-                Text(card.title)
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(CD.ColorToken.textSecondary)
-            }
-            if !card.subtitle.isEmpty {
-                Text(card.subtitle)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.8))
-            }
-
-            HStack(spacing: 10) {
-                Button {
-                    DictionaryPhraseActions.play(card)
-                } label: {
-                    Label("Послушать", systemImage: "speaker.wave.2.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(ThemeManager.shared.currentAccentTintColor)
-
-                if let onTrain {
-                    Button(action: onTrain) {
-                        Image(systemName: "person.wave.2.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
-
-            HStack(spacing: 16) {
-                if let onEdit {
-                    Button("Изменить", action: onEdit)
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                if let onDelete {
-                    Button("Удалить", role: .destructive, action: onDelete)
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                Spacer(minLength: 0)
-                Button("Закрыть", action: onDismiss)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(CD.ColorToken.textSecondary)
-            }
-        }
-        .padding(.horizontal, Theme.Layout.pageHorizontal)
-        .padding(.top, 8)
-        .padding(.bottom, 24)
-        .presentationBackground(CD.ColorToken.background)
-    }
-}
+// MARK: - Helpers
 
 private func dictionaryPhraseCountLabel(_ count: Int) -> String {
     let mod10 = count % 10
@@ -540,6 +447,7 @@ struct DictionaryDrawerRow: View {
     var isSelected: Bool = false
     var onToggleSelect: (() -> Void)? = nil
     var onTap: (() -> Void)? = nil
+    var onLongPress: (() -> Void)? = nil
     var onSpeak: (() -> Void)? = nil
     var onEdit: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
@@ -657,16 +565,12 @@ struct DictionaryDrawerRow: View {
                 onTap?()
             }
         }
-        .contextMenu {
-            if showsActionsMenu {
-                dictionaryPhraseContextMenu(
-                    card: card,
-                    onEdit: onEdit,
-                    onDelete: onDelete,
-                    onTrain: onTrain
-                )
-            }
+        .onLongPressGesture(minimumDuration: 0.35) {
+            guard !isSelectionMode else { return }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            onLongPress?()
         }
+        .accessibilityHint(showsActionsMenu ? "Долгое нажатие — разбор фразы" : "")
     }
 }
 
@@ -775,6 +679,144 @@ enum DictionaryPhraseActions {
 
     static func cardId(_ card: FDCardDTO) -> String {
         DictionaryEditTarget(card: card).id
+    }
+}
+
+/// Лонгтап по фразе словаря: РАЗБОР (не дубль меню ⋯).
+struct DictionaryPhraseBreakdownSheet: View {
+    let card: FDCardDTO
+    var onDismiss: () -> Void
+
+    @ObservedObject private var favorites = FavoriteManager.shared
+    @State private var repairInFlight = false
+    @State private var repairAttempted = false
+
+    private var phonetic: String {
+        var meta = card.meta
+        if meta.hasPrefix("card:") { meta = String(meta.dropFirst("card:".count)) }
+        return meta.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var parts: [FavoritePhrasePart] {
+        let stored = FavoriteManager.shared.dictionaryPhraseParts(for: card)
+        if !stored.isEmpty { return stored }
+        return card.phraseParts ?? []
+    }
+
+    /// Карточки, сохранённые до пословного контракта, могут хранить обрезанный разбор.
+    /// Он выглядит как полноценный, поэтому проверяем его тем же инвариантом, что и живой.
+    private var storedPartsAreUsable: Bool {
+        let saved = parts
+        guard !saved.isEmpty, !phonetic.isEmpty else { return false }
+        let mapped = saved.map { SpeakerManager.SmartSpeakerPart(p: $0.p, m: $0.m) }
+        return SpeakerManager.partsMatchPhonetic(phonetic: phonetic, parts: mapped)
+    }
+
+    /// Чиним молча: пользователь не должен узнать, что в его словаре лежал мусор.
+    private func repairPartsIfNeeded() {
+        guard !repairAttempted, !repairInFlight else { return }
+        guard !storedPartsAreUsable else { return }
+        let thai = card.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !thai.isEmpty, !phonetic.isEmpty else { return }
+
+        repairAttempted = true
+        repairInFlight = true
+        let sourceId = card.sourceId
+        let ru = card.title
+        let ph = phonetic
+        Task {
+            let fresh = await SpeakerManager.shared.alignedPhraseParts(ru: ru, thai: thai, phonetic: ph)
+            await MainActor.run {
+                repairInFlight = false
+                guard !fresh.isEmpty else { return }
+                FavoriteManager.shared.replaceDictionaryPhraseParts(
+                    sourceId: sourceId,
+                    parts: fresh.map { FavoritePhrasePart(p: $0.p, m: $0.m) }
+                )
+            }
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if !phonetic.isEmpty {
+                            TaikaPhoneticText.styled(
+                                phonetic,
+                                font: .system(size: 22, weight: .semibold),
+                                baseColor: CD.ColorToken.text
+                            )
+                        }
+                        if !card.title.isEmpty {
+                            Text(card.title)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(CD.ColorToken.textSecondary)
+                        }
+                        let thai = card.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !thai.isEmpty {
+                            Text(thai)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.75))
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("РАЗБОР")
+                            .font(.system(size: 11, weight: .bold))
+                            .tracking(0.6)
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
+
+                        if repairInFlight {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .controlSize(.mini)
+                                Text("собираю разбор…")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.75))
+                            }
+                        } else if !storedPartsAreUsable {
+                            Text("У этой фразы разбора нет.")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(PD.ColorToken.textSecondary)
+                        } else {
+                            VStack(alignment: .leading, spacing: 12) {
+                                ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+                                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                        Text(part.p)
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundStyle(PD.ColorToken.text.opacity(0.92))
+                                        Text("—")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.45))
+                                        Text(SpeakerManager.withoutThaiScript(part.m))
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.88))
+                                            .fixedSize(horizontal: false, vertical: true)
+                                        Spacer(minLength: 0)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                }
+                .padding(.horizontal, Theme.Layout.pageHorizontal)
+                .padding(.top, 8)
+                .padding(.bottom, 28)
+            }
+            .onAppear { repairPartsIfNeeded() }
+            .background(CD.ColorToken.background.ignoresSafeArea())
+            .navigationTitle("Разбор")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Готово") { onDismiss() }
+                        .font(.system(size: 16, weight: .semibold))
+                }
+            }
+        }
     }
 }
 

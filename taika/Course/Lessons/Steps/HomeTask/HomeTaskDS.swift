@@ -101,8 +101,6 @@ public struct MPFlipCard: View {
     public var body: some View {
         let radius: CGFloat = 16
         let len = text.count
-        let baseRight: CGFloat = 20
-        let baseLeft: CGFloat  = 17
         let fontSize: CGFloat = len > 28 ? 15 : (len > 20 ? 17 : 19)
 
         let front = ZStack {
@@ -311,19 +309,22 @@ public struct MPMatchPairsGrid: View {
     }
 
     public var body: some View {
-        HStack(alignment: .top, spacing: 30) {
-            VStack(alignment: .leading, spacing: 8) {
-                if let t = leftTitle { header(t) }
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                if let t = leftTitle, !t.isEmpty { header(t) }
                 column(left, isLeft: true)
             }
-            VStack(alignment: .leading, spacing: 8) {
-                if let t = rightTitle { header(t) }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+            VStack(alignment: .leading, spacing: 6) {
+                if let t = rightTitle, !t.isEmpty { header(t) }
                 column(right, isLeft: false)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .frame(maxWidth: .infinity, alignment: .top)
-        .padding(.top, 36)
-        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.top, 8)
+        .padding(.horizontal, 4)
     }
 
     @ViewBuilder
@@ -333,15 +334,17 @@ public struct MPMatchPairsGrid: View {
             .tracking(0.5)
             .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
             .padding(.horizontal, 4)
-            .padding(.bottom, 8)
+            .padding(.bottom, 4)
     }
 
     @ViewBuilder
     private func column(_ items: [MPItem], isLeft: Bool) -> some View {
-        VStack(alignment: .center, spacing: 22) {
+        // Few cards (error replay): keep a centered cluster.
+        // Many cards: distribute evenly across height.
+        let compact = items.count <= 3
+        VStack(alignment: .center, spacing: compact ? 12 : 0) {
             ForEach(Array(items.enumerated()), id: \.offset) { idx, it in
                 let isActive = (isLeft ? selectedLeft == idx : selectedRight == idx)
-                let isWrong = (it.state == .wrong)
                 MPFlipCard(
                     text: it.text,
                     isRevealed: (revealedIds?.contains(it.pairId) ?? (isActive || it.state == .matched || it.state == .wrong)),
@@ -353,8 +356,13 @@ public struct MPMatchPairsGrid: View {
                 )
                 .contentShape(Rectangle())
                 .onTapGesture { (isLeft ? onTapLeft(idx) : onTapRight(idx)) }
+
+                if !compact, idx < items.count - 1 {
+                    Spacer(minLength: 8)
+                }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: compact ? .center : .top)
     }
 }
 
@@ -413,108 +421,326 @@ fileprivate struct MPMatchHUD: View {
 
 // MARK: - Game status strip (все игры: ход / таймер / очки)
 
-/// Выразительные status-чипы: таймер / прогресс / очки [/ошибки]. Glass pills, не мелкий текст.
+/// Fixed 2-row status chrome — layout never jumps when score/mistakes change.
+/// Colors: gold stars · gucci green correct · crimson mistakes.
 public struct TaikaGameStatusStrip: View {
     public var timeText: String
     public var progressText: String?
     public var mistakes: Int
+    /// Correct answers in the current session (not the global star wallet).
     public var score: Int
+    /// When false, session score chip stays at 0 visually (still reserved).
+    public var showsSessionScore: Bool
+    /// When true, shows persistent star balance from `TaikaStarsStore`.
+    public var showsStarWallet: Bool
+    /// Hints opened by tapping the star chip (no separate hint chips).
+    public var hints: [TaikaGameHintAction]
+
+    @ObservedObject private var stars = TaikaStarsStore.shared
 
     public init(
         timeText: String,
         progressText: String? = nil,
         mistakes: Int = 0,
-        score: Int = 0
+        score: Int = 0,
+        showsSessionScore: Bool = true,
+        showsStarWallet: Bool = true,
+        hints: [TaikaGameHintAction] = []
     ) {
         self.timeText = timeText
         self.progressText = progressText
         self.mistakes = mistakes
         self.score = score
+        self.showsSessionScore = showsSessionScore
+        self.showsStarWallet = showsStarWallet
+        self.hints = hints
+    }
+
+    private var trimmedProgress: String {
+        guard let progress = progressText?.trimmingCharacters(in: .whitespacesAndNewlines), !progress.isEmpty else {
+            return "—"
+        }
+        return progress
+    }
+
+    private var sessionScoreValue: Int {
+        showsSessionScore ? max(0, score) : 0
+    }
+
+    private var availableHints: [TaikaGameHintAction] {
+        hints.filter(\.isEnabled)
     }
 
     public var body: some View {
-        HStack(spacing: 8) {
-            statusChip(
-                icon: "timer",
-                text: timeText,
-                style: .neutral
-            )
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                statusChip(icon: "timer", text: timeText, style: .neutral)
 
-            if let progress = progressText?.trimmingCharacters(in: .whitespacesAndNewlines), !progress.isEmpty {
                 statusChip(
                     icon: "list.number",
-                    text: progress,
+                    text: trimmedProgress,
                     style: .neutral
                 )
+                .opacity(progressText == nil ? 0.45 : 1)
+
+                if showsStarWallet {
+                    starWalletChip
+                }
             }
 
-            statusChip(
-                icon: "star.fill",
-                text: "\(score)",
-                style: .neutral
-            )
-
-            if mistakes > 0 {
+            // Always reserved — prevents layout jump when first mistake / score appears.
+            HStack(spacing: 8) {
+                statusChip(
+                    icon: "checkmark.circle.fill",
+                    text: "\(sessionScoreValue)",
+                    style: .correct,
+                    dimmed: sessionScoreValue == 0
+                )
                 statusChip(
                     icon: "xmark.circle.fill",
-                    text: "\(mistakes)",
-                    style: .wrong
+                    text: "\(max(0, mistakes))",
+                    style: .wrong,
+                    dimmed: mistakes == 0
                 )
             }
         }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var starWalletChip: some View {
+        let chip = statusChip(
+            icon: "star.fill",
+            text: "\(stars.balance)",
+            style: .gold,
+            accessibilityLabel: availableHints.isEmpty
+                ? "Звёзды: \(stars.balance)"
+                : "Звёзды: \(stars.balance). Тап — подсказка"
+        )
+
+        if availableHints.isEmpty {
+            chip
+        } else if availableHints.count == 1, let only = availableHints.first {
+            Button {
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                only.action()
+            } label: {
+                chip
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Активировать подсказку: \(only.title)")
+        } else {
+            Menu {
+                ForEach(availableHints) { hint in
+                    Button {
+                        hint.action()
+                    } label: {
+                        Label("\(hint.title) · \(hint.cost)★", systemImage: "star.fill")
+                    }
+                }
+            } label: {
+                chip
+            }
+            .accessibilityHint("Открыть подсказки за звёзды")
+        }
     }
 
     private enum ChipStyle {
         case neutral
-        case score
+        case gold
+        case correct
         case wrong
     }
 
-    private func statusChip(icon: String, text: String, style: ChipStyle) -> some View {
-        let fg: Color = {
-            switch style {
-            case .wrong: return Color.red.opacity(0.95)
-            case .score: return ThemeManager.shared.currentAccentTintColor
-            case .neutral: return CD.ColorToken.text
-            }
-        }()
-        let fill: Color = {
-            switch style {
-            case .wrong: return Color.red.opacity(0.16)
-            case .score: return ThemeManager.shared.currentAccentTintColor.opacity(0.18)
-            case .neutral: return CD.ColorToken.card.opacity(0.92)
-            }
-        }()
-        let stroke: Color = {
-            switch style {
-            case .wrong: return Color.red.opacity(0.4)
-            case .score: return ThemeManager.shared.currentAccentTintColor.opacity(0.45)
-            case .neutral: return CD.ColorToken.stroke.opacity(0.4)
-            }
-        }()
-
+    private func statusChip(
+        icon: String,
+        text: String,
+        style: ChipStyle,
+        dimmed: Bool = false,
+        accessibilityLabel: String? = nil
+    ) -> some View {
+        let palette = Self.palette(for: style)
         return HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(palette.icon)
             Text(text)
                 .font(.system(size: 15, weight: .bold))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+                .foregroundStyle(palette.text)
         }
-        .foregroundStyle(fg)
         .frame(maxWidth: .infinity)
         .frame(height: 44)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(fill)
+                .fill(palette.fill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(stroke, lineWidth: 1)
+                .stroke(palette.stroke, lineWidth: 1)
         )
+        .opacity(dimmed ? 0.42 : 1)
+        .accessibilityLabel(accessibilityLabel ?? text)
+    }
+
+    private struct ChipPalette {
+        let icon: AnyShapeStyle
+        let text: Color
+        let fill: Color
+        let stroke: Color
+    }
+
+    private static func palette(for style: ChipStyle) -> ChipPalette {
+        switch style {
+        case .neutral:
+            return ChipPalette(
+                icon: AnyShapeStyle(CD.ColorToken.text),
+                text: CD.ColorToken.text,
+                fill: CD.ColorToken.card.opacity(0.92),
+                stroke: CD.ColorToken.stroke.opacity(0.4)
+            )
+        case .gold:
+            return ChipPalette(
+                icon: AnyShapeStyle(TaikaGoldStarGradient.fill),
+                text: Color(red: 1.0, green: 0.86, blue: 0.42),
+                fill: Color(red: 1.0, green: 0.78, blue: 0.22).opacity(0.16),
+                stroke: Color(red: 0.98, green: 0.72, blue: 0.18).opacity(0.48)
+            )
+        case .correct:
+            let green = TaikaMasteryTokens.green
+            return ChipPalette(
+                icon: AnyShapeStyle(green),
+                text: green,
+                fill: green.opacity(0.16),
+                stroke: green.opacity(0.42)
+            )
+        case .wrong:
+            let crimson = Color(red: 0.92, green: 0.22, blue: 0.38)
+            return ChipPalette(
+                icon: AnyShapeStyle(crimson),
+                text: crimson,
+                fill: crimson.opacity(0.16),
+                stroke: crimson.opacity(0.42)
+            )
+        }
+    }
+}
+
+/// Status strip — единый верхний chrome для всех игр (подсказки через тап по ★).
+public struct TaikaGameTopChrome: View {
+    public var timeText: String
+    public var progressText: String?
+    public var mistakes: Int
+    public var score: Int
+    public var showsSessionScore: Bool
+    public var showsStarWallet: Bool
+    public var hints: [TaikaGameHintAction]
+
+    public init(
+        timeText: String,
+        progressText: String? = nil,
+        mistakes: Int = 0,
+        score: Int = 0,
+        showsSessionScore: Bool = true,
+        showsStarWallet: Bool = true,
+        hints: [TaikaGameHintAction] = []
+    ) {
+        self.timeText = timeText
+        self.progressText = progressText
+        self.mistakes = mistakes
+        self.score = score
+        self.showsSessionScore = showsSessionScore
+        self.showsStarWallet = showsStarWallet
+        self.hints = hints
+    }
+
+    public var body: some View {
+        TaikaGameStatusStrip(
+            timeText: timeText,
+            progressText: progressText,
+            mistakes: mistakes,
+            score: score,
+            showsSessionScore: showsSessionScore,
+            showsStarWallet: showsStarWallet,
+            hints: hints
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Taika Stars UI (gold wallet + hint actions via ★)
+
+public enum TaikaGoldStarGradient {
+    public static var fill: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 1.0, green: 0.88, blue: 0.38),
+                Color(red: 0.98, green: 0.72, blue: 0.18),
+                Color(red: 0.92, green: 0.58, blue: 0.12)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    public static var stroke: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color.white.opacity(0.55),
+                Color(red: 1.0, green: 0.82, blue: 0.35).opacity(0.35)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+public struct TaikaGameHintAction: Identifiable {
+    public let id: String
+    public let title: String
+    public let cost: Int
+    public let isEnabled: Bool
+    public let action: () -> Void
+
+    public init(id: String, title: String, cost: Int, isEnabled: Bool, action: @escaping () -> Void) {
+        self.id = id
+        self.title = title
+        self.cost = cost
+        self.isEnabled = isEnabled
+        self.action = action
+    }
+}
+
+/// Legacy hint bar — kept for source compatibility; unused by top chrome.
+public struct TaikaGameHintBar: View {
+    public let hints: [TaikaGameHintAction]
+
+    public init(hints: [TaikaGameHintAction]) {
+        self.hints = hints
+    }
+
+    public var body: some View {
+        EmptyView()
+    }
+}
+
+public struct TaikaGameHintButton: View {
+    public let title: String
+    public let cost: Int
+    public let isEnabled: Bool
+    public let action: () -> Void
+
+    public init(title: String, cost: Int, isEnabled: Bool, action: @escaping () -> Void) {
+        self.title = title
+        self.cost = cost
+        self.isEnabled = isEnabled
+        self.action = action
+    }
+
+    public var body: some View {
+        EmptyView()
     }
 }
 

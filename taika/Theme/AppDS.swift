@@ -10,34 +10,54 @@ import UIKit
 
 /// Shared semantic color for completed/mastery surfaces; accessible across design-system files.
 public enum TaikaMasteryTokens {
-    /// Solid companion for non-gradient surfaces: the readable jungle mid-tone of the leaf palette.
-    public static let green = Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0)
+    /// Gucci-emerald solid — bottle green for fills (not mint / thrush-egg).
+    public static let green = Color(red: 0x1F / 255.0, green: 0x8A / 255.0, blue: 0x55 / 255.0)
 
-    /// Natural completed/mastery accent: pink leaf core → soft mint variegation → jungle green edge.
-    /// It is intentionally a continuation of Taika pink, not a flat status green.
+    /// Mastery wash: neon pink → soft emerald bridge → bottle green.
     public static let greenGradient = LinearGradient(
         colors: [
-            Color(red: 0xFF / 255.0, green: 0x92 / 255.0, blue: 0xC9 / 255.0),
-            Color(red: 0x9F / 255.0, green: 0xE5 / 255.0, blue: 0xB5 / 255.0),
-            Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0),
-            Color(red: 0x0B / 255.0, green: 0x8F / 255.0, blue: 0x68 / 255.0)
+            Color(red: 0xFF / 255.0, green: 0x7A / 255.0, blue: 0xC0 / 255.0),
+            Color(red: 0x6E / 255.0, green: 0xB8 / 255.0, blue: 0x7E / 255.0),
+            Color(red: 0x1F / 255.0, green: 0x8A / 255.0, blue: 0x55 / 255.0),
+            Color(red: 0x0C / 255.0, green: 0x52 / 255.0, blue: 0x36 / 255.0)
         ],
         startPoint: .leading,
         endPoint: .trailing
     )
 
-    /// Bright mint-leaf highlight used for readable completed strokes and counters.
-    public static let greenGlow = Color(red: 0x9F / 255.0, green: 0xE5 / 255.0, blue: 0xB5 / 255.0)
+    /// Яркий изумруд для текста/индикаторов на тёмном UI — читается, без болотного «тёмного».
+    public static let greenGlow = Color(red: 0x4F / 255.0, green: 0xD6 / 255.0, blue: 0x8A / 255.0)
 
-    /// Same natural leaf family for compact status badges and completion chips.
+    /// Compact badges / metric text: pink → emerald without mint mid.
     public static let greenBadgeGradient = LinearGradient(
         colors: [
-            Color(red: 0xFF / 255.0, green: 0xB0 / 255.0, blue: 0xD8 / 255.0),
-            Color(red: 0x9F / 255.0, green: 0xE5 / 255.0, blue: 0xB5 / 255.0),
-            Color(red: 0x19 / 255.0, green: 0xCF / 255.0, blue: 0xA0 / 255.0)
+            Color(red: 0xFF / 255.0, green: 0x7A / 255.0, blue: 0xC0 / 255.0),
+            Color(red: 0x6E / 255.0, green: 0xB8 / 255.0, blue: 0x7E / 255.0),
+            Color(red: 0x1F / 255.0, green: 0x8A / 255.0, blue: 0x55 / 255.0)
         ],
         startPoint: .leading,
         endPoint: .trailing
+    )
+
+    // MARK: In-progress / «Продолжить» — ice sky (white → cyan → azure)
+
+    /// Soft ice highlight for in-progress card washes.
+    public static let continueSkyGlow = Color(red: 0xB7 / 255.0, green: 0xE4 / 255.0, blue: 0xFF / 255.0)
+    /// Deeper azure for depth on continue cards.
+    public static let continueSkyDeep = Color(red: 0x3A / 255.0, green: 0x9B / 255.0, blue: 0xE3 / 255.0)
+    /// Mid sky tone for solid companions.
+    public static let continueSky = Color(red: 0x6F / 255.0, green: 0xC7 / 255.0, blue: 0xF2 / 255.0)
+
+    /// Beautiful sky line for «Продолжить»: cloud-white → ice → azure.
+    public static let continueSkyGradient = LinearGradient(
+        colors: [
+            Color.white.opacity(0.96),
+            Color(red: 0xB7 / 255.0, green: 0xE4 / 255.0, blue: 0xFF / 255.0),
+            Color(red: 0x6F / 255.0, green: 0xC7 / 255.0, blue: 0xF2 / 255.0),
+            Color(red: 0x3A / 255.0, green: 0x9B / 255.0, blue: 0xE3 / 255.0)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
     )
 }
 
@@ -477,18 +497,15 @@ public struct AppHeader: View {
     @ViewBuilder
     private func dictionaryHeaderButton(
         count: Int,
-        isAccent: Bool = false,
+        /// Подсветка счётчика акцентом. На главном выключена: розовым там говорит только CTA.
+        active: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             if count > 0 {
-                headerCounterBadge(
-                    icon: "bookmark.fill",
-                    text: "\(count)",
-                    active: isAccent || count > 0
-                )
+                headerCounterBadge(icon: "bookmark.fill", text: "\(count)", active: active)
             } else {
-                headerIcon("bookmark", isAccent: isAccent)
+                headerIcon("bookmark")
             }
         }
         .buttonStyle(TaikaHeaderButtonStyle())
@@ -568,10 +585,12 @@ public struct AppHeader: View {
                 headerTrailingCluster {
                     switch tab {
                     case 0:
+                        // Иконки хедера держим нейтральными: розовым на главном говорит
+                        // только основное действие, иначе экран превращается в ёлку.
                         // TF: «Голос Таики» скрыт (stub «Скоро»).
-                        headerIconButton("gamecontroller.fill", isAccent: gameParkActive, action: onTapGamePark)
+                        headerIconButton("gamecontroller.fill", action: onTapGamePark)
                         if let onDict = onTapDictionary {
-                            dictionaryHeaderButton(count: dictionaryCount, action: onDict)
+                            dictionaryHeaderButton(count: dictionaryCount, active: false, action: onDict)
                         }
                     case 1:
                         // MVP: создание курса скрыто (как «Голос Таики» — позже).
@@ -631,8 +650,10 @@ public struct AppHeader: View {
                         EmptyView()
                     }
                     if showPro {
+                        // Статус подписки читается заливкой глифа — красить его ещё и
+                        // акцентом незачем, хедер должен быть спокойным.
                         let proGlyph = isPro ? "crown.fill" : "crown"
-                        headerIconButton(proGlyph, isAccent: isPro, action: onTapPro)
+                        headerIconButton(proGlyph, action: onTapPro)
                     }
                 }
 
@@ -684,8 +705,10 @@ public struct AppHeader: View {
                         .accessibilityLabel("Игры")
                     }
                     if showPro {
+                        // Статус подписки читается заливкой глифа — красить его ещё и
+                        // акцентом незачем, хедер должен быть спокойным.
                         let proGlyph = isPro ? "crown.fill" : "crown"
-                        headerIconButton(proGlyph, isAccent: isPro, action: onTapPro)
+                        headerIconButton(proGlyph, action: onTapPro)
                     }
                 }
 
@@ -4471,6 +4494,72 @@ public struct AppSpeakerIconPill: View {
     }
 }
 
+// MARK: - Listen / action slot (Step cards + Speaker breakdown)
+
+/// Same visual language as Step card footer actions: icon + caption, equal-width slot.
+public struct TaikaListenActionSlot: View {
+    public var systemName: String
+    public var title: String
+    public var isActive: Bool
+    public var isEnabled: Bool
+    public var playbackActive: Bool
+    public var action: () -> Void
+
+    public init(
+        systemName: String,
+        title: String,
+        isActive: Bool = false,
+        isEnabled: Bool = true,
+        playbackActive: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.systemName = systemName
+        self.title = title
+        self.isActive = isActive
+        self.isEnabled = isEnabled
+        self.playbackActive = playbackActive
+        self.action = action
+    }
+
+    public var body: some View {
+        let lit = (isActive || playbackActive) && isEnabled
+        Button {
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            action()
+        } label: {
+            VStack(spacing: 5) {
+                Image(systemName: systemName)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(
+                        lit
+                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                        : AnyShapeStyle(PD.ColorToken.text.opacity(isEnabled ? 0.88 : 0.34))
+                    )
+                    .symbolEffect(
+                        .variableColor.iterative,
+                        options: .repeating,
+                        isActive: playbackActive && systemName.contains("speaker")
+                    )
+                    .frame(height: 22)
+                Text(title)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(
+                        lit
+                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                        : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(isEnabled ? 0.85 : 0.34))
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.94, useBouncySpring: false, flashOpacity: 0.04))
+        .disabled(!isEnabled)
+        .accessibilityLabel(title)
+    }
+}
+
 // MARK: - Audio (play + inline waveform)
 
 /// A compact, on-brand audio control: single tappable capsule that contains the play icon
@@ -5013,9 +5102,9 @@ struct AppDS_Previews: PreviewProvider {
                 DSSection("Card icon buttons") {
                     HStack(spacing: 10) {
                         AppCardIconButton(kind: .favorite, isActive: false, onTap: {})
-                        AppCardIconButton(kind: .favorite, isActive: true) {}
-                        AppCardIconButton(kind: .console, isEnabled: false) {}
-                        AppCardIconButton(kind: .console, isEnabled: true) {}
+                        AppCardIconButton(kind: .favorite, isActive: true, onTap: {})
+                        AppCardIconButton(kind: .console, isEnabled: false, onTap: {})
+                        AppCardIconButton(kind: .console, isEnabled: true, onTap: {})
                         AppFavCounterButton(count: 0, onTap: {})
                         AppFavCounterButton(count: 3, onTap: {})
                         AppFavCounterButton(count: 12, onTap: {})

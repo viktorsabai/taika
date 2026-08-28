@@ -77,7 +77,7 @@ extension ProgressManager {
         let averagePronunciationScore: Int? = {
             let attempts = SpeakerAttemptsStore.loadAll()
             guard !attempts.isEmpty else { return nil }
-            let scores = attempts.values.map(\.heardConfidence)
+            let scores = attempts.values.map { $0.advancedScore ?? $0.heardConfidence }
             let sum = scores.reduce(0, +)
             let avg = sum / scores.count
             return max(0, min(100, avg))
@@ -91,7 +91,7 @@ extension ProgressManager {
         let attemptValues = Array(SpeakerAttemptsStore.loadAll().values)
         let speakerTrackedStepsCount = attemptValues.count
         let speakerTotalMicAttempts = attemptValues.reduce(0) { $0 + $1.attemptCount }
-        let speakerBestConfidence = attemptValues.map(\.heardConfidence).max()
+        let speakerBestConfidence = attemptValues.map { $0.advancedScore ?? $0.heardConfidence }.max()
         let (reinforcementSessionsTotal, reinforcementAvgAccuracy) = Self.aggregateReinforcementTotals()
         let favoritesTotalCount = FavoriteManager.shared.items.count
         return ProfileDashboardState(

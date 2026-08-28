@@ -606,7 +606,7 @@ struct FDMiniHackCard: View {
             : item.lessonTitle
         let pill = HStack {
             Spacer(minLength: 8)
-            AppMiniChip(title: pillTitle.lowercased(), style: .accent) {
+            AppMiniChip(title: pillTitle.lowercased(), style: .neutral) {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 onOpen?()
             }
@@ -736,9 +736,26 @@ struct FDMiniHackCard: View {
             }
         }
         .frame(width: layoutWidth, height: layoutHeight, alignment: .topLeading)
-        .background(
-            Theme.Surfaces.card(round)
-        )
+        .background {
+            ZStack {
+                Theme.Surfaces.card(round)
+                TaikaLifehackCrayonPalette.wash
+                    .clipShape(round)
+                TaikaLifehackOrganicLinesOverlay(
+                    seedKey: item.id,
+                    intensity: 0.95
+                )
+                .opacity(0.92)
+                .mask(
+                    LinearGradient(
+                        colors: [.clear, .white.opacity(0.38), .white.opacity(0.88)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .clipShape(round)
+            }
+        }
         .overlay(deleteButtonOverlay(round))
         .contentShape(round)
         .modifier(FDMiniHackCardGestures(
@@ -856,11 +873,225 @@ struct FDLessonSummaryHacksReel: View {
     }
 }
 
+// MARK: - Organic lines (same DNA as CourseLessonCard / CDOrganicLearnedTreatment)
+
+enum TaikaOrganicCardSeed {
+    /// Same salt recipe as `CourseLessonCard.organicCardSeed`.
+    static func value(for courseId: String) -> CGFloat {
+        var hash: UInt64 = 5381
+        for unit in courseId.utf8 {
+            hash = ((hash << 5) &+ hash) &+ UInt64(unit)
+        }
+        return CGFloat(hash % 9973) / 997.0 + 0.37
+    }
+}
+
+struct TaikaOrganicWaveShape: Shape {
+    var cardSeed: CGFloat
+    var lane: Int
+    /// Phrase cards are smaller than course cards — dial waves down so text stays readable.
+    var amplitudeScale: CGFloat = 1
+
+    func path(in rect: CGRect) -> Path {
+        let s0 = cardSeed * 1.618 + CGFloat(lane) * 2.37
+        let s1 = sin(s0 * 1.1)
+        let s2 = cos(s0 * 0.73)
+        let s3 = sin(s0 * 2.05 + 0.4)
+
+        let y0 = rect.height * (0.28 + 0.48 * (0.5 + 0.5 * s1))
+        let y1 = rect.height * (0.22 + 0.55 * (0.5 + 0.5 * s2))
+        let y2 = rect.height * (0.35 + 0.45 * (0.5 + 0.5 * s3))
+        let y3 = rect.height * (0.30 + 0.50 * (0.5 + 0.5 * sin(s0 * 0.91)))
+
+        let amp = (22 + 28 * abs(s2)) * amplitudeScale
+        let flip: CGFloat = ((Int((cardSeed * 10).rounded()) &+ lane) % 2 == 0) ? 1 : -1
+
+        var path = Path()
+        path.move(to: CGPoint(x: -36, y: y0))
+        path.addCurve(
+            to: CGPoint(x: rect.width * (0.28 + 0.08 * s1), y: y1 + flip * amp * 0.35),
+            control1: CGPoint(x: rect.width * 0.08, y: y0 - flip * amp),
+            control2: CGPoint(x: rect.width * 0.18, y: y1 + flip * amp * 0.9)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.width * (0.58 + 0.06 * s2), y: y2 - flip * amp * 0.25),
+            control1: CGPoint(x: rect.width * 0.40, y: y1 - flip * amp * 0.75),
+            control2: CGPoint(x: rect.width * 0.48, y: y2 + flip * amp * 0.85)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.width + 36, y: y3),
+            control1: CGPoint(x: rect.width * 0.74, y: y2 - flip * amp * 0.55),
+            control2: CGPoint(x: rect.width * 0.88, y: y3 + flip * amp * 0.4)
+        )
+        return path
+    }
+}
+
+/// Shared vine overlay for course + favorite phrase cards (not lifehack lilac).
+struct TaikaOrganicCardLinesOverlay: View {
+    let cardSeed: CGFloat
+    var intensity: Double = 1.0
+    /// Base vine tint (course status glow). Defaults to brand accent.
+    var glow: Color? = nil
+    /// Optional status stroke (green/sky gradients on course cards).
+    var lineStyle: AnyShapeStyle? = nil
+    /// Favorite course cards add accent vines on top — phrases in Favorites are always favorited.
+    var isFavorite: Bool = true
+    /// Stroke thickness scale (phrase grid ≈ 0.5 vs course cards).
+    var lineWidthScale: CGFloat = 1
+    /// Wave amplitude scale (phrase grid ≈ 0.5).
+    var amplitudeScale: CGFloat = 1
+
+    private var resolvedGlow: Color {
+        glow ?? ThemeManager.shared.currentAccentTintColor
+    }
+
+    private var statusLineStyle: AnyShapeStyle {
+        lineStyle ?? AnyShapeStyle(resolvedGlow)
+    }
+
+    private var favoriteLineStyle: AnyShapeStyle {
+        AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+    }
+
+    private var vineCount: Int {
+        // Compact phrase cards: fewer vines so text isn't covered.
+        let base = 3 + (Int((cardSeed * 17).magnitude) % 2)
+        if lineWidthScale < 0.75 { return max(2, base - 1) }
+        return base
+    }
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<vineCount, id: \.self) { lane in
+                let mid = vineCount / 2
+                TaikaOrganicWaveShape(cardSeed: cardSeed, lane: lane, amplitudeScale: amplitudeScale)
+                    .stroke(
+                        statusLineStyle.opacity((lane == mid ? 0.42 : 0.18) * intensity),
+                        style: StrokeStyle(
+                            lineWidth: (lane == mid ? 1.45 : (0.75 + CGFloat(lane % 2) * 0.2)) * lineWidthScale,
+                            lineCap: .round,
+                            lineJoin: .round
+                        )
+                    )
+                    .offset(
+                        x: CGFloat(lane - mid) * (6 + 4 * abs(sin(cardSeed + CGFloat(lane)))) * amplitudeScale,
+                        y: CGFloat(lane - mid) * (5 + 3 * abs(cos(cardSeed * 0.7))) * amplitudeScale
+                    )
+            }
+
+            if isFavorite {
+                ForEach(0..<2, id: \.self) { lane in
+                    TaikaOrganicWaveShape(
+                        cardSeed: cardSeed + 3.1,
+                        lane: lane + 1,
+                        amplitudeScale: amplitudeScale
+                    )
+                    .stroke(
+                        favoriteLineStyle.opacity((lane == 0 ? 0.38 : 0.20) * intensity),
+                        style: StrokeStyle(
+                            lineWidth: (lane == 0 ? 1.2 : 0.8) * lineWidthScale,
+                            lineCap: .round,
+                            lineJoin: .round
+                        )
+                    )
+                    .offset(
+                        x: (CGFloat(lane) * 12 - 4) * amplitudeScale,
+                        y: (8 + CGFloat(lane) * 11 + sin(cardSeed) * 4) * amplitudeScale
+                    )
+                }
+            }
+        }
+        .drawingGroup(opaque: false)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Lifehack crayon identity (lilac / purple — not course pink)
+
+public enum TaikaLifehackCrayonPalette {
+    /// Soft lilac → purple → violet (distinct from course accent crayons).
+    public static let colors: [Color] = [
+        Color(red: 0.72, green: 0.58, blue: 0.96),
+        Color(red: 0.58, green: 0.42, blue: 0.88),
+        Color(red: 0.82, green: 0.68, blue: 0.98),
+        Color(red: 0.48, green: 0.36, blue: 0.78),
+        Color(red: 0.66, green: 0.52, blue: 0.92)
+    ]
+
+    public static var primary: Color { colors[0] }
+    public static var deep: Color { colors[1] }
+
+    public static var wash: LinearGradient {
+        LinearGradient(
+            colors: [
+                colors[0].opacity(0.22),
+                colors[1].opacity(0.10),
+                Color.clear
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+}
+
+/// Crayon vines for lifehack cards — same hand-drawn DNA as courses, lilac/purple only.
+struct TaikaLifehackOrganicLinesOverlay: View {
+    let cardSeed: CGFloat
+    var intensity: Double = 1.0
+
+    private var vineCount: Int {
+        4 + (Int((cardSeed * 13).magnitude) % 2) // slightly denser than course cards
+    }
+
+    public init(cardSeed: CGFloat, intensity: Double = 1.0) {
+        self.cardSeed = cardSeed
+        self.intensity = intensity
+    }
+
+    public init(seedKey: String, intensity: Double = 1.0) {
+        self.cardSeed = TaikaOrganicCardSeed.value(for: seedKey)
+        self.intensity = intensity
+    }
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<vineCount, id: \.self) { lane in
+                let mid = vineCount / 2
+                // Offset lane salt so vines don't mirror course-card patterns 1:1
+                TaikaOrganicWaveShape(cardSeed: cardSeed * 1.27 + 0.8, lane: lane + 1)
+                    .stroke(
+                        TaikaLifehackCrayonPalette.colors[lane % TaikaLifehackCrayonPalette.colors.count]
+                            .opacity((lane == mid ? 0.38 : 0.18) * intensity),
+                        style: StrokeStyle(
+                            lineWidth: lane == mid ? 2.0 : 1.35,
+                            lineCap: .round,
+                            lineJoin: .round
+                        )
+                    )
+                    .offset(
+                        x: CGFloat(lane - mid) * (5 + 3.5 * abs(sin(cardSeed + CGFloat(lane) * 1.3))),
+                        y: CGFloat(lane - mid) * (4 + 3 * abs(cos(cardSeed * 0.9)))
+                    )
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+enum FDMiniCourseCardStyle {
+    case discovery
+    case proShowcase
+    case reinforcement
+}
+
 // MARK: - Mini course card (подборка дня): категория сверху справа, outcomes под названием, мета+play внизу
 struct FDMiniCourseCard: View {
     let item: FDCourseDTO
     var layoutWidth: CGFloat = 200
     var layoutHeight: CGFloat = 286
+    var cardStyle: FDMiniCourseCardStyle = .discovery
     var isPro: Bool = false
     var categoryChip: String? = nil
     var learningOutcomes: [String] = []
@@ -870,176 +1101,260 @@ struct FDMiniCourseCard: View {
     /// Избранное: снять курс с избранного (как на старой `FDFavCourseCard`).
     var onUnfavorite: (() -> Void)? = nil
 
+    private var resolvedStyle: FDMiniCourseCardStyle {
+        if cardStyle == .proShowcase || (isPro && cardStyle == .discovery) {
+            return .proShowcase
+        }
+        return cardStyle
+    }
+
+    private var cardSeed: CGFloat {
+        TaikaOrganicCardSeed.value(for: item.courseId)
+    }
+
+    private var showsProSell: Bool { resolvedStyle == .proShowcase }
+    /// Every mini card wears the crayon vines — PRO no longer floods the cell with pink.
+    private var showsOrganic: Bool { true }
+
+    /// Two crayon colors picked deterministically per course — cards differ like colored pencils.
+    private var crayonLineStyle: AnyShapeStyle {
+        let palette = TaikaCrayonCarouselPalette.colors(
+            accent: ThemeManager.shared.currentAccentTintColor
+        )
+        let base = Int((cardSeed * 31).magnitude) % palette.count
+        let pair = (base + 2) % palette.count
+        return AnyShapeStyle(
+            LinearGradient(
+                colors: [palette[base], palette[pair]],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+    }
+
     var body: some View {
-        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-        let tint = ThemeManager.shared.currentAccentTintColor
-        let accent = ThemeManager.shared.currentAccentFill
+        cardContent
+            .clipShape(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous))
+            .background { cardBackground }
+            .overlay { cardBorder }
+            .clipShape(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous))
+            .onTapGesture { onOpen?() }
+    }
 
+    private var cardContent: some View {
         ZStack(alignment: .topTrailing) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 8) {
-                    Text("taikA")
-                        .font(Font.custom("ONMARK Trial", size: 14))
-                        .foregroundStyle(isPro ? AnyShapeStyle(accent) : AnyShapeStyle(Color.secondary))
-                    Spacer(minLength: 4)
+            organicOverlay
+            cardMainColumn
+        }
+    }
+
+    @ViewBuilder
+    private var organicOverlay: some View {
+        if showsOrganic {
+            TaikaOrganicCardLinesOverlay(
+                cardSeed: cardSeed,
+                intensity: resolvedStyle == .reinforcement ? 1.15 : 1.0,
+                lineStyle: crayonLineStyle,
+                isFavorite: false,
+                lineWidthScale: 0.72,
+                amplitudeScale: 0.72
+            )
+            .clipShape(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous))
+        }
+    }
+
+    private var cardMainColumn: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            cardHeaderRow
+            Spacer(minLength: 0)
+            cardTextBlock
+            Spacer(minLength: 6)
+            cardFooterRow
+        }
+        .padding(16)
+        .frame(width: layoutWidth, height: layoutHeight, alignment: .topLeading)
+    }
+
+    private var cardHeaderRow: some View {
+        return HStack(spacing: 8) {
+            Text("taikA")
+                .font(Font.custom("ONMARK Trial", size: 14))
+                .foregroundStyle(Color.secondary)
+            Spacer(minLength: 4)
+            if resolvedStyle == .reinforcement {
+                Text("пройден")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule(style: .continuous).fill(PD.ColorToken.chip.opacity(0.92)))
+            }
+        }
+    }
+
+    private var cardTextBlock: some View {
+        let style = resolvedStyle
+        return VStack(alignment: .leading, spacing: 6) {
+            if let chip = categoryChip?.trimmingCharacters(in: .whitespacesAndNewlines), !chip.isEmpty {
+                Text(chip)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(
+                        style == .reinforcement
+                            ? AnyShapeStyle(PD.ColorToken.textSecondary)
+                            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                    )
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .minimumScaleFactor(0.85)
+                    .allowsTightening(true)
+                    .allowsHitTesting(false)
+            }
+            Text(item.title)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.9)
+            subtitleBlock(style: style)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Cut on a word boundary — a mid-word "…" is what makes the card unreadable.
+    private static func trimmedSubtitle(_ raw: String, fallback: String) -> String {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return fallback }
+        let limit = 86
+        guard text.count > limit else { return text }
+        let head = text.prefix(limit)
+        guard let lastSpace = head.lastIndex(of: " ") else { return String(head) + "…" }
+        return head[..<lastSpace].trimmingCharacters(in: .whitespaces) + "…"
+    }
+
+    @ViewBuilder
+    private func subtitleBlock(style: FDMiniCourseCardStyle) -> some View {
+        if showsProSell {
+            Text(Self.trimmedSubtitle(item.subtitle, fallback: "Расширь практику с Taika+"))
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .lineLimit(3)
+        } else if style == .reinforcement {
+            Text(Self.trimmedSubtitle(item.subtitle, fallback: "Повтори в играх и Спикере"))
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .lineLimit(3)
+        } else if !learningOutcomes.isEmpty {
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(Array(learningOutcomes.prefix(2)), id: \.self) { outcome in
+                    Text("#\(outcome)")
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(PD.ColorToken.textSecondary)
+            .minimumScaleFactor(0.9)
+            .padding(.top, 3)
+        }
+    }
 
-                Spacer(minLength: 0)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    if let chip = categoryChip?.trimmingCharacters(in: .whitespacesAndNewlines),
-                       !chip.isEmpty {
-                        Text(chip)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(accent)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .minimumScaleFactor(0.85)
-                            .allowsTightening(true)
-                            .allowsHitTesting(false)
-                    }
-                    Text(item.title)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(3)
-                    if isPro {
-                        Text(item.subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                             ? "Расширь практику с Taika+"
-                             : String(item.subtitle.prefix(72)))
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .lineLimit(2)
-                    } else if !learningOutcomes.isEmpty {
-                        VStack(alignment: .leading, spacing: 2) {
-                            ForEach(Array(learningOutcomes.prefix(2)), id: \.self) { outcome in
-                                Text("#\(outcome)")
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                            }
-                        }
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .minimumScaleFactor(0.9)
-                        .padding(.top, 3)
-                    }
+    private var cardFooterRow: some View {
+        let style = resolvedStyle
+        return HStack(spacing: 10) {
+            footerPrimaryAction(style: style)
+            if let unfav = onUnfavorite {
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    unfav()
+                }) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        .frame(minWidth: 34, minHeight: 32)
+                        .contentShape(Rectangle())
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Spacer(minLength: 6)
-
+                .buttonStyle(.plain)
+            }
+            Spacer(minLength: 0)
+            if !showsProSell, style != .reinforcement {
                 HStack(spacing: 10) {
-                    if isPro {
-                        Text("Открыть")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.black.opacity(0.88))
-                            .padding(.horizontal, 12)
-                            .frame(height: 30)
-                            .background(Capsule(style: .continuous).fill(accent))
-                    } else {
-                        Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onOpen?() }) {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(accent)
-                                .frame(width: 34, height: 34)
-                                .background(
-                                    Circle()
-                                        .fill(PD.ColorToken.chip)
-                                )
-                                .overlay(
-                                    Circle()
-                                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                                )
-                                .contentShape(Circle())
-                        }
-                        .buttonStyle(.plain)
+                    if let lc = lessonCount, lc > 0 {
+                        Label("\(lc)", systemImage: "square.stack.3d.up")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
                     }
-                    if let unfav = onUnfavorite {
-                        Button(action: {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            unfav()
-                        }) {
-                            Image(systemName: "heart.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(accent)
-                                .frame(minWidth: 34, minHeight: 32)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    Spacer(minLength: 0)
-                    if !isPro {
-                        HStack(spacing: 10) {
-                            if let lc = lessonCount, lc > 0 {
-                                Label("\(lc)", systemImage: "square.stack.3d.up")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                            }
-                            if let dm = durationMinutes, dm > 0 {
-                                Label("\(dm)m", systemImage: "clock")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                    if let dm = durationMinutes, dm > 0 {
+                        Label("\(dm)m", systemImage: "clock")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
-            .padding(16)
-            .frame(width: layoutWidth, height: layoutHeight, alignment: .topLeading)
+        }
+    }
 
-            if isPro {
-                // Tech mesh wash — продающий баннер, не учебная карточка.
-                Canvas { context, size in
-                    for i in 0..<6 {
-                        let t = Double(i) / 5.0
-                        var path = Path()
-                        let y0 = size.height * (0.35 + t * 0.45)
-                        let amp = 8.0 + t * 10.0
-                        var x: CGFloat = 0
-                        while x <= size.width {
-                            let xn = Double(x / size.width)
-                            let y = y0 + sin((xn * 2.2 + t) * .pi * 2) * amp
-                            let pt = CGPoint(x: x, y: y)
-                            if x == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
-                            x += 4
-                        }
-                        context.stroke(
-                            path,
-                            with: .color(tint.opacity(0.10 + (1 - t) * 0.12)),
-                            lineWidth: 0.9
-                        )
-                    }
-                }
-                .allowsHitTesting(false)
-                .mask(
+    @ViewBuilder
+    private func footerPrimaryAction(style: FDMiniCourseCardStyle) -> some View {
+        if showsProSell {
+            Text("Открыть")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                .padding(.horizontal, 12)
+                .frame(height: 30)
+                .background(Capsule(style: .continuous).fill(PD.ColorToken.chip.opacity(0.95)))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.34), lineWidth: 1)
+                )
+        } else if style == .reinforcement {
+            HStack(spacing: 6) {
+                Image(systemName: "gamecontroller.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                Text("Закрепить")
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(PD.ColorToken.text)
+            .padding(.horizontal, 12)
+            .frame(height: 30)
+            .background(Capsule(style: .continuous).fill(PD.ColorToken.chip.opacity(0.95)))
+            .overlay(Capsule(style: .continuous).stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+        } else {
+            Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onOpen?() }) {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(PD.ColorToken.chip))
+                    .overlay(Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private var cardBackground: some View {
+        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+        ZStack {
+            Theme.Surfaces.card(round)
+            if resolvedStyle == .reinforcement {
+                round.fill(
                     LinearGradient(
-                        colors: [.clear, .white.opacity(0.55), .white],
+                        colors: [Color.white.opacity(0.04), Color.clear],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
             }
         }
-        .background {
-            ZStack {
-                Theme.Surfaces.card(round)
-                if isPro {
-                    round.fill(
-                        LinearGradient(
-                            colors: [
-                                tint.opacity(0.16),
-                                Color.clear,
-                                tint.opacity(0.10)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                }
-            }
-        }
-        .shadow(color: isPro ? tint.opacity(0.18) : .clear, radius: isPro ? 10 : 0, y: isPro ? 4 : 0)
-        .contentShape(round)
-        .onTapGesture { onOpen?() }
+    }
+
+    private var cardBorder: some View {
+        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+        return round.stroke(
+            Theme.Strokes.strokeSubtle,
+            lineWidth: Theme.Strokes.strokeLineWidth
+        )
     }
 }
 

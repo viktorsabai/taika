@@ -1241,12 +1241,22 @@ public struct CDReelCourseCard: View {
             isPro: isPro,
             tags: [],
             sectionChrome: .none,
-            accentTreatment: status == .done
-                ? .taikaValues(
-                    fill: CDLearnedCardTokens.fill,
-                    glow: CDLearnedCardTokens.glow
-                )
-                : .none,
+            accentTreatment: {
+                switch status {
+                case .done:
+                    return .taikaValues(
+                        fill: CDLearnedCardTokens.fill,
+                        glow: CDLearnedCardTokens.glow
+                    )
+                case .inProgress:
+                    return .taikaValues(
+                        fill: AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient),
+                        glow: TaikaMasteryTokens.continueSkyGlow
+                    )
+                default:
+                    return .none
+                }
+            }(),
             primaryCTA: {
                 let raw = (cta ?? "").lowercased()
                 if raw.contains("нач") { return .start }
@@ -1436,6 +1446,8 @@ public struct CDCourseItem: Identifiable {
     public var progress: Double
     /// Optional 0...1 fraction used to render stars under the top-right status chip.
     public var statusStarsFraction: Double? = nil
+    /// Identity chip when there is no normal course status (e.g. theory-only «Лайфхаки»).
+    public var badgeChipTitle: String? = nil
 
     /// Optional averaged pronunciation score for this course (0...100).
     public var pronunciationPercent: Int? = nil
@@ -1477,6 +1489,7 @@ public struct CDCourseItem: Identifiable {
         status: CDCourseStatus? = nil,
         progress: Double,
         statusStarsFraction: Double? = nil,
+        badgeChipTitle: String? = nil,
         pronunciationPercent: Int? = nil,
         reinforcementScore: Int? = nil,
         reinforcementSessions: Int = 0,
@@ -1508,6 +1521,7 @@ public struct CDCourseItem: Identifiable {
         self.status = status
         self.progress = progress
         self.statusStarsFraction = statusStarsFraction
+        self.badgeChipTitle = badgeChipTitle
         self.pronunciationPercent = pronunciationPercent
         self.reinforcementScore = reinforcementScore
         self.reinforcementSessions = max(0, reinforcementSessions)
@@ -1661,22 +1675,38 @@ public struct CDBaseSection: View {
             ) { item in
                 CourseLessonCard(
                     title: item.title,
-                    subtitle: item.status == .done ? (item.applicationLine ?? "") : "",
+                    subtitle: {
+                        if item.badgeChipTitle != nil {
+                            return item.applicationLine ?? item.subtitle
+                        }
+                        return item.status == .done ? (item.applicationLine ?? "") : ""
+                    }(),
                     lessonsCount: item.lessons,
                     durationText: "≈ \(item.durationMin) мин",
                     statusKind: item.showProCrown ? nil : item.status.map { toAppStatus($0) },
-                    statusChipTitle: item.status == .done ? "курс пройден" : nil,
-                    courseCategory: item.category,
+                    statusChipTitle: item.badgeChipTitle
+                        ?? (item.status == .done ? "курс пройден" : nil),
+                    courseCategory: item.badgeChipTitle == nil ? item.category : nil,
                     isPro: item.isPro,
                     showProCrown: item.showProCrown,
                     tags: [],
                     sectionChrome: .none,
-                    accentTreatment: item.status == .done
-                        ? .taikaValues(
-                            fill: CDLearnedCardTokens.fill,
-                            glow: CDLearnedCardTokens.glow
-                        )
-                        : .none,
+                    accentTreatment: {
+                        switch item.status {
+                        case .done:
+                            return .taikaValues(
+                                fill: CDLearnedCardTokens.fill,
+                                glow: CDLearnedCardTokens.glow
+                            )
+                        case .inProgress:
+                            return .taikaValues(
+                                fill: AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient),
+                                glow: TaikaMasteryTokens.continueSkyGlow
+                            )
+                        default:
+                            return .none
+                        }
+                    }(),
                     primaryCTA: {
                         let t = item.cta.lowercased()
                         if t.contains("нач") { return .start }
@@ -1697,7 +1727,7 @@ public struct CDBaseSection: View {
                     },
                     isFavoriteActive: item.isFavorite,
                     isConsoleEnabled: item.homeworkDone > 0,
-                    completionFraction: item.progress,
+                    completionFraction: item.badgeChipTitle == nil ? item.progress : nil,
                     statusStarsFraction: item.statusStarsFraction,
                     pronunciationPercent: item.pronunciationPercent,
                     reinforcementScore: item.reinforcementScore,
@@ -1711,7 +1741,7 @@ public struct CDBaseSection: View {
                     onConsoleTap: { item.onTapConsole?() },
                     onSpeakerTap: item.onTapSpeaker,
                     onTapInfo: item.onTapInfo,
-                    showsInlineProgress: true
+                    showsInlineProgress: item.badgeChipTitle == nil
                 )
             }
         }
@@ -1765,22 +1795,38 @@ public struct CDAllCoursesSection<Trailing: View>: View {
             ) { item in
                 CourseLessonCard(
                     title: item.title,
-                    subtitle: item.status == .done ? (item.applicationLine ?? "") : "",
+                    subtitle: {
+                        if item.badgeChipTitle != nil {
+                            return item.applicationLine ?? item.subtitle
+                        }
+                        return item.status == .done ? (item.applicationLine ?? "") : ""
+                    }(),
                     lessonsCount: item.lessons,
                     durationText: "≈ \(item.durationMin) мин",
                     statusKind: item.showProCrown ? nil : item.status.map { toAppStatus($0) },
-                    statusChipTitle: item.status == .done ? "курс пройден" : nil,
-                    courseCategory: item.category,
+                    statusChipTitle: item.badgeChipTitle
+                        ?? (item.status == .done ? "курс пройден" : nil),
+                    courseCategory: item.badgeChipTitle == nil ? item.category : nil,
                     isPro: item.isPro,
                     showProCrown: item.showProCrown,
                     tags: [],
                     sectionChrome: .none,
-                    accentTreatment: item.status == .done
-                        ? .taikaValues(
-                            fill: CDLearnedCardTokens.fill,
-                            glow: CDLearnedCardTokens.glow
-                        )
-                        : .none,
+                    accentTreatment: {
+                        switch item.status {
+                        case .done:
+                            return .taikaValues(
+                                fill: CDLearnedCardTokens.fill,
+                                glow: CDLearnedCardTokens.glow
+                            )
+                        case .inProgress:
+                            return .taikaValues(
+                                fill: AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient),
+                                glow: TaikaMasteryTokens.continueSkyGlow
+                            )
+                        default:
+                            return .none
+                        }
+                    }(),
                     primaryCTA: {
                         let t = item.cta.lowercased()
                         if t.contains("нач") { return .start }
@@ -1795,7 +1841,7 @@ public struct CDAllCoursesSection<Trailing: View>: View {
                     onPrimaryTap: { DispatchQueue.main.async { item.onTap?() } },
                     isFavoriteActive: item.isFavorite,
                     isConsoleEnabled: item.homeworkDone > 0,
-                    completionFraction: item.progress,
+                    completionFraction: item.badgeChipTitle == nil ? item.progress : nil,
                     statusStarsFraction: item.statusStarsFraction,
                     pronunciationPercent: item.pronunciationPercent,
                     reinforcementScore: item.reinforcementScore,
@@ -1809,7 +1855,7 @@ public struct CDAllCoursesSection<Trailing: View>: View {
                     onConsoleTap: { item.onTapConsole?() },
                     onSpeakerTap: item.onTapSpeaker,
                     onTapInfo: item.onTapInfo,
-                    showsInlineProgress: true
+                    showsInlineProgress: item.badgeChipTitle == nil
                 )
             }
         }
@@ -1822,128 +1868,94 @@ extension CDAllCoursesSection where Trailing == EmptyView {
     }
 }
 
-// MARK: - Weekly rhythm (CourseView bottom) — айдентика с донатом, компактнее по высоте
+// MARK: - Weekly rhythm (CourseView bottom)
 
 public struct CDWeeklyRhythmModel: Equatable {
     public var lessons: Int
-    public var minutes: Int
-    public var words: Int
-    /// Цель минут за неделю для кольца (мягкая).
-    public var minuteGoal: Int
+    public var steps: Int
+    /// Distinct practice days this week (0…7).
+    public var days: Int
 
-    public init(lessons: Int, minutes: Int, words: Int, minuteGoal: Int = 45) {
+    public init(lessons: Int, steps: Int, days: Int) {
         self.lessons = max(0, lessons)
-        self.minutes = max(0, minutes)
-        self.words = max(0, words)
-        self.minuteGoal = max(1, minuteGoal)
+        self.steps = max(0, steps)
+        self.days = max(0, days)
     }
 
-    public var minuteProgress: CGFloat {
-        CGFloat(min(1, Double(minutes) / Double(minuteGoal)))
+    public var isQuietWeek: Bool {
+        lessons == 0 && steps == 0 && days == 0
     }
 
-    public static let empty = CDWeeklyRhythmModel(lessons: 0, minutes: 0, words: 0)
+    public static let empty = CDWeeklyRhythmModel(lessons: 0, steps: 0, days: 0)
 }
 
-/// «Твой ритм»: как «за неделю» на Main — просто значения, без рамки и без мини-карточек.
-/// Пустой старт (0/0/0) → CTA вместо голых нулей.
+/// «Твой ритм» за текущую неделю: уроки · шаги · дни. Без минут и без CTA онбординга.
 public struct CDWeeklyRhythmSection: View {
     public var model: CDWeeklyRhythmModel
     public var windowLabel: String = "эта неделя"
-    /// Старт: «Тайский без паники» (course_b_0).
-    public var onStartMain: (() -> Void)? = nil
-    /// Открыть вкладку «Сценарии».
-    public var onChooseScenario: (() -> Void)? = nil
 
     @State private var displayLessons: Int = 0
-    @State private var displayMinutes: Int = 0
-    @State private var displayWords: Int = 0
+    @State private var displaySteps: Int = 0
+    @State private var displayDays: Int = 0
     @State private var appeared: Bool = false
     @State private var countTask: Task<Void, Never>?
 
+    /// Quiet week: invite into rhythm — not a wall of zeros.
+    private static let quietWeekLines: [String] = [
+        "на этой неделе пока тихо",
+        "открой урок — ритм сам подтянется",
+        "один шаг сегодня уже считается",
+        "вернись к сценарию — и неделя оживёт",
+        "маленькая практика лучше идеального плана"
+    ]
+
     public init(
         model: CDWeeklyRhythmModel,
-        windowLabel: String = "эта неделя",
-        onStartMain: (() -> Void)? = nil,
-        onChooseScenario: (() -> Void)? = nil
+        windowLabel: String = "эта неделя"
     ) {
         self.model = model
         self.windowLabel = windowLabel
-        self.onStartMain = onStartMain
-        self.onChooseScenario = onChooseScenario
-    }
-
-    private var isEmptyStart: Bool {
-        model.lessons == 0 && model.minutes == 0 && model.words == 0
-            && (onStartMain != nil || onChooseScenario != nil)
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             TaikaSectionHeaderRow("ТВОЙ РИТМ") {
-                Text((isEmptyStart ? "старт" : windowLabel).uppercased())
+                Text(windowLabel.uppercased())
                     .taikaSubsectionStyle(accent: false)
             }
             .padding(.horizontal, CD.Spacing.screen)
 
-            if isEmptyStart {
-                emptyStartCTAs
-                    .padding(.horizontal, CD.Spacing.screen)
+            if model.isQuietWeek {
+                MDCyclingTypewriter(
+                    lines: Self.quietWeekLines,
+                    font: .system(size: 17, weight: .semibold),
+                    holdSeconds: 2.6,
+                    charInterval: 0.034,
+                    minHeight: 44
+                )
+                .padding(.horizontal, CD.Spacing.screen)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 8)
+                .accessibilityLabel("Твой ритм за \(windowLabel): пока тихо")
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
                     rhythmValue(value: displayLessons, label: lessonWord(model.lessons), delay: 0)
-                    rhythmValue(value: displayMinutes, label: "учебн. мин", delay: 0.08)
-                    rhythmValue(value: displayWords, label: wordWord(model.words), delay: 0.16)
+                    rhythmValue(value: displaySteps, label: stepWord(model.steps), delay: 0.08)
+                    rhythmValue(value: displayDays, label: dayWord(model.days), delay: 0.16)
                 }
                 .padding(.horizontal, CD.Spacing.screen)
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 10)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(
-                    "Твой ритм: \(model.lessons) \(lessonWord(model.lessons)), \(model.minutes) минут, \(model.words) \(wordWord(model.words))"
+                    "Твой ритм за \(windowLabel): \(model.lessons) \(lessonWord(model.lessons)), \(model.steps) \(stepWord(model.steps)), \(model.days) \(dayWord(model.days))"
                 )
             }
         }
         .padding(.top, 8)
-        .onAppear {
-            if !isEmptyStart { animateIn() }
-        }
-        .onChange(of: model) { _, _ in
-            if !isEmptyStart { animateIn(fromCurrent: true) }
-        }
+        .onAppear { animateIn() }
+        .onChange(of: model) { _, _ in animateIn(fromCurrent: true) }
         .onDisappear { countTask?.cancel() }
-    }
-
-    private var emptyStartCTAs: some View {
-        VStack(spacing: 10) {
-            if let onStartMain {
-                Button(action: {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    onStartMain()
-                }) {
-                    DictionarySoftActionLabel(
-                        icon: "arrow.right",
-                        title: "Начать с главного"
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Начать с главного — Тайский без паники")
-            }
-
-            if let onChooseScenario {
-                Button(action: {
-                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                    onChooseScenario()
-                }) {
-                    DictionarySoftActionLabel(
-                        icon: "square.grid.2x2.fill",
-                        title: "Выбрать сценарий"
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Выбрать сценарий")
-            }
-        }
     }
 
     private func rhythmValue(value: Int, label: String, delay: TimeInterval) -> some View {
@@ -1961,17 +1973,18 @@ public struct CDWeeklyRhythmSection: View {
         countTask?.cancel()
         if !fromCurrent {
             displayLessons = 0
-            displayMinutes = 0
-            displayWords = 0
+            displaySteps = 0
+            displayDays = 0
             appeared = false
         }
         withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) {
             appeared = true
         }
+        guard !model.isQuietWeek else { return }
         countTask = Task { @MainActor in
             async let a: Void = countUp(to: model.lessons, assign: { displayLessons = $0 }, stagger: 0)
-            async let b: Void = countUp(to: model.minutes, assign: { displayMinutes = $0 }, stagger: 0.07)
-            async let c: Void = countUp(to: model.words, assign: { displayWords = $0 }, stagger: 0.14)
+            async let b: Void = countUp(to: model.steps, assign: { displaySteps = $0 }, stagger: 0.07)
+            async let c: Void = countUp(to: model.days, assign: { displayDays = $0 }, stagger: 0.14)
             _ = await (a, b, c)
         }
     }
@@ -2000,24 +2013,25 @@ public struct CDWeeklyRhythmSection: View {
     }
 
     private func lessonWord(_ n: Int) -> String {
-        let mod10 = n % 10
-        let mod100 = n % 100
-        if mod100 >= 11 && mod100 <= 14 { return "уроков" }
-        switch mod10 {
-        case 1: return "урок"
-        case 2, 3, 4: return "урока"
-        default: return "уроков"
-        }
+        ruPlural(n, one: "урок", few: "урока", many: "уроков")
     }
 
-    private func wordWord(_ n: Int) -> String {
+    private func stepWord(_ n: Int) -> String {
+        ruPlural(n, one: "шаг", few: "шага", many: "шагов")
+    }
+
+    private func dayWord(_ n: Int) -> String {
+        ruPlural(n, one: "день", few: "дня", many: "дней")
+    }
+
+    private func ruPlural(_ n: Int, one: String, few: String, many: String) -> String {
         let mod10 = n % 10
         let mod100 = n % 100
-        if mod100 >= 11 && mod100 <= 14 { return "слов" }
+        if mod100 >= 11 && mod100 <= 14 { return many }
         switch mod10 {
-        case 1: return "слово"
-        case 2, 3, 4: return "слова"
-        default: return "слов"
+        case 1: return one
+        case 2, 3, 4: return few
+        default: return many
         }
     }
 }

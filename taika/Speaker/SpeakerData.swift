@@ -18,13 +18,36 @@ struct SpeakerAttemptResult: Codable, Equatable {
     
     let heardThai: String?
     let heardTranslit: String?
+    /// Raw Thai from Apple ASR (what user actually said).
+    let heardThaiASR: String?
+    /// Cyrillic phonetic of ASR Thai (`/thai_phonetic`).
+    let heardPhoneticFromASR: String?
+    /// Text-only score (ASR vs expected), 0…100.
     let heardConfidence: Int
-    /// Optional advanced score (0...100) when Pro breakdown/hybrid is available.
+    /// Unified score after tone breakdown; nil if tone pass not completed.
     let advancedScore: Int?
     let attemptCount: Int
     let lastAttemptURL: String? // stored as path string
     
+    /// Cached tone breakdown for this recording (avoids re-hitting /assess on tab return).
+    let toneSyllables: [StoredSyllableFeedback]?
+    let toneHybridScore: Int?
+    /// Must match `lastAttemptURL` for cache to be valid.
+    let toneBreakdownRecordingPath: String?
+    
     let timestamp: Date
+}
+
+/// Codable tone syllable row persisted with SpeakerAttemptResult.
+struct StoredSyllableFeedback: Codable, Equatable {
+    let syllable: String
+    let score: Int
+    let comment: String?
+    let toneExpected: String?
+    let toneActual: String?
+    let f0Contour: [Double]?
+    let segmentStart: Double?
+    let segmentEnd: Double?
 }
 
 /// Storage key for UserDefaults
@@ -106,6 +129,19 @@ struct SpeakerAttemptsStore {
     }
 }
 
+// MARK: - Shared day key (Bangkok — aligned with UserSession activity)
+
+enum TaikaDayKey {
+    static var bangkok: TimeZone { TimeZone(identifier: "Asia/Bangkok") ?? .current }
+
+    static func todayString() -> String {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = bangkok
+        let c = cal.dateComponents([.year, .month, .day], from: Date())
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+}
+
 // MARK: - EPIC 2: Daily attempts for Speaker (header badge; resets daily)
 import Combine
 
@@ -169,10 +205,7 @@ public final class SpeakerDailyAttemptsStore: ObservableObject {
     }
 
     private func ensureDayReset() {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone.current
-        let todayStr = formatter.string(from: Date())
+        let todayStr = TaikaDayKey.todayString()
         if UserDefaults.standard.string(forKey: dailyAttemptsDateKey) != todayStr {
             UserDefaults.standard.set(todayStr, forKey: dailyAttemptsDateKey)
             Self.saveUsedToday(0)
@@ -231,10 +264,7 @@ public final class SpeakerConversationAttemptsStore: ObservableObject {
     }
 
     private func ensureDayReset() {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone.current
-        let todayStr = formatter.string(from: Date())
+        let todayStr = TaikaDayKey.todayString()
         if UserDefaults.standard.string(forKey: conversationAttemptsDateKey) != todayStr {
             UserDefaults.standard.set(todayStr, forKey: conversationAttemptsDateKey)
             Self.saveUsedToday(0)
@@ -316,6 +346,95 @@ enum SpeakerConversationHistoryStore {
     }
 
     static func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+}
+
+// MARK: - Conversation tone cache (max 5 phrases — compact, no f0 contours)
+
+struct ConversationToneCacheEntry: Codable, Equatable {
+    let historyItemId: String
+    let toneSyllables: [StoredSyllableFeedback]
+    let toneHybridScore: Int?
+    let recordingPath: String?
+    let heardConfidence: Int
+    let heardThaiASR: String?
+    let heardPhoneticFromASR: String?
+    let updatedAt: Date
+}
+
+enum SpeakerConversationToneCacheStore {
+    private static let key = "taika.speaker.conversationTone.v1"
+    private static let maxEntries = 5
+
+    private static func recordingsDir() -> URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let dir = base.appendingPathComponent("SpeakerRecordings", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    static func recordingURL(for historyItemId: UUID) -> URL {
+        recordingsDir().appendingPathComponent("conv-\(historyItemId.uuidString.lowercased()).m4a")
+    }
+
+    private static func loadAll() -> [ConversationToneCacheEntry] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let decoded = try? JSONDecoder().decode([ConversationToneCacheEntry].self, from: data) else {
+            return []
+        }
+        return decoded
+    }
+
+    private static func saveAll(_ entries: [ConversationToneCacheEntry]) {
+        let trimmed = Array(
+            entries.sorted { $0.updatedAt > $1.updatedAt }.prefix(maxEntries)
+        )
+        guard let data = try? JSONEncoder().encode(trimmed) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    static func load(historyItemId: UUID) -> ConversationToneCacheEntry? {
+        loadAll().first { $0.historyItemId == historyItemId.uuidString.lowercased() }
+    }
+
+    /// Copy recording to a stable path; returns normalized path or nil.
+    static func persistRecording(from source: URL, historyItemId: UUID) -> String? {
+        let dest = recordingURL(for: historyItemId)
+        do {
+            if FileManager.default.fileExists(atPath: dest.path) {
+                try FileManager.default.removeItem(at: dest)
+            }
+            try FileManager.default.copyItem(at: source, to: dest)
+            return dest.path
+        } catch {
+            return nil
+        }
+    }
+
+    static func save(_ entry: ConversationToneCacheEntry) {
+        var entries = loadAll().filter { $0.historyItemId != entry.historyItemId }
+        entries.append(entry)
+        saveAll(entries)
+    }
+
+    static func remove(historyItemId: UUID) {
+        let id = historyItemId.uuidString.lowercased()
+        var entries = loadAll()
+        entries.removeAll { $0.historyItemId == id }
+        saveAll(entries)
+        let file = recordingURL(for: historyItemId)
+        if FileManager.default.fileExists(atPath: file.path) {
+            try? FileManager.default.removeItem(at: file)
+        }
+    }
+
+    static func clearAll() {
+        for entry in loadAll() {
+            if let path = entry.recordingPath, FileManager.default.fileExists(atPath: path) {
+                try? FileManager.default.removeItem(atPath: path)
+            }
+        }
         UserDefaults.standard.removeObject(forKey: key)
     }
 }

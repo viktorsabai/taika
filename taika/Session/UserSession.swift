@@ -118,6 +118,9 @@ public struct USSnapshot: Codable, Equatable {
     @Published public private(set) var isProFromServer: Bool? = nil
 
     private let storeKey = "UserSession.snapshot.v1"
+    /// Real lesson seat-time (not curriculum estimates). dayKey -> courseId -> seconds.
+    private let studyStoreKey = "UserSession.studySecondsByDayCourse.v1"
+    private var studySecondsByDayCourse: [String: [String: Int]] = [:]
 
     // MARK: - Thailand canonical calendar (match MainManager/MainView)
     private static let bangkokTZ: TimeZone = TimeZone(identifier: "Asia/Bangkok") ?? .current
@@ -257,6 +260,7 @@ public struct USSnapshot: Codable, Equatable {
 
     private init() {
         load()
+        loadStudyStore()
         migrateLegacyPlannedAll()
         // hydrate observable PRO flag from persisted snapshot
         isProFromServer = snapshot.isProUser
@@ -729,6 +733,7 @@ public struct USSnapshot: Codable, Equatable {
         // collect existing map to broadcast full clear
         let prevMap = snapshot.lessonProgress
         LessonsManager.shared.resetAllProgress()
+        TaikaStarsStore.shared.clearAll()
 
         snapshot.startedCourses.removeAll()
         snapshot.startedLessons.removeAll()
@@ -1037,6 +1042,91 @@ public struct USSnapshot: Codable, Equatable {
 
     public func hasCourses(on date: Date) -> Bool {
         !courseIds(on: date).isEmpty
+    }
+
+    // MARK: - Real study time (lesson seat-time)
+
+    /// Persist seconds spent in a lesson StepView session.
+    /// Ignores tiny blips; caps a single flush so a stuck screen cannot inflate the week.
+    public func recordStudySeconds(
+        _ seconds: Int,
+        courseId: String,
+        lessonId: String? = nil,
+        at date: Date = Date()
+    ) {
+        let cid = courseId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cid.isEmpty else { return }
+        let capped = min(max(0, seconds), 3 * 60 * 60)
+        guard capped >= 5 else { return }
+
+        objectWillChange.send()
+        let dayKey = bangkokDayKey(for: Self.bangkokCal.startOfDay(for: date))
+        var byCourse = studySecondsByDayCourse[dayKey] ?? [:]
+        byCourse[cid, default: 0] += capped
+        studySecondsByDayCourse[dayKey] = byCourse
+        snapshot.lastEventAt = date
+        recordCourseActivity(courseId: cid, on: date)
+        saveStudyStore()
+        saveDebounced()
+
+        NotificationCenter.default.post(name: .usActivityLogDidChange, object: nil, userInfo: ["day": Self.bangkokCal.startOfDay(for: date)])
+        NotificationCenter.default.post(name: Notification.Name("UserSessionActivityDidChange"), object: nil)
+        _ = lessonId // reserved for per-lesson breakdown later
+    }
+
+    /// Total real study seconds for day keys, optionally scoped to course ids.
+    public func studySeconds(dayKeys: [String], courseIds: Set<String>? = nil) -> Int {
+        var total = 0
+        for dayKey in dayKeys {
+            guard let byCourse = studySecondsByDayCourse[dayKey] else { continue }
+            if let courseIds {
+                for (cid, seconds) in byCourse where courseIds.contains(cid) {
+                    total += max(0, seconds)
+                }
+            } else {
+                total += byCourse.values.reduce(0) { $0 + max(0, $1) }
+            }
+        }
+        return total
+    }
+
+    /// All-time real study seconds for one course (every stored day).
+    public func studySeconds(courseId: String) -> Int {
+        let cid = courseId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cid.isEmpty else { return 0 }
+        return studySecondsByDayCourse.values.reduce(0) { partial, byCourse in
+            partial + max(0, byCourse[cid] ?? 0)
+        }
+    }
+
+    /// Rounded-down whole minutes for UI (honest floor, not curriculum inflate).
+    public func studyMinutes(dayKeys: [String], courseIds: Set<String>? = nil) -> Int {
+        studySeconds(dayKeys: dayKeys, courseIds: courseIds) / 60
+    }
+
+    public func studyMinutes(courseId: String) -> Int {
+        studySeconds(courseId: courseId) / 60
+    }
+
+    private func loadStudyStore() {
+        guard let data = UserDefaults.standard.data(forKey: studyStoreKey) else {
+            studySecondsByDayCourse = [:]
+            return
+        }
+        do {
+            studySecondsByDayCourse = try JSONDecoder().decode([String: [String: Int]].self, from: data)
+        } catch {
+            studySecondsByDayCourse = [:]
+        }
+    }
+
+    private func saveStudyStore() {
+        do {
+            let data = try JSONEncoder().encode(studySecondsByDayCourse)
+            UserDefaults.standard.set(data, forKey: studyStoreKey)
+        } catch {
+            // silent — seat-time is best-effort
+        }
     }
 
     // MARK: - Day Planning API (free/pro)

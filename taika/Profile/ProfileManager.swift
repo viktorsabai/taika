@@ -160,7 +160,7 @@ final class ProfileManager: ObservableObject {
         dashboardRadarValues = s.radarValues
 
         let courseIds = UserSession.shared.profileAllKnownCourseIds()
-        let (lessonsDone, lessonsTotal) = await overallLessonsDoneTotal(courseIds: courseIds)
+        let (lessonsDone, lessonsTotal) = overallLessonsDoneTotal(courseIds: courseIds)
         let lessonBase = lessonsTotal > 0 ? Double(lessonsDone) / Double(lessonsTotal) : 0
         let learnedCount = s.totalStableSteps
         dashboardExpatMarket = min(100, max(0, Int(round(Double(learnedCount) * 1.2 + lessonBase * 25))))
@@ -342,7 +342,7 @@ final class ProfileManager: ObservableObject {
 
     private func buildCourseMetrics(courseIds: [String]) async -> [PDMetric] {
         // stable keys; do not localize keys
-        let overall = await overallCourseProgress(courseIds: courseIds)
+        let overall = overallCourseProgress(courseIds: courseIds)
 
         return [
             PDMetric(
@@ -361,7 +361,7 @@ final class ProfileManager: ObservableObject {
     }
 
     private func buildLessonMetrics(courseIds: [String]) async -> [PDMetric] {
-        let (done, total) = await overallLessonsDoneTotal(courseIds: courseIds)
+        let (done, total) = overallLessonsDoneTotal(courseIds: courseIds)
         let value = total > 0 ? "\(done)/\(total)" : "0"
 
         return [
@@ -379,7 +379,7 @@ final class ProfileManager: ObservableObject {
     private func currentCourseMetricValue(metricKey: String, courseIds: [String]) async -> Double {
         switch metricKey {
         case "course_progress":
-            return await overallCourseProgress(courseIds: courseIds)
+            return overallCourseProgress(courseIds: courseIds)
         case "courses_count":
             // normalize for charts
             return min(Double(courseIds.count) / 10.0, 1.0)
@@ -391,7 +391,7 @@ final class ProfileManager: ObservableObject {
     private func currentLessonMetricValue(metricKey: String, courseIds: [String]) async -> Double {
         switch metricKey {
         case "lessons_done":
-            let (done, total) = await overallLessonsDoneTotal(courseIds: courseIds)
+            let (done, total) = overallLessonsDoneTotal(courseIds: courseIds)
             guard total > 0 else { return 0 }
             return min(max(Double(done) / Double(total), 0), 1)
         default:
@@ -401,14 +401,14 @@ final class ProfileManager: ObservableObject {
 
     // MARK: - core aggregations
 
-    private func overallCourseProgress(courseIds: [String]) async -> Double {
+    private func overallCourseProgress(courseIds: [String]) -> Double {
         guard !courseIds.isEmpty else { return 0 }
 
         var sum: Double = 0
         var count: Int = 0
 
         for cid in courseIds {
-            let p = await ProgressManager.shared.progress(for: cid, lessonId: nil)
+            let p = ProgressManager.shared.progress(for: cid, lessonId: nil)
             sum += min(max(p, 0), 1)
             count += 1
         }
@@ -417,7 +417,7 @@ final class ProfileManager: ObservableObject {
         return sum / Double(count)
     }
 
-    private func overallLessonsDoneTotal(courseIds: [String]) async -> (done: Int, total: Int) {
+    private func overallLessonsDoneTotal(courseIds: [String]) -> (done: Int, total: Int) {
         var done = 0
         var total = 0
 
@@ -426,7 +426,7 @@ final class ProfileManager: ObservableObject {
             total += lessons.count
 
             // best-effort: derive done from course progress fraction (no per-lesson state here)
-            let p = await ProgressManager.shared.progress(for: cid, lessonId: nil)
+            let p = ProgressManager.shared.progress(for: cid, lessonId: nil)
             let clamped = min(max(p, 0), 1)
             done += Int(round(clamped * Double(lessons.count)))
         }

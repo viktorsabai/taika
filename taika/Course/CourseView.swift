@@ -37,10 +37,10 @@ struct CourseView: View {
     private let courseData = CourseData()
     @EnvironmentObject private var overlay: OverlayPresenter
     @EnvironmentObject private var nav: NavigationIntent
-    @StateObject private var favs = FavoriteManager.shared
-    @StateObject private var personalPack = PersonalPackManager.shared
+    @ObservedObject private var favs = FavoriteManager.shared
+    @ObservedObject private var personalPack = PersonalPackManager.shared
     @ObservedObject private var userSession = UserSession.shared
-    private let lessonsManager = LessonsManager.shared
+    @ObservedObject private var lessonsManager = LessonsManager.shared
     private let pro = ProManager.shared
 
     private func handleTapCourse(_ c: Course, persistCarousel: PersistedCourseCarousel = .none) {
@@ -283,15 +283,20 @@ struct CourseView: View {
         return total > 0 && done >= total
     }
 
-    /// Только начатые и ещё не полностью завершённые курсы.
-    /// Course favorites больше не смешиваются с «Продолжить»: для них есть отдельный tab «Избранное».
+    /// Начатые и ещё не полностью завершённые курсы («Продолжить»).
+    /// Считаем начатым: закрыт ≥1 урок, или есть урок in progress / started, или выучены карточки.
+    /// Избранное сюда не смешиваем — отдельный tab.
+    private func isCourseInProgress(_ course: Course) -> Bool {
+        guard !isCourseCompleted(course) else { return false }
+        let lessonsTotal = max(course.lessonCount, LessonsData.shared.lessons(for: course.id).count)
+        let (done, total) = lessonsManager.headerCounts(for: course.id, lessonsTotal: lessonsTotal)
+        if done > 0, total > 0, done < total { return true }
+        if lessonsManager.courseStatus(for: course.id) == .inProgress { return true }
+        return lessonsManager.coursePercent(for: course.id) > 0
+    }
+
     private func inProgressCourses(in pool: [Course]) -> [Course] {
-        let started = pool.filter { c in
-            guard !isCourseCompleted(c) else { return false }
-            let (done, _) = lessonsManager.headerCounts(for: c.id, lessonsTotal: c.lessonCount)
-            return done > 0
-        }
-        return deduplicateByText(started)
+        deduplicateByText(pool.filter(isCourseInProgress))
     }
 
     /// Только курсы, которые пользователь явно добавил в избранное сердечком.
@@ -334,12 +339,15 @@ struct CourseView: View {
             let (done, total) = lessonsManager.headerCounts(for: c.id, lessonsTotal: effectiveLessonTotal)
             let courseCompleted = total > 0 && done >= total
             let courseProgress = lessonsManager.coursePercent(for: c.id)
+            let hasStarted = !courseCompleted && (
+                done > 0
+                || lessonsManager.courseStatus(for: c.id) == .inProgress
+                || courseProgress > 0
+            )
             let canonCourseId = ProgressManager.shared.canonicalize(c.id)
-            let courseFavoriteKey = "course:\(canonCourseId)".lowercased()
-            let isFavorite = favs.items.contains { item in
-                let rawId = item.id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                return rawId == courseFavoriteKey || rawId == canonCourseId.lowercased()
-            }
+            // Read published likedCourses so SwiftUI refreshes heart + pink lines after toggle.
+            _ = favs.likedCourses
+            let isFavorite = favs.isCourseLiked(c.id)
             let pronunciationPercent: Int? = pronunciation.heard[canonCourseId]
             let pronunciationAdvancedPercent: Int? = pro.isPro ? pronunciation.advanced[canonCourseId] : nil
             let reinforcementMetrics = ReinforcementStore.shared.metrics(courseId: c.id)
@@ -353,8 +361,7 @@ struct CourseView: View {
                 .replacingOccurrences(of: "]]", with: "")
             let subtitleResolved: String = {
                 if isTheoryBonus {
-                    let hint = "Бонус · только теория"
-                    return sanitizedDescription.isEmpty ? hint : "\(hint)\n\(sanitizedDescription)"
+                    return sanitizedDescription
                 }
                 return sanitizedDescription
             }()
@@ -366,16 +373,17 @@ struct CourseView: View {
                 category: c.category,
                 lessons: effectiveLessonTotal,
                 durationMin: c.durationMinutes,
-                cta: done == 0 ? "Начать" : (done < total ? "Продолжить" : "Повторить"),
+                cta: courseCompleted ? "Повторить" : (hasStarted ? "Продолжить" : "Начать"),
                 isPro: c.isPro,
                 showProCrown: c.isPro && !pro.isPro,
-                status: done == 0 ? .new : (done < total ? .inProgress : .done),
-                progress: courseProgress,
+                status: isTheoryBonus ? nil : (courseCompleted ? .done : (hasStarted ? .inProgress : .new)),
+                progress: isTheoryBonus ? 0 : courseProgress,
                 statusStarsFraction: nil,
-                pronunciationPercent: pro.isPro ? (pronunciationAdvancedPercent ?? pronunciationPercent) : pronunciationPercent,
-                reinforcementScore: reinforcementScore,
-                reinforcementSessions: reinforcementSessions,
-                reinforcementCoveredCards: reinforcementCoveredCards,
+                badgeChipTitle: isTheoryBonus ? "Лайфхаки" : nil,
+                pronunciationPercent: isTheoryBonus ? nil : (pro.isPro ? (pronunciationAdvancedPercent ?? pronunciationPercent) : pronunciationPercent),
+                reinforcementScore: isTheoryBonus ? nil : reinforcementScore,
+                reinforcementSessions: isTheoryBonus ? 0 : reinforcementSessions,
+                reinforcementCoveredCards: isTheoryBonus ? 0 : reinforcementCoveredCards,
                 isProUser: pro.isPro,
                 flipEnabled: courseCompleted && !isTheoryBonus,
                 onBackSelectGameMode: (courseCompleted && !isTheoryBonus) ? { _ in
@@ -394,7 +402,15 @@ struct CourseView: View {
                 onTap: { handleTapCourse(c, persistCarousel: persistCarousel) },
                 isFavorite: isFavorite,
                 onToggleFavorite: {
-                    FavoriteManager.shared.toggle(item: c)
+#if os(iOS)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+#endif
+                    favs.toggleCourse(
+                        id: c.id,
+                        title: c.title,
+                        subtitle: c.favoriteSubtitle,
+                        meta: c.favoriteMeta
+                    )
                 },
                 onTapConsole: isTheoryBonus ? nil : {
                     let cards = CourseManager.shared.cardsForGame(courseId: c.id)
@@ -698,8 +714,7 @@ struct CourseView: View {
         }
     }
 
-    /// Прогресс за **текущую календарную неделю** (Bangkok), только реальное изучение (`stepLearned`).
-    /// Раньше брали rolling 7 дней + `lessonOpened` → минуты прошлой недели «липли» в новую.
+    /// Прогресс за **текущую календарную неделю** (Bangkok): уроки · шаги · дни практики.
     private func weeklyRhythmModel() -> CDWeeklyRhythmModel {
         _ = userSession.snapshot.lastEventAt // observe session updates
         let scope = rhythmScopeCourseIds()
@@ -716,41 +731,31 @@ struct CourseView: View {
         }
 
         var lessonKeys = Set<String>()
-        var words = 0
-        var minutesFromLessons = 0
-
-        func considerLesson(courseId: String, lessonId: String?) {
-            guard let lessonId, !lessonId.isEmpty else { return }
-            let key = "\(courseId)|\(lessonId)"
-            guard !lessonKeys.contains(key) else { return }
-            lessonKeys.insert(key)
-            // Curriculum time for a unique lesson touched this week. Do not invent minutes
-            // when lesson data has no declared duration; USActivityEvent has no elapsed field.
-            if let mins = LessonsData.shared.lesson(courseID: courseId, lessonID: lessonId)?.durationMinutes,
-               mins > 0 {
-                minutesFromLessons += mins
-            }
-        }
+        var steps = 0
+        var activeDays = Set<String>()
 
         for dayKey in dayKeys {
             let events = userSession.snapshot.activityLog[dayKey] ?? []
+            var dayHadPractice = false
             for event in events {
                 guard let courseId = event.courseId, scope.contains(courseId) else { continue }
-                // Только выученные шаги — не считаем «открыл урок» как минуты учёбы.
                 guard event.kind == .stepLearned else { continue }
-                words += 1
-                considerLesson(courseId: courseId, lessonId: event.lessonId)
+                steps += 1
+                dayHadPractice = true
+                if let lessonId = event.lessonId, !lessonId.isEmpty {
+                    lessonKeys.insert("\(courseId)|\(lessonId)")
+                }
+            }
+            if dayHadPractice {
+                activeDays.insert(dayKey)
             }
         }
 
-        let model = CDWeeklyRhythmModel(
+        return CDWeeklyRhythmModel(
             lessons: lessonKeys.count,
-            minutes: minutesFromLessons,
-            words: words,
-            minuteGoal: 45
+            steps: steps,
+            days: activeDays.count
         )
-
-        return model
     }
 
     private func courseEmptyState(
@@ -1185,18 +1190,7 @@ struct CourseView: View {
                         LazyVStack(spacing: max(14, Theme.Layout.sectionGap - 6)) {
                             courseTabContentView()
                             CDWeeklyRhythmSection(
-                                model: weeklyRhythmModel(),
-                                onStartMain: {
-                                    TaikaProductDemoFlags.markCourseSeen()
-                                    nav.go(.lessons(courseId: "course_b_0"))
-                                },
-                                onChooseScenario: {
-                                    TaikaProductDemoFlags.markCourseSeen()
-                                    withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
-                                        selectedCourseTab = .scenarios
-                                        catalogTabState.selectedTab = .scenarios
-                                    }
-                                }
+                                model: weeklyRhythmModel()
                             )
                                 .id("weekly-rhythm-\(selectedCourseTab.rawValue)-\(selectedScenarioCategory)")
                         }

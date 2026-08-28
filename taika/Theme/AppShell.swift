@@ -32,6 +32,22 @@ struct AppShell: View {
         case learn
     }
 
+    /// Hide chrome header while fullscreen park / reinforce overlays are up.
+    private var showsShellHeaderChrome: Bool {
+        guard welcomeSeen, onboardingDone, !showBootSplash, firstEntryPhase == .none else { return false }
+        switch overlay.overlay {
+        case .dictionaryQuickDrawer,
+             .gamePark,
+             .gameParkFromFavorites,
+             .gameParkFromDictionary,
+             .reinforcePick,
+             .gameParkForCourse:
+            return false
+        default:
+            return true
+        }
+    }
+
     private var tabSelection: Binding<Int> {
         Binding(
             get: { selectedTab },
@@ -137,7 +153,7 @@ struct AppShell: View {
                             overlay.dismiss()
                         }
                 case .courseFirstTip:
-                    // Legacy case: Course Hub demo removed — empty rhythm CTAs replace it.
+                    // Legacy case: Course Hub demo removed.
                     Color.clear
                         .onAppear { overlay.dismiss() }
                 case .courseFilters:
@@ -177,6 +193,52 @@ struct AppShell: View {
                 case .gameParkFromDictionary:
                     GameParkOverlayView(
                         source: .dictionary,
+                        onDismiss: { overlay.dismiss() },
+                        onOpenCourses: {
+                            overlay.dismiss()
+                            nav.popToRoot()
+                            nav.requestTab(1)
+                        }
+                    )
+                case .reinforcePick:
+                    ReinforcePickOverlayView(
+                        courses: MainManager.shared.reinforcementCourseCards.map {
+                            .init(
+                                id: $0.courseId,
+                                title: $0.title,
+                                subtitle: $0.subtitle.isEmpty ? "Пройденный курс" : $0.subtitle
+                            )
+                        },
+                        hasAllLearnedPool: LearnedGameSource.hasPlayableCards,
+                        onDismiss: { overlay.dismiss() },
+                        onStartGame: { courseId, mode in
+                            nav.go(.game(
+                                courseId: courseId,
+                                lessonId: nil,
+                                gameType: mode.rawValue
+                            ))
+                        },
+                        onStartSpeaker: { courseId in
+                            SpeakerReturnContext.shared.save(tab: selectedTab, path: nav.path)
+                            if let courseId, !courseId.isEmpty {
+                                SpeakerManager.shared.setSpeakerUIMode(.training)
+                                SpeakerRequestedCourseId.shared.set(courseId)
+                            } else {
+                                SpeakerManager.shared.setSpeakerUIMode(.conversation)
+                                SpeakerRequestedCourseId.shared.set(nil)
+                            }
+                            nav.requestTab(2)
+                        },
+                        onOpenCourses: {
+                            overlay.dismiss()
+                            nav.popToRoot()
+                            nav.requestTab(1)
+                        }
+                    )
+                case .gameParkForCourse(let courseId):
+                    GameParkOverlayView(
+                        source: .main,
+                        courseId: courseId,
                         onDismiss: { overlay.dismiss() },
                         onOpenCourses: {
                             overlay.dismiss()
@@ -258,11 +320,7 @@ struct AppShell: View {
             nav.popToRoot()
         }
         .overlay(alignment: .top) {
-            if welcomeSeen && onboardingDone && !showBootSplash && firstEntryPhase == .none
-                && overlay.overlay != .dictionaryQuickDrawer
-                && overlay.overlay != .gamePark
-                && overlay.overlay != .gameParkFromFavorites
-                && overlay.overlay != .gameParkFromDictionary {
+            if showsShellHeaderChrome {
                 ZStack(alignment: .top) {
                     // The transition layer is behind the header content and extends
                     // into the canvas without becoming an opaque page strip.
@@ -708,6 +766,22 @@ private struct GameView: View {
                     onClose: { dismiss() },
                     onNextGame: isFromLessonStep ? nil : {
                         guard let next = nextParkMode else { return }
+                        // Keep error-queue filter across mode hops (don't open full-course game 2).
+                        let nextKeys: [String]? = {
+                            guard let lessonIds, !lessonIds.isEmpty, cardKeys != nil else { return cardKeys }
+                            let remaining = Array(
+                                ReinforcementStore.shared.failedCardKeys(
+                                    courseId: courseId,
+                                    lessonIds: lessonIds
+                                )
+                            ).sorted()
+                            return remaining.isEmpty ? nil : remaining
+                        }()
+                        GameRequestedCourseScope.shared.set(
+                            courseId: courseId,
+                            lessonIds: lessonIds ?? [],
+                            cardKeys: nextKeys
+                        )
                         if !nav.path.isEmpty { nav.path.removeLast() }
                         nav.go(.game(courseId: courseId, lessonId: lessonId, gameType: next.rawValue))
                     },

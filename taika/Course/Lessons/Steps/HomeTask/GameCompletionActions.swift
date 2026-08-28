@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// Кнопки итогов закрепления.
+/// - Курс (зачётка): очередь ошибок → 2a/2b/2c, без «следующий урок».
 /// - Из урока/степа: повторить → произношение → следующий урок/курс → закрыть.
 /// - Из игрового парка: повторить → следующая игра (или замок Taika+) → закрыть.
 struct GameCompletionActions: View {
@@ -11,8 +12,10 @@ struct GameCompletionActions: View {
     var continueLearningTitle: String? = nil
     var nextGameTitle: String? = nil
     var onRepeat: () -> Void
-    /// Number of concrete failed cards from the just-finished session.
+    /// Ошибки только этой сессии (ветка степа / парка).
     var errorCount: Int = 0
+    /// Размер очереди курса после записи сессии (ветка зачётки, вариант A).
+    var queueErrorCount: Int = 0
     var onRepeatErrors: (() -> Void)? = nil
     var onNextGame: (() -> Void)? = nil
     var onSpeakerPractice: (() -> Void)? = nil
@@ -23,10 +26,10 @@ struct GameCompletionActions: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            if errorCount > 0 {
+            if isCourseReinforcement {
+                courseReinforcementFollowUp
+            } else if errorCount > 0 {
                 errorFollowUpButtons
-            } else if isCourseReinforcement {
-                reinforcementFollowUpButtons
             } else {
                 primaryButton(title: "Повторить", action: onRepeat)
                 if isFromLessonStep {
@@ -37,15 +40,47 @@ struct GameCompletionActions: View {
             }
 
             if let onClose {
-                Button(action: onClose) {
-                    Text("Закрыть")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                // 2c already uses primary «К зачётке» — не дублируем.
+                if !(isCourseReinforcement && queueErrorCount == 0) {
+                    Button(action: onClose) {
+                        Text(isCourseReinforcement ? "К зачётке" : "Закрыть")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
+        }
+    }
+
+    /// 2a/2b: очередь > 0 · 2c: очередь пуста.
+    @ViewBuilder
+    private var courseReinforcementFollowUp: some View {
+        if queueErrorCount > 0 {
+            primaryButton(
+                title: "Повторить ошибки · \(queueErrorCount)",
+                action: onRepeatErrors ?? onRepeat
+            )
+            if let onNextGame {
+                outlineButton(title: "Следующая игра", systemImage: "arrow.right", action: onNextGame)
+            }
+            outlineButton(title: "Повторить эту игру", systemImage: "arrow.counterclockwise", action: onRepeat)
+        } else {
+            if let onClose {
+                primaryButton(title: "К зачётке", action: onClose)
+            }
+            if let onNextGame {
+                outlineButton(title: "Следующая игра", systemImage: "arrow.right", action: onNextGame)
+            } else if let onSpeakerPractice {
+                outlineButton(
+                    title: "Тренировать произношение",
+                    systemImage: "mic.fill",
+                    action: onSpeakerPractice
+                )
+            }
+            outlineButton(title: "Повторить эту игру", systemImage: "arrow.counterclockwise", action: onRepeat)
         }
     }
 
@@ -62,17 +97,6 @@ struct GameCompletionActions: View {
                 action: onSpeakerPractice
             )
         }
-    }
-
-    @ViewBuilder
-    private var reinforcementFollowUpButtons: some View {
-        if let onNextGame {
-            primaryButton(title: "Следующая игра", action: onNextGame)
-        } else if let onSpeakerPractice {
-            primaryButton(title: "Тренировать произношение", action: onSpeakerPractice)
-        }
-
-        outlineButton(title: "Повторить эту игру", systemImage: "arrow.counterclockwise", action: onRepeat)
     }
 
     @ViewBuilder

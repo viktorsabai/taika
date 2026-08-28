@@ -115,6 +115,11 @@ public final class ReinforcementStore: ObservableObject {
         let normalizedKeys = Set(sourceCardKeys.compactMap { normalizeSourceCardKey($0) })
         let normalizedFailedKeys = Set(failedCardKeys.compactMap { normalizeSourceCardKey($0) })
         let normalizedClearedKeys = Set(clearedCardKeys.compactMap { normalizeSourceCardKey($0) })
+        // Variant A: cards practiced cleanly this session leave the error queue.
+        // Explicit clearedCardKeys still merge in for callers that pass them.
+        let autoClearedKeys = normalizedKeys.subtracting(normalizedFailedKeys)
+        let effectiveClearedKeys = autoClearedKeys.union(normalizedClearedKeys)
+
         if !normalizedKeys.isEmpty {
             let grouped = Dictionary(grouping: normalizedKeys) { key in
                 key.split(separator: "|", maxSplits: 1).first.map(String.init) ?? ""
@@ -124,9 +129,11 @@ public final class ReinforcementStore: ObservableObject {
                 var lesson = cm.byLesson[lid] ?? LessonMetrics()
                 lesson.sessions += 1
                 lesson.coveredCardKeys.formUnion(keys)
-                let sessionFailedKeys = normalizedFailedKeys.filter { $0.hasPrefix("\(rawLessonId)|") }
+                let prefix = "\(lid)|"
+                let sessionFailedKeys = normalizedFailedKeys.filter { $0.hasPrefix(prefix) }
+                let sessionClearedKeys = effectiveClearedKeys.filter { $0.hasPrefix(prefix) }
                 lesson.failedCardKeys.formUnion(sessionFailedKeys)
-                lesson.failedCardKeys.subtract(normalizedClearedKeys.filter { $0.hasPrefix("\(rawLessonId)|") })
+                lesson.failedCardKeys.subtract(sessionClearedKeys)
                 let sessionScore: Int? = {
                     guard !keys.isEmpty else { return score }
                     let cleanCount = max(0, keys.count - sessionFailedKeys.count)
@@ -144,8 +151,9 @@ public final class ReinforcementStore: ObservableObject {
             })
             for lid in scopedLessonIds {
                 var lesson = cm.byLesson[lid] ?? LessonMetrics()
-                lesson.failedCardKeys.subtract(normalizedClearedKeys.filter { $0.hasPrefix("\(lid)|") })
-                lesson.failedCardKeys.formUnion(normalizedFailedKeys.filter { $0.hasPrefix("\(lid)|") })
+                let prefix = "\(lid)|"
+                lesson.failedCardKeys.subtract(effectiveClearedKeys.filter { $0.hasPrefix(prefix) })
+                lesson.failedCardKeys.formUnion(normalizedFailedKeys.filter { $0.hasPrefix(prefix) })
                 lesson.sessions += 1
                 lesson.lastScore = score.map { max(0, min(100, $0)) }
                 cm.byLesson[lid] = lesson
@@ -249,6 +257,54 @@ public final class ReinforcementStore: ObservableObject {
 }
 
 
+
+/// Lightweight per-course reinforcement UI scope (lesson ids + tab focus only).
+enum ReinforcementScopeStore {
+    struct Snapshot: Codable, Equatable {
+        let lessonIds: [String]?
+        let focus: String
+        let didSeed: Bool
+    }
+
+    private static let key = "taika.reinforcement.scope.v1"
+
+    private static func loadAll() -> [String: Snapshot] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let decoded = try? JSONDecoder().decode([String: Snapshot].self, from: data) else {
+            return [:]
+        }
+        return decoded
+    }
+
+    private static func saveAll(_ map: [String: Snapshot]) {
+        guard let data = try? JSONEncoder().encode(map) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    static func load(courseId: String) -> Snapshot? {
+        loadAll()[courseId]
+    }
+
+    static func save(courseId: String, lessonIds: Set<String>?, focus: String, didSeed: Bool) {
+        var map = loadAll()
+        map[courseId] = Snapshot(
+            lessonIds: lessonIds.map { Array($0).sorted() },
+            focus: focus,
+            didSeed: didSeed
+        )
+        saveAll(map)
+    }
+
+    static func clear(courseId: String) {
+        var map = loadAll()
+        map.removeValue(forKey: courseId)
+        saveAll(map)
+    }
+
+    static func clearAll() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+}
 
 /// One-shot course lesson scope used when a completed-course selection launches Game Park.
 @MainActor

@@ -371,7 +371,9 @@ public final class HomeTaskManager: ObservableObject {
     public init() {}
 
     public func setTasks(_ tasks: [HTask], for courseId: String) {
-        tasksByCourse[courseId] = tasks
+        var applied = tasks
+        HomeTaskDoneStore.applyDoneStatus(to: &applied, courseId: courseId)
+        tasksByCourse[courseId] = applied
     }
 
     public func tasks(for courseId: String) -> [HTask] {
@@ -393,6 +395,7 @@ public final class HomeTaskManager: ObservableObject {
         guard var arr = tasksByCourse[courseId], let idx = arr.firstIndex(where: { $0.id == taskId }) else { return }
         arr[idx].status = .done
         tasksByCourse[courseId] = arr
+        HomeTaskDoneStore.markDone(taskId: taskId, courseId: courseId)
     }
 
     // MARK: - Data collection from progress / steps
@@ -489,27 +492,15 @@ public final class HomeTaskManager: ObservableObject {
         }
         guard !steps.isEmpty else { return [] }
 
-        let learnedIdx = ProgressManager.shared.learnedSet(courseId: courseId, lessonId: lessonId)
+        let resolved = ProgressManager.shared.resolvedLearnedCardIndices(courseId: courseId, lessonId: lessonId)
         var out: [LearnedTriple] = []
-        var learnableOrdinal = 0
-        for (i, it) in steps.enumerated() {
-            switch it.kind {
-            case .word, .phrase, .casual:
-                let orderKey = it.order >= 0 ? it.order : i
-                let matched = ProgressManager.matchesLearnedIndex(
-                    learnedIdx,
-                    order: orderKey,
-                    enumerated: i,
-                    learnableOrdinal: learnableOrdinal
-                )
-                learnableOrdinal += 1
-                guard matched, let ru = it.ru else { continue }
-                let th = it.thai ?? ""
-                let ph = it.phonetic ?? ""
-                out.append(.init(ru: ru, th: th, ph: ph, courseId: courseId, lessonId: lessonId))
-            default:
-                continue
-            }
+        for i in resolved.sorted() {
+            guard steps.indices.contains(i) else { continue }
+            let it = steps[i]
+            guard let ru = it.ru else { continue }
+            let th = it.thai ?? ""
+            let ph = it.phonetic ?? ""
+            out.append(.init(ru: ru, th: th, ph: ph, courseId: courseId, lessonId: lessonId))
         }
         return out
     }

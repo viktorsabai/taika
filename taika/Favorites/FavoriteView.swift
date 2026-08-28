@@ -32,9 +32,9 @@ struct FavoriteView: View {
     @State private var selectedTab: FavoriteScreenTab = .cards
     @State private var isEditing: Bool = false
     @State private var isTrainingPickerPresented: Bool = false
+    @State private var selectedTrainingGameMode: GameModeType = .match
 
-    @AppStorage("taika.fav.cards.viewMode") private var cardsViewModeRaw: String = FavCardsViewMode.list.rawValue
-    @AppStorage("taika.fav.dict.viewMode") private var dictViewModeRaw: String = FavCardsViewMode.list.rawValue
+    @AppStorage(FavCardsViewMode.storageKey) private var viewModeRaw: String = FavCardsViewMode.list.rawValue
 
     private var cardsList: [FDCardDTO] {
         manager.cardsDTO
@@ -55,18 +55,10 @@ struct FavoriteView: View {
     }
 
     private var activeViewMode: Binding<FavCardsViewMode> {
-        switch selectedTab {
-        case .dictionary:
-            return Binding(
-                get: { FavCardsViewMode(rawValue: dictViewModeRaw) ?? .list },
-                set: { dictViewModeRaw = $0.rawValue }
-            )
-        default:
-            return Binding(
-                get: { FavCardsViewMode(rawValue: cardsViewModeRaw) ?? .list },
-                set: { cardsViewModeRaw = $0.rawValue }
-            )
-        }
+        Binding(
+            get: { FavCardsViewMode(rawValue: viewModeRaw) ?? .list },
+            set: { viewModeRaw = $0.rawValue }
+        )
     }
 
     private var currentEmptySpec: FavEmptySpec? {
@@ -152,24 +144,39 @@ struct FavoriteView: View {
                         .ignoresSafeArea(edges: .bottom)
                     )
             }
-        }
-        .confirmationDialog(
-            selectedTab == .dictionary ? "Начать тренировку словаря" : "Начать тренировку избранного",
-            isPresented: $isTrainingPickerPresented,
-            titleVisibility: .visible
-        ) {
-            Button("Спикер") {
-                trainCurrentTabInSpeaker()
+
+            if isTrainingPickerPresented {
+                GameModePickerDS(
+                    selected: $selectedTrainingGameMode,
+                    isProUser: pro.isPro,
+                    onStart: { mode in
+                        isTrainingPickerPresented = false
+                        startFavoritesGame(mode: mode)
+                    },
+                    onClose: {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                            isTrainingPickerPresented = false
+                        }
+                    },
+                    onLockedTap: { mode in
+                        if mode.isPro && !pro.isPro {
+                            isTrainingPickerPresented = false
+                            overlay.presentPro(reason: .games)
+                        }
+                    },
+                    modes: GameModeType.modesLessonAndPark,
+                    onSpeaker: {
+                        isTrainingPickerPresented = false
+                        trainCurrentTabInSpeaker()
+                    }
+                )
+                .transition(.opacity)
+                .zIndex(20)
             }
-            Button("Игры") {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                overlay.present(selectedTab == .dictionary ? .gameParkFromDictionary : .gameParkFromFavorites)
-            }
-            Button("Отмена", role: .cancel) {}
-        } message: {
-            Text("Выбери способ для сохранённых карточек")
         }
+        .animation(.easeInOut(duration: 0.22), value: isTrainingPickerPresented)
         .onAppear {
+            FavCardsViewMode.migrateStorageIfNeeded()
             if favFilter.selectedTab == .hacks || favFilter.selectedTab == .courses {
                 favFilter.selectedTab = .cards
             }
@@ -229,27 +236,13 @@ struct FavoriteView: View {
         let count = selectedTab == .dictionary ? dictionaryList.count : cardsList.count
         return Button {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            isTrainingPickerPresented = true
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                Text("Начать тренировку · \(count)")
-                    .font(.system(size: 17, weight: .semibold))
-                Spacer(minLength: 0)
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 15, weight: .bold))
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                isTrainingPickerPresented = true
             }
-            .foregroundStyle(PD.ColorToken.text)
-            .padding(.horizontal, 18)
-            .frame(maxWidth: .infinity, minHeight: 58)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(PD.ColorToken.card.opacity(0.86))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(PD.ColorToken.stroke.opacity(0.8), lineWidth: 1)
+        } label: {
+            DictionarySoftActionLabel(
+                icon: "mic.fill",
+                title: "Начать тренировку · \(count)"
             )
         }
         .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
@@ -277,6 +270,19 @@ struct FavoriteView: View {
             }
         }
         nav.requestTab(2)
+    }
+
+    private func startFavoritesGame(mode: GameModeType) {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        if selectedTab == .dictionary {
+            nav.go(.game(
+                courseId: DictionaryGameSource.courseId,
+                lessonId: nil,
+                gameType: mode.rawValue
+            ))
+        } else {
+            nav.go(.game(courseId: "__favorites__", lessonId: nil, gameType: mode.rawValue))
+        }
     }
 
     @ViewBuilder

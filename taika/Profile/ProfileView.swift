@@ -127,6 +127,9 @@ struct ProfileView: View {
         FavoriteManager.shared.resetAll()
         StepData.shared.resetDailyPicksCache()
         SpeakerAttemptsStore.clearAll()
+        HomeTaskDoneStore.clearAll()
+        ReinforcementScopeStore.clearAll()
+        TaikaStarsStore.shared.clearAll()
 
         NotificationCenter.default.post(name: .init("ProgressDidChange"), object: nil)
         NotificationCenter.default.post(name: .init("FavoritesDidChange"), object: nil)
@@ -176,10 +179,6 @@ struct ProfileView: View {
                         onRhythm: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showStatistics = true
-                        },
-                        onSpeaker: {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            nav.requestTab(2)
                         },
                         onSupport: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -263,6 +262,7 @@ struct ProfileView: View {
                let window = scene.windows.first(where: { $0.isKeyWindow }) {
                 AuthService.presentationWindow = window
             }
+            profile.refresh()
             Task { @MainActor in
                 await ProManager.shared.syncCustomerInfoFromRevenueCat()
                 AuthSoftWallState.tryPresentSoftWall(calledFromProfile: true)

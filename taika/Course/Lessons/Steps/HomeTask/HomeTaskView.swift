@@ -34,6 +34,7 @@ public struct HomeTaskView: View {
     @StateObject private var store: HomeTaskManager
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var theme: ThemeManager
+    @ObservedObject private var stars = TaikaStarsStore.shared
 
     // Matching state
     @State private var leftItems: [MPItem] = []
@@ -69,6 +70,8 @@ public struct HomeTaskView: View {
     @State private var activeCardKeys: [String]?
     @State private var totalPairsCount: Int = 0
     private let visiblePairsTarget: Int = 6
+    @State private var matchHintUsedOnBoard = false
+    @State private var builderFreeListenUsed = false
 
     public init(courseId: String,
                 lessonId: String,
@@ -234,15 +237,17 @@ public struct HomeTaskView: View {
 
     @ViewBuilder
     private var contentBody: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            TaikaGameStatusStrip(
+        VStack(spacing: 10) {
+            TaikaGameTopChrome(
                 timeText: formatGameTime(gameElapsedSeconds),
                 progressText: {
                     let total = max(1, totalPairsCount)
                     return "\(matchedPairIds.count)/\(total)"
                 }(),
                 mistakes: max(0, tries - matchedPairIds.count),
-                score: matchedPairIds.count
+                score: matchedPairIds.count,
+                showsSessionScore: true,
+                hints: matchHintActions
             )
 
             if leftItems.isEmpty || rightItems.isEmpty {
@@ -256,14 +261,12 @@ public struct HomeTaskView: View {
                         }
                     }
             } else {
-                Spacer(minLength: 6)
                 activeGameBlock
-                Spacer(minLength: 0)
             }
         }
         .padding(.horizontal, CD.Spacing.screen)
         .padding(.top, 6)
-        .padding(.bottom, 24)
+        .padding(.bottom, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .overlay {
             if showSummary {
@@ -300,11 +303,23 @@ public struct HomeTaskView: View {
     }
 
     private var courseCompletionHint: String {
-        let mistakes = max(0, tries - matchedPairIds.count)
-        if mistakes > 0 {
-            return "Карточки закреплены. \(mistakes) ошибок сохранены в уроках — начни следующую практику с них."
+        let queue = postSessionQueueErrorCount
+        let sessionErrors = failedPairIds.count
+        if queue > 0 {
+            if sessionErrors > 0 {
+                return "В очереди ошибок: \(queue). Повтори их или вернись в зачётку."
+            }
+            return "Сессия чистая. В очереди ещё \(queue) карточек."
         }
-        return "Карточки закреплены. Следующий шаг — коротко повторить их в Спикере или пройти следующую игру."
+        return "Ошибок по курсу больше нет. Можно вернуться в зачётку или сменить игру."
+    }
+
+    /// Очередь ошибок курса после записи сессии (вариант A).
+    private var postSessionQueueErrorCount: Int {
+        ReinforcementStore.shared.failedCardKeys(
+            courseId: courseId,
+            lessonIds: reinforcementLessonScope
+        ).count
     }
 
     private var finishedBlockContent: some View {
@@ -352,8 +367,15 @@ public struct HomeTaskView: View {
                             buildRound(force: true)
                         },
                         errorCount: failedPairIds.count,
+                        queueErrorCount: isCourseReinforcement ? postSessionQueueErrorCount : 0,
                         onRepeatErrors: {
-                            activeCardKeys = failedCardKeysForCurrentSession
+                            let queueKeys = Array(
+                                ReinforcementStore.shared.failedCardKeys(
+                                    courseId: courseId,
+                                    lessonIds: reinforcementLessonScope
+                                )
+                            ).sorted()
+                            activeCardKeys = queueKeys.isEmpty ? failedCardKeysForCurrentSession : queueKeys
                             withAnimation(.easeOut(duration: 0.2)) { showSummary = false }
                             buildRound(force: true)
                         },
@@ -382,7 +404,7 @@ public struct HomeTaskView: View {
             onTapRight: { tapRight($0) },
             revealedIds: Set(flipStates.compactMap { $0.value ? $0.key : nil })
         )
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     // MARK: - Conversation flow (PRO)
@@ -462,6 +484,7 @@ public struct HomeTaskView: View {
     // MARK: - Recall Body (PRO recall game)
 
     private var recallCompletionTitle: String {
+        if isCourseReinforcement { return "Закрепление" }
         switch gameType {
         case .builder: return "фразы в контексте — раунд завершён"
         case .recall: return "быстрое повторение завершено"
@@ -475,20 +498,150 @@ public struct HomeTaskView: View {
         let assembled = store.assembledBuilder
         let syllables = round.syllables
         let replaceMode = store.builderSelectedSlotForReplacement != nil
+        let wrongTexts: Set<String> = {
+            guard store.builderState == .wrong else { return [] }
+            return Set(store.builderWrongSlotIndices.compactMap { idx in
+                guard assembled.indices.contains(idx) else { return nil }
+                let piece = assembled[idx].trimmingCharacters(in: .whitespacesAndNewlines)
+                return piece.isEmpty ? nil : piece
+            })
+        }()
         let usedByText = Dictionary(grouping: assembled, by: { $0 }).mapValues(\.count)
         var consumedRank: [String: Int] = [:]
         return syllables.enumerated().map { index, text in
             let rank = consumedRank[text, default: 0]
             consumedRank[text] = rank + 1
             let isInUse = rank < (usedByText[text] ?? 0)
+            let isWrong = isInUse && wrongTexts.contains(text)
             let usedCount = usedByText[text] ?? 0
             let availableCount = syllables.filter { $0 == text }.count
             let occupiedCount = assembled.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
             let canAdd = !isInUse && usedCount < availableCount && occupiedCount < round.slotCount
             // Повторный тап по уже поставленному чипу — снять; в replace — любой свободный/пул.
             let isSelectable = replaceMode || isInUse || canAdd
-            return RecallSyllableItem(id: index, text: text, isSelectable: isSelectable, isInUse: isInUse)
+            return RecallSyllableItem(id: index, text: text, isSelectable: isSelectable, isInUse: isInUse, isWrong: isWrong)
         }
+    }
+
+    private var matchHintActions: [TaikaGameHintAction] {
+        let unmatched = Set(leftItems.map(\.pairId)).subtracting(matchedPairIds)
+        let canUse = !matchHintUsedOnBoard
+            && !showSummary
+            && unmatched.count > 3
+            && stars.canAfford(TaikaStarsStore.costMatchHalfBoard)
+        return [
+            TaikaGameHintAction(
+                id: "match_half",
+                title: "оставить 3 пары",
+                cost: TaikaStarsStore.costMatchHalfBoard,
+                isEnabled: canUse,
+                action: applyMatchHalfBoardHint
+            )
+        ]
+    }
+
+    private func applyMatchHalfBoardHint() {
+        guard !matchHintUsedOnBoard else { return }
+        guard TaikaStarsStore.shared.spend(TaikaStarsStore.costMatchHalfBoard, hint: .matchHalfBoard) else { return }
+        let unmatched = Set(leftItems.map(\.pairId)).subtracting(matchedPairIds)
+        guard unmatched.count > 3 else { return }
+        matchHintUsedOnBoard = true
+        let keep = Set(Array(unmatched).shuffled().prefix(3))
+        let remove = unmatched.subtracting(keep)
+        for pid in remove {
+            if let triple = allTriples.first(where: { "\($0.ru)|\($0.ph)" == pid }) {
+                remainingTriples.append(triple)
+            }
+            flipStates[pid] = nil
+        }
+        leftItems.removeAll { remove.contains($0.pairId) }
+        rightItems.removeAll { remove.contains($0.pairId) }
+        selectedLeft = nil
+        selectedRight = nil
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    private func playBuilderAudio(_ text: String, freeIfAvailable: Bool) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if freeIfAvailable, !builderFreeListenUsed {
+            builderFreeListenUsed = true
+            StepAudio.shared.speakThai(trimmed)
+            return
+        }
+        if TaikaStarsStore.shared.spend(TaikaStarsStore.costBuilderListen, hint: .builderListen) {
+            StepAudio.shared.speakThai(trimmed)
+        }
+    }
+
+    @ViewBuilder
+    private func recallGameView(for round: HomeTaskManager.BuilderRound) -> some View {
+        let roundDisplays: [RecallRoundDisplay] = store.builderRoundDisplays.map { d in
+            RecallRoundDisplay(id: d.id, question: d.question, target: d.target, thai: d.thai)
+        }
+        let builderCorrectness: Bool? = {
+            switch store.builderState {
+            case .correct: return true
+            case .wrong: return false
+            default: return nil
+            }
+        }()
+        let statusTime: String = {
+            let m = recallElapsedSeconds / 60
+            let s = recallElapsedSeconds % 60
+            return String(format: "%d:%02d", m, s)
+        }()
+        RecallGameView(
+            question: round.question,
+            phoneticDisplay: round.target,
+            progressText: "раунд \(store.builderIndex + 1)",
+            segments: round.segments,
+            syllableItems: recallSyllableItems(round: round),
+            slotCount: round.slotCount,
+            assembled: store.assembledBuilder,
+            isCorrect: builderCorrectness,
+            wrongSlotIndices: store.builderWrongSlotIndices,
+            selectedSlotForReplacement: store.builderSelectedSlotForReplacement,
+            onTapSlot: { idx in
+                guard store.builderState != .correct else { return }
+                if store.builderSelectedSlotForReplacement == idx {
+                    store.clearSlotForReplacement()
+                } else {
+                    store.selectSlotForReplacement(idx)
+                }
+            },
+            audioText: round.audioText,
+            onTapSyllable: { text, isInUse in
+                if isInUse, store.builderSelectedSlotForReplacement == nil {
+                    store.removeLastBuilderPiece(matching: text)
+                } else {
+                    store.appendBuilderPiece(text)
+                }
+            },
+            onPlayAudio: round.audioText.map { text in
+                { playBuilderAudio(text, freeIfAvailable: true) }
+            },
+            onRemoveLast: { store.removeLastBuilderPiece() },
+            onReset: { store.resetBuilder() },
+            onCheck: { store.checkBuilderAnswer() },
+            onNextRound: { store.advanceBuilderRound() },
+            roundText: "раунд \(store.builderIndex + 1)",
+            scoreText: "\(store.builderScore)",
+            isLocked: store.builderState == .correct,
+            roundDisplays: roundDisplays.isEmpty ? nil : roundDisplays,
+            currentRoundIndex: store.builderIndex,
+            onSelectRound: { store.selectBuilderRound(at: $0) },
+            lessonTitle: displayTitle ?? gameContextSourceTitle(),
+            statusTimeText: statusTime,
+            statusProgressText: "\(store.builderIndex + 1)/\(max(1, store.builderTotalRounds))",
+            statusMistakes: store.builderMistakeCount,
+            statusScore: store.builderScore,
+            listenHintCost: TaikaStarsStore.costBuilderListen,
+            listenHintFreeAvailable: !builderFreeListenUsed,
+            onListenHint: round.audioText.map { text in
+                { playBuilderAudio(text, freeIfAvailable: false) }
+            }
+        )
     }
 
     @ViewBuilder
@@ -506,65 +659,7 @@ public struct HomeTaskView: View {
         ) {
             Group {
                 if let round = store.currentBuilderRound {
-                    let roundDisplays: [RecallRoundDisplay] = store.builderRoundDisplays.map { d in
-                        RecallRoundDisplay(id: d.id, question: d.question, target: d.target, thai: d.thai)
-                    }
-                    RecallGameView(
-                        question: round.question,
-                        phoneticDisplay: round.target,
-                        progressText: "раунд \(store.builderIndex + 1)",
-                        segments: round.segments,
-                        syllableItems: recallSyllableItems(round: round),
-                        slotCount: round.slotCount,
-                        assembled: store.assembledBuilder,
-                        isCorrect: {
-                            switch store.builderState {
-                            case .correct: return true
-                            case .wrong: return false
-                            default: return nil
-                            }
-                        }(),
-                        wrongSlotIndices: store.builderWrongSlotIndices,
-                        selectedSlotForReplacement: store.builderSelectedSlotForReplacement,
-                        onTapSlot: { idx in
-                            guard store.builderState != .correct else { return }
-                            if store.builderSelectedSlotForReplacement == idx {
-                                store.clearSlotForReplacement()
-                            } else {
-                                store.selectSlotForReplacement(idx)
-                            }
-                        },
-                        audioText: round.audioText,
-                        onTapSyllable: { text, isInUse in
-                            if isInUse, store.builderSelectedSlotForReplacement == nil {
-                                store.removeLastBuilderPiece(matching: text)
-                            } else {
-                                store.appendBuilderPiece(text)
-                            }
-                        },
-                        onPlayAudio: round.audioText.map { text in
-                            { StepAudio.shared.speakThai(text) }
-                        },
-                        onRemoveLast: { store.removeLastBuilderPiece() },
-                        onReset: { store.resetBuilder() },
-                        onCheck: { store.checkBuilderAnswer() },
-                        onNextRound: { store.advanceBuilderRound() },
-                        roundText: "раунд \(store.builderIndex + 1)",
-                        scoreText: "\(store.builderScore)",
-                        isLocked: store.builderState == .correct,
-                        roundDisplays: roundDisplays.isEmpty ? nil : roundDisplays,
-                        currentRoundIndex: store.builderIndex,
-                        onSelectRound: { store.selectBuilderRound(at: $0) },
-                        lessonTitle: displayTitle ?? gameContextSourceTitle(),
-                        statusTimeText: {
-                            let m = recallElapsedSeconds / 60
-                            let s = recallElapsedSeconds % 60
-                            return String(format: "%d:%02d", m, s)
-                        }(),
-                        statusProgressText: "\(store.builderIndex + 1)/\(max(1, store.builderTotalRounds))",
-                        statusMistakes: store.builderMistakeCount,
-                        statusScore: store.builderScore
-                    )
+                    recallGameView(for: round)
                 } else if store.builderState != .finished {
                     TaikaLoadingView(label: "подготовка…", compact: true)
                         .onAppear { startRecallGame() }
@@ -590,9 +685,14 @@ public struct HomeTaskView: View {
             GameHeaderStore.shared.config = nil
         }
         .onChange(of: store.builderIndex) { _, _ in
+            builderFreeListenUsed = false
             GameHeaderStore.shared.config = recallHeaderConfig()
         }
-        .onChange(of: store.builderScore) { _, _ in
+        .onChange(of: store.builderScore) { old, new in
+            let delta = new - old
+            if delta > 0 {
+                TaikaStarsStore.shared.earn(delta)
+            }
             GameHeaderStore.shared.config = recallHeaderConfig()
         }
         .onChange(of: store.builderMistakeCount) { _, _ in
@@ -720,8 +820,27 @@ public struct HomeTaskView: View {
                         nextGameTitle: nextGameTitle,
                         onRepeat: { startRecallGame() },
                         errorCount: store.builderSessionFailedKeys.count,
-                        onRepeatErrors: store.builderSessionFailedKeys.isEmpty ? nil : {
-                            let failed = recallTriples().filter { store.builderSessionFailedKeys.contains(HomeTaskManager.builderCardKey($0)) }
+                        queueErrorCount: isCourseReinforcement
+                            ? ReinforcementStore.shared.failedCardKeys(
+                                courseId: courseId,
+                                lessonIds: reinforcementLessonScope
+                            ).count
+                            : 0,
+                        onRepeatErrors: {
+                            let queueKeys = ReinforcementStore.shared.failedCardKeys(
+                                courseId: courseId,
+                                lessonIds: reinforcementLessonScope
+                            )
+                            let fromQueue = recallTriples().filter {
+                                queueKeys.contains(HomeTaskManager.builderCardKey($0))
+                            }
+                            if !fromQueue.isEmpty {
+                                startRecallGame(from: fromQueue)
+                                return
+                            }
+                            let failed = recallTriples().filter {
+                                store.builderSessionFailedKeys.contains(HomeTaskManager.builderCardKey($0))
+                            }
                             guard !failed.isEmpty else { return }
                             startRecallGame(from: failed)
                         },
@@ -915,15 +1034,16 @@ public struct HomeTaskView: View {
 
     /// Persist the exact source cards encountered in this completed match session.
     /// Global Game Park is grouped back into real courses instead of writing to the pseudo-course.
+    /// Variant A: source − failed leave the course error queue automatically inside ReinforcementStore.
     private func recordMatchedGameMastery() {
         guard !isFavoritesContext, !isDictionaryContext else { return }
         let total = max(1, totalPairsCount)
         let attempts = max(1, tries)
         let accuracy = Double(total) / Double(attempts)
         let percent = max(0, min(100, Int((accuracy * 100).rounded())))
-        let matched = allTriples.filter { matchedPairIds.contains("\($0.ru)|\($0.ph)") }
         let failed = allTriples.filter { failedPairIds.contains("\($0.ru)|\($0.ph)") }
-        if matched.isEmpty {
+        let roundTriples = allTriples
+        if roundTriples.isEmpty {
             let scope = reinforcementLessonScope
             guard !scope.isEmpty else { return }
             ReinforcementStore.shared.recordSession(
@@ -931,31 +1051,26 @@ public struct HomeTaskView: View {
                 gameType: "match",
                 score: percent,
                 failedCardKeys: failed.compactMap(Self.cardKey),
-                // Не очищаем общий error queue после одного режима.
                 lessonIds: scope
             )
             return
         }
-        let grouped = Dictionary(grouping: matched) { triple in
+        let grouped = Dictionary(grouping: roundTriples) { triple in
             let sourceCourse = triple.courseId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return sourceCourse.isEmpty ? courseId : sourceCourse
         }
         for (sourceCourseId, triples) in grouped {
             guard !LearnedGameSource.isPseudoCourseId(sourceCourseId) else { continue }
-            let sourceKeys = triples.compactMap { triple -> String? in
-                guard let lesson = triple.lessonId?.trimmingCharacters(in: .whitespacesAndNewlines), !lesson.isEmpty else { return nil }
-                let phrase = triple.ru.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                guard !phrase.isEmpty else { return nil }
-                return "\(lesson)|\(phrase)"
-            }
+            let sourceKeys = triples.compactMap(Self.cardKey)
+            let failedKeys = failed
+                .filter { ($0.courseId ?? courseId) == sourceCourseId }
+                .compactMap(Self.cardKey)
             ReinforcementStore.shared.recordSession(
                 courseId: sourceCourseId,
                 gameType: "match",
                 score: percent,
                 sourceCardKeys: sourceKeys,
-                failedCardKeys: failed.filter { ($0.courseId ?? courseId) == sourceCourseId }.compactMap(Self.cardKey),
-                // Не очищаем общий error queue после одного режима: курс имеет три разных инструмента.
-                // Очистка должна происходить отдельным завершением corrective loop, а не этой сессией.
+                failedCardKeys: failedKeys,
                 lessonIds: reinforcementLessonScope
             )
         }
@@ -1050,6 +1165,7 @@ public struct HomeTaskView: View {
         tries = 0
         gameElapsedSeconds = 0
         didRecordReinforcementSession = false
+        matchHintUsedOnBoard = false
         selectedLeft = nil; selectedRight = nil
 
         // Seed visible with up to 5 pairs
@@ -1116,6 +1232,7 @@ public struct HomeTaskView: View {
                 rightItems.shuffle()
             }
         }
+        matchHintUsedOnBoard = false
     }
 
     private func currentVisiblePairsCount() -> Int {
@@ -1168,6 +1285,7 @@ public struct HomeTaskView: View {
         let L = leftItems[li]; let R = rightItems[ri]
         if L.pairId == R.pairId {
             matchedPairIds.insert(L.pairId)
+            TaikaStarsStore.shared.earn()
             // mark matched visually
             leftItems[li].state = .matched
             rightItems[ri].state = .matched

@@ -164,7 +164,8 @@ final class FavoriteManager: ObservableObject {
                     meta: it.phonetic,
                     lessonTitle: "словарь",
                     tagText: nil,
-                    addedAt: it.createdAt
+                    addedAt: it.createdAt,
+                    phraseParts: it.phraseParts
                 )
             }
     }
@@ -205,7 +206,14 @@ final class FavoriteManager: ObservableObject {
 
     // 2️⃣: Public helper to check if a course is liked
     public func isCourseLiked(_ courseId: String) -> Bool {
-        likedCourses.contains("course:" + normalized(courseId))
+        let n = normalized(courseId)
+        if likedCourses.contains("course:" + n) { return true }
+        // Tolerate ProgressManager-style ids (`_` → `-`) if anything was stored that way.
+        let asHyphen = n.replacingOccurrences(of: "_", with: "-")
+        if asHyphen != n, likedCourses.contains("course:" + asHyphen) { return true }
+        let asUnderscore = n.replacingOccurrences(of: "-", with: "_")
+        if asUnderscore != n, likedCourses.contains("course:" + asUnderscore) { return true }
+        return false
     }
 
     private let storeKey = "taika.favorites.v1"
@@ -335,7 +343,8 @@ final class FavoriteManager: ObservableObject {
                 courseId: course,
                 lessonId: lesson,
                 lessonTitle: title.isEmpty ? nil : title,
-                createdAt: it.createdAt
+                createdAt: it.createdAt,
+                phraseParts: it.phraseParts
             )
 
             if fixed != it { changed = true }
@@ -789,7 +798,12 @@ final class FavoriteManager: ObservableObject {
 
     /// Add a Smart Speaker phrase into favorites as a personal dictionary card.
     /// Stored as canonical step-like id so Speaker favorites queue can train it.
-    func addSmartSpeakerCard(ru: String, thai: String, phonetic: String) {
+    func addSmartSpeakerCard(
+        ru: String,
+        thai: String,
+        phonetic: String,
+        phraseParts: [FavoritePhrasePart]? = nil
+    ) {
         let ruTrim = ru.trimmingCharacters(in: .whitespacesAndNewlines)
         let thTrim = thai.trimmingCharacters(in: .whitespacesAndNewlines)
         let phTrim = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -811,6 +825,17 @@ final class FavoriteManager: ObservableObject {
         let nextIdx = maxIdx + 1
         let favId = canonicalStepFavoriteId(courseId: courseId, lessonId: lessonId, index: nextIdx)
 
+        let cleanedParts: [FavoritePhrasePart]? = {
+            guard let phraseParts, !phraseParts.isEmpty else { return nil }
+            let mapped = phraseParts.compactMap { part -> FavoritePhrasePart? in
+                let p = part.p.trimmingCharacters(in: .whitespacesAndNewlines)
+                let m = part.m.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !p.isEmpty, !m.isEmpty else { return nil }
+                return FavoritePhrasePart(p: p, m: m)
+            }
+            return mapped.isEmpty ? nil : mapped
+        }()
+
         let stored = FavoriteItem(
             id: favId,
             ru: ruTrim.isEmpty ? "Моя фраза" : ruTrim,
@@ -819,7 +844,8 @@ final class FavoriteManager: ObservableObject {
             courseId: courseId,
             lessonId: lessonId,
             lessonTitle: "мой словарь",
-            createdAt: Date()
+            createdAt: Date(),
+            phraseParts: cleanedParts
         )
 
         DispatchQueue.main.async {
@@ -835,6 +861,55 @@ final class FavoriteManager: ObservableObject {
             self.save()
             self.emit()
         }
+    }
+
+    /// Разбор фразы для карточки словаря: только то, что сохранили из Спикера (API parts).
+    func dictionaryPhraseParts(for card: FDCardDTO) -> [FavoritePhrasePart] {
+        if let saved = card.phraseParts, !saved.isEmpty { return saved }
+        if let item = items.first(where: { normalized($0.id) == normalized(card.sourceId) }),
+           let parts = item.phraseParts, !parts.isEmpty {
+            return parts
+        }
+        return []
+    }
+
+    /// Перезаписывает разбор карточки на месте (id, createdAt и порядок сохраняются).
+    /// Нужно для тихого починки карточек, сохранённых до пословного контракта: у них в
+    /// `phraseParts` может лежать обрезанный разбор, и молча оставлять его нельзя.
+    @discardableResult
+    func replaceDictionaryPhraseParts(sourceId: String, parts: [FavoritePhrasePart]) -> Bool {
+        let idKey = normalized(sourceId)
+        let cleaned = parts.compactMap { part -> FavoritePhrasePart? in
+            let p = part.p.trimmingCharacters(in: .whitespacesAndNewlines)
+            let m = part.m.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !p.isEmpty, !m.isEmpty else { return nil }
+            return FavoritePhrasePart(p: p, m: m)
+        }
+        guard !cleaned.isEmpty else { return false }
+
+        var updated = false
+        applyFavoritesMutation {
+            guard let idx = self.items.firstIndex(where: { self.normalized($0.id) == idKey }) else { return }
+            let existing = self.items[idx]
+            guard existing.phraseParts != cleaned else { return }
+            self.items[idx] = FavoriteItem(
+                id: existing.id,
+                ru: existing.ru,
+                th: existing.th,
+                phonetic: existing.phonetic,
+                courseId: existing.courseId,
+                lessonId: existing.lessonId,
+                lessonTitle: existing.lessonTitle,
+                createdAt: existing.createdAt,
+                phraseParts: cleaned
+            )
+            self.recomputeCaches()
+            self.syncToUserSession()
+            self.save()
+            self.emit()
+            updated = true
+        }
+        return updated
     }
 
     /// Совпадает с дедупликацией в `addSmartSpeakerCard` (нормализованный тайский).
@@ -875,7 +950,8 @@ final class FavoriteManager: ObservableObject {
                 courseId: existing.courseId,
                 lessonId: existing.lessonId,
                 lessonTitle: existing.lessonTitle,
-                createdAt: existing.createdAt
+                createdAt: existing.createdAt,
+                phraseParts: existing.phraseParts
             )
             self.recomputeCaches()
             self.recomputeLikedCourses()
@@ -981,13 +1057,45 @@ final class FavoriteManager: ObservableObject {
     /// Toggle an explicit course favorite. Course favorites are intentionally separate
     /// from favorite lesson cards and always use the course namespace.
     public func toggleCourse(id: String, title: String, subtitle: String, meta: String) {
-        let payload = CourseFavoritePayload(
-            id: normalized(id),
-            title: title,
-            subtitle: subtitle,
-            meta: meta
+        let courseId = normalized(id)
+        guard !courseId.isEmpty else { return }
+        let fid = "course:" + courseId
+
+        if let idx = items.firstIndex(where: { normalized($0.id) == fid }) {
+            applyFavoritesMutation {
+                _ = withAnimation { self.items.remove(at: idx) }
+                self.sortNewestFirst()
+                self.recomputeLikedCourses()
+                self.recomputeCaches()
+                self.syncToUserSession()
+                self.save()
+                self.emit()
+            }
+            return
+        }
+
+        let stored = FavoriteItem(
+            id: fid,
+            ru: title,
+            th: subtitle,
+            phonetic: meta,
+            courseId: courseId,
+            lessonId: "",
+            lessonTitle: nil,
+            createdAt: Date()
         )
-        toggle(item: payload)
+        applyFavoritesMutation {
+            withAnimation {
+                self.items.removeAll { self.normalized($0.id) == fid }
+                self.items.insert(stored, at: 0)
+            }
+            self.sortNewestFirst()
+            self.recomputeLikedCourses()
+            self.recomputeCaches()
+            self.syncToUserSession()
+            self.save()
+            self.emit()
+        }
     }
 
     /// Toggle a generic favoritable entity
@@ -1097,8 +1205,10 @@ final class FavoriteManager: ObservableObject {
         }
 
         let fid: String = {
+            // Explicit course favorites must never be rewritten as steps (ids may contain `.`).
+            if rawId.hasPrefix("course:") { return rawId }
             if rawId.hasPrefix("step:") || rawId.contains(".") { return canonicalizeStepIfPossible(rawId) }
-            // Courses and hacks keep their namespaces (add default course: for bare ids)
+            // Bare ids default to the course namespace
             if !rawId.contains(":") { return "course:" + rawId }
             return rawId
         }()
@@ -1192,6 +1302,7 @@ final class FavoriteManager: ObservableObject {
         }
 
         let fid: String = {
+            if rawId.hasPrefix("course:") { return rawId }
             if rawId.hasPrefix("step:") || rawId.contains(".") {
                 return canonicalizeStepIfPossible(rawId)
             }
@@ -1294,7 +1405,7 @@ final class FavoriteManager: ObservableObject {
 
         if let existingIndex = items.firstIndex(where: { normalized($0.id) == favId }) {
             DispatchQueue.main.async {
-                withAnimation { self.items.remove(at: existingIndex) }
+                _ = withAnimation { self.items.remove(at: existingIndex) }
                 self.sortNewestFirst()
                 self.recomputeLikedCourses()
                 self.syncToUserSession()
@@ -1303,7 +1414,7 @@ final class FavoriteManager: ObservableObject {
             }
         } else {
             DispatchQueue.main.async {
-                withAnimation {
+                _ = withAnimation {
                     // remove duplicates by normalized id before inserting
                     if isHack {
                         self.items.removeAll { self.normalized($0.id) == self.normalized(favId) }
@@ -1598,7 +1709,17 @@ final class FavoriteManager: ObservableObject {
     }
 }
 
-/// data model for one favorite
+/// Word gloss line for Smart Speaker dictionary (phonetic — meaning).
+public struct FavoritePhrasePart: Codable, Hashable {
+    public let p: String
+    public let m: String
+
+    public init(p: String, m: String) {
+        self.p = p
+        self.m = m
+    }
+}
+
 struct FavoriteItem: Identifiable, Codable, Hashable {
     let id: String
     let ru: String
@@ -1608,4 +1729,28 @@ struct FavoriteItem: Identifiable, Codable, Hashable {
     let lessonId: String
     let lessonTitle: String? // optional for backward compatibility
     let createdAt: Date
+    /// Word-level gloss (РАЗБОР) from Smart Speaker — kept with dictionary saves.
+    let phraseParts: [FavoritePhrasePart]?
+
+    init(
+        id: String,
+        ru: String,
+        th: String,
+        phonetic: String,
+        courseId: String,
+        lessonId: String,
+        lessonTitle: String? = nil,
+        createdAt: Date = Date(),
+        phraseParts: [FavoritePhrasePart]? = nil
+    ) {
+        self.id = id
+        self.ru = ru
+        self.th = th
+        self.phonetic = phonetic
+        self.courseId = courseId
+        self.lessonId = lessonId
+        self.lessonTitle = lessonTitle
+        self.createdAt = createdAt
+        self.phraseParts = phraseParts
+    }
 }

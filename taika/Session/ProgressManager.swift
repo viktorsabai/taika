@@ -283,13 +283,26 @@ public final class ProgressManager: ObservableObject {
 
     // MARK: - Effective count helpers
     /// Считаем только word/phrase/casual. Ключи в `learnedSteps` могут быть `order`,
-    /// enumerated index или compact-индекс среди learnable — матчим все три, лайфхаки не учитываем.
+    /// enumerated index или compact-индекс среди learnable — каждое сохранённое значение
+    /// матчим максимум на одну карточку (как hydrate в StepView), иначе один тап даёт
+    /// 2–3 «выученных» и процент скачет (1 карточка → ~30% при ~10 карточках).
     public func learnedEffectiveCount(courseId: String, lessonId: String) -> Int {
+        resolvedLearnedCardIndices(courseId: courseId, lessonId: lessonId).count
+    }
+
+    /// Индексы learnable-карточек (enumerated в `StepData.items`), помеченных выученными 1:1.
+    public func resolvedLearnedCardIndices(courseId: String, lessonId: String) -> Set<Int> {
         let learned = learnedSet(courseId: courseId, lessonId: lessonId)
-        guard !learned.isEmpty else { return 0 }
-        let items = StepData.shared.items(for: lessonId)
-        let invalid = StepData.shared.invalidProgressIndices(for: lessonId)
-        var count = 0
+        guard !learned.isEmpty else { return [] }
+        // Progress keys often use `-`; steps.json may use `_` (or differ by case).
+        guard let resolvedLesson = Self.resolveStepLessonId(lessonId) else { return [] }
+        let items = StepData.shared.items(for: resolvedLesson)
+        guard !items.isEmpty else { return [] }
+        let invalid = StepData.shared.invalidProgressIndices(for: resolvedLesson)
+
+        var byOrder: [Int: Int] = [:]
+        var byEnumerated: [Int: Int] = [:]
+        var byLearnableOrdinal: [Int: Int] = [:]
         var learnableOrdinal = 0
         for (i, item) in items.enumerated() {
             switch item.kind {
@@ -297,14 +310,49 @@ public final class ProgressManager: ObservableObject {
                 let orderKey = item.order >= 0 ? item.order : i
                 defer { learnableOrdinal += 1 }
                 if invalid.contains(orderKey) || invalid.contains(i) { continue }
-                if Self.matchesLearnedIndex(learned, order: orderKey, enumerated: i, learnableOrdinal: learnableOrdinal) {
-                    count += 1
+                if byOrder[orderKey] == nil { byOrder[orderKey] = i }
+                if byEnumerated[i] == nil { byEnumerated[i] = i }
+                if byLearnableOrdinal[learnableOrdinal] == nil {
+                    byLearnableOrdinal[learnableOrdinal] = i
                 }
             default:
                 continue
             }
         }
-        return count
+
+        var resolved = Set<Int>()
+        for value in learned {
+            if let i = byOrder[value] {
+                resolved.insert(i)
+            } else if let i = byEnumerated[value] {
+                resolved.insert(i)
+            } else if let i = byLearnableOrdinal[value] {
+                resolved.insert(i)
+            }
+        }
+        return resolved
+    }
+
+    /// Match Progress lesson keys to an actual `steps.json` lesson id.
+    private static func resolveStepLessonId(_ lessonId: String) -> String? {
+        let raw = lessonId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return nil }
+        let sd = StepData.shared
+        var candidates: [String] = []
+        var seen = Set<String>()
+        func add(_ s: String) {
+            let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !t.isEmpty, seen.insert(t).inserted else { return }
+            candidates.append(t)
+        }
+        if let exact = sd.lessonIdForCaseInsensitiveLookup(raw) { add(exact) }
+        add(raw)
+        add(raw.replacingOccurrences(of: "_", with: "-"))
+        add(raw.replacingOccurrences(of: "-", with: "_"))
+        for cand in candidates {
+            if !sd.items(for: cand).isEmpty { return cand }
+        }
+        return nil
     }
 
     public func totalEffectiveCount(courseId: String, lessonId: String) -> Int {
@@ -332,7 +380,8 @@ public final class ProgressManager: ObservableObject {
         return 0
     }
 
-    /// Совпадение ключа прогресса с карточкой (order / index / compact learnable ordinal).
+    /// Legacy OR-match: только для точечных проверок одной карточки, не для подсчёта урока.
+    /// Для агрегатов используй `resolvedLearnedCardIndices` / `learnedEffectiveCount`.
     public static func matchesLearnedIndex(
         _ learned: Set<Int>,
         order: Int,

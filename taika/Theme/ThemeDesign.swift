@@ -125,6 +125,10 @@ public enum Theme {
         public static func metric(_ size: CGFloat) -> Font {
             .system(size: size, weight: .medium, design: .monospaced)
         }
+        /// Выразительные очки/проценты (разбор, hero-score): жирнее и круглее, чем `metric`.
+        public static func score(_ size: CGFloat) -> Font {
+            .system(size: size, weight: .bold, design: .rounded)
+        }
         public static let heading: Font = .system(size: 22, weight: .semibold, design: .rounded)
         public static let body: Font    = .system(size: 16, weight: .regular, design: .rounded)
         public static let caption: Font = .system(size: 12, weight: .regular, design: .rounded)
@@ -353,6 +357,35 @@ public enum Theme {
                     ],
                     startPoint: .top,
                     endPoint: .bottom
+                )
+                .blendMode(.plusLighter)
+            }
+        }
+
+        /// Полноэкранный жидкий чёрный глянец — без серого material-«мешка».
+        /// Для outcome / practice / focus-сцен, где подложка должна быть чёрной и глянцевой.
+        public static var liquidBlackGloss: some View {
+            ZStack {
+                Color.black
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.16),
+                        Color.white.opacity(0.05),
+                        Color.clear,
+                        Color.black.opacity(0.55)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .blendMode(.plusLighter)
+                RadialGradient(
+                    colors: [
+                        Color.white.opacity(0.08),
+                        Color.clear
+                    ],
+                    center: UnitPoint(x: 0.5, y: 0.18),
+                    startRadius: 8,
+                    endRadius: 380
                 )
                 .blendMode(.plusLighter)
             }

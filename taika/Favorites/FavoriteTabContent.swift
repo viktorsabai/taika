@@ -289,23 +289,14 @@ private struct FavInsetGroup<Content: View>: View {
         RoundedRectangle(cornerRadius: FDFavListChrome.rowCorner, style: .continuous)
     }
 
-    private var accentWash: LinearGradient {
-        LinearGradient(
-            colors: [
-                ThemeManager.shared.currentAccentTintColor.opacity(0.12),
-                Color.clear
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             content
         }
-        .background(.ultraThinMaterial, in: groupShape)
-        .overlay(accentWash.clipShape(groupShape))
+        .background(groupShape.fill(PD.ColorToken.card.opacity(0.92)))
+        .overlay(
+            groupShape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+        )
         .clipShape(groupShape)
         .padding(.horizontal, CD.Spacing.screen)
     }
@@ -426,6 +417,20 @@ enum FavCardsViewMode: String, CaseIterable, Identifiable {
     case grid
 
     var id: String { rawValue }
+
+    /// Один режим на Карточки и Словарь — переключение вкладок его не сбрасывает.
+    static let storageKey = "taika.fav.viewMode"
+    private static let legacyCardsKey = "taika.fav.cards.viewMode"
+    private static let legacyDictKey = "taika.fav.dict.viewMode"
+
+    /// Переносит старые раздельные ключи в общий (один раз).
+    static func migrateStorageIfNeeded() {
+        let ud = UserDefaults.standard
+        guard ud.object(forKey: storageKey) == nil else { return }
+        if let raw = ud.string(forKey: legacyCardsKey) ?? ud.string(forKey: legacyDictKey) {
+            ud.set(raw, forKey: storageKey)
+        }
+    }
 
     var systemImage: String {
         switch self {
@@ -913,6 +918,7 @@ private struct FDFavPhraseCompactRow: View {
     var onEdit: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
     var onTrain: (() -> Void)? = nil
+    var onShowBreakdown: (() -> Void)? = nil
 
     private var russian: String {
         dto.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -950,6 +956,11 @@ private struct FDFavPhraseCompactRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onPlay)
+                .onLongPressGesture(minimumDuration: 0.35) {
+                    guard showsDictionaryActions, let onShowBreakdown else { return }
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    onShowBreakdown()
+                }
 
                 if showsDictionaryActions {
                     DictionaryPhraseActionsMenu(
@@ -978,6 +989,7 @@ private struct FDFavPhraseCompactRow: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel([phonetic, russian].filter { !$0.isEmpty }.joined(separator: ", "))
+        .accessibilityHint(showsDictionaryActions ? "Долгое нажатие — разбор фразы" : "")
     }
 }
 
@@ -1052,7 +1064,7 @@ struct FDFavCardsTabList: View {
     var onUnfavorite: (FDCardDTO) -> Void
     var onOpenCourse: (String) -> Void = { _ in }
 
-    @AppStorage("taika.fav.cards.viewMode") private var viewModeRaw: String = FavCardsViewMode.list.rawValue
+    @AppStorage(FavCardsViewMode.storageKey) private var viewModeRaw: String = FavCardsViewMode.list.rawValue
     @State private var collapsedCourseIds: Set<String> = []
     @State private var focusedCourseId: String? = nil
     @State private var draggingCourseId: String? = nil
@@ -1219,6 +1231,7 @@ private struct FDFavPhraseGridCard: View {
     var onEdit: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
     var onTrain: (() -> Void)? = nil
+    var onShowBreakdown: (() -> Void)? = nil
 
     @State private var appeared = false
 
@@ -1241,10 +1254,16 @@ private struct FDFavPhraseGridCard: View {
         let shape = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
         ZStack(alignment: .topTrailing) {
             VStack(alignment: .leading, spacing: 0) {
+                Text("taikA")
+                    .font(Font.custom("ONMARK Trial", size: 14))
+                    .foregroundStyle(Color.secondary)
+
+                Spacer(minLength: 10)
+
                 if !russian.isEmpty {
                     Text(russian)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.95))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .lineLimit(2)
@@ -1252,7 +1271,7 @@ private struct FDFavPhraseGridCard: View {
                         .padding(.trailing, 28)
                 }
 
-                Spacer(minLength: 6)
+                Spacer(minLength: 8)
 
                 Group {
                     if !phonetic.isEmpty {
@@ -1268,54 +1287,79 @@ private struct FDFavPhraseGridCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                     } else if !russian.isEmpty {
                         Text(russian)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(PD.ColorToken.text)
                             .multilineTextAlignment(.leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .lineLimit(4)
                             .minimumScaleFactor(0.72)
                     } else {
                         Text("—")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.headline.weight(.semibold))
                             .foregroundStyle(PD.ColorToken.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
 
-                Spacer(minLength: 8)
+                Spacer(minLength: 10)
 
                 if !pathLabel.isEmpty {
                     Text(pathLabel)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
                         .lineLimit(2)
                         .minimumScaleFactor(0.85)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 14)
-            .padding(.bottom, 12)
-            .padding(.trailing, 22)
+            .padding(16)
             .frame(width: size.width, height: size.height, alignment: .topLeading)
 
             Button(action: onUnfavorite) {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 34, height: 32)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Убрать из избранного")
-            .padding(.top, 6)
-            .padding(.trailing, 6)
+            .padding(.top, 12)
+            .padding(.trailing, 12)
         }
-        .background(Theme.Surfaces.card(shape))
+        .background {
+            ZStack {
+                Theme.Surfaces.card(shape)
+                // Phrase cards are ~½ course size — keep DNA, dial vines down so copy stays readable.
+                TaikaOrganicCardLinesOverlay(
+                    cardSeed: TaikaOrganicCardSeed.value(for: dto.id),
+                    intensity: 0.52,
+                    isFavorite: true,
+                    lineWidthScale: 0.5,
+                    amplitudeScale: 0.5
+                )
+                .mask(
+                    LinearGradient(
+                        colors: [.clear, .white.opacity(0.22), .white.opacity(0.72)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .clipShape(shape)
+            }
+        }
+        .overlay(
+            shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+        )
         .contentShape(shape)
         .onTapGesture {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             onPlay()
+        }
+        .onLongPressGesture(minimumDuration: 0.35) {
+            guard showsDictionaryActions, let onShowBreakdown else { return }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            onShowBreakdown()
         }
         .overlay(alignment: .bottomTrailing) {
             if showsDictionaryActions {
@@ -1327,16 +1371,6 @@ private struct FDFavPhraseGridCard: View {
                     compact: true
                 )
                 .padding(8)
-            }
-        }
-        .contextMenu {
-            if showsDictionaryActions {
-                dictionaryPhraseContextMenu(
-                    card: dto,
-                    onEdit: onEdit,
-                    onDelete: onDelete,
-                    onTrain: onTrain
-                )
             }
         }
         .opacity(appeared ? 1 : 0)
@@ -1353,7 +1387,7 @@ private struct FDFavPhraseGridCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel([phonetic, russian].filter { !$0.isEmpty }.joined(separator: ", "))
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Прослушать")
+        .accessibilityHint(showsDictionaryActions ? "Прослушать. Долгое нажатие — разбор" : "Прослушать")
         .accessibilityAction(named: "Убрать из избранного", onUnfavorite)
     }
 }
@@ -1372,17 +1406,18 @@ private struct FavCourseBlock<Content: View>: View {
         let shape = RoundedRectangle(cornerRadius: FDFavListChrome.rowCorner, style: .continuous)
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                Button(action: onOpenCourse) {
+                // Primary: collapse/expand group (same as course-card identity chrome)
+                Button(action: onToggle) {
                     HStack(spacing: 10) {
                         RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                            .fill(ThemeManager.shared.currentAccentFill.opacity(isFocused ? 1 : 0.85))
+                            .fill(ThemeManager.shared.currentAccentFill.opacity(isFocused || !isCollapsed ? 1 : 0.7))
                             .frame(width: isFocused ? 4 : 3, height: 16)
 
                         Text(title.uppercased())
                             .font(.system(size: 11, weight: .bold))
                             .tracking(0.55)
                             .foregroundStyle(
-                                isFocused
+                                (!isCollapsed || isFocused)
                                 ? AnyShapeStyle(PD.ColorToken.text)
                                 : AnyShapeStyle(PD.ColorToken.textSecondary)
                             )
@@ -1391,34 +1426,33 @@ private struct FavCourseBlock<Content: View>: View {
 
                         Spacer(minLength: 8)
 
-                        Image(systemName: "line.3.horizontal")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.45))
-                            .accessibilityHidden(true)
-
                         Text("\(phraseCount)")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.8))
                             .monospacedDigit()
+
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.65))
+                            .rotationEffect(.degrees(isCollapsed ? -90 : 0))
                     }
                     .padding(.leading, FDFavListChrome.rowHPad)
                     .padding(.vertical, 11)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Открыть курс \(title), \(phraseCount) карточек")
-                .accessibilityHint("Открыть курс и продолжить обучение")
+                .accessibilityLabel("\(title), \(phraseCount)")
+                .accessibilityHint(isCollapsed ? "Развернуть" : "Свернуть")
 
-                Button(action: onToggle) {
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.65))
-                        .rotationEffect(.degrees(isCollapsed ? -90 : 0))
+                Button(action: onOpenCourse) {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ThemeManager.shared.currentAccentFill.opacity(0.85))
                         .frame(width: 42, height: 42)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(isCollapsed ? "Развернуть карточки курса" : "Свернуть карточки курса")
+                .accessibilityLabel("Открыть курс \(title)")
             }
             .padding(.trailing, 4)
 
@@ -1433,22 +1467,11 @@ private struct FavCourseBlock<Content: View>: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .background(.ultraThinMaterial, in: shape)
-        .overlay(
-            LinearGradient(
-                colors: [
-                    ThemeManager.shared.currentAccentTintColor.opacity(isFocused ? 0.16 : 0.08),
-                    Color.clear
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .clipShape(shape)
-        )
+        .background(shape.fill(PD.ColorToken.card.opacity(0.92)))
         .overlay(
             shape.stroke(
                 isFocused
-                ? AnyShapeStyle(ThemeManager.shared.currentAccentTintColor.opacity(0.42))
+                ? AnyShapeStyle(ThemeManager.shared.currentAccentTintColor.opacity(0.38))
                 : AnyShapeStyle(Theme.Strokes.strokeSubtle),
                 lineWidth: Theme.Strokes.strokeLineWidth
             )
@@ -1583,8 +1606,9 @@ struct FDFavDictionaryTabList: View {
 
     @EnvironmentObject private var nav: NavigationIntent
     @State private var editingCard: DictionaryEditTarget?
+    @State private var breakdownCard: DictionaryEditTarget?
 
-    @AppStorage("taika.fav.dict.viewMode") private var viewModeRaw: String = FavCardsViewMode.list.rawValue
+    @AppStorage(FavCardsViewMode.storageKey) private var viewModeRaw: String = FavCardsViewMode.list.rawValue
 
     private var viewMode: Binding<FavCardsViewMode> {
         Binding(
@@ -1616,6 +1640,14 @@ struct FDFavDictionaryTabList: View {
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(28)
                 }
+                .sheet(item: $breakdownCard) { target in
+                    DictionaryPhraseBreakdownSheet(card: target.card) {
+                        breakdownCard = nil
+                    }
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(28)
+                }
         }
     }
 
@@ -1642,7 +1674,8 @@ struct FDFavDictionaryTabList: View {
                         showsDictionaryActions: true,
                         onEdit: { editingCard = DictionaryEditTarget(card: dto) },
                         onDelete: { onUnfavorite(dto) },
-                        onTrain: { trainInSpeaker() }
+                        onTrain: { trainInSpeaker() },
+                        onShowBreakdown: { breakdownCard = DictionaryEditTarget(card: dto) }
                     )
                 }
             }
@@ -1663,7 +1696,8 @@ struct FDFavDictionaryTabList: View {
                     showsDictionaryActions: true,
                     onEdit: { editingCard = DictionaryEditTarget(card: dto) },
                     onDelete: { onUnfavorite(dto) },
-                    onTrain: { trainInSpeaker() }
+                    onTrain: { trainInSpeaker() },
+                    onShowBreakdown: { breakdownCard = DictionaryEditTarget(card: dto) }
                 )
             }
         }
