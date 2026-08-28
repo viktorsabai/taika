@@ -73,6 +73,8 @@ def assess(audio_path: str, text: str, expected_tones: str | None = None) -> dic
             "tone_actual": tone_actual,
             "tone_score": tone_score,
             "feedback": feedback,
+            "start_s": round(float(c.get("start_s", 0)), 3),
+            "end_s": round(float(c.get("end_s", 0)), 3),
         }
         # Normalized pitch contour (semitones) for UI "wow" graph
         contour_list = contour.tolist() if hasattr(contour, "tolist") else list(contour)

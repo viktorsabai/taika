@@ -7,11 +7,13 @@ from __future__ import annotations
 
 import asyncio
 import difflib
+import functools
 import importlib
 import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import json
@@ -133,6 +135,11 @@ async def post_assess(
 # --- Smart Speaker: RU -> (thai, phonetic) in Taika style ---
 
 ARROWS = ("→", "↓", "↘", "↑", "↗")
+# Верхняя граница разбора — предохранитель от разросшегося ответа модели, а не норма.
+# Отсечка режет саму фразу, поэтому запас щедрый: клиент ограничивает ввод 12 русскими
+# словами, а честное пословное деление тайского даёт заметно больше единиц, чем русский
+# оригинал (артикли-классификаторы, разнесённые «ไม่ + เผ็ด», «ร้อน + มาก»).
+MAX_WORDS = 32
 # Иногда модель выдаёт ↕/↔ вместо одного из пяти тоновых знаков Taika — нормализуем в средний тон.
 _PHONETIC_ARROW_FIXUPS = (
     ("↕", "→"),
@@ -256,6 +263,55 @@ def _has_thai_script(s: str) -> bool:
     return bool(_THAI_SCRIPT_RE.search(s))
 
 
+def _strip_thai_from_explanation(text: str) -> str:
+    """
+    Тайское письмо в объяснении для пользователя — мусор: он его не читает, всё тайское
+    приходит к нему кириллицей. Вырезаем скрипт и подчищаем осиротевшую пунктуацию
+    («слово ครับ — вежливость» → «слово — вежливость» → «слово — вежливость»).
+    """
+    if not _has_thai_script(text or ""):
+        return text or ""
+    out = _THAI_SCRIPT_RE.sub(" ", text)
+    out = re.sub(r"\(\s*\)|\[\s*\]|«\s*»", " ", out)
+    out = re.sub(r"\s+([,.;:!?])", r"\1", out)
+    out = re.sub(r"([,;:])\s*(?=[,.;:])", "", out)
+    out = re.sub(r"\s+", " ", out).strip(" -–—,;:")
+    return out
+
+
+_CONTRAST_SEPARATORS = ("нужно было", "а нужен", "а нужно", "а надо", "а не", "вместо")
+_ADVICE_TOKEN_TRIM = ".,;:!?«»\"'()[]"
+
+
+def _is_degenerate_advice(text: str) -> bool:
+    """
+    Совет, у которого обе стороны противопоставления совпадают: «используй май↗ вместо май↗».
+    Ничему не учит и читается как поломка приложения.
+
+    Возникает там, где два тайских слова различаются только тоном: кириллицей они пишутся
+    одинаково, и без названия тона совет схлопывается. Стрелки здесь значимы —
+    «май↘ вместо май↗» это нормальный, полезный совет.
+    """
+    t = (text or "").lower()
+    if not t:
+        return False
+    for phrase in _CONTRAST_SEPARATORS[:-1]:
+        t = t.replace(phrase, " вместо ")
+    tokens = [w.strip(_ADVICE_TOKEN_TRIM) for w in t.split()]
+    tokens = [w for w in tokens if w]
+    for i, w in enumerate(tokens):
+        if w != "вместо" or i == 0 or i + 1 >= len(tokens):
+            continue
+        if tokens[i - 1] == tokens[i + 1]:
+            return True
+    return False
+
+
+def _first_sentence(text: str) -> str:
+    m = re.search(r"^(.+?[.!?])(\s|$)", (text or "").strip())
+    return (m.group(1) if m else (text or "")).strip()
+
+
 def _cyrillic_letters_only(s: str) -> str:
     """Только буквы а-яё подряд (без пробелов), lower."""
     return "".join(re.findall(r"[а-яё]", (s or "").lower()))
@@ -335,26 +391,92 @@ def _collapse_letter_space_arrow(phonetic: str) -> str:
     return phonetic
 
 
+_IPA_REPLACEMENTS = (
+    ("dʒ", "дж"), ("tʃ", "ч"),
+    ("ū", "у"), ("ē", "е"), ("ā", "а"), ("ī", "и"), ("ō", "о"),
+    ("í", "и"), ("ú", "у"), ("é", "е"), ("ó", "о"), ("á", "а"),
+    ("ɛ", "е"), ("ɪ", "и"), ("ɔ", "о"), ("ʌ", "а"), ("ə", "э"),
+    ("ʃ", "ш"), ("ʒ", "ж"), ("ŋ", "нг"), ("ɲ", "нь"),
+    ("ʰ", ""), ("ʹ", ""), ("ʿ", ""), ("ʻ", ""), ("ˈ", ""), ("ˌ", ""),
+)
+
+# RTGS-подобная латиница иногда протекает в phonetic («ng», «khrap»). Раньше она проходила
+# насквозь и ломала сравнение чанков (латинская g ≠ кириллическая г) — теперь транслитерируем.
+_LATIN_TO_CYR = {
+    "ng": "нг", "kh": "кх", "ph": "пх", "th": "тх", "ch": "ч", "dj": "дж",
+    "aa": "а", "ee": "и", "ii": "и", "oo": "у", "uu": "у", "ae": "э", "oe": "ы",
+    "ue": "ы", "eu": "ы", "ai": "ай", "ao": "ау", "aw": "о", "iu": "иу", "ua": "уа",
+    "a": "а", "b": "б", "c": "к", "d": "д", "e": "е", "f": "ф", "g": "г", "h": "х",
+    "i": "и", "j": "дж", "k": "к", "l": "л", "m": "м", "n": "н", "o": "о", "p": "п",
+    "q": "к", "r": "р", "s": "с", "t": "т", "u": "у", "v": "в", "w": "в", "x": "кс",
+    "y": "й", "z": "з",
+}
+_LATIN_RE = re.compile(
+    "|".join(sorted((re.escape(k) for k in _LATIN_TO_CYR), key=len, reverse=True)),
+    re.IGNORECASE,
+)
+
+
+def _latin_to_cyrillic_phonetic(s: str) -> str:
+    """«ng» → «нг», «khrap» → «кхрап». Кириллица — единственный алфавит phonetic."""
+    if not s or not re.search(r"[A-Za-z]", s):
+        return s
+    return _LATIN_RE.sub(lambda m: _LATIN_TO_CYR[m.group(0).lower()], s)
+
+
 def _normalize_phonetic(phonetic: str) -> str:
     """Убирает IPA, латиницу в фонетике, тайский скрипт; оставляет кириллицу и стрелки →↓↘↑↗."""
-    replacements = [
-        ("ū", "у"), ("ē", "е"), ("ā", "а"), ("ī", "и"), ("ō", "о"),
-        ("í", "и"), ("ú", "у"), ("é", "е"), ("ó", "о"), ("á", "а"),
-        ("ɛ", "е"), ("ɪ", "и"), ("ɔ", "о"), ("ʌ", "а"), ("ə", "э"),
-        ("ʃ", "ш"), ("ʒ", "ж"), ("ŋ", "нг"), ("ɲ", "нь"),
-        ("dʒ", "дж"), ("tʃ", "ч"),
-        ("ʰ", ""), ("ʹ", ""), ("ʿ", ""), ("ʻ", ""), ("ˈ", ""), ("ˌ", ""),
-    ]
     out = _strip_thai_from_phonetic(phonetic)
-    for old, new in replacements:
+    for old, new in _IPA_REPLACEMENTS:
         out = out.replace(old, new)
     for bad, good in _PHONETIC_ARROW_FIXUPS:
         out = out.replace(bad, good)
     out = _fix_latin_i_in_phonetic(out)
+    out = _latin_to_cyrillic_phonetic(out)
     out = re.sub(r"\s+", " ", out).strip()
     out = _collapse_letter_space_arrow(out)
     out = _normalize_phonetic_word_spaces(out)
     return out
+
+
+def _strip_arrows(s: str) -> str:
+    out = s or ""
+    for a in ARROWS + ("↕", "↔", "⇕", "⇅"):
+        out = out.replace(a, "")
+    return out.strip()
+
+
+def _normalize_phonetic_token(raw: str) -> str:
+    """
+    Нормализация ОДНОГО слова: внутри слова пробелов быть не может — только дефисы,
+    поэтому `_normalize_phonetic_word_spaces` (режет по стрелкам) здесь не применяется.
+    """
+    s = _strip_thai_from_phonetic(raw or "")
+    # Скобочные пояснения («кхун (you)») — комментарий модели, а не звучание.
+    s = re.sub(r"[(\[{][^)\]}]*[)\]}]", " ", s)
+    for old, new in _IPA_REPLACEMENTS:
+        s = s.replace(old, new)
+    for bad, good in _PHONETIC_ARROW_FIXUPS:
+        s = s.replace(bad, good)
+    s = _fix_latin_i_in_phonetic(s)
+    s = _latin_to_cyrillic_phonetic(s)
+    s = re.sub(r"\s+", " ", s).strip()
+    s = _collapse_letter_space_arrow(s)
+    s = re.sub(r"[^а-яёА-ЯЁ→↓↘↑↗\s-]", "", s)
+    s = re.sub(r"[\s-]*-[\s-]*", "-", s)
+    s = re.sub(r"\s+", "-", s)
+    s = re.sub(r"-{2,}", "-", s)
+    return s.strip("- ")
+
+
+def _normalize_phonetic_line(phonetic: str) -> str:
+    """
+    Санитайз уже согласованной строки С СОХРАНЕНИЕМ границ слов.
+    В отличие от `_normalize_phonetic`, не режет «ру↑-сык↘» по стрелке: там дефис —
+    это стык слогов внутри одного тайского слова, а не граница слов.
+    """
+    tokens = [_normalize_phonetic_token(t) for t in (phonetic or "").split()]
+    return " ".join(t for t in tokens if t)
 
 
 def _normalize_phonetic_word_spaces(phonetic: str) -> str:
@@ -417,7 +539,11 @@ class SemanticCoachResp(BaseModel):
 # Bump this whenever the LLM system prompt changes meaning-affecting behavior:
 # it namespaces cache keys so old (possibly wrong) cached translations become
 # unreachable instead of being served forever via INSERT OR REPLACE.
-_SMART_CACHE_PROMPT_VERSION = "v7"
+# v8: пословный контракт (thai/phonetic/parts собираются из одного массива слов) —
+# все записи v7 и раньше могли содержать обрезанный разбор, поэтому становятся недостижимыми.
+# v9: одна строка разбора = одно словарное слово. Записи v8 могли склеивать
+# самостоятельные слова («หูตลก — смешное ухо»), пряча слово от пользователя.
+_SMART_CACHE_PROMPT_VERSION = "v9"
 
 
 def _cache_db_path() -> Path:
@@ -514,13 +640,16 @@ def _normalize_parts(raw: list[Any]) -> list[dict[str, str]]:
         for a in ARROWS:
             p = p.replace(a, "")
         p = re.sub(r"\s+", " ", p).strip(" -–—")
+        # Значение читает пользователь, который тайскую графику не знает: «ครับ — вежливость»
+        # для него начинается с непонятного квадратика. Оставляем только русский текст.
+        m = _strip_thai_from_explanation(m)
         m = re.sub(r"\s+", " ", m).strip()
         if not p or not m:
             continue
         if _has_thai_script(p):
             continue
         out.append({"p": p, "m": m})
-        if len(out) >= 12:
+        if len(out) >= MAX_WORDS:
             break
     return out
 
@@ -619,8 +748,19 @@ def _align_parts_to_phonetic(parts: list[dict[str, str]], phonetic: str) -> list
     return out
 
 
-def _finalize_parts(ru: str, thai: str, phonetic: str, parts: list[dict[str, str]]) -> list[dict[str, str]]:
-    ph = _normalize_phonetic_word_spaces(phonetic)
+def _finalize_parts(
+    ru: str,
+    thai: str,
+    phonetic: str,
+    parts: list[dict[str, str]],
+    preserve_word_boundaries: bool = False,
+) -> list[dict[str, str]]:
+    """
+    `preserve_word_boundaries=True` — строка уже канонична (пришла от клиента или из
+    пословного контракта), и дефис в ней это стык слогов внутри слова. Резать её по
+    «стрелка-дефис» нельзя: «са-баи→-ди→» развалится на два слова и разбор разъедется.
+    """
+    ph = phonetic.strip() if preserve_word_boundaries else _normalize_phonetic_word_spaces(phonetic)
     groups = _phonetic_word_groups(ph)
     aligned = _align_parts_to_phonetic(parts, ph)
 
@@ -650,6 +790,388 @@ _init_cache_db()
 
 OPENAI_API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip()
 OPENAI_MODEL = (os.getenv("TAIKA_SMART_MODEL") or "gpt-4o-mini").strip()
+OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions"
+
+
+def _openai_chat_json(
+    *,
+    system: str,
+    user: str,
+    temperature: float,
+    timeout: float,
+    schema: dict[str, Any] | None = None,
+    tag: str = "smart_speaker",
+) -> dict[str, Any] | None:
+    """
+    Один вход для всех LLM-вызовов. Пробует Structured Outputs (strict json_schema);
+    если аккаунт/модель их не принимает — откатывается на json_object, а не падает.
+    """
+    if not OPENAI_API_KEY:
+        return None
+    body: dict[str, Any] = {
+        "model": OPENAI_MODEL,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "temperature": temperature,
+    }
+    formats: list[dict[str, Any]] = []
+    if schema:
+        formats.append({"type": "json_schema", "json_schema": schema})
+    formats.append({"type": "json_object"})
+
+    for fmt in formats:
+        body["response_format"] = fmt
+        try:
+            resp = requests.post(
+                OPENAI_CHAT_URL,
+                headers={
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json=body,
+                timeout=timeout,
+            )
+        except Exception as e:  # pragma: no cover - network errors
+            print(f"[{tag}] openai request failed: {e}", file=sys.stderr, flush=True)
+            return None
+        if resp.status_code == 400 and fmt.get("type") == "json_schema":
+            print(f"[{tag}] json_schema rejected, falling back to json_object", file=sys.stderr, flush=True)
+            continue
+        if resp.status_code >= 300:
+            print(f"[{tag}] openai http {resp.status_code}: {resp.text[:200]}", file=sys.stderr, flush=True)
+            return None
+        try:
+            content = resp.json()["choices"][0]["message"]["content"]
+            data = json.loads(content)
+            return data if isinstance(data, dict) else None
+        except Exception as e:  # pragma: no cover - defensive
+            print(f"[{tag}] parse error: {e}", file=sys.stderr, flush=True)
+            return None
+    return None
+
+
+# --- Word-level contract -------------------------------------------------
+#
+# Раньше модель писала `phonetic` строкой, а `parts` — отдельным списком, и сервер сверял
+# их сравнением строк. Любое расхождение (лишний дефис, латинская буква) молча убивало разбор.
+# Теперь модель отдаёт СЛОВА, а `thai` / `phonetic` / `parts` собираются из одного массива —
+# рассинхрон невозможен by construction.
+
+_WORDS_SCHEMA: dict[str, Any] = {
+    "name": "thai_words",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["words"],
+        "properties": {
+            "words": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["th", "ph", "m"],
+                    "properties": {
+                        "th": {"type": "string", "description": "One Thai word, Thai script only"},
+                        "ph": {"type": "string", "description": "Cyrillic pronunciation of that word + tone arrows"},
+                        "m": {"type": "string", "description": "Russian meaning of that word in this sentence"},
+                    },
+                },
+            }
+        },
+    },
+}
+
+
+def _clean_words(raw: Any) -> list[dict[str, str]]:
+    """Санитайз массива слов: тайский скрипт в th, кириллица+стрелки в ph, чистый gloss в m."""
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, str]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        th = "".join(_THAI_SCRIPT_RE.findall(str(item.get("th") or "")))
+        ph = _normalize_phonetic_token(str(item.get("ph") or ""))
+        # Значение читает пользователь, тайскую графику он не знает. Пословный путь
+        # собирает parts напрямую, минуя `_normalize_parts`, поэтому чистим здесь.
+        # Если после чистки не осталось смысла — `_validate_words` увидит пустое «m»
+        # и отправит ответ в ремонтный проход.
+        m = _strip_thai_from_explanation(str(item.get("m") or ""))
+        m = re.sub(r"\s+", " ", m).strip()
+        if not th and not ph:
+            continue
+        # Частицу вежливости добавляет сервер. Опознаём её по тайскому написанию, а не по
+        # звучанию: ขา («нога») тоже читается «кха», и по фонетике его срезало бы зря.
+        if th:
+            if _THAI_POLITENESS_TRAIL_RE.fullmatch(th):
+                continue
+        elif _is_politeness_chunk(ph):
+            continue
+        out.append({"th": th, "ph": ph, "m": m})
+        if len(out) >= MAX_WORDS:
+            # Обрезка укорачивает и саму фразу, не только разбор — это не рядовое
+            # событие, а сигнал, что предохранитель сработал по живому вводу.
+            if len(raw) > MAX_WORDS:
+                print(
+                    f"[smart_speaker.words] hit MAX_WORDS={MAX_WORDS}, dropped {len(raw) - MAX_WORDS} words",
+                    file=sys.stderr,
+                    flush=True,
+                )
+            break
+    return out
+
+
+@functools.lru_cache(maxsize=4096)
+def _thai_word_tokens(th: str) -> tuple[str, ...]:
+    """
+    Границы слов по словарю newmm. Ошибка или отсутствие PyThaiNLP — не повод ронять
+    перевод: возвращаем строку одним токеном, и проверка склейки просто молчит.
+    """
+    s = (th or "").strip()
+    if not s:
+        return ()
+    try:
+        from pythainlp.tokenize import word_tokenize
+
+        tokens = [t for t in word_tokenize(s, engine="newmm", keep_whitespace=False) if t.strip()]
+    except Exception as e:  # noqa: BLE001 — словарь опционален, деградируем молча
+        print(f"[smart_speaker.words] thai tokenizer unavailable: {e}", file=sys.stderr, flush=True)
+        return (s,)
+    return tuple(tokens) or (s,)
+
+
+def _segmentation_problems(words: list[dict[str, str]]) -> list[str]:
+    """
+    Ловит склейку самостоятельных слов в одну строку разбора: «หูตลก — смешное ухо»
+    вместо «หู — ухо» + «ตลก — смешной». Формально такой ответ согласован и проходит
+    все остальные инварианты, но слово прячется от пользователя — в следующей фразе
+    он «ху» уже не узнает, а ради узнавания слов он приложением и пользуется.
+
+    Границу слова определяет словарь, а не длина строки: настоящие сращения
+    (สบายดี, อย่างไร, น้ำแข็ง, โรงพยาบาล) словарь держит одним токеном, а свободные
+    сочетания (หู+ตลก, ผู้หญิง+สวย, ร้อน+มาก) разбирает на части.
+    """
+    problems: list[str] = []
+    for i, w in enumerate(words):
+        th = (w.get("th") or "").strip()
+        if not th:
+            continue
+        tokens = _thai_word_tokens(th)
+        if len(tokens) > 1:
+            problems.append(
+                f"word[{i}] '{th}' is {len(tokens)} separate Thai words ({' + '.join(tokens)}): "
+                "split it into one entry per word, each with its own \"ph\" and \"m\""
+            )
+    return problems
+
+
+def _validate_words(ru: str, words: list[dict[str, str]]) -> list[str]:
+    """Инварианты ответа. Пустой список = ответ пригоден к показу."""
+    if not words:
+        return ["empty words array"]
+    problems: list[str] = []
+    multi = len(words) > 1
+    for i, w in enumerate(words):
+        th, ph, m = w.get("th", ""), w.get("ph", ""), w.get("m", "")
+        if not th:
+            problems.append(f"word[{i}]: 'th' is empty or not Thai script")
+        if not ph:
+            problems.append(f"word[{i}]: 'ph' is empty")
+        elif not re.search(r"[а-яё]", ph, re.IGNORECASE):
+            problems.append(f"word[{i}] '{th}': 'ph' has no Cyrillic letters")
+        if not m:
+            problems.append(f"word[{i}] '{th}': 'm' is empty")
+        elif _is_weak_gloss(m):
+            problems.append(f"word[{i}] '{th}': 'm' is too vague ({m!r})")
+        elif multi and _is_whole_phrase_gloss(m, ru):
+            problems.append(f"word[{i}] '{th}': 'm' repeats the whole sentence instead of this word")
+    if not any(any(a in w.get("ph", "") for a in ARROWS) for w in words):
+        problems.append("no tone arrows anywhere in 'ph'")
+    return problems
+
+
+def _words_to_outputs(words: list[dict[str, str]]) -> tuple[str, str, list[dict[str, str]]]:
+    """Единственное место, где рождаются thai / phonetic / parts — из одного массива."""
+    usable = [w for w in words if w.get("th") and w.get("ph") and w.get("m")]
+    thai = "".join(w["th"] for w in usable)
+    phonetic = " ".join(w["ph"] for w in usable)
+    parts = [{"p": _strip_arrows(w["ph"]), "m": w["m"]} for w in usable]
+    return thai, phonetic, parts
+
+
+def _politeness_part(politeness: str) -> dict[str, str]:
+    if _norm_politeness(politeness) == "male":
+        return {"p": "кхрап", "m": "вежливость (м)"}
+    return {"p": "кха", "m": "вежливость (ж)"}
+
+
+def _append_politeness(thai: str, phonetic: str, politeness: str) -> tuple[str, str]:
+    """
+    Версия `_apply_politeness` без предварительной зачистки хвоста: на пословном пути
+    частицы в ответе модели уже отсеяны по тайскому написанию, а слепое срезание
+    «кха» из фонетики съело бы обычное слово вроде ขา.
+    """
+    if _norm_politeness(politeness) == "male":
+        return (thai + " ครับ").strip(), (phonetic + " кхрап↘").strip()
+    return (thai + " ค่ะ").strip(), (phonetic + " кха↘").strip()
+
+
+def _parts_match_phonetic(phonetic: str, parts: list[dict[str, str]]) -> bool:
+    """Главный инвариант выдачи: один gloss на каждое слово фонетики, в том же порядке."""
+    groups = _phonetic_word_groups(phonetic)
+    if len(groups) != len(parts):
+        return False
+    return all(_part_key(g) == _part_key(p.get("p", "")) for g, p in zip(groups, parts))
+
+
+def _aligned_parts_only(phonetic: str, parts: list[dict[str, str]], where: str) -> list[dict[str, str]]:
+    """
+    Рассогласованный разбор не отдаём вообще: пустой список — сигнал клиенту дотянуть его
+    отдельным запросом. Пара «слово — чужое значение» учит неправильному и подрывает доверие
+    к функции; отсутствие разбора читается всего лишь как свойство фразы.
+    """
+    if not parts:
+        return []
+    if _parts_match_phonetic(phonetic, parts):
+        return parts
+    print(
+        f"[smart_speaker] dropping unaligned parts ({where}): {len(parts)} parts vs "
+        f"{len(_phonetic_word_groups(phonetic))} phonetic chunks",
+        file=sys.stderr,
+        flush=True,
+    )
+    return []
+
+
+def _words_system_prompt(politeness: str, problems: list[str] | None) -> str:
+    p = _norm_politeness(politeness)
+    particle = "ครับ / кхрап" if p == "male" else "ค่ะ / кха"
+    base = (
+        "You are a Thai teacher for Russian speakers.\n"
+        "Translate the Russian sentence into natural Thai and return it SPLIT INTO WORDS as JSON.\n\n"
+        "For every Thai word return three fields:\n"
+        "  \"th\" — that single word in Thai script (Thai letters only, no spaces).\n"
+        "  \"ph\" — how THAT word sounds, in Russian Cyrillic + tone arrows.\n"
+        "  \"m\"  — what THAT word means IN THIS sentence (Russian, 1-4 words).\n\n"
+        "\"ph\" rules (STRICT):\n"
+        "- Cyrillic а-я/ё ONLY. Never Latin letters: write «нг», not «ng»; «кх», not «kh».\n"
+        "- No Thai script, no IPA, no accents.\n"
+        "- Tone arrows: only → ↓ ↘ ↑ ↗ , each glued right after its syllable.\n"
+        "- A multi-syllable word joins its syllables with hyphens INSIDE \"ph\": «ру↑-сык↘».\n"
+        "- No accent marks or combining diacritics — plain Cyrillic letters only.\n"
+        "- NEVER put a space inside \"ph\" — one word = one \"ph\".\n\n"
+        "Splitting rules (STRICT):\n"
+        "- One entry = ONE Thai dictionary word. A noun and the word describing it are\n"
+        "  SEPARATE entries: «смешное ухо» is หู (ухо) + ตลก (смешной), never one «หูตลก».\n"
+        "- Same for verb + object, adjective + intensifier: ร้อน (горячо) + มาก (очень).\n"
+        "- But a real compound that lives in the dictionary stays ONE entry:\n"
+        "  สบายดี, อย่างไร, น้ำแข็ง, โรงพยาบาล, ขอบคุณ.\n"
+        "- The learner reads only these entries, so a hidden word is a word never learned.\n\n"
+        "\"m\" rules:\n"
+        "- The role of THAT word here, not a dictionary dump of all senses.\n"
+        "- NEVER put the translation of the whole sentence into one \"m\".\n"
+        "- Russian only. No Thai script inside \"m\" — the learner cannot read it.\n\n"
+        "Translation rules:\n"
+        "- Keep the exact meaning: same subject (я/ты/вы/он), same tense, a question stays a question.\n"
+        "- If the Russian names a language (русский/английский/тайский), keep that EXACT language.\n"
+        "- Do NOT translate into a more \"typical\" app phrase than what was asked.\n"
+        f"- Do NOT output {particle} anywhere — the server appends exactly one politeness particle.\n\n"
+        "Example — Russian «Как ваше настроение»:\n"
+        "{\"words\":[{\"th\":\"คุณ\",\"ph\":\"кхун→\",\"m\":\"вы\"},"
+        "{\"th\":\"รู้สึก\",\"ph\":\"ру↑-сык↘\",\"m\":\"чувствуете\"},"
+        "{\"th\":\"อย่างไร\",\"ph\":\"я↘нг-рай→\",\"m\":\"как\"}]}\n"
+        "Note: รู้สึก and อย่างไร are single words, so their syllables are joined by a hyphen.\n\n"
+        "Example — Russian «Очень смешное ухо» (three separate words, never glued):\n"
+        "{\"words\":[{\"th\":\"หู\",\"ph\":\"ху↑\",\"m\":\"ухо\"},"
+        "{\"th\":\"ตลก\",\"ph\":\"та↓-лок↓\",\"m\":\"смешной\"},"
+        "{\"th\":\"มาก\",\"ph\":\"мак↘\",\"m\":\"очень\"}]}\n"
+        "Note: «หูตลก» as one entry would be WRONG — it hides the word หู from the learner.\n\n"
+        "Return JSON: {\"words\":[{\"th\":\"...\",\"ph\":\"...\",\"m\":\"...\"}]}"
+    )
+    if problems:
+        base += (
+            "\n\nYour previous answer was REJECTED. Fix exactly these problems and return the whole array again:\n"
+            + "\n".join(f"- {p}" for p in problems[:8])
+        )
+    return base
+
+
+def _llm_words_ru_to_th(
+    ru: str,
+    politeness: str | None,
+    problems: list[str] | None = None,
+    timeout: float = 12.0,
+) -> list[dict[str, str]] | None:
+    p = _norm_politeness(politeness)
+    is_question = (ru.rstrip()).endswith("?")
+    user = (
+        f"Russian sentence: {ru!r}{' (this is a question)' if is_question else ''}\n"
+        f"Speaker politeness: {p} (do not write the particle yourself).\n"
+        "Return the Thai translation split into words."
+    )
+    data = _openai_chat_json(
+        system=_words_system_prompt(p, problems),
+        user=user,
+        temperature=0.2 if problems else 0.35,
+        timeout=timeout,
+        schema=_WORDS_SCHEMA,
+        tag="smart_speaker.words",
+    )
+    if not data:
+        return None
+    return _clean_words(data.get("words"))
+
+
+# Клиент ждёт ответ 25 с. Проход по словам (до двух попыток) обязан оставить время
+# на legacy-запас, иначе пользователь получит таймаут вместо перевода.
+_WORDS_TIME_BUDGET_S = 13.0
+
+
+def _smart_translate_words(ru: str, politeness: str) -> tuple[str, str, list[dict[str, str]]] | None:
+    """
+    Основной путь /smart_speaker. Возвращает согласованные (thai, phonetic, parts)
+    либо None — тогда вызывающий откатывается на legacy-путь. Брак наружу не отдаём.
+    """
+    started = time.monotonic()
+    attempt_problems: list[str] | None = None
+    # Слишком крупный, но корректный разбор: придерживаем на случай, если ремонтный
+    # проход не справится. Показать «ху-талок — смешное ухо» хуже, чем два слова,
+    # но заметно лучше, чем не показать разбор вовсе.
+    coarse: tuple[str, str, list[dict[str, str]]] | None = None
+    for attempt in range(2):
+        left = _WORDS_TIME_BUDGET_S - (time.monotonic() - started)
+        if attempt and left < 4.0:
+            print("[smart_speaker.words] out of time budget, skipping repair pass", file=sys.stderr, flush=True)
+            return coarse
+        words = _llm_words_ru_to_th(ru, politeness, problems=attempt_problems, timeout=max(4.0, left))
+        if not words:
+            attempt_problems = ["response had no usable words"]
+            continue
+        problems = _validate_words(ru, words)
+        if not problems:
+            thai, phonetic, parts = _words_to_outputs(words)
+            if _phonetic_is_spelled_russian_source(ru, phonetic):
+                problems = ["\"ph\" spells the Russian sentence instead of Thai pronunciation"]
+            elif not _parts_match_phonetic(phonetic, parts):
+                problems = ["internal: parts did not line up with phonetic"]
+            else:
+                merges = _segmentation_problems(words)
+                if not merges:
+                    if attempt:
+                        print("[smart_speaker.words] recovered on repair pass", file=sys.stderr, flush=True)
+                    return thai, phonetic, parts
+                coarse = (thai, phonetic, parts)
+                problems = merges
+        print(
+            f"[smart_speaker.words] rejected (attempt {attempt + 1}): {'; '.join(problems[:4])}",
+            file=sys.stderr,
+            flush=True,
+        )
+        attempt_problems = problems
+    return coarse
 
 
 def _llm_translate_ru_to_th(ru: str, politeness: str | None) -> tuple[str, str, list[dict[str, str]]] | None:
@@ -1002,33 +1524,57 @@ async def smart_speaker(req: SmartSpeakerReq):
     cached = _cache_get(ru_norm, politeness)
     if cached:
         thai, phonetic, parts = cached
+        canonical = _normalize_phonetic_line(phonetic)
+        if _parts_match_phonetic(canonical, parts):
+            # Запись v8 уже согласована — не гоняем её через выравнивание заново.
+            return {"thai": thai, "phonetic": canonical, "parts": parts}
         phonetic = _normalize_phonetic(phonetic)
         phonetic = _sanitize_phonetic_not_russian_spellout(ru, thai, phonetic)
         thai, phonetic = _strip_trailing_politeness(thai, phonetic)
         thai, phonetic = _apply_politeness(thai, phonetic, politeness)
         parts = _finalize_parts(ru, thai, phonetic, parts)
-        if parts:
+        if _parts_match_phonetic(phonetic, parts):
             _cache_set(ru_norm, politeness, thai, phonetic, parts)
+        parts = _aligned_parts_only(phonetic, parts, "cache")
         return {"thai": thai, "phonetic": phonetic, "parts": parts}
 
-    # 2. Steps.json — точное совпадение
+    # 2. Steps.json — точное совпадение (фонетика авторская, её не переписываем)
     idx = _load_steps_index()
     hit = idx.get(ru_norm)
     if hit:
         thai, phonetic = hit
-        parts = []
-    else:
-        # 3. LLM — генерация (если настроен OPENAI_API_KEY)
-        if not OPENAI_API_KEY:
-            print("[smart_speaker] OPENAI_API_KEY not set, cannot translate", file=sys.stderr, flush=True)
-            raise HTTPException(status_code=404, detail="no match and OPENAI_API_KEY not set in Railway Variables")
-        llm = _llm_translate_ru_to_th(ru, politeness)
-        if not llm:
-            raise HTTPException(
-                status_code=404,
-                detail="LLM translation failed. Check Railway logs for OpenAI errors. Model=" + OPENAI_MODEL,
-            )
-        thai, phonetic, parts = llm
+        thai, phonetic = _apply_politeness(thai, _normalize_phonetic(phonetic), politeness)
+        parts = _finalize_parts(ru, thai, phonetic, _llm_phrase_parts(ru, thai, phonetic) or [])
+        if _parts_match_phonetic(phonetic, parts):
+            _cache_set(ru_norm, politeness, thai, phonetic, parts)
+        parts = _aligned_parts_only(phonetic, parts, "steps")
+        return {"thai": thai, "phonetic": phonetic, "parts": parts}
+
+    if not OPENAI_API_KEY:
+        print("[smart_speaker] OPENAI_API_KEY not set, cannot translate", file=sys.stderr, flush=True)
+        raise HTTPException(status_code=404, detail="no match and OPENAI_API_KEY not set in Railway Variables")
+
+    # 3. Основной путь: пословный контракт — thai/phonetic/parts из одного массива слов.
+    built = _smart_translate_words(ru, politeness)
+    if built:
+        thai, phonetic, parts = built
+        thai, phonetic = _append_politeness(thai, phonetic, politeness)
+        parts = parts + [_politeness_part(politeness)]
+        if _parts_match_phonetic(phonetic, parts):
+            _cache_set(ru_norm, politeness, thai, phonetic, parts)
+            print(f"[smart_speaker] words path ok: {len(parts)} parts", file=sys.stderr, flush=True)
+            return {"thai": thai, "phonetic": phonetic, "parts": parts}
+        print("[smart_speaker] words path lost alignment after politeness", file=sys.stderr, flush=True)
+
+    # 4. Legacy-путь: отдельные phonetic + parts со сверкой строк. Держим как страховку,
+    #    чтобы отказ структурированного ответа не оставлял пользователя без перевода.
+    llm = _llm_translate_ru_to_th(ru, politeness)
+    if not llm:
+        raise HTTPException(
+            status_code=404,
+            detail="LLM translation failed. Check Railway logs for OpenAI errors. Model=" + OPENAI_MODEL,
+        )
+    thai, phonetic, parts = llm
 
     phonetic = _normalize_phonetic(phonetic)
     phonetic = _sanitize_phonetic_not_russian_spellout(ru, thai, phonetic)
@@ -1038,9 +1584,12 @@ async def smart_speaker(req: SmartSpeakerReq):
         parts = _llm_phrase_parts(ru, thai, phonetic) or []
     parts = _finalize_parts(ru, thai, phonetic, parts)
 
-    # 4. Сохраняем в кэш (с учётом politeness — результат уже с кхрап/кха)
-    _cache_set(ru_norm, politeness, thai, phonetic, parts)
+    # Кэшируем только согласованный результат: битый разбор не должен «залипать» навсегда.
+    if _parts_match_phonetic(phonetic, parts):
+        _cache_set(ru_norm, politeness, thai, phonetic, parts)
 
+    # Перевод и произношение отдаём всегда — это главное. Разбор только если он сошёлся.
+    parts = _aligned_parts_only(phonetic, parts, "legacy")
     return {"thai": thai, "phonetic": phonetic, "parts": parts}
 
 
@@ -1055,11 +1604,21 @@ async def phrase_parts(req: PhrasePartsReq):
     """Word-level gloss for an already-translated Smart Speaker phrase."""
     ru = (req.text_ru or "").strip()
     thai = (req.text_th or "").strip()
-    phonetic = _normalize_phonetic((req.phonetic or "").strip())
+    # Клиент присылает уже готовую строку — границы слов в ней смысловые. Агрессивный
+    # `_normalize_phonetic` разорвал бы «са-баи→-ди→» на слоги, и разбор снова разъехался бы.
+    phonetic = _normalize_phonetic_line((req.phonetic or "").strip())
     if not thai and not phonetic:
         raise HTTPException(status_code=400, detail="text_th or phonetic required")
-    parts = _finalize_parts(ru, thai, phonetic, _llm_phrase_parts(ru, thai, phonetic) or [])
-    return {"parts": parts}
+    parts = _finalize_parts(
+        ru,
+        thai,
+        phonetic,
+        _llm_phrase_parts(ru, thai, phonetic) or [],
+        preserve_word_boundaries=True,
+    )
+    # Тот же инвариант, что и в /smart_speaker: сюда клиент приходит именно за чистым
+    # разбором, поэтому отдать полурассыпавшийся — хуже, чем не отдать ничего.
+    return {"parts": _aligned_parts_only(phonetic, parts, "phrase_parts")}
 
 
 @app.post("/thai_phonetic")
@@ -1085,18 +1644,52 @@ async def thai_phonetic(req: ThaiPhoneticReq):
     return {"phonetic": phonetic}
 
 
-def _llm_semantic_coach(req: SemanticCoachReq) -> SemanticCoachResp | None:
-    if not OPENAI_API_KEY:
-        return None
+def _usable_coach(raw_headline: str, raw_detail: str) -> SemanticCoachResp | None:
+    """
+    Единственное место, где решается, годна ли подсказка к показу. Правила в промпте —
+    не гарантия, поэтому фильтруем на выходе: тайская графика, вырожденное
+    противопоставление и пустой заголовок одинаково подрывают доверие к разбору.
+
+    Пустой заголовок при живом пояснении не выбрасываем целиком — поднимаем первую фразу
+    пояснения наверх: совет остаётся, а блок не выглядит обрубленным.
+    """
+    headline = _strip_thai_from_explanation(raw_headline).strip()
+    detail = _strip_thai_from_explanation(raw_detail).strip()
+
+    if headline and _is_degenerate_advice(headline):
+        print(f"[semantic_coach] dropping degenerate headline: {headline!r}", file=sys.stderr, flush=True)
+        headline = ""
+    if detail and _is_degenerate_advice(detail):
+        print(f"[semantic_coach] dropping degenerate detail: {detail!r}", file=sys.stderr, flush=True)
+        detail = ""
+
+    if not headline:
+        if not detail:
+            return None
+        headline = _first_sentence(detail)
+        detail = detail[len(headline):].strip()
+
+    return SemanticCoachResp(headline=headline, detail=detail or None)
+
+
+def _openai_post_coach_raw(req: SemanticCoachReq) -> dict[str, Any] | None:
+    """Сырой ответ модели. Вынесено отдельно, чтобы фильтр `_usable_coach` тестировался сквозь эндпоинт."""
     weak = req.weak_syllables or []
     weak_txt = json.dumps(weak[:6], ensure_ascii=False) if weak else "[]"
     system = (
         "You are a Thai pronunciation coach for Russian-speaking learners. "
         "Return JSON {\"headline\": \"...\", \"detail\": \"...\"} in Russian.\n"
-        "headline: one short line (max 8 words) — the ONE main fix.\n"
+        "headline: one short line (max 8 words) — the ONE main fix. REQUIRED, never empty.\n"
         "detail: 1-2 sentences — concrete: wrong word vs wrong tone vs wrong syllable. "
         "If heard_thai differs from expected_thai, explain the semantic difference when expected_ru is given. "
-        "Never invent Thai words not in the input. No markdown."
+        "Never invent Thai words not in the input. No markdown.\n"
+        "NEVER write Thai script: the learner cannot read it. To name a Thai word, use its "
+        "Russian Cyrillic pronunciation from expected_phonetic / heard_phonetic instead.\n"
+        "Two Thai words can share the same Cyrillic spelling and differ ONLY by tone. In that case "
+        "naming the words is useless — «используй май вместо май» teaches nothing. Name the TONE in "
+        "Russian words instead: «в слове май нужен нисходящий тон, а прозвучал восходящий». "
+        "Tone names: ровный, низкий, нисходящий, высокий, восходящий.\n"
+        "NEVER return advice where both sides of «вместо» / «а не» / «нужно было» are the same text."
     )
     user = (
         f"expected_ru: {req.expected_ru!r}\n"
@@ -1133,15 +1726,19 @@ def _llm_semantic_coach(req: SemanticCoachReq) -> SemanticCoachResp | None:
     if resp.status_code >= 300:
         return None
     try:
-        content = resp.json()["choices"][0]["message"]["content"]
-        data = json.loads(content)
-        headline = str(data.get("headline", "")).strip()
-        detail = str(data.get("detail", "")).strip() or None
-        if not headline:
-            return None
-        return SemanticCoachResp(headline=headline, detail=detail)
+        data = json.loads(resp.json()["choices"][0]["message"]["content"])
+        return data if isinstance(data, dict) else None
     except Exception:
         return None
+
+
+def _llm_semantic_coach(req: SemanticCoachReq) -> SemanticCoachResp | None:
+    if not OPENAI_API_KEY:
+        return None
+    data = _openai_post_coach_raw(req)
+    if not data:
+        return None
+    return _usable_coach(str(data.get("headline", "")), str(data.get("detail", "")))
 
 
 @app.post("/semantic_coach")
