@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from pitch_tracker import extract_pitch_contours
+from syllable_contract import expected_tones_for_chunks, phonetic_syllable_chunks
 from tone_compare import process_syllable_contour
 
 
@@ -38,15 +39,31 @@ def parse_expected_tones(opt: str | None, n_syllables: int) -> list[str]:
     return out[:n_syllables]
 
 
-def assess(audio_path: str, text: str, expected_tones: str | None = None) -> dict:
+def assess(
+    audio_path: str,
+    text: str,
+    expected_tones: str | None = None,
+    phonetic: str | None = None,
+) -> dict:
     """
     Run tone assessment; returns Phase D–compatible dict with total_score and syllables.
     Used by both CLI and API. On error returns {"error": "..."}.
+
+    When `phonetic` is present, syllable count follows teaching chunks (same as iOS
+    breakdown rows), not Thai tokenizer length.
     """
-    _log(f"assess: audio={audio_path!r} text={text!r} expected_tones={expected_tones!r}")
+    chunks = phonetic_syllable_chunks(phonetic)
+    _log(
+        f"assess: audio={audio_path!r} text={text!r} expected_tones={expected_tones!r} "
+        f"phonetic_chunks={len(chunks)}"
+    )
     try:
         _log("extract_pitch_contours: start")
-        contours = extract_pitch_contours(audio_path, text)
+        contours = extract_pitch_contours(
+            audio_path,
+            text,
+            syllable_labels=chunks or None,
+        )
         _log("extract_pitch_contours: done")
     except Exception as e:
         _log(f"ошибка extract_pitch_contours: {e}")
@@ -56,7 +73,14 @@ def assess(audio_path: str, text: str, expected_tones: str | None = None) -> dic
         _log("контуров нет (пустое аудио или текст)")
         return {"total_score": 0, "syllables": []}
 
-    expected_list = parse_expected_tones(expected_tones, len(contours))
+    if chunks and len(chunks) == len(contours):
+        expected_list = expected_tones_for_chunks(chunks)
+        parsed = parse_expected_tones(expected_tones, len(contours))
+        supplied = [p.strip() for p in (expected_tones or "").split(",") if p.strip()]
+        if len(supplied) == len(contours):
+            expected_list = parsed
+    else:
+        expected_list = parse_expected_tones(expected_tones, len(contours))
     syllables_out = []
     scores = []
     for idx, (c, tone_expected) in enumerate(zip(contours, expected_list)):
@@ -96,6 +120,11 @@ def main() -> int:
         default=None,
         help="Comma-separated expected tones per syllable, e.g. Mid,Falling (default: all Mid)",
     )
+    parser.add_argument(
+        "--phonetic",
+        default=None,
+        help="Cyrillic teaching phonetic; when set, audio is split into these chunks",
+    )
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
     args = parser.parse_args()
 
@@ -104,7 +133,7 @@ def main() -> int:
         print(json.dumps({"error": f"Audio file not found: {args.audio}"}), file=sys.stderr)
         return 1
 
-    result = assess(str(audio_path), args.text, args.expected_tones)
+    result = assess(str(audio_path), args.text, args.expected_tones, args.phonetic)
     if "error" in result:
         print(json.dumps(result), file=sys.stderr)
         return 1

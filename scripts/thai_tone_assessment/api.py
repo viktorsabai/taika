@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
 Minimal FastAPI server for Thai tone assessment (Phase C).
-POST /assess: multipart form with "file" (audio) + "text" (Thai target); returns Phase D–compatible JSON.
+POST /assess: multipart form with "file" (audio) + "text" (Thai target)
++ optional "phonetic" (Cyrillic teaching chunks; syllable count follows this, not Thai tokenizer)
++ optional "expected_tones"; returns Phase D–compatible JSON.
 """
 from __future__ import annotations
 
@@ -62,6 +64,10 @@ async def post_assess(
     file: UploadFile = File(..., description="Audio file (WAV preferred)"),
     text: str = Form(..., description="Target Thai word or phrase"),
     expected_tones: str | None = Form(None, description="Optional: comma-separated tones, e.g. Mid,Falling"),
+    phonetic: str | None = Form(
+        None,
+        description="Cyrillic teaching phonetic; syllable count follows these chunks, not Thai tokenizer",
+    ),
     text_score: int | None = Form(None, description="Optional: 0-100 text similarity from client (ASR); used for hybrid_score"),
 ):
     """
@@ -97,7 +103,12 @@ async def post_assess(
             loop.run_in_executor(
                 None,
                 # Lazy import: avoid slow librosa/numba import at server startup.
-                lambda: importlib.import_module("run_phase_c").assess(assess_path, text.strip(), expected_tones),
+                lambda: importlib.import_module("run_phase_c").assess(
+                    assess_path,
+                    text.strip(),
+                    expected_tones,
+                    (phonetic or "").strip() or None,
+                ),
             ),
             timeout=ASSESS_TIMEOUT_S,
         )
@@ -424,9 +435,119 @@ def _latin_to_cyrillic_phonetic(s: str) -> str:
     return _LATIN_RE.sub(lambda m: _LATIN_TO_CYR[m.group(0).lower()], s)
 
 
-def _normalize_phonetic(phonetic: str) -> str:
-    """Убирает IPA, латиницу в фонетике, тайский скрипт; оставляет кириллицу и стрелки →↓↘↑↗."""
-    out = _strip_thai_from_phonetic(phonetic)
+# Spoken digits in house phonetic. 3+ digit strings (1669, 555) are read one by one;
+# 1–99 use Thai tens. Tones follow the course cards (нынг→, сип→, ий-сип→).
+_TAIKA_DIGIT = (
+    "сун→", "нынг→", "сонг→", "сам→", "си→",
+    "ха→", "хок→", "чет→", "пэт→", "кау→",
+)
+_TAIKA_ONES_PLACE = (
+    "сун→", "эт→", "сонг→", "сам→", "си→",
+    "ха→", "хок→", "чет→", "пэт→", "кау→",
+)
+_TAIKA_TENS = {
+    2: "ий-сип→",
+    3: "сам→-сип→",
+    4: "си→-сип→",
+    5: "ха→-сип→",
+    6: "хок→-сип→",
+    7: "чет→-сип→",
+    8: "пэт→-сип→",
+    9: "кау→-сип→",
+}
+_ARROW_CLASS = "→↓↘↑↗"
+_GLUE_AFTER_ARROW_RE = re.compile(
+    # Хвост без собственной стрелки до конца слога. Lookahead обязан смотреть
+    # дальше одной буквы: иначе «ру↑-сык↘» откатится к «ру↑-сы» + «к↘» → «русы↑к↘».
+    rf"([а-яёА-ЯЁ-]+)([{_ARROW_CLASS}])(?:[\s-]*)([а-яёА-ЯЁ]+)(?![а-яёА-ЯЁ-]*[{_ARROW_CLASS}])"
+)
+
+
+def _int_to_taika(n: int) -> str:
+    if n < 0:
+        n = 0
+    if n < 10:
+        return _TAIKA_DIGIT[n]
+    if n == 10:
+        return "сип→"
+    if n < 20:
+        return "сип→-" + _TAIKA_ONES_PLACE[n - 10]
+    if n < 100:
+        tens, ones = divmod(n, 10)
+        head = _TAIKA_TENS[tens]
+        if ones == 0:
+            return head
+        return head + "-" + _TAIKA_ONES_PLACE[ones]
+    return "-".join(_TAIKA_DIGIT[int(d)] for d in str(n))
+
+
+def _expand_phonetic_digits(s: str) -> str:
+    """
+    Цифры в phonetic — дыра в контракте: ученик читает «90→», а не «кау→-сип→».
+    «4x6» / «4кс6» (латинский x уже стал «кс») — размер фото, не слово «икс».
+    """
+    if not s or not re.search(r"\d", s):
+        return s
+
+    def times(m: re.Match[str]) -> str:
+        return f"{_int_to_taika(int(m.group(1)))}-кху→-{_int_to_taika(int(m.group(2)))}"
+
+    out = re.sub(r"(\d+)\s*[xх×]\s*(\d+)", times, s, flags=re.IGNORECASE)
+    out = re.sub(r"(\d+)\s*кс\s*(\d+)", times, out)
+
+    def num(m: re.Match[str]) -> str:
+        raw = m.group(1)
+        spoken = (
+            "-".join(_TAIKA_DIGIT[int(d)] for d in raw)
+            if len(raw) >= 3
+            else _int_to_taika(int(raw))
+        )
+        return spoken
+
+    # Стрелку, которую модель приклеила к числу («90→»), съедаем: у spoken свои.
+    out = re.sub(rf"(\d+)[{_ARROW_CLASS}]?", num, out)
+    return out
+
+
+def _glue_letters_after_arrows(s: str) -> str:
+    """
+    หิว — один слог. Модель пишет «хи↘в» / «хи↘-в» / «хи↘ в», и тогда
+    `_normalize_phonetic_word_spaces` делает из хвоста отдельное слово «в».
+    Три чанка phonetic не сходятся с тайскими словами — разбор выкидывается.
+
+    Не склеиваем, если у следующих букв уже есть своя стрелка: «хи↘ кхрап↘».
+    Букву в конце слога после склейки поправляет `_house_w_coda`.
+    """
+    prev = None
+    out = s or ""
+    while prev != out:
+        prev = out
+        out = _GLUE_AFTER_ARROW_RE.sub(r"\1\3\2", out)
+    return out
+
+
+_HOUSE_W_CODA_RE = re.compile(
+    rf"([аеёиоуыэюя])в(?=[{_ARROW_CLASS}\s-]|$)"
+)
+_HOUSE_IO_CODA_RE = re.compile(rf"ио(?=[{_ARROW_CLASS}\s-]|$)")
+_HOUSE_YU_CODA_RE = re.compile(rf"ью(?=[{_ARROW_CLASS}\s-]|$)")
+
+
+def _house_w_coda(s: str) -> str:
+    """
+    Конечная ว — гласный скольжения, в курсе это «у»: хиу, лэу, кхиу.
+    Латиница w→в и royin «hio» дают хив / хио; «хью» — та же ошибка другим алфавитом.
+    Начальная ว не трогаем: ว่า → ва.
+    """
+    out = _HOUSE_W_CODA_RE.sub(r"\1у", s or "")
+    out = _HOUSE_IO_CODA_RE.sub("иу", out)
+    out = _HOUSE_YU_CODA_RE.sub("иу", out)
+    return out
+
+
+def _shape_phonetic(s: str) -> str:
+    """Общая зачистка: IPA, латиница, цифры, обрубки после стрелки. Границы слов не трогает."""
+    out = _strip_thai_from_phonetic(s or "")
     for old, new in _IPA_REPLACEMENTS:
         out = out.replace(old, new)
     for bad, good in _PHONETIC_ARROW_FIXUPS:
@@ -434,9 +555,20 @@ def _normalize_phonetic(phonetic: str) -> str:
     out = _fix_latin_i_in_phonetic(out)
     out = _latin_to_cyrillic_phonetic(out)
     out = re.sub(r"\s+", " ", out).strip()
+    out = _expand_phonetic_digits(out)
+    out = _glue_letters_after_arrows(out)
+    out = _house_w_coda(out)
     out = _collapse_letter_space_arrow(out)
-    out = _normalize_phonetic_word_spaces(out)
     return out
+
+
+def _normalize_phonetic(phonetic: str) -> str:
+    """Убирает IPA, латиницу в фонетике, тайский скрипт; оставляет кириллицу и стрелки →↓↘↑↗."""
+    out = _shape_phonetic(phonetic)
+    out = _normalize_phonetic_word_spaces(out)
+    # word_spaces мог снова оторвать «↘-в» → «↘ в»; склеиваем повторно.
+    out = _glue_letters_after_arrows(out)
+    return _house_w_coda(out)
 
 
 def _strip_arrows(s: str) -> str:
@@ -450,23 +582,18 @@ def _normalize_phonetic_token(raw: str) -> str:
     """
     Нормализация ОДНОГО слова: внутри слова пробелов быть не может — только дефисы,
     поэтому `_normalize_phonetic_word_spaces` (режет по стрелкам) здесь не применяется.
+    Цифры раскрываем ДО вычистки non-Cyrillic, иначе «90→» превращалось в голую стрелку.
     """
     s = _strip_thai_from_phonetic(raw or "")
     # Скобочные пояснения («кхун (you)») — комментарий модели, а не звучание.
     s = re.sub(r"[(\[{][^)\]}]*[)\]}]", " ", s)
-    for old, new in _IPA_REPLACEMENTS:
-        s = s.replace(old, new)
-    for bad, good in _PHONETIC_ARROW_FIXUPS:
-        s = s.replace(bad, good)
-    s = _fix_latin_i_in_phonetic(s)
-    s = _latin_to_cyrillic_phonetic(s)
-    s = re.sub(r"\s+", " ", s).strip()
-    s = _collapse_letter_space_arrow(s)
+    s = _shape_phonetic(s)
     s = re.sub(r"[^а-яёА-ЯЁ→↓↘↑↗\s-]", "", s)
     s = re.sub(r"[\s-]*-[\s-]*", "-", s)
     s = re.sub(r"\s+", "-", s)
     s = re.sub(r"-{2,}", "-", s)
-    return s.strip("- ")
+    s = s.strip("- ")
+    return _house_w_coda(_glue_letters_after_arrows(s))
 
 
 def _normalize_phonetic_line(phonetic: str) -> str:
@@ -474,8 +601,12 @@ def _normalize_phonetic_line(phonetic: str) -> str:
     Санитайз уже согласованной строки С СОХРАНЕНИЕМ границ слов.
     В отличие от `_normalize_phonetic`, не режет «ру↑-сык↘» по стрелке: там дефис —
     это стык слогов внутри одного тайского слова, а не граница слов.
+
+    Сначала склеиваем обрубок после стрелки на всей строке: иначе «хи↘ в» — два токена
+    и glue внутри токена его уже не достаёт.
     """
-    tokens = [_normalize_phonetic_token(t) for t in (phonetic or "").split()]
+    shaped = _shape_phonetic(phonetic or "")
+    tokens = [_normalize_phonetic_token(t) for t in shaped.split()]
     return " ".join(t for t in tokens if t)
 
 
@@ -543,7 +674,9 @@ class SemanticCoachResp(BaseModel):
 # все записи v7 и раньше могли содержать обрезанный разбор, поэтому становятся недостижимыми.
 # v9: одна строка разбора = одно словарное слово. Записи v8 могли склеивать
 # самостоятельные слова («หูตลก — смешное ухо»), пряча слово от пользователя.
-_SMART_CACHE_PROMPT_VERSION = "v9"
+# v10: цифры в phonetic раскрываются в кириллицу; «хи↘ в» склеивается обратно в слог.
+# Записи v9 с «90→» и пустым разбором из-за обрубка «в» становятся недостижимыми.
+_SMART_CACHE_PROMPT_VERSION = "v10"
 
 
 def _cache_db_path() -> Path:
@@ -679,6 +812,11 @@ def _is_weak_gloss(m: str) -> bool:
         return True
     letters = re.sub(r"[^а-яёa-z]+", "", t.lower(), flags=re.IGNORECASE)
     if len(letters) <= 1:
+        # «я» / «и» / «а» — нормальные значения слов, не обрубок. Иначе
+        # «Я хочу есть» срывалось с пословного пути (ฉัน → «я») на legacy,
+        # где หิว резалось на «хи↘ в» и разбор пропадал.
+        if letters in {"я", "и", "а"}:
+            return False
         return True
     if re.fullmatch(r"[вукс]\s*/\s*[вукс]", t.lower()):
         return True
@@ -982,6 +1120,10 @@ def _validate_words(ru: str, words: list[dict[str, str]]) -> list[str]:
             problems.append(f"word[{i}]: 'ph' is empty")
         elif not re.search(r"[а-яё]", ph, re.IGNORECASE):
             problems.append(f"word[{i}] '{th}': 'ph' has no Cyrillic letters")
+        elif re.search(r"\d", ph):
+            problems.append(f"word[{i}] '{th}': 'ph' still has digits — write the spoken form")
+        elif not any(a in ph for a in ARROWS):
+            problems.append(f"word[{i}] '{th}': 'ph' has no tone arrow (a leftover letter is not a word)")
         if not m:
             problems.append(f"word[{i}] '{th}': 'm' is empty")
         elif _is_weak_gloss(m):
@@ -1062,7 +1204,15 @@ def _words_system_prompt(politeness: str, problems: list[str] | None) -> str:
         "- Tone arrows: only → ↓ ↘ ↑ ↗ , each glued right after its syllable.\n"
         "- A multi-syllable word joins its syllables with hyphens INSIDE \"ph\": «ру↑-сык↘».\n"
         "- No accent marks or combining diacritics — plain Cyrillic letters only.\n"
-        "- NEVER put a space inside \"ph\" — one word = one \"ph\".\n\n"
+        "- NEVER put a space inside \"ph\" — one word = one \"ph\".\n"
+        "- NEVER digits in \"ph\". Write the spoken Thai number in Cyrillic:\n"
+        "  90 → кау→-сип→ ; 11 → сип→-эт→ ; 1669 → нынг→-хок→-хок→-кау→ ;\n"
+        "  555 → ха→-ха→-ха→ ; 4x6 → си→-кху→-хок→.\n"
+        "- The tone arrow sits at the END of the syllable. Never «хи↘в» / «хи↘-в» /\n"
+        "  leftover «в» as its own word — the gloss vanishes.\n"
+        "- Final ว is a VOWEL glide, not Russian «в». House spelling is «у»:\n"
+        "  หิว → хиу↗ (hungry), คิว → кхиу→ (queue), แล้ว → лэу→. NEVER хив / хью / хио.\n"
+        "- Every \"ph\" has at least one tone arrow.\n\n"
         "Splitting rules (STRICT):\n"
         "- One entry = ONE Thai dictionary word. A noun and the word describing it are\n"
         "  SEPARATE entries: «смешное ухо» is หู (ухо) + ตลก (смешной), never one «หูตลก».\n"
@@ -1084,6 +1234,11 @@ def _words_system_prompt(politeness: str, problems: list[str] | None) -> str:
         "{\"th\":\"รู้สึก\",\"ph\":\"ру↑-сык↘\",\"m\":\"чувствуете\"},"
         "{\"th\":\"อย่างไร\",\"ph\":\"я↘нг-рай→\",\"m\":\"как\"}]}\n"
         "Note: รู้สึก and อย่างไร are single words, so their syllables are joined by a hyphen.\n\n"
+        "Example — Russian «Я хочу есть» (meaning: I am hungry):\n"
+        "{\"words\":[{\"th\":\"ฉัน\",\"ph\":\"чхан→\",\"m\":\"я\"},"
+        "{\"th\":\"หิว\",\"ph\":\"хиу↗\",\"m\":\"голоден\"}]}\n"
+        "Note: หิว is one syllable «хиу↗» — final ว = «у», never «в». "
+        "Splitting it as «хи↗» + «у» is also WRONG.\n\n"
         "Example — Russian «Очень смешное ухо» (three separate words, never glued):\n"
         "{\"words\":[{\"th\":\"หู\",\"ph\":\"ху↑\",\"m\":\"ухо\"},"
         "{\"th\":\"ตลก\",\"ph\":\"та↓-лок↓\",\"m\":\"смешной\"},"

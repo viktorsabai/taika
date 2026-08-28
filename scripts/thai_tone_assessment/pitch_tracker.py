@@ -245,6 +245,7 @@ def extract_f0_segment(
 def extract_pitch_contours(
     audio_path: str,
     thai_text: str,
+    syllable_labels: list[str] | None = None,
 ) -> list[dict]:
     """
     Load WAV and Thai text; return one dict per syllable with keys:
@@ -252,11 +253,18 @@ def extract_pitch_contours(
     - start_s, end_s: float
     - times: 1D array (time in segment)
     - f0_hz: 1D array (F0 per frame; NaN where unvoiced)
+
+    `syllable_labels` (phonetic chunks) is the teaching contract. When present,
+    audio is split into exactly that many segments — not PyThaiNLP tokens.
     """
     _log("extract_pitch_contours: load_and_trim...")
     y, sr = load_and_trim(audio_path, SR)
-    _log("extract_pitch_contours: get_syllables_from_text...")
-    syllables = get_syllables_from_text(thai_text)
+    if syllable_labels:
+        syllables = [s for s in syllable_labels if str(s).strip()]
+        _log(f"extract_pitch_contours: phonetic chunks ({len(syllables)})")
+    else:
+        _log("extract_pitch_contours: get_syllables_from_text...")
+        syllables = get_syllables_from_text(thai_text)
     if not syllables:
         return []
 
