@@ -41,11 +41,13 @@ struct TaikaLearnOnboardingView: View {
     @State private var doorIndex = 0
     @State private var catalogIndex = 0
     @State private var reinforceIndex = 0
+    @State private var reinforcePreviewed = false
     @State private var catalogPausedUntil: Date = .distantPast
     @State private var pickedCourseId: String = "course_b_1"
     @State private var offeredPlus = false
     @State private var didFinish = false
     @State private var breakdownIsDemo = true
+    @State private var titlePulse = false
 
     /// Единая геометрия сцены — не менять между шагами.
     private enum Stage {
@@ -163,22 +165,37 @@ struct TaikaLearnOnboardingView: View {
 
     private var titleSlot: some View {
         VStack(alignment: .center, spacing: 6) {
-            Text(stageTitle)
-                .font(.system(size: 26, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .minimumScaleFactor(0.85)
+            if step == .door {
+                MDCyclingTypewriter(
+                    lines: ["Научись говорить сам", "Taika будет рядом", "Одна фраза — один шаг"],
+                    font: .system(size: 25, weight: .bold, design: .rounded),
+                    holdSeconds: 2.0,
+                    charInterval: 0.035,
+                    minHeight: 34
+                )
+                .frame(height: 36, alignment: .center)
+            } else {
+                Text(stageTitle)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+                    .frame(height: 36, alignment: .center)
+            }
 
-            Text(stageSubtitle)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.white.opacity(stageSubtitle.isEmpty ? 0 : 0.58))
+            Text(step == .door
+                 ? "Не переводчик. Персональный кун кру для твоей практики."
+                 : stageSubtitle)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.58))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-                .minimumScaleFactor(0.85)
-                .frame(maxWidth: .infinity)
+                .minimumScaleFactor(0.82)
+                .frame(maxWidth: .infinity, height: 38, alignment: .top)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .scaleEffect(titlePulse ? 1.0 : 0.985)
         .animation(contentMotion, value: step)
         .animation(nil, value: speakPhase)
     }
@@ -189,16 +206,16 @@ struct TaikaLearnOnboardingView: View {
         case .phrase: return "Начнём с одной фразы"
         case .breakdown:
             return breakdownIsDemo ? "Так выглядит разбор" : "Вот как Taika разбирает"
-        case .catalog: return "Сценарии на все случаи"
-        case .reinforce: return "Как закреплять"
-        case .plus: return "Хочешь больше Taika?"
+        case .catalog: return "Из фразы — в живую речь"
+        case .reinforce: return "Закрепим так, как запомнится"
+        case .plus: return "Дальше — твой путь"
         }
     }
 
     private var stageSubtitle: String {
         switch step {
         case .door:
-            return "Фразы для жизни. По 3–5 минут в день."
+            return "Фразы для жизни, короткие уроки и практика голосом."
         case .phrase:
             // Высота title-слота фиксирована — меняем только текст, не layout.
             switch speakPhase {
@@ -215,11 +232,11 @@ struct TaikaLearnOnboardingView: View {
                 ? "Пример на этой фразе — слова, тон, что поправить."
                 : "Слова, тон по слогам и что поправить — сразу."
         case .catalog:
-            return "Рынок, такси, храм, кафе — живые курсы."
+            return "Курсы и уроки под разные ситуации — выберешь свой путь."
         case .reinforce:
-            return "Тот же язык карточек — разные способы."
+            return "Матч, слоги, аудио — одна фраза закрепляется по-разному."
         case .plus:
-            return "Попробуй Taika+"
+            return "Начни бесплатно. Глубже — когда появится желание."
         }
     }
 
@@ -241,11 +258,19 @@ struct TaikaLearnOnboardingView: View {
                 plusHero
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
-        .id(step)
-        .transition(.opacity)
-        .animation(contentMotion, value: step)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+            .id(step)
+            .transition(
+                reduceMotion
+                ? .opacity
+                : .asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                )
+            )
+            .animation(contentMotion, value: step)
+
     }
 
     @ViewBuilder
@@ -266,14 +291,21 @@ struct TaikaLearnOnboardingView: View {
             case .catalog:
                 primaryCTA("Дальше") { go(.reinforce) }
             case .reinforce:
-                primaryCTA("Дальше") { go(.plus) }
+                reinforceFooter
             case .plus:
                 plusFooter
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .id(step)
-        .transition(.opacity)
+        .transition(
+            reduceMotion
+            ? .opacity
+            : .asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
+            )
+        )
         .animation(contentMotion, value: step)
         .animation(nil, value: speakPhase)
     }
@@ -533,6 +565,26 @@ struct TaikaLearnOnboardingView: View {
         .accessibilityLabel(speakPhase == .recording ? "Остановить запись" : "Говорить")
     }
 
+    private var reinforceFooter: some View {
+        VStack(spacing: 8) {
+            let current = ReinforceCard.all.indices.contains(reinforceIndex)
+                ? ReinforceCard.all[reinforceIndex]
+                : ReinforceCard.all[0]
+            Text(reinforcePreviewed ? "Готово — дальше выберем твой путь" : "Выбрано: \(current.title)")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.55))
+                .lineLimit(1)
+                .frame(height: 20)
+            primaryCTA(reinforcePreviewed ? "Дальше" : "Продолжить с \(current.title)") {
+                withAnimation(contentMotion) { reinforcePreviewed = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.22)) {
+                    go(.plus)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
     private var plusFooter: some View {
         VStack(spacing: 8) {
             if pro.isPro {
@@ -592,7 +644,14 @@ struct TaikaLearnOnboardingView: View {
 
     private func go(_ next: Step) {
         withAnimation(contentMotion) {
+            titlePulse = false
             step = next
+        }
+        guard !reduceMotion else { return }
+        DispatchQueue.main.async {
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                titlePulse = true
+            }
         }
     }
 
