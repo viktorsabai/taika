@@ -1,0 +1,1340 @@
+{
+  "title": "Дифф голых базовых карточек в платных курсах — было → стало",
+  "html_id": "generic-diff",
+  "foot": "Ок / понятно / картой / счёт / границы — под сцену урока, не общий шаблон.",
+  "note": "Только жёлтые дубли внутри платных уроков. Базу не трогали.",
+  "before": {
+    "totals": {
+      "courses": 42,
+      "lessons": 267,
+      "learnable": 2431,
+      "courses_green": 42,
+      "courses_yellow": 0,
+      "courses_red": 0,
+      "lessons_green": 267,
+      "lessons_yellow": 0,
+      "lessons_red": 0
+    },
+    "yellow_cards": 43,
+    "courses": [
+      {
+        "id": "course_l_1",
+        "title": "На посту с полицией",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_1_l1",
+            "ru": "Понял",
+            "thai": "เข้าใจแล้ว",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_1_l5",
+            "ru": "Картой можно?",
+            "thai": "จ่ายบัตรได้ไหม",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_2",
+        "title": "Таксист, вези меня домой",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_2_l1",
+            "ru": "Вот адрес",
+            "thai": "นี่ที่อยู่",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_2_l1",
+            "ru": "Картой можно?",
+            "thai": "จ่ายบัตรได้ไหม",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_2_l2",
+            "ru": "Договорились",
+            "thai": "ตกลง",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_3",
+        "title": "Король рынка",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_3_l4",
+            "ru": "Договорились",
+            "thai": "ตกลง",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_4",
+        "title": "Вселенная тайской еды",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_4_l3",
+            "ru": "Понятно",
+            "thai": "เข้าใจ",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_4_l6",
+            "ru": "Счёт",
+            "thai": "เช็คบิล",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_4_l6",
+            "ru": "Всё вместе",
+            "thai": "รวม",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_4_l6",
+            "ru": "Картой",
+            "thai": "บัตร",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_4_l6",
+            "ru": "Наличные",
+            "thai": "เงินสด",
+            "notes": [
+              "ещё в 3 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_5",
+        "title": "Доктор Тайка дежурит",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_5_l2",
+            "ru": "Понятно",
+            "thai": "เข้าใจ",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_6",
+        "title": "Белый лотос на максималках",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_6_l1",
+            "ru": "Этаж",
+            "thai": "ชั้น",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_6_l2",
+            "ru": "Полотенце",
+            "thai": "ผ้าเช็ดตัว",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_6_l5",
+            "ru": "Счёт",
+            "thai": "เช็คบิล",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_6_l5",
+            "ru": "Картой",
+            "thai": "บัตร",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_6_l5",
+            "ru": "Наличные",
+            "thai": "เงินสด",
+            "notes": [
+              "ещё в 3 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_7",
+        "title": "Пляж как состояние",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_7_l2",
+            "ru": "Полотенце",
+            "thai": "ผ้าเช็ดตัว",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_8",
+        "title": "Магазинные приключения",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_8_l1",
+            "ru": "Этаж",
+            "thai": "ชั้น",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_8_l1",
+            "ru": "Понятно",
+            "thai": "เข้าใจ",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_8_l3",
+            "ru": "Картой",
+            "thai": "บัตร",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_8_l3",
+            "ru": "Наличные",
+            "thai": "เงินสด",
+            "notes": [
+              "ещё в 3 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_8_l6",
+            "ru": "Всё вместе",
+            "thai": "รวม",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_9",
+        "title": "Срочная помощь",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_9_l6",
+            "ru": "Вот адрес",
+            "thai": "นี่ที่อยู่",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_10",
+        "title": "Между подходами",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_10_l2",
+            "ru": "Ок",
+            "thai": "โอเค",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_10_l5",
+            "ru": "Полотенце",
+            "thai": "ผ้าเช็ดตัว",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_12",
+        "title": "Новый тайский образ",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_12_l5",
+            "ru": "Всё вместе",
+            "thai": "รวม",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_12_l5",
+            "ru": "Ок",
+            "thai": "โอเค",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_13",
+        "title": "Хозяин дома — почти сосед",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_13_l2",
+            "ru": "Наличные",
+            "thai": "เงินสด",
+            "notes": [
+              "ещё в 3 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_14",
+        "title": "Таиланд доставляет",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_14_l2",
+            "ru": "Вот адрес",
+            "thai": "นี่ที่อยู่",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_14_l2",
+            "ru": "Этаж",
+            "thai": "ชั้น",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_15",
+        "title": "После заката всё интереснее",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_l_15_l1",
+            "ru": "Счёт",
+            "thai": "เช็คบิล",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_15_l2",
+            "ru": "Ок",
+            "thai": "โอเค",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_l_15_l5",
+            "ru": "Границы",
+            "thai": "ขอบเขต",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_e_2",
+        "title": "Работа с тайцами",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_e_2_l1",
+            "ru": "Понял",
+            "thai": "เข้าใจแล้ว",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_e_2_l2",
+            "ru": "Без давления",
+            "thai": "ไม่กดดัน",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_e_3",
+        "title": "Сервис и персонал",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_e_3_l5",
+            "ru": "Понял",
+            "thai": "เข้าใจแล้ว",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_e_3_l6",
+            "ru": "Картой можно?",
+            "thai": "จ่ายบัตรได้ไหม",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_e_4",
+        "title": "Разговоры без конфликта",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_e_4_l6",
+            "ru": "Договорились",
+            "thai": "ตกลง",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_e_5",
+        "title": "Коды Таиланда",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_e_5_l6",
+            "ru": "Без давления",
+            "thai": "ไม่กดดัน",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_s_4",
+        "title": "Ретрит и внутренний сабай",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_s_4_l6",
+            "ru": "Границы",
+            "thai": "ขอบเขต",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_s_5",
+        "title": "Романтика по-тайски",
+        "color": "green",
+        "yellow_cards": [
+          {
+            "lesson": "course_s_5_l4",
+            "ru": "Границы",
+            "thai": "ขอบเขต",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          },
+          {
+            "lesson": "course_s_5_l4",
+            "ru": "Без давления",
+            "thai": "ไม่กดดัน",
+            "notes": [
+              "ещё в 2 курсах"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "after": {
+    "totals": {
+      "courses": 42,
+      "lessons": 267,
+      "learnable": 2431,
+      "courses_green": 42,
+      "courses_yellow": 0,
+      "courses_red": 0,
+      "lessons_green": 267,
+      "lessons_yellow": 0,
+      "lessons_red": 0
+    },
+    "yellow_cards": 0,
+    "courses": [
+      {
+        "id": "course_l_1",
+        "title": "На посту с полицией",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_2",
+        "title": "Таксист, вези меня домой",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_3",
+        "title": "Король рынка",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_4",
+        "title": "Вселенная тайской еды",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_5",
+        "title": "Доктор Тайка дежурит",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_6",
+        "title": "Белый лотос на максималках",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_7",
+        "title": "Пляж как состояние",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_8",
+        "title": "Магазинные приключения",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_9",
+        "title": "Срочная помощь",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_10",
+        "title": "Между подходами",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_12",
+        "title": "Новый тайский образ",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_13",
+        "title": "Хозяин дома — почти сосед",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_14",
+        "title": "Таиланд доставляет",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_l_15",
+        "title": "После заката всё интереснее",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_e_2",
+        "title": "Работа с тайцами",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_e_3",
+        "title": "Сервис и персонал",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_e_4",
+        "title": "Разговоры без конфликта",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_e_5",
+        "title": "Коды Таиланда",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_s_4",
+        "title": "Ретрит и внутренний сабай",
+        "color": "green",
+        "yellow_cards": []
+      },
+      {
+        "id": "course_s_5",
+        "title": "Романтика по-тайски",
+        "color": "green",
+        "yellow_cards": []
+      }
+    ]
+  },
+  "lessons": [
+    {
+      "id": "course_l_1_l1",
+      "title": "Спокойно остановиться",
+      "course": "На посту с полицией",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Понял",
+          "thai_before": "เข้าใจแล้ว",
+          "ph_before": "кау→ джай→ лэу→",
+          "ru_after": "Понял, что не так",
+          "thai_after": "เข้าใจแล้วว่าผิดตรงไหน",
+          "ph_after": "кау→ джай→ лэу→ ваа→ фит↘ тронг→ най↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_1_l5",
+      "title": "Понять процедуру",
+      "course": "На посту с полицией",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Картой можно?",
+          "thai_before": "จ่ายบัตรได้ไหม",
+          "ph_before": "джай→ бат→ дай→ май↗",
+          "ru_after": "Штраф картой можно?",
+          "thai_after": "ค่าปรับจ่ายบัตรได้ไหม",
+          "ph_after": "кхаа→ прап→ джай→ бат→ дай→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_2_l1",
+      "title": "Назвать точку",
+      "course": "Таксист, вези меня домой",
+      "n_before": 15,
+      "n_after": 15,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Вот адрес",
+          "thai_before": "นี่ที่อยู่",
+          "ph_before": "ни→ ти→ ю→",
+          "ru_after": "Адрес в приложении",
+          "thai_after": "โชว์ที่อยู่ในแอป",
+          "ph_after": "чоу→ ти→ ю→ най→ эп↘"
+        },
+        {
+          "ru_before": "Картой можно?",
+          "thai_before": "จ่ายบัตรได้ไหม",
+          "ph_before": "джай→ бат→ дай→ май↗",
+          "ru_after": "Такси картой можно?",
+          "thai_after": "แท็กซี่จ่ายบัตรได้ไหม",
+          "ph_after": "тхэк→ си→ джай→ бат→ дай→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_2_l2",
+      "title": "Цена до поездки",
+      "course": "Таксист, вези меня домой",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Договорились",
+          "thai_before": "ตกลง",
+          "ph_before": "ток→ лонг→",
+          "ru_after": "Цену зафиксировали",
+          "thai_after": "ราคาตกลงแล้ว",
+          "ph_after": "раа→ кхаа→ ток→ лонг→ лэу→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_3_l4",
+      "title": "Давай 200",
+      "course": "Король рынка",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Договорились",
+          "thai_before": "ตกลง",
+          "ph_before": "ток→ лонг→",
+          "ru_after": "Беру по этой цене",
+          "thai_after": "เอาตามราคานี้",
+          "ph_after": "ау→ там→ раа→ кхаа→ ни→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_4_l3",
+      "title": "Мало остро",
+      "course": "Вселенная тайской еды",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Понятно",
+          "thai_before": "เข้าใจ",
+          "ph_before": "кау→ джай→",
+          "ru_after": "Такой остроты хватит",
+          "thai_after": "ระดับนี้พอ",
+          "ph_after": "ра→ дап→ ни→ пхо→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_4_l6",
+      "title": "Вкусно и счёт",
+      "course": "Вселенная тайской еды",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Счёт",
+          "thai_before": "เช็คบิล",
+          "ph_before": "чек→ бин→",
+          "ru_after": "Счёт на стол",
+          "thai_after": "เช็คบิลโต๊ะนี้",
+          "ph_after": "чек→ бин→ то→ ни→"
+        },
+        {
+          "ru_before": "Всё вместе",
+          "thai_before": "รวม",
+          "ph_before": "руам→",
+          "ru_after": "Всё на один стол",
+          "thai_after": "รวมโต๊ะนี้",
+          "ph_after": "руам→ то→ ни→"
+        },
+        {
+          "ru_before": "Картой",
+          "thai_before": "บัตร",
+          "ph_before": "бат→",
+          "ru_after": "Картой за еду",
+          "thai_after": "จ่ายบัตรที่โต๊ะ",
+          "ph_after": "джай→ бат→ ти→ то→"
+        },
+        {
+          "ru_before": "Наличные",
+          "thai_before": "เงินสด",
+          "ph_before": "нген→ сот↘",
+          "ru_after": "Наличными за еду",
+          "thai_after": "จ่ายเงินสดที่โต๊ะ",
+          "ph_after": "джай→ нген→ сот↘ ти→ то→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_5_l2",
+      "title": "Живот и температура",
+      "course": "Доктор Тайка дежурит",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Понятно",
+          "thai_before": "เข้าใจ",
+          "ph_before": "кау→ джай→",
+          "ru_after": "Давно так?",
+          "thai_after": "เป็นมานานไหม",
+          "ph_after": "пэн→ маа→ наан→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_6_l1",
+      "title": "Номер и ключ",
+      "course": "Белый лотос на максималках",
+      "n_before": 12,
+      "n_after": 12,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Этаж",
+          "thai_before": "ชั้น",
+          "ph_before": "чан↘",
+          "ru_after": "Номер на каком этаже?",
+          "thai_after": "ห้องชั้นไหน",
+          "ph_after": "хонг→ чан↘ най↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_6_l2",
+      "title": "Уборка и полотенце",
+      "course": "Белый лотос на максималках",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Полотенце",
+          "thai_before": "ผ้าเช็ดตัว",
+          "ph_before": "пха→ чхет→ туа→",
+          "ru_after": "Не хватает полотенец",
+          "thai_after": "ผ้าเช็ดตัวขาด",
+          "ph_after": "пха→ чхет→ туа→ кхат→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_6_l5",
+      "title": "Счёт и выезд",
+      "course": "Белый лотос на максималках",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Счёт",
+          "thai_before": "เช็คบิล",
+          "ph_before": "чек→ бин→",
+          "ru_after": "Счёт за номер",
+          "thai_after": "บิลห้อง",
+          "ph_after": "бин→ хонг→"
+        },
+        {
+          "ru_before": "Картой",
+          "thai_before": "บัตร",
+          "ph_before": "бат→",
+          "ru_after": "Картой на ресепшен",
+          "thai_after": "จ่ายบัตรที่ล็อบบี้",
+          "ph_after": "джай→ бат→ ти→ лоп↘ би→"
+        },
+        {
+          "ru_before": "Наличные",
+          "thai_before": "เงินสด",
+          "ph_before": "нген→ сот↘",
+          "ru_after": "Наличными в лобби",
+          "thai_after": "จ่ายเงินสดที่ล็อบบี้",
+          "ph_after": "джай→ нген→ сот↘ ти→ лоп↘ би→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_7_l2",
+      "title": "Шезлонг и лежак",
+      "course": "Пляж как состояние",
+      "n_before": 10,
+      "n_after": 10,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Полотенце",
+          "thai_before": "ผ้าเช็ดตัว",
+          "ph_before": "пха→ чхет→ туа→",
+          "ru_after": "Есть пляжное полотенце?",
+          "thai_after": "มีผ้าชายหาดไหม",
+          "ph_after": "ми→ пха→ чай→ хат→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_8_l1",
+      "title": "Где товар",
+      "course": "Магазинные приключения",
+      "n_before": 16,
+      "n_after": 16,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Этаж",
+          "thai_before": "ชั้น",
+          "ph_before": "чан↘",
+          "ru_after": "Товар на каком этаже?",
+          "thai_after": "ของอยู่ชั้นไหน",
+          "ph_after": "кхонг→ ю→ чан↘ най↗"
+        },
+        {
+          "ru_before": "Понятно",
+          "thai_before": "เข้าใจ",
+          "ph_before": "кау→ джай→",
+          "ru_after": "Нашёл где лежит",
+          "thai_after": "หาเจอแล้ว",
+          "ph_after": "хаа→ джё→ лэу→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_8_l3",
+      "title": "Касса и очередь",
+      "course": "Магазинные приключения",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Картой",
+          "thai_before": "บัตร",
+          "ph_before": "бат→",
+          "ru_after": "Картой на кассе",
+          "thai_after": "จ่ายบัตรที่แคชเชียร์",
+          "ph_after": "джай→ бат→ ти→ кэ→ чиа→"
+        },
+        {
+          "ru_before": "Наличные",
+          "thai_before": "เงินสด",
+          "ph_before": "нген→ сот↘",
+          "ru_after": "Наличными на кассе",
+          "thai_after": "จ่ายเงินสดที่แคชเชียร์",
+          "ph_after": "джай→ нген→ сот↘ ти→ кэ→ чиа→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_8_l6",
+      "title": "Вся покупка",
+      "course": "Магазинные приключения",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Всё вместе",
+          "thai_before": "รวม",
+          "ph_before": "руам→",
+          "ru_after": "Вся корзина вместе",
+          "thai_after": "รวมทั้งตะกร้า",
+          "ph_after": "руам→ тханг→ та→ краа→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_9_l6",
+      "title": "Адрес и телефон",
+      "course": "Срочная помощь",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Вот адрес",
+          "thai_before": "นี่ที่อยู่",
+          "ph_before": "ни→ ти→ ю→",
+          "ru_after": "Передайте адрес службе",
+          "thai_after": "ส่งที่อยู่ให้หน่วย",
+          "ph_after": "сонг→ ти→ ю→ хай→ нуай→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_10_l2",
+      "title": "Тренировка",
+      "course": "Между подходами",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Ок",
+          "thai_before": "โอเค",
+          "ph_before": "о→ кэ→",
+          "ru_after": "Хватит этот подход",
+          "thai_after": "พอเซ็ตนี้",
+          "ph_after": "пхо→ сет↘ ни→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_10_l5",
+      "title": "Душ и шкафчик",
+      "course": "Между подходами",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Полотенце",
+          "thai_before": "ผ้าเช็ดตัว",
+          "ph_before": "пха→ чхет→ туа→",
+          "ru_after": "Одолжите полотенце зала",
+          "thai_after": "ขอยืมผ้ายิม",
+          "ph_after": "кхо→ йым→ пха→ йим→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_12_l5",
+      "title": "Цена и время",
+      "course": "Новый тайский образ",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Всё вместе",
+          "thai_before": "รวม",
+          "ph_before": "руам→",
+          "ru_after": "Весь пакет",
+          "thai_after": "รวมแพ็กเกจ",
+          "ph_after": "руам→ пхэк→ кет↘"
+        },
+        {
+          "ru_before": "Ок",
+          "thai_before": "โอเค",
+          "ph_before": "о→ кэ→",
+          "ru_after": "Длина нормальная",
+          "thai_after": "ความยาวพอดี",
+          "ph_after": "кхвам→ яау→ пхо→ ди→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_13_l2",
+      "title": "Оплата",
+      "course": "Хозяин дома — почти сосед",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Наличные",
+          "thai_before": "เงินสด",
+          "ph_before": "нген→ сот↘",
+          "ru_after": "Аренду наличными",
+          "thai_after": "จ่ายค่าเช่าเงินสด",
+          "ph_after": "джай→ кхаа→ чау→ нген→ сот↘"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_14_l2",
+      "title": "Адрес",
+      "course": "Таиланд доставляет",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Вот адрес",
+          "thai_before": "นี่ที่อยู่",
+          "ph_before": "ни→ ти→ ю→",
+          "ru_after": "Привезите в эту комнату",
+          "thai_after": "ส่งที่ห้องนี้",
+          "ph_after": "сонг→ ти→ хонг→ ни→"
+        },
+        {
+          "ru_before": "Этаж",
+          "thai_before": "ชั้น",
+          "ph_before": "чан↘",
+          "ru_after": "На третий этаж",
+          "thai_after": "ส่งชั้นสาม",
+          "ph_after": "сонг→ чан↘ саам→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_15_l1",
+      "title": "Ещё один",
+      "course": "После заката всё интереснее",
+      "n_before": 12,
+      "n_after": 12,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Счёт",
+          "thai_before": "เช็คบิล",
+          "ph_before": "чек→ бин→",
+          "ru_after": "Ещё раунд на всех",
+          "thai_after": "อีกรอบเดียวกัน",
+          "ph_after": "ик→ роп→ диау→ кан→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_15_l2",
+      "title": "Сколько за пиво?",
+      "course": "После заката всё интереснее",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Ок",
+          "thai_before": "โอเค",
+          "ph_before": "о→ кэ→",
+          "ru_after": "Это пиво берём",
+          "thai_after": "เบียร์นี้ได้",
+          "ph_after": "биа→ ни→ дай→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_15_l5",
+      "title": "Знакомства",
+      "course": "После заката всё интереснее",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Границы",
+          "thai_before": "ขอบเขต",
+          "ph_before": "кхоп→ кхет↘",
+          "ru_after": "Не трогай",
+          "thai_after": "อย่าแตะนะ",
+          "ph_after": "йаа→ тэ→ на↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_2_l1",
+      "title": "Поставить задачу",
+      "course": "Работа с тайцами",
+      "n_before": 16,
+      "n_after": 16,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Понял",
+          "thai_before": "เข้าใจแล้ว",
+          "ph_before": "кау→ джай→ лэу→",
+          "ru_after": "Задачу принял",
+          "thai_after": "รับงานแล้ว",
+          "ph_after": "рап→ нгаан→ лэу→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_2_l2",
+      "title": "Уточнить статус",
+      "course": "Работа с тайцами",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Без давления",
+          "thai_before": "ไม่กดดัน",
+          "ph_before": "май→ кот→ дан↘",
+          "ru_after": "Можно не спеша",
+          "thai_after": "ค่อยๆ ทำได้",
+          "ph_after": "кхой→ глай→ там→ дай→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_3_l5",
+      "title": "Если не понял",
+      "course": "Сервис и персонал",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Понял",
+          "thai_before": "เข้าใจแล้ว",
+          "ph_before": "кау→ джай→ лэу→",
+          "ru_after": "Понял что делать дальше",
+          "thai_after": "เข้าใจขั้นตอน",
+          "ph_after": "кау→ джай→ кхан→ тон→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_3_l6",
+      "title": "Закончить сервис",
+      "course": "Сервис и персонал",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Картой можно?",
+          "thai_before": "จ่ายบัตรได้ไหม",
+          "ph_before": "джай→ бат→ дай→ май↗",
+          "ru_after": "Ремонт картой можно?",
+          "thai_after": "ค่าซ่อมจ่ายบัตรได้ไหม",
+          "ph_after": "кхаа→ сом→ джай→ бат→ дай→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_4_l6",
+      "title": "Договориться заново",
+      "course": "Разговоры без конфликта",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Договорились",
+          "thai_before": "ตกลง",
+          "ph_before": "ток→ лонг→",
+          "ru_after": "Тема закрыта",
+          "thai_after": "พูดจบแล้ว",
+          "ph_after": "пхуут→ джоп→ лэу→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_5_l6",
+      "title": "Уточнить смысл",
+      "course": "Коды Таиланда",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Без давления",
+          "thai_before": "ไม่กดดัน",
+          "ph_before": "май→ кот→ дан↘",
+          "ru_after": "Не заставляй отвечать",
+          "thai_after": "อย่าบังคับตอบ",
+          "ph_after": "йаа→ банг→ кхап↘ топ→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_s_4_l6",
+      "title": "На ретрите",
+      "course": "Ретрит и внутренний сабай",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Границы",
+          "thai_before": "ขอบเขต",
+          "ph_before": "кхоп→ кхет↘",
+          "ru_after": "Здесь зона тишины",
+          "thai_after": "โซนเงียบ",
+          "ph_after": "соон→ нгиап→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_s_5_l4",
+      "title": "Май яак",
+      "course": "Романтика по-тайски",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Границы",
+          "thai_before": "ขอบเขต",
+          "ph_before": "кхоп→ кхет↘",
+          "ru_after": "Моя черта",
+          "thai_after": "เส้นของฉัน",
+          "ph_after": "сен→ кхонг→ чхан→"
+        },
+        {
+          "ru_before": "Без давления",
+          "thai_before": "ไม่กดดัน",
+          "ph_before": "май→ кот→ дан↘",
+          "ru_after": "Не надо сразу встречаться",
+          "thai_after": "ไม่ต้องรีบคบ",
+          "ph_after": "май→ тонг→ рип→ кхоп→"
+        }
+      ],
+      "changed": []
+    }
+  ]
+}

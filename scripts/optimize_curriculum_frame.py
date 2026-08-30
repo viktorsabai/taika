@@ -176,9 +176,12 @@ def main() -> int:
 
     for course in catalog:
         if course.get("id") == "course_b_7":
-            course["title"] = "Короткие ответы в сервисе"
-            course["description"] = "Нет нужной позиции, изменить заказ, коротко ответить и закончить контакт — без длинного диалога."
-            course["short_description"] = "Короткие ответы в сервисе"
+            course["title"] = "Смолток как у местных"
+            course["description"] = (
+                "Финал базы: как болтают тайцы — уже ел, куда идёшь, жара, Таиланд, свободен, пора идти. "
+                "Не касса и не отказ."
+            )
+            course["short_description"] = "Поболтать, не заказывать"
             stats["catalog_b7"] += 1
 
     cat_title = {c["id"]: c["title"] for c in catalog}

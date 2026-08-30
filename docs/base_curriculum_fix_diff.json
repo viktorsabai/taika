@@ -1,0 +1,1470 @@
+{
+  "note": "Правки только Базы (course_b_1…b_7). course_b_0 не трогали. Платные красные l_1 / e_3 не в этом проходе.",
+  "before": {
+    "totals": {
+      "courses": 42,
+      "lessons": 267,
+      "learnable": 2320,
+      "courses_green": 11,
+      "courses_yellow": 28,
+      "courses_red": 3,
+      "lessons_green": 150,
+      "lessons_yellow": 116,
+      "lessons_red": 1
+    },
+    "courses": [
+      {
+        "id": "course_b_0",
+        "title": "Тайский без паники",
+        "color": "green",
+        "learnable": 0,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_0_l1",
+            "title": "Как устроен язык",
+            "n": 0,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_0_l2",
+            "title": "Как работают тоны",
+            "n": 0,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_0_l3",
+            "title": "Как думают тайцы",
+            "n": 0,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_1",
+        "title": "Разговорный старт",
+        "color": "yellow",
+        "learnable": 52,
+        "thin": 3,
+        "dups": 0,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "many_thin",
+            "msg": "3 тонких уроков"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_b_1_l1",
+            "title": "Приветствие",
+            "n": 3,
+            "color": "red",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 3 карточек (цель 8–12)"
+              },
+              {
+                "sev": "red",
+                "code": "too_thin",
+                "msg": "Критически тонкий урок: 3 карточек — нет объёма, чтобы учить"
+              }
+            ]
+          },
+          {
+            "id": "course_b_1_l2",
+            "title": "Знакомство",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_b_1_l3",
+            "title": "Как дела?",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_1_l4",
+            "title": "Просьбы",
+            "n": 12,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_1_l5",
+            "title": "Где тут?",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_b_1_l6",
+            "title": "Цена",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_1_l7",
+            "title": "Спасибо и извини",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_2",
+        "title": "Магия интонации",
+        "color": "yellow",
+        "learnable": 47,
+        "thin": 2,
+        "dups": 4,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "course_dupes",
+            "msg": "4 повторных карточек внутри курса"
+          },
+          {
+            "sev": "yellow",
+            "code": "many_thin",
+            "msg": "2 тонких уроков"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_b_2_l1",
+            "title": "Три тона на примерах",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l2",
+            "title": "Падение и подъём",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l3",
+            "title": "Эмоции тоном",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l4",
+            "title": "Быстрая речь",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_b_2_l5",
+            "title": "Интонация в просьбе",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_b_2_l6",
+            "title": "Интонация в знакомых фразах",
+            "n": 9,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l4): «Сколько стоит?»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l3): «Очень вкусно»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l4): «Спасибо большое»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l4): «Хорошо»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_b_3",
+        "title": "Я, ты, он, семья",
+        "color": "yellow",
+        "learnable": 60,
+        "thin": 1,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_3_l1",
+            "title": "Я и ты",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_b_3_l2",
+            "title": "Он, она, они",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_3_l3",
+            "title": "Семья",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_3_l4",
+            "title": "Возраст и профессия",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_3_l5",
+            "title": "Мой, твой, его",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_3_l6",
+            "title": "Представиться",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_3_l7",
+            "title": "Друзья и гости",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_4",
+        "title": "Время, место, цифры",
+        "color": "green",
+        "learnable": 63,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_4_l1",
+            "title": "Числа 1–10",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_4_l2",
+            "title": "Числа 10–100",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_4_l3",
+            "title": "Который час?",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_4_l4",
+            "title": "Дни недели",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_4_l5",
+            "title": "Прямо, налево, 100 метров",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_4_l6",
+            "title": "Сколько человек, раз",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_5",
+        "title": "Главные глаголы",
+        "color": "green",
+        "learnable": 78,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_5_l1",
+            "title": "Идти и приходить",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l2",
+            "title": "Хотеть и любить",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l3",
+            "title": "Говорить и понимать",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l4",
+            "title": "Есть, пить, покупать",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l5",
+            "title": "Делать и работать",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l6",
+            "title": "Спать, сидеть, давать",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l7",
+            "title": "Знать, видеть, жить",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_6",
+        "title": "Вкусно, красиво, горячо",
+        "color": "yellow",
+        "learnable": 62,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_6_l1",
+            "title": "Вкусно и остро",
+            "n": 10,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_6_l2",
+            "title": "Красиво и дорого",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_6_l3",
+            "title": "Горячо и холодно",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_6_l4",
+            "title": "Большой, маленький",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_6_l5",
+            "title": "Хороший и плохой",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_6_l6",
+            "title": "Новый, старый, быстрый",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_7",
+        "title": "Смолток как у местных",
+        "color": "red",
+        "learnable": 36,
+        "thin": 6,
+        "dups": 0,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "many_thin",
+            "msg": "6 тонких уроков"
+          },
+          {
+            "sev": "red",
+            "code": "all_lessons_thin",
+            "msg": "Все уроки тонкие — курс выглядит как недоделанный платный пакет"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_b_7_l1",
+            "title": "Уже ел?",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_b_7_l2",
+            "title": "Куда это ты?",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_b_7_l3",
+            "title": "Жара и дождь",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_b_7_l4",
+            "title": "Про Таиланд",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_b_7_l5",
+            "title": "Свободен?",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_b_7_l6",
+            "title": "Пора идти",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "after": {
+    "totals": {
+      "courses": 42,
+      "lessons": 267,
+      "learnable": 2356,
+      "courses_green": 13,
+      "courses_yellow": 27,
+      "courses_red": 2,
+      "lessons_green": 161,
+      "lessons_yellow": 106,
+      "lessons_red": 0
+    },
+    "courses": [
+      {
+        "id": "course_b_0",
+        "title": "Тайский без паники",
+        "color": "green",
+        "learnable": 0,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_0_l1",
+            "title": "Как устроен язык",
+            "n": 0,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_0_l2",
+            "title": "Как работают тоны",
+            "n": 0,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_0_l3",
+            "title": "Как думают тайцы",
+            "n": 0,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_1",
+        "title": "Разговорный старт",
+        "color": "yellow",
+        "learnable": 61,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_1_l1",
+            "title": "Приветствие",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_1_l2",
+            "title": "Знакомство",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_1_l3",
+            "title": "Как дела?",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_1_l4",
+            "title": "Просьбы",
+            "n": 12,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_1_l5",
+            "title": "Где тут?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_1_l6",
+            "title": "Цена",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_1_l7",
+            "title": "Спасибо и извини",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_2",
+        "title": "Магия интонации",
+        "color": "yellow",
+        "learnable": 51,
+        "thin": 0,
+        "dups": 4,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "course_dupes",
+            "msg": "4 повторных карточек внутри курса"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_b_2_l1",
+            "title": "Три тона на примерах",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l2",
+            "title": "Падение и подъём",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l3",
+            "title": "Эмоции тоном",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l4",
+            "title": "Быстрая речь",
+            "n": 9,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l5",
+            "title": "Интонация в просьбе",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l6",
+            "title": "Интонация в знакомых фразах",
+            "n": 9,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l4): «Сколько стоит?»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l3): «Очень вкусно»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l4): «Спасибо большое»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l4): «Хорошо»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_b_3",
+        "title": "Я, ты, он, семья",
+        "color": "green",
+        "learnable": 63,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_3_l1",
+            "title": "Я и ты",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_3_l2",
+            "title": "Он, она, они",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_3_l3",
+            "title": "Семья",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_3_l4",
+            "title": "Возраст и профессия",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_3_l5",
+            "title": "Мой, твой, его",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_3_l6",
+            "title": "Представиться",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_3_l7",
+            "title": "Друзья и гости",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_4",
+        "title": "Время, место, цифры",
+        "color": "green",
+        "learnable": 63,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_4_l1",
+            "title": "Числа 1–10",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_4_l2",
+            "title": "Числа 10–100",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_4_l3",
+            "title": "Который час?",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_4_l4",
+            "title": "Дни недели",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_4_l5",
+            "title": "Прямо, налево, 100 метров",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_4_l6",
+            "title": "Сколько человек, раз",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_5",
+        "title": "Главные глаголы",
+        "color": "green",
+        "learnable": 78,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_5_l1",
+            "title": "Идти и приходить",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l2",
+            "title": "Хотеть и любить",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l3",
+            "title": "Говорить и понимать",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l4",
+            "title": "Есть, пить, покупать",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l5",
+            "title": "Делать и работать",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l6",
+            "title": "Спать, сидеть, давать",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_5_l7",
+            "title": "Знать, видеть, жить",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_6",
+        "title": "Вкусно, красиво, горячо",
+        "color": "yellow",
+        "learnable": 64,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_6_l1",
+            "title": "Вкусно и остро",
+            "n": 10,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_6_l2",
+            "title": "Красиво и дорого",
+            "n": 10,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_b_6_l3",
+            "title": "Горячо и холодно",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_6_l4",
+            "title": "Большой, маленький",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_6_l5",
+            "title": "Хороший и плохой",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_6_l6",
+            "title": "Новый, старый, быстрый",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_b_7",
+        "title": "Смолток как у местных",
+        "color": "green",
+        "learnable": 54,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_7_l1",
+            "title": "Уже ел?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_7_l2",
+            "title": "Куда это ты?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_7_l3",
+            "title": "Жара и дождь",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_7_l4",
+            "title": "Про Таиланд",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_7_l5",
+            "title": "Свободен?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_7_l6",
+            "title": "Пора идти",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      }
+    ]
+  },
+  "lessons": [
+    {
+      "id": "course_b_1_l1",
+      "title": "Приветствие",
+      "course": "Разговорный старт",
+      "n_before": 3,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Доброе утро",
+          "thai": "สวัสดีตอนเช้า",
+          "ph": "са→ ват→ ди→ тон→ чау↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Добрый день",
+          "thai": "สวัสดีตอนบ่าย",
+          "ph": "са→ ват→ ди→ тон→ бай↘"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Добро пожаловать",
+          "thai": "ยินดีต้อนรับ",
+          "ph": "йин→ ди→ тон↗ рап↘"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Давно не виделись",
+          "thai": "นานไม่ได้เจอ",
+          "ph": "наан→ май→ дай↗ джё→"
+        },
+        {
+          "kind": "word",
+          "ru": "Вай",
+          "thai": "ไหว้",
+          "ph": "вай↘"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    },
+    {
+      "id": "course_b_1_l2",
+      "title": "Знакомство",
+      "course": "Разговорный старт",
+      "n_before": 6,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Я турист",
+          "thai": "ฉันเป็นนักท่องเที่ยว",
+          "ph": "чхан→ пэн→ нак→ тхонг→ тхиау↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Я первый раз в Таиланде",
+          "thai": "ฉันมาไทยครั้งแรก",
+          "ph": "чхан→ маа→ тай→ кхраанг↘ рэк↘"
+        }
+      ],
+      "removed": [],
+      "changed": [
+        {
+          "ru": "Меня зовут …",
+          "thai": "ฉันชื่อ …",
+          "ph_before": "чхан→ чыу→ а→ рай↗",
+          "ph_after": "чхан→ чыу→"
+        }
+      ]
+    },
+    {
+      "id": "course_b_1_l4",
+      "title": "Просьбы",
+      "course": "Разговорный старт",
+      "n_before": 12,
+      "n_after": 12,
+      "added": [],
+      "removed": [],
+      "changed": [
+        {
+          "ru": "Медленнее пожалуйста",
+          "thai": "พูดช้าๆหน่อย",
+          "ph_before": "пхуут→ ча↗ глай→ ной→",
+          "ph_after": "пхуут→ ча↗ ча↗ ной→"
+        }
+      ]
+    },
+    {
+      "id": "course_b_1_l5",
+      "title": "Где тут?",
+      "course": "Разговорный старт",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Где банкомат?",
+          "thai": "ตู้เอทีเอ็มอยู่ไหน",
+          "ph": "туу↗ э→ ти→ эм→ ю→ най↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Где аптека?",
+          "thai": "ร้านขายยาอยู่ไหน",
+          "ph": "раан→ кхаай↘ яа→ ю→ най↗"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    },
+    {
+      "id": "course_b_1_l6",
+      "title": "Цена",
+      "course": "Разговорный старт",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "removed": [],
+      "changed": [
+        {
+          "ru": "QR-код можно?",
+          "thai": "สแกน QR ได้ไหม",
+          "ph_before": "сакэн↗ кр→ дай→ май↗",
+          "ph_after": "са→ кэн↗ кю→ ар→ дай→ май↗"
+        }
+      ]
+    },
+    {
+      "id": "course_b_2_l4",
+      "title": "Быстрая речь",
+      "course": "Магия интонации",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Ещё раз коротко",
+          "thai": "อีกที",
+          "ph": "ик→ ти→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Понял",
+          "thai": "รู้แล้ว",
+          "ph": "руу↘ лэу↗"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    },
+    {
+      "id": "course_b_2_l5",
+      "title": "Интонация в просьбе",
+      "course": "Магия интонации",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Подожди немного",
+          "thai": "รอหน่อย",
+          "ph": "ро→ ной→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Ещё чуть-чуть",
+          "thai": "อีกนิด",
+          "ph": "ик→ нит→"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    },
+    {
+      "id": "course_b_3_l1",
+      "title": "Я и ты",
+      "course": "Я, ты, он, семья",
+      "n_before": 6,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Это я",
+          "thai": "นี่ฉัน",
+          "ph": "ни→ чхан→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Кто это?",
+          "thai": "นี่ใคร",
+          "ph": "ни→ кхрай→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Я тоже",
+          "thai": "ฉันด้วย",
+          "ph": "чхан→ дуай→"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    },
+    {
+      "id": "course_b_3_l2",
+      "title": "Он, она, они",
+      "course": "Я, ты, он, семья",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "removed": [],
+      "changed": [
+        {
+          "ru": "Его зовут …",
+          "thai": "เขาชื่อ …",
+          "ph_before": "кхау→ чыу→ а→ рай↗",
+          "ph_after": "кхау→ чыу→"
+        }
+      ]
+    },
+    {
+      "id": "course_b_6_l2",
+      "title": "Красиво и дорого",
+      "course": "Вкусно, красиво, горячо",
+      "n_before": 8,
+      "n_after": 10,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Красивый вид",
+          "thai": "วิวสวย",
+          "ph": "виу→ суай→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Выглядит дорого",
+          "thai": "ดูแพง",
+          "ph": "дуу→ пхэнг→"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    },
+    {
+      "id": "course_b_6_l5",
+      "title": "Хороший и плохой",
+      "course": "Вкусно, красиво, горячо",
+      "n_before": 12,
+      "n_after": 12,
+      "added": [],
+      "removed": [],
+      "changed": [
+        {
+          "ru": "Всё нормально",
+          "thai": "ปกติหมด",
+          "ph_before": "пока→ ти→ мот↘",
+          "ph_after": "пок→ га→ ти→ мот↘"
+        }
+      ]
+    },
+    {
+      "id": "course_b_7_l1",
+      "title": "Уже ел?",
+      "course": "Смолток как у местных",
+      "n_before": 6,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "word",
+          "ru": "Голодный",
+          "thai": "หิว",
+          "ph": "хиу↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Ещё голодный",
+          "thai": "ยังหิว",
+          "ph": "янг→ хиу↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Что поесть?",
+          "thai": "กินอะไรดี",
+          "ph": "кин→ а→ рай↗ ди→"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    },
+    {
+      "id": "course_b_7_l2",
+      "title": "Куда это ты?",
+      "course": "Смолток как у местных",
+      "n_before": 6,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "За покупками",
+          "thai": "ไปซื้อของ",
+          "ph": "пай→ сы→ кхонг→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "К другу",
+          "thai": "ไปหาเพื่อน",
+          "ph": "пай→ хаа↗ пхыан↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Недалеко",
+          "thai": "ใกล้ๆ",
+          "ph": "глай↘ глай↘"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    },
+    {
+      "id": "course_b_7_l3",
+      "title": "Жара и дождь",
+      "course": "Смолток как у местных",
+      "n_before": 6,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Возьми зонт",
+          "thai": "เอาร่ม",
+          "ph": "ау→ ром↘"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Сильный дождь",
+          "thai": "ฝนตกหนัก",
+          "ph": "фон→ ток↘ нак↘"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Облачно",
+          "thai": "ฟ้าครึ้ม",
+          "ph": "фаа↗ кхрым→"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    },
+    {
+      "id": "course_b_7_l4",
+      "title": "Про Таиланд",
+      "course": "Смолток как у местных",
+      "n_before": 6,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Люди добрые",
+          "thai": "คนไทยใจดี",
+          "ph": "кон→ тай→ джай→ ди→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Море красивое",
+          "thai": "ทะเลสวย",
+          "ph": "тха→ ле→ суай→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Еда острая",
+          "thai": "อาหารเผ็ด",
+          "ph": "а→ хаан→ пхет→"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    },
+    {
+      "id": "course_b_7_l5",
+      "title": "Свободен?",
+      "course": "Смолток как у местных",
+      "n_before": 6,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Занят работой",
+          "thai": "ยุ่งงาน",
+          "ph": "ынг↘ нгаан→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Свободен вечером",
+          "thai": "ว่างเย็น",
+          "ph": "ваан↘ йен→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Пойдём за кофе?",
+          "thai": "ไปกินกาแฟไหม",
+          "ph": "пай→ кин→ ка→ фэ→ май↗"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    },
+    {
+      "id": "course_b_7_l6",
+      "title": "Пора идти",
+      "course": "Смолток как у местных",
+      "n_before": 6,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Мне пора",
+          "thai": "ฉันต้องไป",
+          "ph": "чхан→ тонг→ пай→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Хорошего дня",
+          "thai": "ขอให้วันนี้ดี",
+          "ph": "кхо→ хай↗ ван→ ни→ ди→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Напиши потом",
+          "thai": "ทักมาทีหลัง",
+          "ph": "тхак→ маа→ ти→ ланг↘"
+        }
+      ],
+      "removed": [],
+      "changed": []
+    }
+  ]
+}

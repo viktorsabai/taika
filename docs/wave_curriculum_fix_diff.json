@@ -1,0 +1,1399 @@
+{
+  "title": "Дифф «На одной волне» — было → стало",
+  "html_id": "wave-diff",
+  "foot": "Плюс капстон Базы course_b_2_l6: внутренние повторы → фразы 7-Eleven.",
+  "note": "Блок 4. Частицы ครับ/ค่ะ с карточек сняты. Красный course_e_3 добитый до 8.",
+  "before": {
+    "totals": {
+      "courses": 42,
+      "lessons": 267,
+      "learnable": 2405,
+      "courses_green": 36,
+      "courses_yellow": 5,
+      "courses_red": 1,
+      "lessons_green": 252,
+      "lessons_yellow": 15,
+      "lessons_red": 0
+    },
+    "courses": [
+      {
+        "id": "course_b_2",
+        "title": "Магия интонации",
+        "color": "yellow",
+        "learnable": 51,
+        "thin": 0,
+        "dups": 4,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "course_dupes",
+            "msg": "4 повторных карточек внутри курса"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_b_2_l1",
+            "title": "Три тона на примерах",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l2",
+            "title": "Падение и подъём",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l3",
+            "title": "Эмоции тоном",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l4",
+            "title": "Быстрая речь",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l5",
+            "title": "Интонация в просьбе",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l6",
+            "title": "Интонация в знакомых фразах",
+            "n": 9,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l4): «Сколько стоит?»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l3): «Очень вкусно»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l4): «Спасибо большое»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_b_2_l4): «Хорошо»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_e_1",
+        "title": "Понятный тайский",
+        "color": "yellow",
+        "learnable": 51,
+        "thin": 1,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_e_1_l1",
+            "title": "Поняли друг друга?",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_1_l2",
+            "title": "Попросить медленнее",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_1_l3",
+            "title": "Смягчить вопрос",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_e_1_l4",
+            "title": "Попросить без приказа",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_1_l5",
+            "title": "Вежливый хвост",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо»"
+              }
+            ]
+          },
+          {
+            "id": "course_e_1_l6",
+            "title": "Понятный разговор",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_e_2",
+        "title": "Работа с тайцами",
+        "color": "yellow",
+        "learnable": 55,
+        "thin": 1,
+        "dups": 2,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_e_2_l1",
+            "title": "Поставить задачу",
+            "n": 16,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_2_l2",
+            "title": "Уточнить статус",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_e_2_l1): «Ещё не готово»"
+              }
+            ]
+          },
+          {
+            "id": "course_e_2_l3",
+            "title": "Напомнить о сроке",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_e_2_l4",
+            "title": "Похвалить работу",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_2_l5",
+            "title": "Неформально на работе",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_2_l6",
+            "title": "Рабочий разговор",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_e_2_l4): «Спасибо за работу»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_e_3",
+        "title": "Сервис и персонал",
+        "color": "red",
+        "learnable": 30,
+        "thin": 6,
+        "dups": 0,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "many_thin",
+            "msg": "6 тонких уроков"
+          },
+          {
+            "sev": "red",
+            "code": "all_lessons_thin",
+            "msg": "Все уроки тонкие — курс выглядит как недоделанный платный пакет"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_e_3_l1",
+            "title": "Есть проблема",
+            "n": 5,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 5 карточек (цель 8–12)"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо»"
+              }
+            ]
+          },
+          {
+            "id": "course_e_3_l2",
+            "title": "Попросить помощь",
+            "n": 5,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 5 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_e_3_l3",
+            "title": "Уточнить срок",
+            "n": 5,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 5 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_e_3_l4",
+            "title": "Уточнить детали",
+            "n": 5,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 5 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_e_3_l5",
+            "title": "Если не понял",
+            "n": 5,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 5 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_e_3_l6",
+            "title": "Закончить сервис",
+            "n": 5,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 5 карточек (цель 8–12)"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_e_4",
+        "title": "Разговоры без конфликта",
+        "color": "yellow",
+        "learnable": 51,
+        "thin": 1,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_e_4_l1",
+            "title": "Извиниться без унижения",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_4_l2",
+            "title": "Исправить недоразумение",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_4_l3",
+            "title": "Предложить другой вариант",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_4_l4",
+            "title": "Выбрать твёрдость",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_4_l5",
+            "title": "Закрыть неловкость",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_4_l6",
+            "title": "Договориться заново",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_e_5",
+        "title": "Коды Таиланда",
+        "color": "yellow",
+        "learnable": 49,
+        "thin": 1,
+        "dups": 1,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_e_5_l1",
+            "title": "Крэнг-джай",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_5_l2",
+            "title": "Джай-йен",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_e_5_l3",
+            "title": "Сабай и май пэн рай",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_5_l4",
+            "title": "Мягкий отказ",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_5_l5",
+            "title": "Читать контекст",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_5_l6",
+            "title": "Уточнить смысл",
+            "n": 9,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_e_5_l2): «Давай спокойно»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_e_6",
+        "title": "Мягкий тайский твой",
+        "color": "green",
+        "learnable": 52,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_e_6_l1",
+            "title": "Смягчить просьбу",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_6_l2",
+            "title": "Тон и громкость",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_6_l3",
+            "title": "Каа и кхрап",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_6_l4",
+            "title": "Выразить отношение",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_6_l5",
+            "title": "Не звучать резко",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_6_l6",
+            "title": "Мягкая просьба",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      }
+    ]
+  },
+  "after": {
+    "totals": {
+      "courses": 42,
+      "lessons": 267,
+      "learnable": 2431,
+      "courses_green": 42,
+      "courses_yellow": 0,
+      "courses_red": 0,
+      "lessons_green": 267,
+      "lessons_yellow": 0,
+      "lessons_red": 0
+    },
+    "courses": [
+      {
+        "id": "course_b_2",
+        "title": "Магия интонации",
+        "color": "green",
+        "learnable": 51,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_b_2_l1",
+            "title": "Три тона на примерах",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l2",
+            "title": "Падение и подъём",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l3",
+            "title": "Эмоции тоном",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l4",
+            "title": "Быстрая речь",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l5",
+            "title": "Интонация в просьбе",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_b_2_l6",
+            "title": "Интонация в знакомых фразах",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_e_1",
+        "title": "Понятный тайский",
+        "color": "green",
+        "learnable": 53,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_e_1_l1",
+            "title": "Поняли друг друга?",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_1_l2",
+            "title": "Попросить медленнее",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_1_l3",
+            "title": "Смягчить вопрос",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_1_l4",
+            "title": "Попросить без приказа",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_1_l5",
+            "title": "Вежливый хвост",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_1_l6",
+            "title": "Понятный разговор",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_e_2",
+        "title": "Работа с тайцами",
+        "color": "green",
+        "learnable": 57,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_e_2_l1",
+            "title": "Поставить задачу",
+            "n": 16,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_2_l2",
+            "title": "Уточнить статус",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_2_l3",
+            "title": "Напомнить о сроке",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_2_l4",
+            "title": "Похвалить работу",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_2_l5",
+            "title": "Неформально на работе",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_2_l6",
+            "title": "Рабочий разговор",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_e_3",
+        "title": "Сервис и персонал",
+        "color": "green",
+        "learnable": 48,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_e_3_l1",
+            "title": "Есть проблема",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_3_l2",
+            "title": "Попросить помощь",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_3_l3",
+            "title": "Уточнить срок",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_3_l4",
+            "title": "Уточнить детали",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_3_l5",
+            "title": "Если не понял",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_3_l6",
+            "title": "Закончить сервис",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_e_4",
+        "title": "Разговоры без конфликта",
+        "color": "green",
+        "learnable": 53,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_e_4_l1",
+            "title": "Извиниться без унижения",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_4_l2",
+            "title": "Исправить недоразумение",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_4_l3",
+            "title": "Предложить другой вариант",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_4_l4",
+            "title": "Выбрать твёрдость",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_4_l5",
+            "title": "Закрыть неловкость",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_4_l6",
+            "title": "Договориться заново",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_e_5",
+        "title": "Коды Таиланда",
+        "color": "green",
+        "learnable": 51,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_e_5_l1",
+            "title": "Крэнг-джай",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_5_l2",
+            "title": "Джай-йен",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_5_l3",
+            "title": "Сабай и май пэн рай",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_5_l4",
+            "title": "Мягкий отказ",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_5_l5",
+            "title": "Читать контекст",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_5_l6",
+            "title": "Уточнить смысл",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_e_6",
+        "title": "Мягкий тайский твой",
+        "color": "green",
+        "learnable": 52,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_e_6_l1",
+            "title": "Смягчить просьбу",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_6_l2",
+            "title": "Тон и громкость",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_6_l3",
+            "title": "Каа и кхрап",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_6_l4",
+            "title": "Выразить отношение",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_6_l5",
+            "title": "Не звучать резко",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_e_6_l6",
+            "title": "Мягкая просьба",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      }
+    ]
+  },
+  "lessons": [
+    {
+      "id": "course_b_2_l6",
+      "title": "Интонация в знакомых фразах",
+      "course": "Магия интонации",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Здравствуйте",
+          "thai_before": "สวัสดี",
+          "ph_before": "са→ ват→ ди→",
+          "ru_after": "Этот, пожалуйста",
+          "thai_after": "เอาอันนี้",
+          "ph_after": "ау→ ан→ ни→"
+        },
+        {
+          "ru_before": "Как дела?",
+          "thai_before": "สบายดีไหม",
+          "ph_before": "са→ бай→ ди→ май→",
+          "ru_after": "Жарко тут?",
+          "thai_after": "ร้อนไหม",
+          "ph_after": "рон↘ май↗"
+        },
+        {
+          "ru_before": "Сколько стоит?",
+          "thai_before": "เท่าไหร่",
+          "ph_before": "тао→ рай↗",
+          "ru_after": "Сколько всего?",
+          "thai_after": "รวมกี่บาท",
+          "ph_after": "руам→ ги→ бат→"
+        },
+        {
+          "ru_before": "Очень вкусно",
+          "thai_before": "อร่อยมาก",
+          "ph_before": "а→ рой→ мак→",
+          "ru_after": "Слишком сладко",
+          "thai_after": "หวานไป",
+          "ph_after": "ваан→ пай→"
+        },
+        {
+          "ru_before": "Спасибо большое",
+          "thai_before": "ขอบคุณมาก",
+          "ph_before": "кхоп→ кхун→ мак↘",
+          "ru_after": "Всё, беру",
+          "thai_after": "ได้แล้ว",
+          "ph_after": "дай→ лэу→"
+        },
+        {
+          "ru_before": "Хорошо",
+          "thai_before": "สบายดี",
+          "ph_before": "са→ бай→ ди→",
+          "ru_after": "Только это",
+          "thai_after": "เอาแค่นี้",
+          "ph_after": "ау→ кхэ→ ни→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_1_l3",
+      "title": "Смягчить вопрос",
+      "course": "Понятный тайский",
+      "n_before": 6,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Спросить чуть-чуть",
+          "thai": "ขอถามนิดนึง",
+          "ph": "кхо→ тхам→ нит→ нынг→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Не тороплю",
+          "thai": "ไม่รีบนะ",
+          "ph": "май→ рип→ на↗"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_e_1_l5",
+      "title": "Вежливый хвост",
+      "course": "Понятный тайский",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Очень выручили",
+          "thai_after": "ช่วยได้มากเลย",
+          "ph_after": "чуай↗ дай→ мак↘ лёй→"
+        },
+        {
+          "ru_before": "Маркер каа",
+          "thai_before": "ค่ะ",
+          "ph_before": "кха↘",
+          "ru_after": "Не затруднит?",
+          "thai_after": "รบกวนนิดนึง",
+          "ph_after": "роп→ куан→ нит→ нынг→"
+        },
+        {
+          "ru_before": "Маркер кхрап",
+          "thai_before": "ครับ",
+          "ph_before": "кхрап↘",
+          "ru_after": "Скажи мягче",
+          "thai_after": "พูดสุภาพหน่อย",
+          "ph_after": "пхуут→ су→ пхаап↘ ной→"
+        },
+        {
+          "ru_before": "Пять важных слов",
+          "thai_before": "ห้าคำสำคัญ",
+          "ph_before": "ха→ кхам→ сам→ кхан→",
+          "ru_after": "Смягчи хвост",
+          "thai_after": "ลงท้ายให้นุ่ม",
+          "ph_after": "лонг→ тхаай↗ хай→ нум→"
+        },
+        {
+          "ru_before": "Всем привет",
+          "thai_before": "สวัสดีทุกคน",
+          "ph_before": "са→ ват→ ди↘ тук→ кхон→",
+          "ru_after": "Извини что вклинился",
+          "thai_after": "ขอโทษที่ขัด",
+          "ph_after": "кхо→ тхот→ ти→ кхат↘"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_2_l2",
+      "title": "Уточнить статус",
+      "course": "Работа с тайцами",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Ещё не готово",
+          "thai_before": "ยังไม่เสร็จ",
+          "ph_before": "янг→ май→ сет↘",
+          "ru_after": "Ещё в работе",
+          "thai_after": "กำลังทำอยู่",
+          "ph_after": "кам→ ланг→ там→ ю→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_2_l3",
+      "title": "Напомнить о сроке",
+      "course": "Работа с тайцами",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "В какой день отдадите?",
+          "thai": "ส่งให้วันไหน",
+          "ph": "сонг→ хай→ ван→ най↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Можно сдвинуть срок?",
+          "thai": "เลื่อนได้ไหม",
+          "ph": "лыан→ дай→ май↗"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_e_2_l6",
+      "title": "Рабочий разговор",
+      "course": "Работа с тайцами",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Спасибо за работу",
+          "thai_before": "ขอบคุณที่ช่วย",
+          "ph_before": "кхоп→ кхун→ ти→ чуай↗",
+          "ru_after": "Продолжим завтра",
+          "thai_after": "ไว้คุยต่อพรุ่งนี้",
+          "ph_after": "вай→ кхуй→ то→ пхрунг→ ни→"
+        },
+        {
+          "ru_before": "Ещё не готово?",
+          "thai_before": "ยังไม่เสร็จเหรอ",
+          "ph_before": "янг→ май→ сет↘ еро↗",
+          "ru_after": "С задачей всё ок?",
+          "thai_after": "งานนี้โอเคไหม",
+          "ph_after": "нгаан→ ни→ о→ кэ→ май↗"
+        },
+        {
+          "ru_before": "И",
+          "thai_before": "และ",
+          "ph_before": "лэ→",
+          "ru_after": "Файл уже отправил",
+          "thai_after": "ส่งไฟล์มาแล้ว",
+          "ph_after": "сонг→ фай→ маа→ лэу→"
+        },
+        {
+          "ru_before": "Но",
+          "thai_before": "แต่",
+          "ph_before": "тэ↘",
+          "ru_after": "Застрял вот здесь",
+          "thai_after": "ติดตรงนี้นิดหน่อย",
+          "ph_after": "тит→ тронг→ ни→ нит→ ной→"
+        },
+        {
+          "ru_before": "Потому что",
+          "thai_before": "เพราะ",
+          "ph_before": "пхро↘",
+          "ru_after": "Жду подтверждения",
+          "thai_after": "รอคอนเฟิร์มก่อน",
+          "ph_after": "ро→ кхон→ фём→ кон→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_3_l1",
+      "title": "Есть проблема",
+      "course": "Сервис и персонал",
+      "n_before": 5,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Кондей не холодит",
+          "thai": "แอร์ไม่เย็น",
+          "ph": "э→ май→ ен→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Здесь грязно",
+          "thai": "สกปรกตรงนี้",
+          "ph": "сок→ ка→ прок→ тронг→ ни→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Странный запах",
+          "thai": "กลิ่นไม่ดี",
+          "ph": "клин→ май→ ди→"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Кто принимает заявку?",
+          "thai_after": "ใครรับเรื่องนี้",
+          "ph_after": "кхрай→ рап→ рыанг→ ни→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_3_l2",
+      "title": "Попросить помощь",
+      "course": "Сервис и персонал",
+      "n_before": 5,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Позовите мастера",
+          "thai": "เรียกช่างให้หน่อย",
+          "ph": "риак↗ чаанг→ хай→ ной→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Долго ждать очередь?",
+          "thai": "รอคิวนานไหม",
+          "ph": "ро→ кхиу→ наан→ май↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Можно сделать здесь?",
+          "thai": "ทำที่นี่ได้ไหม",
+          "ph": "там→ ти→ ни→ дай→ май↗"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_e_3_l3",
+      "title": "Уточнить срок",
+      "course": "Сервис и персонал",
+      "n_before": 5,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Во сколько будет готово?",
+          "thai": "กี่โมงเสร็จ",
+          "ph": "ги→ монг→ сет↘"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Напишите когда готово",
+          "thai": "แจ้งเมื่อเสร็จ",
+          "ph": "джэнг→ мыа→ сет↘"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Долго займёт?",
+          "thai": "ใช้เวลานานไหม",
+          "ph": "чай↗ ве→ лаа→ наан→ май↗"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_e_3_l4",
+      "title": "Уточнить детали",
+      "course": "Сервис и персонал",
+      "n_before": 5,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Запчасти входят?",
+          "thai": "รวมอะไหล่ไหม",
+          "ph": "руам→ а→ лай→ май↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Когда платить?",
+          "thai": "จ่ายตอนไหน",
+          "ph": "джай→ тон→ най↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Есть гарантия?",
+          "thai": "มีประกันไหม",
+          "ph": "ми→ пра→ кан→ май↗"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Сколько стоит?",
+          "thai_before": "เท่าไหร่",
+          "ph_before": "тао→ рай↗",
+          "ru_after": "Сколько за услугу?",
+          "thai_after": "ค่าบริการเท่าไหร่",
+          "ph_after": "кхаа→ бо→ ри→ кан→ тао→ рай↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_3_l5",
+      "title": "Если не понял",
+      "course": "Сервис и персонал",
+      "n_before": 5,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Это вот это?",
+          "thai": "หมายถึงอันนี้ไหม",
+          "ph": "маай→ тхынг→ ан→ ни→ май↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Покажите пальцем",
+          "thai": "ชี้ให้ดูหน่อย",
+          "ph": "чи→ хай→ ду→ ной→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Это слово ещё раз",
+          "thai": "พูดคำนี้ใหม่",
+          "ph": "пхуут→ кхам→ ни→ май→"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_e_3_l6",
+      "title": "Закончить сервис",
+      "course": "Сервис и персонал",
+      "n_before": 5,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Чек, пожалуйста",
+          "thai": "ใบเสร็จด้วย",
+          "ph": "бай→ сет↘ дуай→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Сдача будет?",
+          "thai": "เหลือทอนไหม",
+          "ph": "лыа→ тхон→ май↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "До следующего раза",
+          "thai": "ไว้คราวหน้า",
+          "ph": "вай→ кхрау→ наа↗"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Спасибо, до свидания",
+          "thai_before": "ขอบคุณ ลาก่อน",
+          "ph_before": "кхоп→ кхун→ ла→ кон→",
+          "ru_after": "Всё забрал",
+          "thai_after": "รับของเรียบร้อย",
+          "ph_after": "рап→ кхонг→ риап→ рой↘"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_e_4_l6",
+      "title": "Договориться заново",
+      "course": "Разговоры без конфликта",
+      "n_before": 6,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Можно начать заново?",
+          "thai": "เริ่มใหม่ได้ไหม",
+          "ph": "рём→ май→ дай→ май↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Не держу зла",
+          "thai": "ไม่ถือสา",
+          "ph": "май→ тхы→ саа→"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_e_5_l2",
+      "title": "Джай-йен",
+      "course": "Коды Таиланда",
+      "n_before": 6,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Говори спокойно",
+          "thai": "ค่อยๆ พูด",
+          "ph": "кхой→ глай→ пхуут→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Не злись сразу",
+          "thai": "อย่าเพิ่งโกรธ",
+          "ph": "йаа→ пхенг→ кроот→"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_e_5_l6",
+      "title": "Уточнить смысл",
+      "course": "Коды Таиланда",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Давай спокойно",
+          "thai_before": "ใจเย็นนะ",
+          "ph_before": "джай→ ен→ на→",
+          "ru_after": "Что он имеет в виду?",
+          "thai_after": "เขาหมายถึงอะไร",
+          "ph_after": "кхау→ маай→ тхынг→ а→ рай↗"
+        }
+      ],
+      "changed": []
+    }
+  ]
+}

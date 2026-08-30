@@ -128,7 +128,7 @@
           "title": "Приветствие",
           "subtitle": "Саватди и улыбка — открываем разговор",
           "duration_minutes": 4,
-          "card_count": 5,
+          "card_count": 10,
           "is_free": true,
           "tags": [],
           "preview_phrase": "Здравствуйте;са→ ват→ ди↘",
@@ -166,7 +166,7 @@
           "title": "Знакомство",
           "subtitle": "Имя и откуда — без допроса и грамматики",
           "duration_minutes": 3,
-          "card_count": 7,
+          "card_count": 9,
           "is_free": true,
           "tags": [],
           "preview_phrase": "Как тебя зовут?;кхун→ чыу→ а→ рай↗",
@@ -274,7 +274,7 @@
           "title": "Где тут?",
           "subtitle": "Где туалет, вайфай и как показать место",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [],
           "preview_phrase": "Где это?;ю→ ти→ най↗",
@@ -503,7 +503,7 @@
           "title": "Быстрая речь",
           "subtitle": "Слышать мелодику, даже когда слабые слоги сокращаются.",
           "duration_minutes": 4,
-          "card_count": 9,
+          "card_count": 11,
           "is_free": false,
           "tags": [],
           "preview_phrase": "Как дела медленно;са→ бай→ ди→ май↗",
@@ -539,7 +539,7 @@
           "title": "Интонация в просьбе",
           "subtitle": "Мягкость просьбы: голос, пауза и короткие частицы.",
           "duration_minutes": 4,
-          "card_count": 9,
+          "card_count": 11,
           "is_free": false,
           "tags": [],
           "preview_phrase": "Немного пожалуйста;ной→",
@@ -622,7 +622,7 @@
           "title": "Я и ты",
           "subtitle": "Кто говорит и к кому — без таблицы местоимений",
           "duration_minutes": 3,
-          "card_count": 7,
+          "card_count": 10,
           "is_free": true,
           "tags": [],
           "preview_phrase": "Я мужчина;пхом→",
@@ -1407,7 +1407,7 @@
           "title": "Красиво и дорого",
           "subtitle": "Суай, пхэнг, тук — про вещи и цены",
           "duration_minutes": 3,
-          "card_count": 9,
+          "card_count": 11,
           "is_free": true,
           "tags": [],
           "preview_phrase": "Красиво;суай→",
@@ -1590,34 +1590,34 @@
     },
     {
       "course_id": "course_b_7",
-      "course_title": "Короткие ответы в сервисе",
+      "course_title": "Смолток как у местных",
       "lessons": [
         {
           "lesson_id": "course_b_7_l1",
           "order": 1,
-          "title": "Если позиции нет",
-          "subtitle": "Замена отсутствующего варианта короткими фразами",
+          "title": "Уже ел?",
+          "subtitle": "Настоящий тайский «как дела» — не сабай ди",
           "duration_minutes": 4,
-          "card_count": 7,
+          "card_count": 10,
           "is_free": true,
           "tags": [],
-          "preview_phrase": "Этого нет;май→ ми→",
+          "preview_phrase": "Уже ел?;кин→ кхау↘ ры→ янг→",
           "content": [
             {
               "kind": "intro",
-              "text": "Короткий набор фраз: Замена отсутствующего варианта короткими фразами."
+              "text": "После приветствия тайцы часто спрашивают, ел ли ты. Это смолток, не заказ еды."
             },
             {
               "kind": "outline",
-              "text": "Этого нет · заменить · а это? · тогда это."
+              "text": "กินข้าวหรือยัง · ещё нет · уже ел · сыт · пойдём есть?"
             },
             {
               "kind": "apply",
-              "text": "Скажи одну фразу из урока вслух — сначала со стрелками, потом в темпе."
+              "text": "Спроси «кин кхау ры янг» и ответь коротко — без меню и без кассы."
             }
           ],
           "outcomes": [
-            "Использовать короткие фразы для задачи: если позиции нет."
+            "Открыть болтовню вопросом про еду, не про самочувствие."
           ],
           "prerequisites": [
             "course_b_1_l7",
@@ -1633,29 +1633,29 @@
         {
           "lesson_id": "course_b_7_l2",
           "order": 2,
-          "title": "Изменить заказ",
-          "subtitle": "Добавь, убери или измени один элемент",
+          "title": "Куда это ты?",
+          "subtitle": "Пай най как приветствие, не как навигация",
           "duration_minutes": 4,
-          "card_count": 6,
+          "card_count": 10,
           "is_free": true,
           "tags": [],
-          "preview_phrase": "Добавьте ещё один;пхым→ ик→ нынг→ дай→ май↗",
+          "preview_phrase": "Куда это ты?;пай→ най↗",
           "content": [
             {
               "kind": "intro",
-              "text": "Короткий набор фраз: Добавь, убери или измени один элемент."
+              "text": "«Куда?» у тайцев часто значит «привет, что делаешь» — не маршрут такси."
             },
             {
               "kind": "outline",
-              "text": "Добавить · убрать · с собой · здесь."
+              "text": "ไปไหน · гуляю · на работу · домой · откуда идёшь?"
             },
             {
               "kind": "apply",
-              "text": "Скажи одну фразу из урока вслух — сначала со стрелками, потом в темпе."
+              "text": "Ответь на «пай най» одной короткой картинкой дня — не адресом."
             }
           ],
           "outcomes": [
-            "Использовать короткие фразы для задачи: изменить заказ."
+            "Понять и ответить на ไปไหน как на смолток."
           ],
           "prerequisites": [
             "course_b_1_l4",
@@ -1671,29 +1671,29 @@
         {
           "lesson_id": "course_b_7_l3",
           "order": 3,
-          "title": "Не то",
-          "subtitle": "Исправь выбор короткой фразой",
+          "title": "Жара и дождь",
+          "subtitle": "Погода как клей разговора",
           "duration_minutes": 4,
-          "card_count": 6,
+          "card_count": 10,
           "is_free": false,
           "tags": [],
-          "preview_phrase": "Не это;май→ чай→ ан→ ни→",
+          "preview_phrase": "Какая жара;рон↘ мак↘ лёй→",
           "content": [
             {
               "kind": "intro",
-              "text": "Короткий набор фраз: Исправь выбор короткой фразой."
+              "text": "Рон и йен уже были словами. Здесь — как ими поболтать, а не описать суп."
             },
             {
               "kind": "outline",
-              "text": "Не это · вот это · ещё один · достаточно."
+              "text": "ร้อนมากเลย · дождь идёт · дождь начался · прохладно хорошо · солнце жжёт"
             },
             {
               "kind": "apply",
-              "text": "Скажи одну фразу из урока вслух — сначала со стрелками, потом в темпе."
+              "text": "Скажи одну погодную реплику вместо молчания в лифте или у магазина."
             }
           ],
           "outcomes": [
-            "Использовать короткие фразы для задачи: не то."
+            "Открыть или поддержать разговор погодой."
           ],
           "prerequisites": [
             "course_b_1_l5",
@@ -1709,29 +1709,29 @@
         {
           "lesson_id": "course_b_7_l4",
           "order": 4,
-          "title": "Изменить выбор",
-          "subtitle": "Выбери другой вариант без нового торга",
+          "title": "Про Таиланд",
+          "subtitle": "После «я из России» — живой второй круг",
           "duration_minutes": 4,
-          "card_count": 6,
+          "card_count": 10,
           "is_free": false,
           "tags": [],
-          "preview_phrase": "Не это;май→ ау→ ан→ ни→",
+          "preview_phrase": "Таиланд нравится?;чоп↘ тай→ май↗",
           "content": [
             {
               "kind": "intro",
-              "text": "Короткий набор фраз: Выбери другой вариант без нового торга."
+              "text": "Имя и страну уже спрашивали в старте. Здесь — как продолжить, когда тебя расспрашивают про Таиланд."
             },
             {
               "kind": "outline",
-              "text": "Не это · вот это · один · ещё один."
+              "text": "ชอบไทยไหม · давно в Таиланде? · говорю чуть-чуть · Таиланд красивый · еда вкусная"
             },
             {
               "kind": "apply",
-              "text": "Скажи одну фразу из урока вслух — сначала со стрелками, потом в темпе."
+              "text": "Ответь на комплимент стране одной короткой фразой — без экскурсии."
             }
           ],
           "outcomes": [
-            "Использовать короткие фразы для задачи: изменить выбор."
+            "Удержать знакомство после «я из России»."
           ],
           "prerequisites": [
             "course_b_1_l6",
@@ -1747,29 +1747,29 @@
         {
           "lesson_id": "course_b_7_l5",
           "order": 5,
-          "title": "Коротко ответить",
-          "subtitle": "Скажи сейчас, потом, понял или спасибо",
+          "title": "Свободен?",
+          "subtitle": "Есть ли время — не отказ на кассе",
           "duration_minutes": 4,
-          "card_count": 6,
+          "card_count": 10,
           "is_free": false,
           "tags": [],
-          "preview_phrase": "Сейчас не могу;тон→ ни→ май→ дай→",
+          "preview_phrase": "Свободен?;ваан↘ май↗",
           "content": [
             {
               "kind": "intro",
-              "text": "Короткий набор фраз: Скажи сейчас, потом, понял или спасибо."
+              "text": "Ваан и ынг — про жизнь, не про «не надо, спасибо» продавцу."
             },
             {
               "kind": "outline",
-              "text": "Сейчас · потом · понял · хорошо · спасибо."
+              "text": "ว่างไหม · немного занят · сегодня свободен · дома сижу · пойдём вместе?"
             },
             {
               "kind": "apply",
-              "text": "Скажи одну фразу из урока вслух — сначала со стрелками, потом в темпе."
+              "text": "Ответь, свободен ли ты сегодня — без сервиса и без заказа."
             }
           ],
           "outcomes": [
-            "Использовать короткие фразы для задачи: коротко ответить."
+            "Сказать, свободен ты или занят, и предложить компанию."
           ],
           "prerequisites": [
             "course_b_3_l6",
@@ -1785,29 +1785,29 @@
         {
           "lesson_id": "course_b_7_l6",
           "order": 6,
-          "title": "Закончить контакт",
-          "subtitle": "Закрой короткую бытовую ситуацию",
+          "title": "Пора идти",
+          "subtitle": "Закрыть болтовню, не чек",
           "duration_minutes": 4,
-          "card_count": 6,
+          "card_count": 10,
           "is_free": false,
           "tags": [],
-          "preview_phrase": "Всё;мот↘ лэу→",
+          "preview_phrase": "Я пойду;пай→ кон↘ на↗",
           "content": [
             {
               "kind": "intro",
-              "text": "Короткий набор фраз: Закрой короткую бытовую ситуацию."
+              "text": "Финал базы: уйти из разговора тепло. Спасибо на кассе уже было в старте."
             },
             {
               "kind": "outline",
-              "text": "Всё · готово · хорошо · спасибо · до встречи."
+              "text": "ไปก่อนนะ · ещё поболтаем · удачи · береги себя · увидимся"
             },
             {
               "kind": "apply",
-              "text": "Скажи одну фразу из урока вслух — сначала со стрелками, потом в темпе."
+              "text": "Собери уход: «пай кон на» + одно тёплое слово."
             }
           ],
           "outcomes": [
-            "Использовать короткие фразы для задачи: закончить контакт."
+            "Закончить смолток, а не покупку."
           ],
           "prerequisites": [
             "course_b_4_l3",
@@ -1825,7 +1825,7 @@
         "total_lessons": 6,
         "total_duration_minutes": 24
       },
-      "description": "Капстоун Базы: шесть бытовых сцен на уже выученном материале B1–B6, с максимум одной-двумя новыми сценическими единицами."
+      "description": "Финал базы: как болтают тайцы — уже ел, куда идёшь, жара, Таиланд, свободен, пора идти. Не касса и не отказ."
     },
     {
       "course_id": "course_l_1",
@@ -1837,7 +1837,7 @@
           "title": "Спокойно остановиться",
           "subtitle": "Коротко подтверди просьбу и снизь напряжение",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": true,
           "tags": [
             "roadside",
@@ -1878,7 +1878,7 @@
           "title": "Показать документы",
           "subtitle": "Права, документы на байк и паспорт",
           "duration_minutes": 5,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "roadside",
@@ -1919,7 +1919,7 @@
           "title": "Шлем и пассажир",
           "subtitle": "Отвечай коротко на вопросы о безопасности",
           "duration_minutes": 5,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "roadside",
@@ -1960,7 +1960,7 @@
           "title": "Если не понял",
           "subtitle": "Попроси повторить и скажи, что делать дальше",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "roadside",
@@ -2001,7 +2001,7 @@
           "title": "Понять процедуру",
           "subtitle": "Спроси сумму, место оплаты и квитанцию",
           "duration_minutes": 5,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "roadside",
@@ -2042,7 +2042,7 @@
           "title": "Если документа нет",
           "subtitle": "Коротко объясни, где оригинал и что есть с собой",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "roadside",
@@ -2083,7 +2083,7 @@
           "title": "Закрыть проверку",
           "subtitle": "Остановись, покажи документы, уточни и поблагодари",
           "duration_minutes": 6,
-          "card_count": 6,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "roadside",
@@ -2464,7 +2464,7 @@
           "title": "Напомнить о сроке",
           "subtitle": "Уточнить дедлайн без нажима",
           "duration_minutes": 4,
-          "card_count": 7,
+          "card_count": 9,
           "is_free": false,
           "tags": [
             "работа",
@@ -2673,7 +2673,7 @@
           "title": "Джай-йен",
           "subtitle": "Снизить напряжение",
           "duration_minutes": 3,
-          "card_count": 7,
+          "card_count": 9,
           "is_free": true,
           "tags": [
             "культура",
@@ -2884,7 +2884,7 @@
           "title": "Есть проблема",
           "subtitle": "Назови проблему и попроси посмотреть",
           "duration_minutes": 3,
-          "card_count": 6,
+          "card_count": 9,
           "is_free": true,
           "tags": [
             "сервис",
@@ -2922,7 +2922,7 @@
           "title": "Попросить помощь",
           "subtitle": "Коротко обратись к нужному сотруднику",
           "duration_minutes": 3,
-          "card_count": 6,
+          "card_count": 9,
           "is_free": true,
           "tags": [
             "сервис",
@@ -2962,7 +2962,7 @@
           "title": "Уточнить срок",
           "subtitle": "Спроси когда будет готово",
           "duration_minutes": 4,
-          "card_count": 6,
+          "card_count": 9,
           "is_free": false,
           "tags": [
             "сервис",
@@ -3002,7 +3002,7 @@
           "title": "Уточнить детали",
           "subtitle": "Проверь одну деталь за раз",
           "duration_minutes": 4,
-          "card_count": 6,
+          "card_count": 9,
           "is_free": false,
           "tags": [
             "сервис",
@@ -3042,7 +3042,7 @@
           "title": "Если не понял",
           "subtitle": "Попроси повторить и назвать следующий шаг",
           "duration_minutes": 4,
-          "card_count": 6,
+          "card_count": 9,
           "is_free": false,
           "tags": [
             "сервис",
@@ -3082,7 +3082,7 @@
           "title": "Закончить сервис",
           "subtitle": "Проверь результат, оплати и поблагодари",
           "duration_minutes": 4,
-          "card_count": 6,
+          "card_count": 9,
           "is_free": false,
           "tags": [
             "сервис",
@@ -3211,7 +3211,7 @@
           "title": "Смягчить вопрос",
           "subtitle": "Добавить мягкость к просьбе",
           "duration_minutes": 4,
-          "card_count": 6,
+          "card_count": 8,
           "is_free": false,
           "tags": [
             "ясность",
@@ -4520,7 +4520,7 @@
           "title": "Заказ с аллергиями",
           "subtitle": "Предупредить об аллергии и проверить, поняли ли ограничение.",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "food",
@@ -4817,7 +4817,7 @@
           "title": "В клинике",
           "subtitle": "Показать место боли, сообщить о хронической проблеме и попросить врача.",
           "duration_minutes": 4,
-          "card_count": 9,
+          "card_count": 11,
           "is_free": false,
           "tags": [
             "health",
@@ -5036,7 +5036,7 @@
           "title": "Счёт и выезд",
           "subtitle": "Проверить счёт, оплатить и завершить проживание.",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "hotel",
@@ -5077,7 +5077,7 @@
           "title": "Весь визит в отель",
           "subtitle": "Собрать заезд, ключ, сервис и выезд в одну сцену.",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "hotel",
@@ -5254,7 +5254,7 @@
           "title": "Трек-номер",
           "subtitle": "Проверить путь посылки и дату доставки.",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "delivery",
@@ -5374,7 +5374,7 @@
           "title": "Вся доставка",
           "subtitle": "Собрать заказ, адрес, курьера и получение.",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "delivery",
@@ -5964,7 +5964,7 @@
           "title": "Вся покупка",
           "subtitle": "Собрать путь от поиска товара до кассы.",
           "duration_minutes": 4,
-          "card_count": 7,
+          "card_count": 9,
           "is_free": false,
           "tags": [
             "shopping",
@@ -6142,7 +6142,7 @@
           "title": "Больница",
           "subtitle": "Сказать, что нужна больница или скорая помощь.",
           "duration_minutes": 4,
-          "card_count": 9,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "emergency",
@@ -6952,7 +6952,7 @@
           "title": "Стрижка",
           "subtitle": "Показать фото и начать объяснение желаемой стрижки.",
           "duration_minutes": 3,
-          "card_count": 12,
+          "card_count": 14,
           "is_free": true,
           "tags": [
             "salon",
@@ -7072,7 +7072,7 @@
           "title": "Борода",
           "subtitle": "Объяснить, что подровнять, сбрить и какую форму оставить.",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [
             "salon",
@@ -7152,7 +7152,7 @@
           "title": "Весь салон",
           "subtitle": "Собрать вход, услугу, результат и оплату.",
           "duration_minutes": 4,
-          "card_count": 11,
+          "card_count": 13,
           "is_free": false,
           "tags": [
             "salon",
@@ -7700,7 +7700,7 @@
           "title": "Договориться заново",
           "subtitle": "Собрать конфликт в решение",
           "duration_minutes": 4,
-          "card_count": 6,
+          "card_count": 8,
           "is_free": false,
           "tags": [
             "repair",
@@ -8306,7 +8306,7 @@
           "title": "Кхон ди и другие",
           "subtitle": "Хороший человек и идиомы",
           "duration_minutes": 4,
-          "card_count": 5,
+          "card_count": 9,
           "is_free": false,
           "tags": [],
           "preview_phrase": "Младший брат/сестра;нонг→",
@@ -8459,7 +8459,7 @@
           "title": "Расписание",
           "subtitle": "Когда медитация",
           "duration_minutes": 3,
-          "card_count": 7,
+          "card_count": 9,
           "is_free": true,
           "tags": [],
           "preview_phrase": "Расписание;та→ ранг→",
@@ -8791,7 +8791,7 @@
           "title": "Пен а-рай ган",
           "subtitle": "Кто мы друг другу",
           "duration_minutes": 4,
-          "card_count": 7,
+          "card_count": 9,
           "is_free": false,
           "tags": [],
           "preview_phrase": "Кто мы друг для друга?;рау→ пэн→ а→ рай↗ кан→",
@@ -8943,7 +8943,7 @@
           "title": "Раванг на",
           "subtitle": "Границы мягко",
           "duration_minutes": 4,
-          "card_count": 8,
+          "card_count": 10,
           "is_free": false,
           "tags": [],
           "preview_phrase": "Осторожно!;раванг→ на↘",
@@ -8979,7 +8979,7 @@
           "title": "С родителями",
           "subtitle": "Луук нарак маак",
           "duration_minutes": 4,
-          "card_count": 7,
+          "card_count": 9,
           "is_free": false,
           "tags": [],
           "preview_phrase": "Ваш ребёнок очень весёлый;луук→ кхун→ санук↘ мак↘ лёй→",

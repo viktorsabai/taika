@@ -1,0 +1,1712 @@
+{
+  "title": "Дифф «Душа + долгожители» — было → стало",
+  "html_id": "soul-diff",
+  "foot": "Пересечения между курсами не трогали. Только thin и внутренний recap.",
+  "note": "Блок 3. Йога โย починена. «Границы» между ретритом и романтикой оставлены.",
+  "before": {
+    "totals": {
+      "courses": 42,
+      "lessons": 267,
+      "learnable": 2393,
+      "courses_green": 30,
+      "courses_yellow": 11,
+      "courses_red": 1,
+      "lessons_green": 243,
+      "lessons_yellow": 24,
+      "lessons_red": 0
+    },
+    "courses": [
+      {
+        "id": "course_s_1",
+        "title": "Тайский для блогинга",
+        "color": "yellow",
+        "learnable": 57,
+        "thin": 0,
+        "dups": 1,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_s_1_l1",
+            "title": "Сегодня сабай",
+            "n": 16,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_1_l2",
+            "title": "Вайб 100",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_s_1_l1): «Вайб дня»"
+              }
+            ]
+          },
+          {
+            "id": "course_s_1_l3",
+            "title": "Подписи к фото",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_1_l4",
+            "title": "Ответы подписчикам",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_1_l5",
+            "title": "Эмодзи и сленг",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_1_l6",
+            "title": "Сторис целиком",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_s_2",
+        "title": "Хобби и движ по-тайски",
+        "color": "green",
+        "learnable": 53,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_s_2_l1",
+            "title": "Муай-тай и йога",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_2_l2",
+            "title": "Где зал?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_2_l3",
+            "title": "Сколько стоит занятие?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_2_l4",
+            "title": "Когда следующий класс?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_2_l5",
+            "title": "Серфинг и керамика",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_2_l6",
+            "title": "С тренером",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_s_3",
+        "title": "О чём говорят на самом деле",
+        "color": "yellow",
+        "learnable": 49,
+        "thin": 1,
+        "dups": 1,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_s_3_l1",
+            "title": "555 и джин",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_3_l2",
+            "title": "Джай-рай и фан",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_3_l3",
+            "title": "Идиомы нам-джай",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_3_l4",
+            "title": "Кхон ди и другие",
+            "n": 5,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 5 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_s_3_l5",
+            "title": "Шутки и подкасты",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_3_l6",
+            "title": "Живой разговор",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_s_3_l5): «Шутки по-тайски»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_s_4",
+        "title": "Ретрит и внутренний сабай",
+        "color": "yellow",
+        "learnable": 51,
+        "thin": 1,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_s_4_l1",
+            "title": "Правила молчания",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_4_l2",
+            "title": "Расписание",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_s_4_l3",
+            "title": "Можно медитировать?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_4_l4",
+            "title": "Где дхарма-холл?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_4_l5",
+            "title": "С монахами",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_4_l6",
+            "title": "На ретрите",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_s_5",
+        "title": "Романтика по-тайски",
+        "color": "yellow",
+        "learnable": 55,
+        "thin": 1,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_s_5_l1",
+            "title": "На-рак",
+            "n": 13,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_5_l2",
+            "title": "Как ты?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_5_l3",
+            "title": "Намёки и интерес",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_5_l4",
+            "title": "Май яак",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_5_l5",
+            "title": "Пен а-рай ган",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_s_5_l6",
+            "title": "Весь разговор",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_s_6",
+        "title": "Тай кидс",
+        "color": "yellow",
+        "learnable": 51,
+        "thin": 2,
+        "dups": 1,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "many_thin",
+            "msg": "2 тонких уроков"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_s_6_l1",
+            "title": "Играть?",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_6_l2",
+            "title": "Кэнг маак",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_6_l3",
+            "title": "Раванг на",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_s_6_l4",
+            "title": "С родителями",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_s_6_l5",
+            "title": "На пляже и в кафе",
+            "n": 10,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_s_6_l3): «Безопасность»"
+              }
+            ]
+          },
+          {
+            "id": "course_s_6_l6",
+            "title": "С детьми",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_1",
+        "title": "Виза, продление, иммиграция",
+        "color": "green",
+        "learnable": 54,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_1_l1",
+            "title": "Отчёт 90 дней",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_1_l2",
+            "title": "Продление визы",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_1_l3",
+            "title": "TM.30 и фото 4×6",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_1_l4",
+            "title": "Почему отказали?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_1_l5",
+            "title": "Где оплатить штраф?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_1_l6",
+            "title": "Весь визит в иммиграцию",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_2",
+        "title": "Банки, деньги, крипта",
+        "color": "green",
+        "learnable": 58,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_2_l1",
+            "title": "Открытие счёта",
+            "n": 18,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_2_l2",
+            "title": "Wise и PromptPay",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_2_l3",
+            "title": "Крипто-обменники",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_2_l4",
+            "title": "Перевод не пришёл",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_2_l5",
+            "title": "Карта заблокирована",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_2_l6",
+            "title": "Весь визит в банк",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_3",
+        "title": "Полная медицина и страховка",
+        "color": "yellow",
+        "learnable": 64,
+        "thin": 0,
+        "dups": 1,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_3_l1",
+            "title": "Симптомы подробно",
+            "n": 16,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_3_l2",
+            "title": "УЗИ и анализы",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_long_3_l1): «Результат готов?»"
+              }
+            ]
+          },
+          {
+            "id": "course_long_3_l3",
+            "title": "Аллергия на пенициллин",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_3_l4",
+            "title": "Страховка покрывает?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_3_l5",
+            "title": "Ассистанс",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_3_l6",
+            "title": "Рецепт и аптека",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_3_l7",
+            "title": "Весь визит к врачу",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_4",
+        "title": "Транспорт для своих",
+        "color": "green",
+        "learnable": 58,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_4_l1",
+            "title": "Мототакси и GrabBike",
+            "n": 16,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_4_l2",
+            "title": "Аренда байка",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_4_l3",
+            "title": "Где шлем?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_4_l4",
+            "title": "Страховка байка",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_4_l5",
+            "title": "Сонгтео",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_4_l6",
+            "title": "Вся дорога",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_5",
+        "title": "Соседи, кондо, правила дома",
+        "color": "green",
+        "learnable": 52,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_5_l1",
+            "title": "Шум и тишина",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_5_l2",
+            "title": "Курение на балконе",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_5_l3",
+            "title": "Общие зоны",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_5_l4",
+            "title": "Кто-то оставил мусор",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_5_l5",
+            "title": "Собрание жильцов",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_5_l6",
+            "title": "Весь дом",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_6",
+        "title": "Питомцы в Таиланде",
+        "color": "green",
+        "learnable": 52,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_6_l1",
+            "title": "Ветеринар",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_6_l2",
+            "title": "Прививки",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_6_l3",
+            "title": "Пёс кашляет",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_6_l4",
+            "title": "Где груминг?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_6_l5",
+            "title": "Отель с животным?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_6_l6",
+            "title": "Весь визит к ветеринару",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_7",
+        "title": "Тайский юмор, мемы, поп-культура",
+        "color": "green",
+        "learnable": 53,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_7_l1",
+            "title": "555 и смех",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_7_l2",
+            "title": "แซ่บ и нонг",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_7_l3",
+            "title": "Фразы из дорам",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_7_l4",
+            "title": "Тикток-тренды",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_7_l5",
+            "title": "Как шутить по-тайски",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_7_l6",
+            "title": "Шутки и мемы",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      }
+    ]
+  },
+  "after": {
+    "totals": {
+      "courses": 42,
+      "lessons": 267,
+      "learnable": 2405,
+      "courses_green": 36,
+      "courses_yellow": 5,
+      "courses_red": 1,
+      "lessons_green": 252,
+      "lessons_yellow": 15,
+      "lessons_red": 0
+    },
+    "courses": [
+      {
+        "id": "course_s_1",
+        "title": "Тайский для блогинга",
+        "color": "green",
+        "learnable": 57,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_s_1_l1",
+            "title": "Сегодня сабай",
+            "n": 16,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_1_l2",
+            "title": "Вайб 100",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_1_l3",
+            "title": "Подписи к фото",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_1_l4",
+            "title": "Ответы подписчикам",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_1_l5",
+            "title": "Эмодзи и сленг",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_1_l6",
+            "title": "Сторис целиком",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_s_2",
+        "title": "Хобби и движ по-тайски",
+        "color": "green",
+        "learnable": 53,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_s_2_l1",
+            "title": "Муай-тай и йога",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_2_l2",
+            "title": "Где зал?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_2_l3",
+            "title": "Сколько стоит занятие?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_2_l4",
+            "title": "Когда следующий класс?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_2_l5",
+            "title": "Серфинг и керамика",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_2_l6",
+            "title": "С тренером",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_s_3",
+        "title": "О чём говорят на самом деле",
+        "color": "green",
+        "learnable": 53,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_s_3_l1",
+            "title": "555 и джин",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_3_l2",
+            "title": "Джай-рай и фан",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_3_l3",
+            "title": "Идиомы нам-джай",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_3_l4",
+            "title": "Кхон ди и другие",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_3_l5",
+            "title": "Шутки и подкасты",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_3_l6",
+            "title": "Живой разговор",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_s_4",
+        "title": "Ретрит и внутренний сабай",
+        "color": "green",
+        "learnable": 53,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_s_4_l1",
+            "title": "Правила молчания",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_4_l2",
+            "title": "Расписание",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_4_l3",
+            "title": "Можно медитировать?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_4_l4",
+            "title": "Где дхарма-холл?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_4_l5",
+            "title": "С монахами",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_4_l6",
+            "title": "На ретрите",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_s_5",
+        "title": "Романтика по-тайски",
+        "color": "green",
+        "learnable": 57,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_s_5_l1",
+            "title": "На-рак",
+            "n": 13,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_5_l2",
+            "title": "Как ты?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_5_l3",
+            "title": "Намёки и интерес",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_5_l4",
+            "title": "Май яак",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_5_l5",
+            "title": "Пен а-рай ган",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_5_l6",
+            "title": "Весь разговор",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_s_6",
+        "title": "Тай кидс",
+        "color": "green",
+        "learnable": 55,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_s_6_l1",
+            "title": "Играть?",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_6_l2",
+            "title": "Кэнг маак",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_6_l3",
+            "title": "Раванг на",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_6_l4",
+            "title": "С родителями",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_6_l5",
+            "title": "На пляже и в кафе",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_s_6_l6",
+            "title": "С детьми",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_1",
+        "title": "Виза, продление, иммиграция",
+        "color": "green",
+        "learnable": 54,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_1_l1",
+            "title": "Отчёт 90 дней",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_1_l2",
+            "title": "Продление визы",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_1_l3",
+            "title": "TM.30 и фото 4×6",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_1_l4",
+            "title": "Почему отказали?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_1_l5",
+            "title": "Где оплатить штраф?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_1_l6",
+            "title": "Весь визит в иммиграцию",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_2",
+        "title": "Банки, деньги, крипта",
+        "color": "green",
+        "learnable": 58,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_2_l1",
+            "title": "Открытие счёта",
+            "n": 18,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_2_l2",
+            "title": "Wise и PromptPay",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_2_l3",
+            "title": "Крипто-обменники",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_2_l4",
+            "title": "Перевод не пришёл",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_2_l5",
+            "title": "Карта заблокирована",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_2_l6",
+            "title": "Весь визит в банк",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_3",
+        "title": "Полная медицина и страховка",
+        "color": "green",
+        "learnable": 64,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_3_l1",
+            "title": "Симптомы подробно",
+            "n": 16,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_3_l2",
+            "title": "УЗИ и анализы",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_3_l3",
+            "title": "Аллергия на пенициллин",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_3_l4",
+            "title": "Страховка покрывает?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_3_l5",
+            "title": "Ассистанс",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_3_l6",
+            "title": "Рецепт и аптека",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_3_l7",
+            "title": "Весь визит к врачу",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_4",
+        "title": "Транспорт для своих",
+        "color": "green",
+        "learnable": 58,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_4_l1",
+            "title": "Мототакси и GrabBike",
+            "n": 16,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_4_l2",
+            "title": "Аренда байка",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_4_l3",
+            "title": "Где шлем?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_4_l4",
+            "title": "Страховка байка",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_4_l5",
+            "title": "Сонгтео",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_4_l6",
+            "title": "Вся дорога",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_5",
+        "title": "Соседи, кондо, правила дома",
+        "color": "green",
+        "learnable": 52,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_5_l1",
+            "title": "Шум и тишина",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_5_l2",
+            "title": "Курение на балконе",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_5_l3",
+            "title": "Общие зоны",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_5_l4",
+            "title": "Кто-то оставил мусор",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_5_l5",
+            "title": "Собрание жильцов",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_5_l6",
+            "title": "Весь дом",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_6",
+        "title": "Питомцы в Таиланде",
+        "color": "green",
+        "learnable": 52,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_6_l1",
+            "title": "Ветеринар",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_6_l2",
+            "title": "Прививки",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_6_l3",
+            "title": "Пёс кашляет",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_6_l4",
+            "title": "Где груминг?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_6_l5",
+            "title": "Отель с животным?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_6_l6",
+            "title": "Весь визит к ветеринару",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_long_7",
+        "title": "Тайский юмор, мемы, поп-культура",
+        "color": "green",
+        "learnable": 53,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_long_7_l1",
+            "title": "555 и смех",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_7_l2",
+            "title": "แซ่บ и нонг",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_7_l3",
+            "title": "Фразы из дорам",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_7_l4",
+            "title": "Тикток-тренды",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_7_l5",
+            "title": "Как шутить по-тайски",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_long_7_l6",
+            "title": "Шутки и мемы",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      }
+    ]
+  },
+  "lessons": [
+    {
+      "id": "course_s_1_l2",
+      "title": "Вайб 100",
+      "course": "Тайский для блогинга",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Вайб дня",
+          "thai_before": "อารมณ์วัน",
+          "ph_before": "а→ ром→ ван→",
+          "ru_after": "Сохрани в хайлайтс",
+          "thai_after": "เก็บไฮไลต์เลย",
+          "ph_after": "кеп→ хай→ лайт↘ лёй→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_s_2_l1",
+      "title": "Муай-тай и йога",
+      "course": "Хобби и движ по-тайски",
+      "n_before": 12,
+      "n_after": 12,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Йога",
+          "thai_before": "โย",
+          "ph_before": "йо→",
+          "ru_after": "Йога",
+          "thai_after": "โยคะ",
+          "ph_after": "йо→ ка→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_s_3_l4",
+      "title": "Кхон ди и другие",
+      "course": "О чём говорят на самом деле",
+      "n_before": 5,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Он правда хороший",
+          "thai": "เขาเป็นคนดีจริง",
+          "ph": "кхау→ пэн→ кон→ ди→ дженг→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Можно без пхи",
+          "thai": "ไม่ต้องเรียกพี่",
+          "ph": "май→ тонг→ риак↗ пхи→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Нонг — про возраст",
+          "thai": "น้องเรื่องอายุ",
+          "ph": "нонг↗ рыанг→ а→ йу→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Не обижайся на шутку",
+          "thai": "อย่าโกรธนะ แซวเล่น",
+          "ph": "йаа→ кроот→ на↗ сэу→ лэн→"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_s_3_l6",
+      "title": "Живой разговор",
+      "course": "О чём говорят на самом деле",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Шутки по-тайски",
+          "thai_before": "ตลกแบบไทย",
+          "ph_before": "тхолок↘ бэп→ тай→",
+          "ru_after": "Можно стикер?",
+          "thai_after": "ส่งสติ๊กเกอร์ได้ไหม",
+          "ph_after": "сонг→ са→ тик→ кё→ дай→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_s_4_l2",
+      "title": "Расписание",
+      "course": "Ретрит и внутренний сабай",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Во сколько подъём?",
+          "thai": "กี่โมงตื่น",
+          "ph": "ги→ монг→ тын→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Не говорить на сидячей",
+          "thai": "ห้ามคุยตอนนั่ง",
+          "ph": "хаам↗ кхуй→ тон→ нанг→"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_s_5_l5",
+      "title": "Пен а-рай ган",
+      "course": "Романтика по-тайски",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Пока не готов встречаться",
+          "thai": "ยังไม่พร้อมคบ",
+          "ph": "янг→ май→ пхром↗ кхоп→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Мы просто друзья",
+          "thai": "แค่เพื่อนนะ",
+          "ph": "кэ→ пхыан↗ на↗"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_s_6_l3",
+      "title": "Раванг на",
+      "course": "Тай кидс",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Не беги",
+          "thai": "อย่าวิ่ง",
+          "ph": "йаа→ винг↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Горячо",
+          "thai": "ร้อนนะ",
+          "ph": "рон↘ на↗"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_s_6_l4",
+      "title": "С родителями",
+      "course": "Тай кидс",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Сколько лет ребёнку?",
+          "thai": "ลูกกี่ขวบ",
+          "ph": "луук↘ ги→ кхуап→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Есть аллергия на еду?",
+          "thai": "แพ้อาหารอะไรไหม",
+          "ph": "пхэ↘ а→ хаан→ а→ рай↗ май↗"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_s_6_l5",
+      "title": "На пляже и в кафе",
+      "course": "Тай кидс",
+      "n_before": 10,
+      "n_after": 10,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Безопасность",
+          "thai_before": "ความปลอดภัย",
+          "ph_before": "кхвам→ плот→ пай→",
+          "ru_after": "В воду недалеко",
+          "thai_after": "อย่าไปไกล",
+          "ph_after": "йаа→ пай→ глай→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_long_3_l2",
+      "title": "УЗИ и анализы",
+      "course": "Полная медицина и страховка",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Результат готов?",
+          "thai_before": "ผลออกหรือยัง",
+          "ph_before": "пхон↘ ок↘ рё→ янг→",
+          "ru_after": "Натощак?",
+          "thai_after": "ต้องงดอาหารไหม",
+          "ph_after": "тонг→ нгот→ а→ хаан→ май↗"
+        }
+      ],
+      "changed": []
+    }
+  ]
+}

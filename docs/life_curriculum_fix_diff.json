@@ -1,0 +1,4247 @@
+{
+  "title": "Дифф «Тайский для жизни» — было → стало",
+  "html_id": "life-diff",
+  "foot": "Замены: базовые клоны и внутренние повторы → ситуативные фразы. Id курсов/уроков те же.",
+  "note": "Только course_l_1…l_15. Базу не трогали. Капстоун больше не копирует тот же курс.",
+  "before": {
+    "totals": {
+      "courses": 42,
+      "lessons": 267,
+      "learnable": 2356,
+      "courses_green": 13,
+      "courses_yellow": 27,
+      "courses_red": 2,
+      "lessons_green": 161,
+      "lessons_yellow": 106,
+      "lessons_red": 0
+    },
+    "courses": [
+      {
+        "id": "course_l_1",
+        "title": "На посту с полицией",
+        "color": "red",
+        "learnable": 47,
+        "thin": 7,
+        "dups": 5,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "course_dupes",
+            "msg": "5 повторных карточек внутри курса"
+          },
+          {
+            "sev": "yellow",
+            "code": "many_thin",
+            "msg": "7 тонких уроков"
+          },
+          {
+            "sev": "red",
+            "code": "all_lessons_thin",
+            "msg": "Все уроки тонкие — курс выглядит как недоделанный платный пакет"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_l_1_l1",
+            "title": "Спокойно остановиться",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Извините»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_1_l2",
+            "title": "Показать документы",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_l_1_l3",
+            "title": "Шлем и пассажир",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_l_1_l4",
+            "title": "Если не понял",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_1_l1): «Понял»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_1_l5",
+            "title": "Понять процедуру",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_1_l4): «Что делать?»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_1_l6",
+            "title": "Если документа нет",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_l_1_l7",
+            "title": "Закрыть проверку",
+            "n": 5,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 5 карточек (цель 8–12)"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_1_l1): «Хорошо»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_1_l4): «Не понял»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_1_l4): «Что делать?»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_2",
+        "title": "Таксист, вези меня домой",
+        "color": "yellow",
+        "learnable": 63,
+        "thin": 0,
+        "dups": 5,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "course_dupes",
+            "msg": "5 повторных карточек внутри курса"
+          },
+          {
+            "sev": "yellow",
+            "code": "base_leak_course",
+            "msg": "3 базовых карточек в ситуативном курсе"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_l_2_l1",
+            "title": "Назвать точку",
+            "n": 15,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_2_l2",
+            "title": "Цена до поездки",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_2_l3",
+            "title": "Прямо и налево",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_2_l4",
+            "title": "Останови здесь",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_2_l1): «Остановите здесь»"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_2_l5",
+            "title": "Чуть подожди",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_2_l6",
+            "title": "Вся поездка",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_2_l2): «По счётчику»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_2_l1): «Остановите здесь»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_2_l1): «Сдачи не надо»"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «До свидания» (в сценке-итоге — допустимо, если не единственное мясо)"
+              }
+            ]
+          },
+          {
+            "id": "course_l_2_l7",
+            "title": "День, ночь и Grab",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_2_l4): «Спасибо»"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_3",
+        "title": "Король рынка",
+        "color": "yellow",
+        "learnable": 68,
+        "thin": 0,
+        "dups": 2,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_3_l1",
+            "title": "Числа на рынке",
+            "n": 11,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_3_l2",
+            "title": "Сколько за это",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_3_l3",
+            "title": "Дорого и дешевле",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_3_l4",
+            "title": "Давай 200",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_3_l5",
+            "title": "Фрукты и штуки",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_3_l6",
+            "title": "Король рынка",
+            "n": 11,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_3_l7",
+            "title": "Торг за разное",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_3_l3): «Последняя цена»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_3_l4): «Договорились»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_4",
+        "title": "Вселенная тайской еды",
+        "color": "yellow",
+        "learnable": 61,
+        "thin": 1,
+        "dups": 2,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_4_l1",
+            "title": "Пад тай и сом там",
+            "n": 13,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_4_l2",
+            "title": "Том ям и кхао ман",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_4_l3",
+            "title": "Мало остро",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_4_l1): «Мало остро»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_4_l4",
+            "title": "Без рыбы и ещё риса",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_4_l2): «Ещё риса»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_4_l5",
+            "title": "На фудкорте",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_4_l6",
+            "title": "Вкусно и счёт",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_4_l7",
+            "title": "Заказ с аллергиями",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_5",
+        "title": "Доктор Тайка дежурит",
+        "color": "yellow",
+        "learnable": 62,
+        "thin": 1,
+        "dups": 2,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_5_l1",
+            "title": "Голова болит",
+            "n": 15,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_5_l2",
+            "title": "Живот и температура",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_5_l3",
+            "title": "Таблетка от …",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_5_l4",
+            "title": "Сколько раз в день",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_5_l5",
+            "title": "Аллергия и нет",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_5_l6",
+            "title": "От симптома до инструкции",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_5_l3): «Таблетка от головы»"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_5_l7",
+            "title": "В клинике",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_5_l2): «Симптомы»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_6",
+        "title": "Белый лотос на максималках",
+        "color": "yellow",
+        "learnable": 64,
+        "thin": 2,
+        "dups": 5,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "course_dupes",
+            "msg": "5 повторных карточек внутри курса"
+          },
+          {
+            "sev": "yellow",
+            "code": "many_thin",
+            "msg": "2 тонких уроков"
+          },
+          {
+            "sev": "yellow",
+            "code": "base_leak_course",
+            "msg": "3 базовых карточек в ситуативном курсе"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_l_6_l1",
+            "title": "Номер и ключ",
+            "n": 12,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_6_l2",
+            "title": "Уборка и полотенце",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_6_l3",
+            "title": "Кондиционер",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_6_l4",
+            "title": "Ранний заезд",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_6_l5",
+            "title": "Счёт и выезд",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «До свидания»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_6_l6",
+            "title": "Весь визит в отель",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_6_l5): «Счёт»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_6_l1): «Спасибо»"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо» (в сценке-итоге — допустимо, если не единственное мясо)"
+              }
+            ]
+          },
+          {
+            "id": "course_l_6_l7",
+            "title": "Проблемы в номере",
+            "n": 11,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_6_l3): «Кондиционер не работает»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_6_l3): «Почините пожалуйста»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_6_l3): «Вода течёт»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_7",
+        "title": "Пляж как состояние",
+        "color": "yellow",
+        "learnable": 68,
+        "thin": 0,
+        "dups": 4,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "course_dupes",
+            "msg": "4 повторных карточек внутри курса"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_l_7_l1",
+            "title": "Тень и солнце",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_7_l2",
+            "title": "Шезлонг и лежак",
+            "n": 10,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_7_l1): «Зонт входит?»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_7_l3",
+            "title": "Кокос и напитки",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_7_l4",
+            "title": "Снорклинг",
+            "n": 11,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_7_l5",
+            "title": "Пляжный день",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_7_l6",
+            "title": "Весь пляж",
+            "n": 11,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «До свидания» (в сценке-итоге — допустимо, если не единственное мясо)"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_7_l3): «Кокос»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_7_l7",
+            "title": "Аренда и напитки",
+            "n": 9,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_7_l4): «Тур снорклинг»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_7_l4): «Ласты»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_8",
+        "title": "Магазинные приключения",
+        "color": "yellow",
+        "learnable": 68,
+        "thin": 1,
+        "dups": 3,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "base_leak_course",
+            "msg": "3 базовых карточек в ситуативном курсе"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_l_8_l1",
+            "title": "Где товар",
+            "n": 16,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_8_l2",
+            "title": "Цена на полке",
+            "n": 10,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_8_l3",
+            "title": "Касса и очередь",
+            "n": 9,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_8_l4",
+            "title": "Пакет и карта",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_8_l5",
+            "title": "Big C и Tesco",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_8_l6",
+            "title": "Вся покупка",
+            "n": 6,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 6 карточек (цель 8–12)"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_8_l5): «Всё»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_8_l3): «Спасибо»"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо» (в сценке-итоге — допустимо, если не единственное мясо)"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «До свидания» (в сценке-итоге — допустимо, если не единственное мясо)"
+              }
+            ]
+          },
+          {
+            "id": "course_l_8_l7",
+            "title": "В Big C и возврат",
+            "n": 11,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_8_l1): «Можно обменять?»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_9",
+        "title": "Срочная помощь",
+        "color": "yellow",
+        "learnable": 63,
+        "thin": 1,
+        "dups": 4,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "course_dupes",
+            "msg": "4 повторных карточек внутри курса"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_l_9_l1",
+            "title": "Помогите",
+            "n": 15,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_9_l2",
+            "title": "Полиция и скорая",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_9_l1): «Полиция»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_9_l1): «Скорая»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_9_l3",
+            "title": "Больница",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_9_l1): «Больница»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_9_l4",
+            "title": "У меня украли",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_9_l5",
+            "title": "Пожар",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_9_l2): «Пожарные»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_9_l6",
+            "title": "Адрес и телефон",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_9_l7",
+            "title": "Срочный вызов",
+            "n": 9,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_10",
+        "title": "Между подходами",
+        "color": "yellow",
+        "learnable": 64,
+        "thin": 0,
+        "dups": 2,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_10_l1",
+            "title": "Абонемент",
+            "n": 13,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_10_l2",
+            "title": "Тренировка",
+            "n": 9,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_10_l3",
+            "title": "Веса и тренажёры",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_10_l4",
+            "title": "Тренер",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_10_l5",
+            "title": "Душ и шкафчик",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_10_l6",
+            "title": "Весь зал",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо» (в сценке-итоге — допустимо, если не единственное мясо)"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Пока» (в сценке-итоге — допустимо, если не единственное мясо)"
+              }
+            ]
+          },
+          {
+            "id": "course_l_10_l7",
+            "title": "С тренером в зале",
+            "n": 10,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_10_l2): «Йога»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_10_l4): «Сколько занятие?»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_11",
+        "title": "Сезон Сонгкрана и не только",
+        "color": "yellow",
+        "learnable": 66,
+        "thin": 0,
+        "dups": 5,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "course_dupes",
+            "msg": "5 повторных карточек внутри курса"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_l_11_l1",
+            "title": "Сонгкран",
+            "n": 12,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_11_l2",
+            "title": "Лой Кратонг",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_11_l3",
+            "title": "Йи Пенг",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_11_l2): «Ноябрь»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_11_l4",
+            "title": "Праздник и ярмарка",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_11_l5",
+            "title": "Поздравления",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_11_l6",
+            "title": "На празднике",
+            "n": 10,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_11_l5): «Фото можно?»"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_11_l7",
+            "title": "Праздники круглый год",
+            "n": 10,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_11_l1): «Счастливого Сонгкрана!»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_11_l5): «Хорошего праздника»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_11_l5): «Веселись»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_12",
+        "title": "Новый тайский образ",
+        "color": "yellow",
+        "learnable": 53,
+        "thin": 1,
+        "dups": 1,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "scenario_thin",
+            "msg": "Сценарий «салон / образ» тонкий (нашлись: ['стриж'])"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_l_12_l1",
+            "title": "Стрижка",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_12_l2",
+            "title": "Длина и форма",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_12_l3",
+            "title": "Массаж головы",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_12_l4",
+            "title": "Борода",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_l_12_l5",
+            "title": "Цена и время",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_12_l3): «Сколько по времени?»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_12_l6",
+            "title": "Весь салон",
+            "n": 10,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо» (в сценке-итоге — допустимо, если не единственное мясо)"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «До свидания» (в сценке-итоге — допустимо, если не единственное мясо)"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_13",
+        "title": "Хозяин дома — почти сосед",
+        "color": "yellow",
+        "learnable": 60,
+        "thin": 0,
+        "dups": 4,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "course_dupes",
+            "msg": "4 повторных карточек внутри курса"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_l_13_l1",
+            "title": "Протечка",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_13_l2",
+            "title": "Оплата",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_13_l3",
+            "title": "Кондиционер сломан",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_13_l1): «Почините пожалуйста»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_13_l1): «Капает вода»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_13_l4",
+            "title": "Можно починить?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_13_l5",
+            "title": "Когда приедете?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_13_l6",
+            "title": "Чат с хозяином",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_13_l5): «Жду»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_13_l7",
+            "title": "Ремонт и соседи",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_13_l1): «Почините пожалуйста»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_14",
+        "title": "Таиланд доставляет",
+        "color": "yellow",
+        "learnable": 57,
+        "thin": 2,
+        "dups": 2,
+        "flags": [
+          {
+            "sev": "yellow",
+            "code": "many_thin",
+            "msg": "2 тонких уроков"
+          }
+        ],
+        "lessons": [
+          {
+            "id": "course_l_14_l1",
+            "title": "Посылка",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_14_l2",
+            "title": "Адрес",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_14_l3",
+            "title": "Трек-номер",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              }
+            ]
+          },
+          {
+            "id": "course_l_14_l4",
+            "title": "Курьер где?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_14_l5",
+            "title": "Сколько доставка?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_14_l6",
+            "title": "Вся доставка",
+            "n": 7,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "thin",
+                "msg": "Тонкий урок: 7 карточек (цель 8–12)"
+              },
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Спасибо» (в сценке-итоге — допустимо, если не единственное мясо)"
+              }
+            ]
+          },
+          {
+            "id": "course_l_14_l7",
+            "title": "Проблемы с доставкой",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_14_l3): «Где моя посылка?»"
+              },
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_14_l3): «Покажите трек»"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "course_l_15",
+        "title": "После заката всё интереснее",
+        "color": "yellow",
+        "learnable": 63,
+        "thin": 0,
+        "dups": 1,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_15_l1",
+            "title": "Ещё один",
+            "n": 12,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_15_l2",
+            "title": "Сколько за пиво?",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_15_l3",
+            "title": "Короткий разговор",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_15_l4",
+            "title": "Музыка и танцы",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_15_l5",
+            "title": "Знакомства",
+            "n": 8,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "base_leak",
+                "msg": "Базовая карточка в ситуативном курсе: «Пока»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_15_l6",
+            "title": "Ночной разговор",
+            "n": 9,
+            "color": "yellow",
+            "flags": [
+              {
+                "sev": "yellow",
+                "code": "dup_in_course",
+                "msg": "Уже было в этом курсе (course_l_15_l2): «Счёт пожалуйста»"
+              }
+            ]
+          },
+          {
+            "id": "course_l_15_l7",
+            "title": "В баре",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      }
+    ]
+  },
+  "after": {
+    "totals": {
+      "courses": 42,
+      "lessons": 267,
+      "learnable": 2393,
+      "courses_green": 15,
+      "courses_yellow": 26,
+      "courses_red": 1,
+      "lessons_green": 213,
+      "lessons_yellow": 54,
+      "lessons_red": 0
+    },
+    "courses": [
+      {
+        "id": "course_l_1",
+        "title": "На посту с полицией",
+        "color": "yellow",
+        "learnable": 63,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_1_l1",
+            "title": "Спокойно остановиться",
+            "n": 9,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_1_l2",
+            "title": "Показать документы",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_1_l3",
+            "title": "Шлем и пассажир",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_1_l4",
+            "title": "Если не понял",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_1_l5",
+            "title": "Понять процедуру",
+            "n": 9,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_1_l6",
+            "title": "Если документа нет",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_1_l7",
+            "title": "Закрыть проверку",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_2",
+        "title": "Таксист, вези меня домой",
+        "color": "yellow",
+        "learnable": 63,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_2_l1",
+            "title": "Назвать точку",
+            "n": 15,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_2_l2",
+            "title": "Цена до поездки",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_2_l3",
+            "title": "Прямо и налево",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_2_l4",
+            "title": "Останови здесь",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_2_l5",
+            "title": "Чуть подожди",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_2_l6",
+            "title": "Вся поездка",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_2_l7",
+            "title": "День, ночь и Grab",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_3",
+        "title": "Король рынка",
+        "color": "yellow",
+        "learnable": 68,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_3_l1",
+            "title": "Числа на рынке",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_3_l2",
+            "title": "Сколько за это",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_3_l3",
+            "title": "Дорого и дешевле",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_3_l4",
+            "title": "Давай 200",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_3_l5",
+            "title": "Фрукты и штуки",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_3_l6",
+            "title": "Король рынка",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_3_l7",
+            "title": "Торг за разное",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_4",
+        "title": "Вселенная тайской еды",
+        "color": "yellow",
+        "learnable": 63,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_4_l1",
+            "title": "Пад тай и сом там",
+            "n": 13,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_4_l2",
+            "title": "Том ям и кхао ман",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_4_l3",
+            "title": "Мало остро",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_4_l4",
+            "title": "Без рыбы и ещё риса",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_4_l5",
+            "title": "На фудкорте",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_4_l6",
+            "title": "Вкусно и счёт",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_4_l7",
+            "title": "Заказ с аллергиями",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_5",
+        "title": "Доктор Тайка дежурит",
+        "color": "yellow",
+        "learnable": 64,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_5_l1",
+            "title": "Голова болит",
+            "n": 15,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_5_l2",
+            "title": "Живот и температура",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_5_l3",
+            "title": "Таблетка от …",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_5_l4",
+            "title": "Сколько раз в день",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_5_l5",
+            "title": "Аллергия и нет",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_5_l6",
+            "title": "От симптома до инструкции",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_5_l7",
+            "title": "В клинике",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_6",
+        "title": "Белый лотос на максималках",
+        "color": "yellow",
+        "learnable": 68,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_6_l1",
+            "title": "Номер и ключ",
+            "n": 12,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_6_l2",
+            "title": "Уборка и полотенце",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_6_l3",
+            "title": "Кондиционер",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_6_l4",
+            "title": "Ранний заезд",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_6_l5",
+            "title": "Счёт и выезд",
+            "n": 9,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_6_l6",
+            "title": "Весь визит в отель",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_6_l7",
+            "title": "Проблемы в номере",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_7",
+        "title": "Пляж как состояние",
+        "color": "yellow",
+        "learnable": 68,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_7_l1",
+            "title": "Тень и солнце",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_7_l2",
+            "title": "Шезлонг и лежак",
+            "n": 10,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_7_l3",
+            "title": "Кокос и напитки",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_7_l4",
+            "title": "Снорклинг",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_7_l5",
+            "title": "Пляжный день",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_7_l6",
+            "title": "Весь пляж",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_7_l7",
+            "title": "Аренда и напитки",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_8",
+        "title": "Магазинные приключения",
+        "color": "yellow",
+        "learnable": 70,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_8_l1",
+            "title": "Где товар",
+            "n": 16,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_8_l2",
+            "title": "Цена на полке",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_8_l3",
+            "title": "Касса и очередь",
+            "n": 9,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_8_l4",
+            "title": "Пакет и карта",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_8_l5",
+            "title": "Big C и Tesco",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_8_l6",
+            "title": "Вся покупка",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_8_l7",
+            "title": "В Big C и возврат",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_9",
+        "title": "Срочная помощь",
+        "color": "yellow",
+        "learnable": 64,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_9_l1",
+            "title": "Помогите",
+            "n": 15,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_9_l2",
+            "title": "Полиция и скорая",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_9_l3",
+            "title": "Больница",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_9_l4",
+            "title": "У меня украли",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_9_l5",
+            "title": "Пожар",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_9_l6",
+            "title": "Адрес и телефон",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_9_l7",
+            "title": "Срочный вызов",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_10",
+        "title": "Между подходами",
+        "color": "yellow",
+        "learnable": 64,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_10_l1",
+            "title": "Абонемент",
+            "n": 13,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_10_l2",
+            "title": "Тренировка",
+            "n": 9,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_10_l3",
+            "title": "Веса и тренажёры",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_10_l4",
+            "title": "Тренер",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_10_l5",
+            "title": "Душ и шкафчик",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_10_l6",
+            "title": "Весь зал",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_10_l7",
+            "title": "С тренером в зале",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_11",
+        "title": "Сезон Сонгкрана и не только",
+        "color": "green",
+        "learnable": 66,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_11_l1",
+            "title": "Сонгкран",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_11_l2",
+            "title": "Лой Кратонг",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_11_l3",
+            "title": "Йи Пенг",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_11_l4",
+            "title": "Праздник и ярмарка",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_11_l5",
+            "title": "Поздравления",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_11_l6",
+            "title": "На празднике",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_11_l7",
+            "title": "Праздники круглый год",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_12",
+        "title": "Новый тайский образ",
+        "color": "yellow",
+        "learnable": 59,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_12_l1",
+            "title": "Стрижка",
+            "n": 13,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_12_l2",
+            "title": "Длина и форма",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_12_l3",
+            "title": "Массаж головы",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_12_l4",
+            "title": "Борода",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_12_l5",
+            "title": "Цена и время",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_12_l6",
+            "title": "Весь салон",
+            "n": 12,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_13",
+        "title": "Хозяин дома — почти сосед",
+        "color": "yellow",
+        "learnable": 60,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_13_l1",
+            "title": "Протечка",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_13_l2",
+            "title": "Оплата",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_13_l3",
+            "title": "Кондиционер сломан",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_13_l4",
+            "title": "Можно починить?",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_13_l5",
+            "title": "Когда приедете?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_13_l6",
+            "title": "Чат с хозяином",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_13_l7",
+            "title": "Ремонт и соседи",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_14",
+        "title": "Таиланд доставляет",
+        "color": "yellow",
+        "learnable": 61,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_14_l1",
+            "title": "Посылка",
+            "n": 11,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_14_l2",
+            "title": "Адрес",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_14_l3",
+            "title": "Трек-номер",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_14_l4",
+            "title": "Курьер где?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_14_l5",
+            "title": "Сколько доставка?",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_14_l6",
+            "title": "Вся доставка",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_14_l7",
+            "title": "Проблемы с доставкой",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      },
+      {
+        "id": "course_l_15",
+        "title": "После заката всё интереснее",
+        "color": "yellow",
+        "learnable": 63,
+        "thin": 0,
+        "dups": 0,
+        "flags": [],
+        "lessons": [
+          {
+            "id": "course_l_15_l1",
+            "title": "Ещё один",
+            "n": 12,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_15_l2",
+            "title": "Сколько за пиво?",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_15_l3",
+            "title": "Короткий разговор",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_15_l4",
+            "title": "Музыка и танцы",
+            "n": 8,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_15_l5",
+            "title": "Знакомства",
+            "n": 8,
+            "color": "yellow",
+            "flags": []
+          },
+          {
+            "id": "course_l_15_l6",
+            "title": "Ночной разговор",
+            "n": 9,
+            "color": "green",
+            "flags": []
+          },
+          {
+            "id": "course_l_15_l7",
+            "title": "В баре",
+            "n": 10,
+            "color": "green",
+            "flags": []
+          }
+        ]
+      }
+    ]
+  },
+  "lessons": [
+    {
+      "id": "course_l_1_l1",
+      "title": "Спокойно остановиться",
+      "course": "На посту с полицией",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Я не пил",
+          "thai": "ฉันไม่ได้ดื่ม",
+          "ph": "чхан→ май→ дай→ дым↘"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Документы сейчас достану",
+          "thai": "เดี๋ยวเอาเอกสาร",
+          "ph": "диау↘ ау→ э→ га→ саан→"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Извините",
+          "thai_before": "ขอโทษ",
+          "ph_before": "кхо→ тхот→",
+          "ru_after": "Извините, не знал правила",
+          "thai_after": "ขอโทษ ไม่รู้กฎ",
+          "ph_after": "кхо→ тхот→ май→ руу↘ кот↘"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_1_l2",
+      "title": "Показать документы",
+      "course": "На посту с полицией",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Международные права",
+          "thai": "ใบขับขี่สากล",
+          "ph": "бай→ кхап→ кхи↘ са→ кон→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Страховка в телефоне",
+          "thai": "ประกันในมือถือ",
+          "ph": "пра→ кан→ най→ мы→ тхы→"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_l_1_l3",
+      "title": "Шлем и пассажир",
+      "course": "На посту с полицией",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Пассажир тоже в шлеме",
+          "thai": "คนซ้อนใส่หมวกด้วย",
+          "ph": "кон→ сон→ сай→ муак→ дуай→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Застегнул шлем",
+          "thai": "รัดหมวกแล้ว",
+          "ph": "рат→ муак→ лэу→"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_l_1_l4",
+      "title": "Если не понял",
+      "course": "На посту с полицией",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Покажите на бумаге",
+          "thai": "ชี้ที่กระดาษหน่อย",
+          "ph": "чи→ ти→ кра→ даат→ ной→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Говорите проще",
+          "thai": "พูดง่ายๆหน่อย",
+          "ph": "пхуут→ нгаай↗ нгаай↗ ной→"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Понял",
+          "thai_before": "เข้าใจแล้ว",
+          "ph_before": "кау→ джай→ лэу→",
+          "ru_after": "Напишите это",
+          "thai_after": "เขียนให้หน่อย",
+          "ph_after": "кхиан→ хай→ ной→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_1_l5",
+      "title": "Понять процедуру",
+      "course": "На посту с полицией",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Можно завтра оплатить?",
+          "thai": "จ่ายพรุ่งนี้ได้ไหม",
+          "ph": "джай→ пхрунг→ ни→ дай→ май↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Можно переводом?",
+          "thai": "โอนได้ไหม",
+          "ph": "он→ дай→ май↗"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Что делать?",
+          "thai_before": "ต้องทำอะไร",
+          "ph_before": "тонг→ там→ а→ рай↗",
+          "ru_after": "Штраф за что?",
+          "thai_after": "ปรับเพราะอะไร",
+          "ph_after": "прап→ пхро→ а→ рай↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_1_l6",
+      "title": "Если документа нет",
+      "course": "На посту с полицией",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Хозяин байка приедет",
+          "thai": "เจ้าของรถมาเอง",
+          "ph": "джау→ кхонг→ рот→ маа→ энг→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Отель рядом",
+          "thai": "โรงแรมใกล้",
+          "ph": "ронг→ рэм→ глай↘"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_l_1_l7",
+      "title": "Закрыть проверку",
+      "course": "На посту с полицией",
+      "n_before": 5,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Еду медленно дальше",
+          "thai": "ขับช้าต่อไป",
+          "ph": "кхап→ ча↗ то→ пай→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Включил поворотник",
+          "thai": "เปิดไฟเลี้ยวแล้ว",
+          "ph": "пёт→ фай→ лиау→ лэу→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Спасибо за объяснение",
+          "thai": "ขอบคุณที่อธิบาย",
+          "ph": "кхоп→ кхун→ ти→ а→ тхи→ баай→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Остановлюсь, если позовёте",
+          "thai": "ถ้าเรียกจะจอด",
+          "ph": "тхаа↗ риак↗ ча→ чот→"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Хорошо",
+          "thai_before": "ได้",
+          "ph_before": "дай→",
+          "ru_after": "Можно ехать?",
+          "thai_after": "ไปได้แล้วไหม",
+          "ph_after": "пай→ дай→ лэу→ май↗"
+        },
+        {
+          "ru_before": "Вот права",
+          "thai_before": "นี่ใบขับขี่",
+          "ph_before": "ни→ бай→ кхап→ кхи↘",
+          "ru_after": "Штраф оплачен",
+          "thai_after": "จ่ายค่าปรับแล้ว",
+          "ph_after": "джай→ кхаа→ прап→ лэу→"
+        },
+        {
+          "ru_before": "Не понял",
+          "thai_before": "ไม่เข้าใจ",
+          "ph_before": "май→ кау→ джай→",
+          "ru_after": "Где участок?",
+          "thai_after": "สถานีตำรวจอยู่ไหน",
+          "ph_after": "са→ тха→ ни→ там→ руат→ ю→ най↗"
+        },
+        {
+          "ru_before": "Что делать?",
+          "thai_before": "ต้องทำอะไร",
+          "ph_before": "тонг→ там→ а→ рай↗",
+          "ru_after": "Копию протокола, пожалуйста",
+          "thai_after": "ขอสำเนาใบสั่ง",
+          "ph_after": "кхо→ сам→ нау→ бай→ санг→"
+        },
+        {
+          "ru_before": "Спасибо, понял",
+          "thai_before": "ขอบคุณ เข้าใจแล้ว",
+          "ph_before": "кхоп→ кхун→ кау→ джай→ лэу→",
+          "ru_after": "Я понял нарушение",
+          "thai_after": "เข้าใจข้อหา",
+          "ph_after": "кау→ джай→ кхо→ хаа→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_2_l2",
+      "title": "Цена до поездки",
+      "course": "Таксист, вези меня домой",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Дорого",
+          "thai_before": "แพง",
+          "ph_before": "пхэнг→",
+          "ru_after": "Дорого за эту поездку",
+          "thai_after": "แพงไปสำหรับทางนี้",
+          "ph_after": "пхэнг→ пай→ сам→ рап→ таанг→ ни→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_2_l3",
+      "title": "Прямо и налево",
+      "course": "Таксист, вези меня домой",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Прямо",
+          "thai_before": "ตรงไป",
+          "ph_before": "тронг→ пай→",
+          "ru_after": "Прямо до светофора",
+          "thai_after": "ตรงไปจนถึงไฟแดง",
+          "ph_after": "тронг→ пай→ джон→ тхынг→ фай→ дэнг→"
+        },
+        {
+          "ru_before": "Налево",
+          "thai_before": "เลี้ยวซ้าย",
+          "ph_before": "лиао→ сай↘",
+          "ru_after": "Налево на следующем",
+          "thai_after": "เลี้ยวซ้ายแยกหน้า",
+          "ph_after": "лиау→ саай→ йэк↘ наа↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_2_l4",
+      "title": "Останови здесь",
+      "course": "Таксист, вези меня домой",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Спасибо, довезли",
+          "thai_after": "ขอบคุณที่ส่ง",
+          "ph_after": "кхоп→ кхун→ ти→ сонг→"
+        },
+        {
+          "ru_before": "Остановите здесь",
+          "thai_before": "จอดตรงนี้",
+          "ph_before": "чот→ тронг→ ни→",
+          "ru_after": "После светофора останови",
+          "thai_after": "เลยไฟแดงแล้วจอด",
+          "ph_after": "лёй→ фай→ дэнг→ лэу→ чот→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_2_l5",
+      "title": "Чуть подожди",
+      "course": "Таксист, вези меня домой",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Сейчас",
+          "thai_before": "ตอนนี้",
+          "ph_before": "тон→ ни→",
+          "ru_after": "Сейчас нельзя повернуть",
+          "thai_after": "ตอนนี้เลี้ยวไม่ได้",
+          "ph_after": "тон→ ни→ лиау→ май→ дай→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_2_l6",
+      "title": "Вся поездка",
+      "course": "Таксист, вези меня домой",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Сколько стоит?",
+          "thai_before": "เท่าไหร่",
+          "ph_before": "тао→ рай↗",
+          "ru_after": "Сколько за поездку?",
+          "thai_after": "ค่าแท็กซี่เท่าไหร่",
+          "ph_after": "кхаа→ тхэк→ си→ тао→ рай↗"
+        },
+        {
+          "ru_before": "По счётчику",
+          "thai_before": "ตามมิเตอร์",
+          "ph_before": "там→ ми→ тё→",
+          "ru_after": "Багаж в багажник",
+          "thai_after": "ของใส่ท้าย",
+          "ph_after": "кхонг→ сай→ тхаай↗"
+        },
+        {
+          "ru_before": "Остановите здесь",
+          "thai_before": "จอดตรงนี้",
+          "ph_before": "чот→ тронг→ ни→",
+          "ru_after": "Этот подъезд",
+          "thai_after": "ซอยนี้",
+          "ph_after": "сой→ ни→"
+        },
+        {
+          "ru_before": "Сдачи не надо",
+          "thai_before": "ไม่ต้องทอน",
+          "ph_before": "май→ тонг→ тхон→",
+          "ru_after": "По приложению, не наличными",
+          "thai_after": "จ่ายในแอป",
+          "ph_after": "джай→ най→ эп↘"
+        },
+        {
+          "ru_before": "До свидания",
+          "thai_before": "ลาก่อน",
+          "ph_before": "ла→ кон→",
+          "ru_after": "Я выхожу здесь",
+          "thai_after": "ลงตรงนี้",
+          "ph_after": "лонг→ тронг→ ни→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_2_l7",
+      "title": "День, ночь и Grab",
+      "course": "Таксист, вези меня домой",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Номер совпадает с приложением",
+          "thai_after": "ทะเบียนตรงกับแอปไหม",
+          "ph_after": "тха→ биан→ тронг→ кап→ эп↘ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_3_l1",
+      "title": "Числа на рынке",
+      "course": "Король рынка",
+      "n_before": 11,
+      "n_after": 11,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Сто",
+          "thai_before": "ร้อย",
+          "ph_before": "рой↘",
+          "ru_after": "Два кило",
+          "thai_after": "สองกิโล",
+          "ph_after": "сонг→ ки→ ло→"
+        },
+        {
+          "ru_before": "Сколько за это?",
+          "thai_before": "อันนี้เท่าไหร่",
+          "ph_before": "ан→ ни→ тао→ рай↗",
+          "ru_after": "Сколько за кило?",
+          "thai_after": "กิโลละเท่าไหร่",
+          "ph_after": "ки→ ло→ ла→ тао→ рай↗"
+        },
+        {
+          "ru_before": "Дорого",
+          "thai_before": "แพง",
+          "ph_before": "пхэнг→",
+          "ru_after": "Дорого за этот сорт",
+          "thai_after": "แพงไปสำหรับลูกนี้",
+          "ph_after": "пхэнг→ пай→ сам→ рап→ лук↘ ни→"
+        },
+        {
+          "ru_before": "Полкило",
+          "thai_before": "ครึ่งกิโล",
+          "ph_before": "кхрынг↗ ки→ ло→",
+          "ru_after": "Пять штук",
+          "thai_after": "ห้าลูก",
+          "ph_after": "хаа↗ лук↘"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_3_l3",
+      "title": "Дорого и дешевле",
+      "course": "Король рынка",
+      "n_before": 10,
+      "n_after": 10,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Можно скидку?",
+          "thai_before": "ลดได้ไหม",
+          "ph_before": "лот→ дай→ май↗",
+          "ru_after": "Можно чуть дешевле?",
+          "thai_after": "ลดอีกนิดได้ไหม",
+          "ph_after": "лот→ ик→ нит→ дай→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_3_l4",
+      "title": "Давай 200",
+      "course": "Король рынка",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Ок беру",
+          "thai_before": "โอเคเอา",
+          "ph_before": "о→ кэ→ ау→",
+          "ru_after": "Беру этот лоток",
+          "thai_after": "เอาถาดนี้",
+          "ph_after": "ау→ тхаат↘ ни→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_3_l6",
+      "title": "Король рынка",
+      "course": "Король рынка",
+      "n_before": 11,
+      "n_after": 11,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Спасибо, что уступили",
+          "thai_after": "ขอบคุณที่ลด",
+          "ph_after": "кхоп→ кхун→ ти→ лот→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_3_l7",
+      "title": "Торг за разное",
+      "course": "Король рынка",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Тысяча",
+          "thai_before": "พัน",
+          "ph_before": "пхан→",
+          "ru_after": "Десять штук",
+          "thai_after": "สิบลูก",
+          "ph_after": "сип→ лук↘"
+        },
+        {
+          "ru_before": "Последняя цена",
+          "thai_before": "ราคาสุดท้าย",
+          "ph_before": "ра→ ха→ сут→ тай→",
+          "ru_after": "Взвесьте ещё раз",
+          "thai_after": "ชั่งใหม่",
+          "ph_after": "чанг↗ май↘"
+        },
+        {
+          "ru_before": "Договорились",
+          "thai_before": "ตกลง",
+          "ph_before": "ток→ лонг→",
+          "ru_after": "Пакет не нужен",
+          "thai_after": "ไม่เอาถุง",
+          "ph_after": "май→ ау→ тхунг→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_4_l1",
+      "title": "Пад тай и сом там",
+      "course": "Вселенная тайской еды",
+      "n_before": 13,
+      "n_after": 13,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Мало остро",
+          "thai_before": "เผ็ดน้อย",
+          "ph_before": "пхет→ ной→",
+          "ru_after": "Средне остро",
+          "thai_after": "เผ็ดปานกลาง",
+          "ph_after": "пхет→ паан→ клаанг→"
+        },
+        {
+          "ru_before": "Вкусно",
+          "thai_before": "อร่อย",
+          "ph_before": "а→ рой→",
+          "ru_after": "Пад тай вкусный",
+          "thai_after": "ผัดไทยอร่อย",
+          "ph_after": "пхад→ тай→ а→ рой→"
+        },
+        {
+          "ru_before": "Счёт пожалуйста",
+          "thai_before": "เช็คบิล",
+          "ph_before": "чек→ бин→",
+          "ru_after": "Счёт на двоих",
+          "thai_after": "เช็คบิลสองคน",
+          "ph_after": "чек→ бин→ сонг→ кон→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_4_l3",
+      "title": "Мало остро",
+      "course": "Вселенная тайской еды",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Мало остро",
+          "thai_before": "เผ็ดน้อย",
+          "ph_before": "пхет→ ной→",
+          "ru_after": "Совсем не остро",
+          "thai_after": "ไม่เผ็ดเลย",
+          "ph_after": "май→ пхет→ лёй→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_4_l4",
+      "title": "Без рыбы и ещё риса",
+      "course": "Вселенная тайской еды",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Ещё риса",
+          "thai_before": "ข้าวอีก",
+          "ph_before": "кхау→ ик→",
+          "ru_after": "Ещё овощей",
+          "thai_after": "ผักเพิ่ม",
+          "ph_after": "пхак→ пхём→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_4_l6",
+      "title": "Вкусно и счёт",
+      "course": "Вселенная тайской еды",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Очень вкусно",
+          "thai_before": "อร่อยมาก",
+          "ph_before": "а→ рой→ мак↘",
+          "ru_after": "Остро и вкусно",
+          "thai_after": "เผ็ดอร่อย",
+          "ph_after": "пхет→ а→ рой→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_4_l7",
+      "title": "Заказ с аллергиями",
+      "course": "Вселенная тайской еды",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Аллергия на креветки",
+          "thai": "แพ้กุ้ง",
+          "ph": "пхэ↘ кунг↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Без соуса с рыбой",
+          "thai": "ไม่ใส่น้ำปลา",
+          "ph": "май→ сай→ нам→ плаа→"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_l_5_l1",
+      "title": "Голова болит",
+      "course": "Доктор Тайка дежурит",
+      "n_before": 15,
+      "n_after": 15,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Я не понимаю",
+          "thai_before": "ไม่เข้าใจ",
+          "ph_before": "май→ кау→ джай→",
+          "ru_after": "Не понял дозировку",
+          "thai_after": "ไม่เข้าใจขนาดยา",
+          "ph_after": "май→ кау→ джай→ кха→ нат→ яа→"
+        }
+      ],
+      "changed": [
+        {
+          "ru": "Не понял дозировку",
+          "thai": "ไม่เข้าใจขนาดยา",
+          "ph_before": "май→ кау→ джай→ кха→ нат→ яа→",
+          "ph_after": "май→ кау→ джай→ кхаа→ нат→ яа→"
+        }
+      ]
+    },
+    {
+      "id": "course_l_5_l6",
+      "title": "От симптома до инструкции",
+      "course": "Доктор Тайка дежурит",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Таблетка от головы",
+          "thai_before": "ยาปวดหัว",
+          "ph_before": "я→ пуат→ хуа→",
+          "ru_after": "Сироп вместо таблетки",
+          "thai_after": "ยาน้ำแทนเม็ด",
+          "ph_after": "яа→ нам→ тхээн→ мет↘"
+        },
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Спасибо, доктор",
+          "thai_after": "ขอบคุณคุณหมอ",
+          "ph_after": "кхоп→ кхун→ кхун→ мо→"
+        },
+        {
+          "ru_before": "Сколько стоит?",
+          "thai_before": "เท่าไหร่",
+          "ph_before": "тао→ рай↗",
+          "ru_after": "Сколько за лекарство?",
+          "thai_after": "ยาเท่าไหร่",
+          "ph_after": "яа→ тао→ рай↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_5_l7",
+      "title": "В клинике",
+      "course": "Доктор Тайка дежурит",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Нужна справка",
+          "thai": "ขอใบรับรองแพทย์",
+          "ph": "кхо→ бай→ рап→ ронг→ пхэт→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Есть страховка",
+          "thai": "มีประกัน",
+          "ph": "ми→ пра→ кан→"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Симптомы",
+          "thai_before": "อาการ",
+          "ph_before": "а→ кан→",
+          "ru_after": "Когда началось?",
+          "thai_after": "เป็นมาตั้งแต่เมื่อไหร่",
+          "ph_after": "пэн→ маа→ танг→ тэ→ мыа→ рай↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_6_l1",
+      "title": "Номер и ключ",
+      "course": "Белый лотос на максималках",
+      "n_before": 12,
+      "n_after": 12,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Спасибо, номер хороший",
+          "thai_after": "ห้องดีมาก",
+          "ph_after": "хонг→ ди→ мак↘"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_6_l5",
+      "title": "Счёт и выезд",
+      "course": "Белый лотос на максималках",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Ранний выезд",
+          "thai": "เช็คเอาท์เช้า",
+          "ph": "чек→ аут↘ чау↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Счёт в номер",
+          "thai": "คิดเงินเข้าห้อง",
+          "ph": "кхит→ нген→ кхау↗ хонг→"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "До свидания",
+          "thai_before": "ลาก่อน",
+          "ph_before": "ла→ кон→",
+          "ru_after": "Можно оставить багаж?",
+          "thai_after": "ฝากกระเป๋าได้ไหม",
+          "ph_after": "фаак↘ кра→ пау→ дай→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_6_l6",
+      "title": "Весь визит в отель",
+      "course": "Белый лотос на максималках",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Разбудите в семь",
+          "thai": "ปลุกเจ็ดโมง",
+          "ph": "плук→ джет→ монг→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Ещё полотенце",
+          "thai": "ผ้าเช็ดตัวเพิ่ม",
+          "ph": "пхаа↗ чет→ туа→ пхём→"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Счёт",
+          "thai_before": "เช็คบิล",
+          "ph_before": "чек→ бин→",
+          "ru_after": "Завтрак до скольки?",
+          "thai_after": "อาหารเช้าถึงกี่โมง",
+          "ph_after": "а→ хаан→ чау↗ тхынг→ ги→ монг→"
+        },
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Можно поздний выезд?",
+          "thai_after": "เช็คเอาท์สายได้ไหม",
+          "ph_after": "чек→ аут↘ саай→ дай→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_6_l7",
+      "title": "Проблемы в номере",
+      "course": "Белый лотос на максималках",
+      "n_before": 11,
+      "n_after": 11,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Кондиционер не работает",
+          "thai_before": "แอร์ไม่ทำงาน",
+          "ph_before": "эр→ май→ там→ нгаан→",
+          "ru_after": "Розетка не работает",
+          "thai_after": "ปลั๊กไม่ติด",
+          "ph_after": "плак↘ май→ тит→"
+        },
+        {
+          "ru_before": "Почините пожалуйста",
+          "thai_before": "ช่วยซ่อมหน่อย",
+          "ph_before": "чуай↗ сом→ ной→",
+          "ru_after": "Сейф не закрывается",
+          "thai_after": "ตู้เซฟปิดไม่ได้",
+          "ph_after": "туу↗ сеф→ пит→ май→ дай→"
+        },
+        {
+          "ru_before": "Вода течёт",
+          "thai_before": "น้ำรั่ว",
+          "ph_before": "нам→ руа↘",
+          "ru_after": "В номере запах",
+          "thai_after": "ห้องมีกลิ่น",
+          "ph_after": "хонг→ ми→ глин→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_7_l2",
+      "title": "Шезлонг и лежак",
+      "course": "Пляж как состояние",
+      "n_before": 10,
+      "n_after": 10,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Ок беру",
+          "thai_before": "โอเคเอา",
+          "ph_before": "о→ кэ→ ау→",
+          "ru_after": "Беру этот лежак",
+          "thai_after": "เอาเตียงนี้",
+          "ph_after": "ау→ тианг→ ни→"
+        },
+        {
+          "ru_before": "Зонт входит?",
+          "thai_before": "รวมร่มไหม",
+          "ph_before": "руам→ ром→ май↗",
+          "ru_after": "Тень весь день?",
+          "thai_after": "มีร่มทั้งวันไหม",
+          "ph_after": "ми→ ром↗ тханг↗ ван→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_7_l3",
+      "title": "Кокос и напитки",
+      "course": "Пляж как состояние",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Вода",
+          "thai_before": "น้ำ",
+          "ph_before": "нам→",
+          "ru_after": "Вода в бутылке",
+          "thai_after": "น้ำขวด",
+          "ph_after": "нам→ кхуат→"
+        },
+        {
+          "ru_before": "Лёд",
+          "thai_before": "น้ำแข็ง",
+          "ph_before": "нам→ кхэнг→",
+          "ru_after": "Без льда",
+          "thai_after": "ไม่ใส่น้ำแข็ง",
+          "ph_after": "май→ сай→ нам→ кхэнг→"
+        },
+        {
+          "ru_before": "Вкусно",
+          "thai_before": "อร่อย",
+          "ph_before": "а→ рой→",
+          "ru_after": "Кокос сладкий",
+          "thai_after": "มะพร้าวหวาน",
+          "ph_after": "ма→ пхраау↗ ваан→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_7_l4",
+      "title": "Снорклинг",
+      "course": "Пляж как состояние",
+      "n_before": 11,
+      "n_after": 11,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Сколько стоит?",
+          "thai_before": "เท่าไหร่",
+          "ph_before": "тао→ рай↗",
+          "ru_after": "Сколько за лежак?",
+          "thai_after": "เตียงเท่าไหร่",
+          "ph_after": "тианг→ тао→ рай↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_7_l5",
+      "title": "Пляжный день",
+      "course": "Пляж как состояние",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Красиво",
+          "thai_before": "สวย",
+          "ph_before": "суай→",
+          "ru_after": "Море сегодня красивое",
+          "thai_after": "ทะเลสวยวันนี้",
+          "ph_after": "тха→ ле→ суай→ ван→ ни→"
+        },
+        {
+          "ru_before": "Всё ок",
+          "thai_before": "โอเค",
+          "ph_before": "о→ кэ→",
+          "ru_after": "Вода спокойная",
+          "thai_after": "น้ำสงบ",
+          "ph_after": "нам→ са→ нгоп→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_7_l6",
+      "title": "Весь пляж",
+      "course": "Пляж как состояние",
+      "n_before": 11,
+      "n_after": 11,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Кокос",
+          "thai_before": "มะพร้าว",
+          "ph_before": "ма→ пхрау→",
+          "ru_after": "Ананасовый сок",
+          "thai_after": "น้ำสับปะรด",
+          "ph_after": "нам→ сап→ па→ рот→"
+        },
+        {
+          "ru_before": "До свидания",
+          "thai_before": "ลาก่อน",
+          "ph_before": "ла→ кон→",
+          "ru_after": "Оставляю лежак, вернусь",
+          "thai_after": "จองเตียงไว้ เดี๋ยวกลับ",
+          "ph_after": "конг→ тианг→ вай→ диау↘ клап→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_7_l7",
+      "title": "Аренда и напитки",
+      "course": "Пляж как состояние",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Тур снорклинг",
+          "thai_before": "ทัวร์ดำน้ำ",
+          "ph_before": "туа→ дам→ нам→",
+          "ru_after": "Маска запотела",
+          "thai_after": "หน้ากากฝ้า",
+          "ph_after": "наа↗ каак→ фаа↗"
+        },
+        {
+          "ru_before": "Ласты",
+          "thai_before": "ตีนกบ",
+          "ph_before": "тин→ коп→",
+          "ru_after": "Нужен жилет?",
+          "thai_after": "ต้องใส่เสื้อชูชีพไหม",
+          "ph_after": "тонг→ сай→ сыа↗ чуу→ чип→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_8_l2",
+      "title": "Цена на полке",
+      "course": "Магазинные приключения",
+      "n_before": 10,
+      "n_after": 10,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Цена",
+          "thai_before": "ราคา",
+          "ph_before": "ра→ ха→",
+          "ru_after": "Это ценник?",
+          "thai_after": "นี่ป้ายราคาไหม",
+          "ph_after": "ни→ паай→ ра→ хаа→ май↗"
+        },
+        {
+          "ru_before": "Дорого",
+          "thai_before": "แพง",
+          "ph_before": "пхэнг→",
+          "ru_after": "Дорого за бренд",
+          "thai_after": "แพงไปสำหรับยี่ห้อ",
+          "ph_after": "пхэнг→ пай→ сам→ рап→ йи→ хо→"
+        },
+        {
+          "ru_before": "Ок беру",
+          "thai_before": "โอเคเอา",
+          "ph_before": "о→ кэ→ ау→",
+          "ru_after": "Беру два размера",
+          "thai_after": "เอาสองไซส์",
+          "ph_after": "ау→ сонг→ сай↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_8_l3",
+      "title": "Касса и очередь",
+      "course": "Магазинные приключения",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Чек в пакет, пожалуйста",
+          "thai_after": "ใส่ใบเสร็จในถุงหน่อย",
+          "ph_after": "сай→ бай→ сет↘ най→ тхунг→ ной→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_8_l6",
+      "title": "Вся покупка",
+      "course": "Магазинные приключения",
+      "n_before": 6,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Можно без чека на кассе самообслуживания?",
+          "thai": "ตู้จ่ายเองไม่เอาใบเสร็จได้ไหม",
+          "ph": "туу↗ джай→ энг→ май→ ау→ бай→ сет↘ дай→ май↗"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Эта акция на кассе сработает?",
+          "thai": "โปรนี้คิดที่แคชเชียร์ไหม",
+          "ph": "про→ ни→ кхит→ ти→ кэш→ чиа→ май↗"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Всё",
+          "thai_before": "หมด",
+          "ph_before": "мот↘",
+          "ru_after": "Чек с НДС есть?",
+          "thai_after": "ใบเสร็จมีภาษีไหม",
+          "ph_after": "бай→ сет↘ ми→ пхаа→ си→ май↗"
+        },
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Без пакета",
+          "thai_after": "ไม่เอาถุง",
+          "ph_after": "май→ ау→ тхунг→"
+        },
+        {
+          "ru_before": "До свидания",
+          "thai_before": "ลาก่อน",
+          "ph_before": "ла→ кон→",
+          "ru_after": "Где примерочная?",
+          "thai_after": "ห้องลองอยู่ไหน",
+          "ph_after": "хонг→ лонг→ ю→ най↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_8_l7",
+      "title": "В Big C и возврат",
+      "course": "Магазинные приключения",
+      "n_before": 11,
+      "n_after": 11,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Можно обменять?",
+          "thai_before": "เปลี่ยนได้ไหม",
+          "ph_before": "плиан→ дай→ май↗",
+          "ru_after": "Без бирки обменяете?",
+          "thai_after": "ไม่มีป้ายเปลี่ยนได้ไหม",
+          "ph_after": "май→ ми→ паай→ пллиан→ дай→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_9_l2",
+      "title": "Полиция и скорая",
+      "course": "Срочная помощь",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Полиция",
+          "thai_before": "ตำรวจ",
+          "ph_before": "там→ руат→",
+          "ru_after": "Вызовите полицию",
+          "thai_after": "เรียกตำรวจ",
+          "ph_after": "риак↗ там→ руат→"
+        },
+        {
+          "ru_before": "Скорая",
+          "thai_before": "รถพยาบาล",
+          "ph_before": "рот→ пха→ я→ бан→",
+          "ru_after": "Скорую сюда",
+          "thai_after": "เรียกรถพยาบาล",
+          "ph_after": "риак↗ рот→ пха→ яа→ бан→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_9_l3",
+      "title": "Больница",
+      "course": "Срочная помощь",
+      "n_before": 7,
+      "n_after": 8,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Нужен переводчик",
+          "thai": "ต้องการล่าม",
+          "ph": "тонг→ гаан→ лаам↗"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Больница",
+          "thai_before": "โรงพยาบาล",
+          "ph_before": "ронг→ пха→ я→ бан→",
+          "ru_after": "Приёмное отделение",
+          "thai_after": "ห้องฉุกเฉิน",
+          "ph_after": "хонг→ чук→ чен→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_9_l5",
+      "title": "Пожар",
+      "course": "Срочная помощь",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Пожарные",
+          "thai_before": "ดับเพลิง",
+          "ph_before": "дап→ пхленг→",
+          "ru_after": "Пожарные уже едут?",
+          "thai_after": "ดับเพลิงมาหรือยัง",
+          "ph_after": "дап→ плёнг→ маа→ ры→ янг→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_9_l7",
+      "title": "Срочный вызов",
+      "course": "Срочная помощь",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Спасибо, что помогли",
+          "thai_after": "ขอบคุณที่ช่วย",
+          "ph_after": "кхоп→ кхун→ ти→ чуай↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_10_l1",
+      "title": "Абонемент",
+      "course": "Между подходами",
+      "n_before": 13,
+      "n_after": 13,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Сколько стоит?",
+          "thai_before": "เท่าไหร่",
+          "ph_before": "тао→ рай↗",
+          "ru_after": "Сколько абонемент?",
+          "thai_after": "สมาชิกเท่าไหร่",
+          "ph_after": "са→ маа→ чик↘ тао→ рай↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_10_l2",
+      "title": "Тренировка",
+      "course": "Между подходами",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Йога",
+          "thai_before": "โย",
+          "ph_before": "йо→",
+          "ru_after": "Йога",
+          "thai_after": "โยคะ",
+          "ph_after": "йо→ ка→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_10_l5",
+      "title": "Душ и шкафчик",
+      "course": "Между подходами",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Вода",
+          "thai_before": "น้ำ",
+          "ph_before": "нам→",
+          "ru_after": "Есть кулер?",
+          "thai_after": "มีตู้น้ำไหม",
+          "ph_after": "ми→ туу↗ нам→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_10_l6",
+      "title": "Весь зал",
+      "course": "Между подходами",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Спасибо за подсказку",
+          "thai_after": "ขอบคุณที่บอก",
+          "ph_after": "кхоп→ кхун→ ти→ бок→"
+        },
+        {
+          "ru_before": "Пока",
+          "thai_before": "บาย",
+          "ph_before": "бай→",
+          "ru_after": "До завтра в зале",
+          "thai_after": "พรุ่งนี้เจอที่ยิม",
+          "ph_after": "пхрунг→ ни→ джё→ ти→ йим→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_10_l7",
+      "title": "С тренером в зале",
+      "course": "Между подходами",
+      "n_before": 10,
+      "n_after": 10,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Йога",
+          "thai_before": "โย",
+          "ph_before": "йо→",
+          "ru_after": "Растяжка",
+          "thai_after": "ยืดเหยียด",
+          "ph_after": "йыт↗ йиат→"
+        },
+        {
+          "ru_before": "Сколько занятие?",
+          "thai_before": "คลาสเท่าไหร่",
+          "ph_before": "кхлат→ тао→ рай↗",
+          "ru_after": "Пробное сколько стоит?",
+          "thai_after": "คลาสทดลองเท่าไหร่",
+          "ph_after": "кхлат→ тхот→ лонг→ тао→ рай↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_11_l1",
+      "title": "Сонгкран",
+      "course": "Сезон Сонгкрана и не только",
+      "n_before": 12,
+      "n_after": 12,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Вода",
+          "thai_before": "น้ำ",
+          "ph_before": "нам→",
+          "ru_after": "Не в лицо",
+          "thai_after": "อย่าสาดหน้า",
+          "ph_after": "йаа→ саат→ наа↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_11_l2",
+      "title": "Лой Кратонг",
+      "course": "Сезон Сонгкрана и не только",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Красиво",
+          "thai_before": "สวย",
+          "ph_before": "суай→",
+          "ru_after": "Красивые фонари",
+          "thai_after": "โคมสวย",
+          "ph_after": "кхоом→ суай→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_11_l3",
+      "title": "Йи Пенг",
+      "course": "Сезон Сонгкрана и не только",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Ноябрь",
+          "thai_before": "พฤศจิกายน",
+          "ph_before": "пхрут→ са→ джи→ ка→ йон→",
+          "ru_after": "Декабрь",
+          "thai_after": "ธันวาคม",
+          "ph_after": "тхан→ ваа→ кхом→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_11_l6",
+      "title": "На празднике",
+      "course": "Сезон Сонгкрана и не только",
+      "n_before": 10,
+      "n_after": 10,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Фото можно?",
+          "thai_before": "ถ่ายรูปได้ไหม",
+          "ph_before": "тай→ руп→ дай→ май↗",
+          "ru_after": "Можно с монахом?",
+          "thai_after": "ถ่ายกับพระได้ไหม",
+          "ph_after": "тхаай→ кап→ пхра→ дай→ май↗"
+        },
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Уже мокрый, весело",
+          "thai_after": "เปียกแล้ว สนุก",
+          "ph_after": "пиак→ лэу→ са→ нук→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_11_l7",
+      "title": "Праздники круглый год",
+      "course": "Сезон Сонгкрана и не только",
+      "n_before": 10,
+      "n_after": 10,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Счастливого Сонгкрана!",
+          "thai_before": "สุขสันต์วันสงกรานต์",
+          "ph_before": "сук→ сан→ ван→ сонг→ кран↘",
+          "ru_after": "С Новым годом",
+          "thai_after": "สวัสดีปีใหม่",
+          "ph_after": "са→ ват→ ди→ пи→ май↗"
+        },
+        {
+          "ru_before": "Хорошего праздника",
+          "thai_before": "ขอให้สนุก",
+          "ph_before": "кхо→ хай→ са→ нук→",
+          "ru_after": "С днём рождения",
+          "thai_after": "สุขสันต์วันเกิด",
+          "ph_after": "сук→ сан→ ван→ кёт→"
+        },
+        {
+          "ru_before": "Веселись",
+          "thai_before": "สนุกนะ",
+          "ph_before": "са→ нук→ на→",
+          "ru_after": "Китайский новый год",
+          "thai_after": "ตรุษจีน",
+          "ph_after": "трут→ джин→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_12_l1",
+      "title": "Стрижка",
+      "course": "Новый тайский образ",
+      "n_before": 11,
+      "n_after": 13,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Окраска",
+          "thai": "ทำสี",
+          "ph": "тхам→ си→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Не осветлять",
+          "thai": "ไม่ไฮไลต์",
+          "ph": "май→ хай→ лайт↘"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_l_12_l4",
+      "title": "Борода",
+      "course": "Новый тайский образ",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Бороду не сбривать",
+          "thai": "อย่าโกนเครา",
+          "ph": "йаа→ кон→ кхрау→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Подровнять бороду",
+          "thai": "เล็มเครา",
+          "ph": "лем→ кхрау→"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_l_12_l5",
+      "title": "Цена и время",
+      "course": "Новый тайский образ",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Сколько стоит?",
+          "thai_before": "เท่าไหร่",
+          "ph_before": "тао→ рай↗",
+          "ru_after": "Сколько стрижка и окраска?",
+          "thai_after": "ตัดกับทำสีเท่าไหร่",
+          "ph_after": "тат→ кап→ тхам→ си→ тао→ рай↗"
+        },
+        {
+          "ru_before": "Сколько по времени?",
+          "thai_before": "ใช้เวลากี่นาที",
+          "ph_before": "чай→ ве→ ла→ ги→ на→ ти→",
+          "ru_after": "Запись на утро",
+          "thai_after": "จองเช้าได้ไหม",
+          "ph_after": "конг→ чау↗ дай→ май↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_12_l6",
+      "title": "Весь салон",
+      "course": "Новый тайский образ",
+      "n_before": 10,
+      "n_after": 12,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Маникюр",
+          "thai": "ทำเล็บ",
+          "ph": "тхам→ леп↘"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Педикюр",
+          "thai": "ทำเล็บเท้า",
+          "ph": "тхам→ леп↘ тхаау↗"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Стрижка получилась",
+          "thai_after": "ตัดสวย",
+          "ph_after": "тат→ суай→"
+        },
+        {
+          "ru_before": "До свидания",
+          "thai_before": "ลาก่อน",
+          "ph_before": "ла→ кон→",
+          "ru_after": "Напомню в Line",
+          "thai_after": "ทักไลน์นะ",
+          "ph_after": "тхак→ лайн→ на↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_13_l3",
+      "title": "Кондиционер сломан",
+      "course": "Хозяин дома — почти сосед",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Почините пожалуйста",
+          "thai_before": "ช่วยซ่อมหน่อย",
+          "ph_before": "чуай↗ сом→ ной→",
+          "ru_after": "Мастер сегодня?",
+          "thai_after": "ช่างมาวันนี้ไหม",
+          "ph_after": "чаанг↗ маа→ ван→ ни→ май↗"
+        },
+        {
+          "ru_before": "Капает вода",
+          "thai_before": "น้ำหยด",
+          "ph_before": "нам→ йот→",
+          "ru_after": "Течёт из кондиционера",
+          "thai_after": "แอร์หยดน้ำ",
+          "ph_after": "ээ→ йот→ нам→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_13_l6",
+      "title": "Чат с хозяином",
+      "course": "Хозяин дома — почти сосед",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Жду",
+          "thai_before": "รอ",
+          "ph_before": "ро→",
+          "ru_after": "Напишите, когда придёт",
+          "thai_after": "ข้อความเมื่อมา",
+          "ph_after": "кхо→ кхвам→ мыа→ маа→"
+        },
+        {
+          "ru_before": "Всё ок",
+          "thai_before": "โอเค",
+          "ph_before": "о→ кэ→",
+          "ru_after": "Ключ оставлю на ресепшен",
+          "thai_after": "กุญแจฝากที่รปภ",
+          "ph_after": "кун→ джаэ→ фаак↘ ти→ ро→ по→ пхо→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_13_l7",
+      "title": "Ремонт и соседи",
+      "course": "Хозяин дома — почти сосед",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Почините пожалуйста",
+          "thai_before": "ช่วยซ่อมหน่อย",
+          "ph_before": "чуай↗ сом→ ной→",
+          "ru_after": "Всё ещё не починили",
+          "thai_after": "ยังไม่ได้ซ่อม",
+          "ph_after": "янг→ май→ дай→ сом↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_14_l3",
+      "title": "Трек-номер",
+      "course": "Таиланд доставляет",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Задержалась на таможне",
+          "thai": "ติดศุลกากร",
+          "ph": "тит→ сун→ ла→ гаа→ кон→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Привезут к вечеру?",
+          "thai": "เย็นนี้ถึงไหม",
+          "ph": "йен→ ни→ тхынг→ май↗"
+        }
+      ],
+      "replaced": [],
+      "changed": []
+    },
+    {
+      "id": "course_l_14_l6",
+      "title": "Вся доставка",
+      "course": "Таиланд доставляет",
+      "n_before": 7,
+      "n_after": 9,
+      "added": [
+        {
+          "kind": "phrase",
+          "ru": "Код на двери вот этот",
+          "thai": "รหัสประตูนี่",
+          "ph": "ра→ хат→ пра→ туу→ ни→"
+        },
+        {
+          "kind": "phrase",
+          "ru": "Оставьте у охраны",
+          "thai": "ฝากที่รปภได้",
+          "ph": "фаак↘ ти→ ро→ по→ пхо→ дай→"
+        }
+      ],
+      "replaced": [
+        {
+          "ru_before": "Получил спасибо",
+          "thai_before": "ได้รับแล้วขอบคุณ",
+          "ph_before": "дай→ ру→ сук→ леу→ кхоп→ кхун→",
+          "ru_after": "Получил, всё на месте",
+          "thai_after": "ได้รับครบแล้ว",
+          "ph_after": "дай→ рап↘ кхроп→ лэу→"
+        },
+        {
+          "ru_before": "Всё в порядке",
+          "thai_before": "ครบดี",
+          "ph_before": "кхоп→ ди→",
+          "ru_after": "Всё в порядке",
+          "thai_after": "ครบถ้วนดี",
+          "ph_after": "кхроп→ тхуан↗ ди→"
+        },
+        {
+          "ru_before": "Спасибо",
+          "thai_before": "ขอบคุณ",
+          "ph_before": "кхоп→ кхун→",
+          "ru_after": "Курьеру не хватает мелочи",
+          "thai_after": "เงินไม่พอทอน",
+          "ph_after": "нген→ май→ пхоо→ тхоон→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_14_l7",
+      "title": "Проблемы с доставкой",
+      "course": "Таиланд доставляет",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Где моя посылка?",
+          "thai_before": "พัสดุอยู่ไหน",
+          "ph_before": "пхат→ са→ ду→ ю→ най↗",
+          "ru_after": "Коробка помята",
+          "thai_after": "กล่องบุบ",
+          "ph_after": "клонг→ буп→"
+        },
+        {
+          "ru_before": "Покажите трек",
+          "thai_before": "แสดงเลขติดตาม",
+          "ph_before": "са→ дэнг→ лек→ ти→ там→",
+          "ru_after": "Не хватает товара",
+          "thai_after": "ของไม่ครบ",
+          "ph_after": "кхонг→ май→ кхроп→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_15_l1",
+      "title": "Ещё один",
+      "course": "После заката всё интереснее",
+      "n_before": 12,
+      "n_after": 12,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Вода",
+          "thai_before": "น้ำ",
+          "ph_before": "нам→",
+          "ru_after": "Содовая ещё",
+          "thai_after": "โซดาอีก",
+          "ph_after": "со→ даа→ ик→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_15_l2",
+      "title": "Сколько за пиво?",
+      "course": "После заката всё интереснее",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Цена",
+          "thai_before": "ราคา",
+          "ph_before": "ра→ ха→",
+          "ru_after": "Цена за сет",
+          "thai_after": "ชุดเท่าไหร่",
+          "ph_after": "чут→ тао→ рай↗"
+        },
+        {
+          "ru_before": "Дорого",
+          "thai_before": "แพง",
+          "ph_before": "пхэнг→",
+          "ru_after": "Дорого за коктейль",
+          "thai_after": "แพงไปสำหรับค็อกเทล",
+          "ph_after": "пхэнг→ пай→ сам→ рап→ кок→ тхэн→"
+        },
+        {
+          "ru_before": "Счёт пожалуйста",
+          "thai_before": "เช็คบิล",
+          "ph_before": "чек→ бин→",
+          "ru_after": "Счёт отдельно",
+          "thai_after": "แยกบิล",
+          "ph_after": "йэк↘ бин→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_15_l3",
+      "title": "Короткий разговор",
+      "course": "После заката всё интереснее",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Как тебя зовут?",
+          "thai_before": "คุณชื่ออะไร",
+          "ph_before": "кхун→ чыу→ а→ рай↗",
+          "ru_after": "Как к тебе обращаться?",
+          "thai_after": "เรียกอะไรดี",
+          "ph_after": "риак↗ а→ рай↗ ди→"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_15_l5",
+      "title": "Знакомства",
+      "course": "После заката всё интереснее",
+      "n_before": 8,
+      "n_after": 8,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Пока",
+          "thai_before": "บาย",
+          "ph_before": "бай→",
+          "ru_after": "Я еду сам",
+          "thai_after": "ไปเองนะ",
+          "ph_after": "пай→ энг→ на↗"
+        }
+      ],
+      "changed": []
+    },
+    {
+      "id": "course_l_15_l6",
+      "title": "Ночной разговор",
+      "course": "После заката всё интереснее",
+      "n_before": 9,
+      "n_after": 9,
+      "added": [],
+      "replaced": [
+        {
+          "ru_before": "Счёт пожалуйста",
+          "thai_before": "เช็คบิล",
+          "ph_before": "чек→ бин→",
+          "ru_after": "Чаевые включены?",
+          "thai_after": "รวมทิปไหม",
+          "ph_after": "руам→ тип→ май↗"
+        }
+      ],
+      "changed": []
+    }
+  ]
+}
