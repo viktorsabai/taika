@@ -14,9 +14,11 @@ from api import (
     MAX_WORDS,
     _apply_politeness,
     _clean_words,
+    _glue_letters_after_arrows,
     _is_degenerate_advice,
     _normalize_parts,
     _normalize_phonetic,
+    _normalize_phonetic_line,
     _normalize_phonetic_token,
     _parts_match_phonetic,
     _politeness_part,
@@ -630,6 +632,133 @@ def test_glued_result_still_shipped_when_repair_fails():
     assert out is not None, "разбор не должен пропадать из-за грубости деления"
     _, phonetic, parts = out
     assert _parts_match_phonetic(phonetic, parts)
+
+
+def test_orphan_letter_after_arrow_glues_into_syllable():
+    """
+    Скрин «Я хочу есть»: หิว писали как «хи↘-в», нормализатор резал по стрелке,
+    появлялось слово «в», разбор не сходился и выкидывался целиком.
+    После склейки конечная ว пишется «у», как в курсе (хиу лэу), не «в».
+    """
+    for src in ("хи↘в", "хи↘-в", "хи↘ в"):
+        assert _glue_letters_after_arrows(src) == "хив↘", src
+        assert _normalize_phonetic_token(src) == "хиу↘", src
+    assert _glue_letters_after_arrows("хи↘ кхрап↘") == "хи↘ кхрап↘"
+    assert _normalize_phonetic_token("хью↗") == "хиу↗"
+    assert _normalize_phonetic_token("хио↗") == "хиу↗"
+    # Начальная ว не трогаем.
+    assert _normalize_phonetic_token("ва↘") == "ва↘"
+
+
+def test_hungry_screenshot_line_has_no_orphan_letter():
+    for src in (
+        "чан-хи↘-в кхрап↘",
+        "чан-хи↘ в кхрап↘",
+        "чан-хи↘в кхрап↘",
+        "чан→ хи↘-в кхрап↘",
+    ):
+        line = _normalize_phonetic_line(src)
+        groups = api._phonetic_word_groups(line)
+        assert "в" not in groups, (src, line, groups)
+        assert any("хиу" in g for g in groups), (src, line, groups)
+
+
+def test_hungry_words_path_glues_broken_hiv():
+    built = _run(
+        None,
+        {"words": [
+            {"th": "ฉัน", "ph": "чан→", "m": "я"},
+            {"th": "หิว", "ph": "хи↘в", "m": "голоден"},
+        ]},
+        ru="Я хочу есть",
+        politeness="male",
+    )
+    assert built is not None
+    thai, phonetic, parts = built
+    assert "ฉัน" in thai and "หิว" in thai
+    groups = api._phonetic_word_groups(phonetic)
+    assert groups == ["чан", "хиу"], (phonetic, groups)
+    assert [p["m"] for p in parts] == ["я", "голоден"]
+    assert _parts_match_phonetic(phonetic, parts)
+
+
+def test_hungry_words_path_keeps_alignment_after_politeness():
+    words = _clean_words([
+        {"th": "ฉัน", "ph": "чан→", "m": "я"},
+        {"th": "หิว", "ph": "хи↘-в", "m": "голоден"},
+    ])
+    thai, phonetic, parts = _words_to_outputs(words)
+    thai, phonetic = api._append_politeness(thai, phonetic, "male")
+    parts = parts + [_politeness_part("male")]
+    assert phonetic == "чан→ хиу↘ кхрап↘", phonetic
+    assert _parts_match_phonetic(phonetic, parts)
+    assert [p["m"] for p in parts] == ["я", "голоден", "вежливость (м)"]
+
+
+def test_digits_become_spoken_cyrillic():
+    def no_digit(s: str) -> None:
+        assert not any(ch.isdigit() for ch in s), s
+
+    no_digit(_normalize_phonetic_token("90→"))
+    assert "кау" in _normalize_phonetic_token("90→")
+    assert "сип" in _normalize_phonetic_token("90→")
+
+    no_digit(_normalize_phonetic("позвони 1669→"))
+    spoken = _normalize_phonetic_token("1669")
+    assert spoken == "нынг→-хок→-хок→-кау→", spoken
+
+    no_digit(_normalize_phonetic_token("555"))
+    assert _normalize_phonetic_token("555") == "ха→-ха→-ха→"
+
+    for raw in ("4x6", "4×6", "4кс6"):
+        got = _normalize_phonetic_token(raw)
+        no_digit(got)
+        assert "кху" in got and "си" in got and "хок" in got, (raw, got)
+
+    # На согласованной строке число остаётся ОДНИМ словом разбора, не тремя чанками.
+    line = _normalize_phonetic_line("то→ 90→ кхрап↘")
+    no_digit(line)
+    groups = api._phonetic_word_groups(line)
+    assert len(groups) == 3, (line, groups)
+    assert groups[1].replace("-", "").startswith("кау"), groups
+
+
+def test_words_path_expands_digits_in_ph():
+    built = _run(
+        None,
+        {"words": [
+            {"th": "โทร", "ph": "то→", "m": "звони"},
+            {"th": "เบอร์", "ph": "1669→", "m": "скорая"},
+        ]},
+        ru="позвони 1669",
+        politeness="female",
+    )
+    assert built is not None
+    _, phonetic, parts = built
+    assert not any(ch.isdigit() for ch in phonetic), phonetic
+    assert _parts_match_phonetic(phonetic, parts)
+
+
+def test_validate_rejects_arrowless_leftover_letter():
+    problems = _validate_words(
+        "я хочу есть",
+        [
+            {"th": "ฉัน", "ph": "чан→", "m": "я"},
+            {"th": "หิว", "ph": "в", "m": "голоден"},
+        ],
+    )
+    assert any("no tone arrow" in p for p in problems), problems
+
+
+def test_pronoun_gloss_ya_is_not_weak():
+    """Иначе ฉัน → «я» браковало весь пословный ответ «Я хочу есть»."""
+    assert _validate_words(
+        "я хочу есть",
+        [
+            {"th": "ฉัน", "ph": "чан→", "m": "я"},
+            {"th": "หิว", "ph": "хиу↗", "m": "голоден"},
+        ],
+    ) == []
 
 
 if __name__ == "__main__":

@@ -66,8 +66,6 @@ struct MainView: View {
     @State private var forYouAutoIndex: Int = 0
     @State private var forYouAutoScrollPausedUntil: Date = .distantPast
     private let forYouAutoScrollTimer = Timer.publish(every: 3.6, on: .main, in: .common).autoconnect()
-    /// Kun-kru composer on Main → handoff to Speaker conversation.
-    @State private var kunKruComposeText: String = ""
     /// Нативный индикатор при «Начни обучение» — без кастомного «случайный курс…» оверлея.
     @State private var isStartingRandomCourse = false
 
@@ -881,8 +879,8 @@ struct MainView: View {
             VStack(spacing: 0) {
                 MDPromptHero(
                     greeting: heroGreetingText,
-                    composeText: $kunKruComposeText,
-                    onSubmit: openSpeakerConversationWithPhrase
+                    onOpenSpeaker: openSpeakerConversationIdle,
+                    onTapPhrase: openSpeakerConversationWithPhrase
                 )
                 .padding(.top, 6)
 
@@ -2103,14 +2101,26 @@ var body: some View {
 
 // MARK: - Navigation intents (scoped to MainView)
 extension MainView {
-    /// Deep link: вкладка Спикер + «Скажи сам» + перевод фразы с Main kun-kru composer.
+    /// Deep link: вкладка Спикер + сразу слушаем (без второго тапа по микрофону).
+    private func openSpeakerConversationIdle() {
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+            overlay.dismiss()
+        }
+        SpeakerReturnContext.shared.clear()
+        SpeakerManager.shared.setSpeakerUIMode(.conversation)
+        SpeakerManager.shared.pendingConversationAutoRecord = true
+        SpeakerManager.shared.pendingConversationDemoRU = nil
+        nav.popToRoot()
+        nav.requestTab(2)
+    }
+
+    /// Deep link: вкладка Спикер + «Скажи сам» + перевод фразы с чипа на Main.
     private func openSpeakerConversationWithPhrase(_ phrase: String) {
         let ru = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !ru.isEmpty else { return }
         withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
             overlay.dismiss()
         }
-        kunKruComposeText = ""
         SpeakerReturnContext.shared.clear()
         SpeakerManager.shared.setSpeakerUIMode(.conversation)
         SpeakerManager.shared.pendingConversationAutoRecord = false

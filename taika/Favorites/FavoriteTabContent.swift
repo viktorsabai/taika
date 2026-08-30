@@ -1636,17 +1636,13 @@ struct FDFavDictionaryTabList: View {
                     DictionaryEditSheet(card: target.card) {
                         editingCard = nil
                     }
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-                    .presentationCornerRadius(28)
+                    .taikaDictionarySheetChrome()
                 }
                 .sheet(item: $breakdownCard) { target in
                     DictionaryPhraseBreakdownSheet(card: target.card) {
                         breakdownCard = nil
                     }
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-                    .presentationCornerRadius(28)
+                    .taikaDictionarySheetChrome()
                 }
         }
     }

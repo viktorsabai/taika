@@ -159,6 +159,79 @@ public enum HT {
     }
 }
 
+/// [[...]] segments are tinted with the current accent.
+fileprivate func lsAccentMarkedText(_ raw: String) -> Text {
+    var result = Text("")
+    var buffer = ""
+    var isAccent = false
+    for ch in raw {
+        if ch == "[" {
+            if buffer.hasSuffix("[") {
+                buffer.removeLast()
+                if !buffer.isEmpty { result = result + Text(buffer) }
+                buffer = ""
+                isAccent = true
+            } else {
+                buffer.append(ch)
+            }
+        } else if ch == "]" {
+            if buffer.hasSuffix("]") {
+                buffer.removeLast()
+                if !buffer.isEmpty {
+                    result = result + Text(buffer).foregroundStyle(ThemeManager.shared.currentAccentFill)
+                }
+                buffer = ""
+                isAccent = false
+            } else {
+                buffer.append(ch)
+            }
+        } else {
+            buffer.append(ch)
+        }
+    }
+    if !buffer.isEmpty {
+        if isAccent {
+            result = result + Text(buffer).foregroundStyle(ThemeManager.shared.currentAccentFill)
+        } else {
+            result = result + Text(buffer)
+        }
+    }
+    return result
+}
+
+/// Course title + description sit on the app canvas, not inside the gray hero card.
+public struct LSCourseHeroCopy: View {
+    let title: String
+    let subtitle: String
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(PD.ColorToken.text)
+                .multilineTextAlignment(.leading)
+                .lineLimit(3)
+                .minimumScaleFactor(0.88)
+                .lineSpacing(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+
+            if !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                lsAccentMarkedText(subtitle)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .lineSpacing(3)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 // MARK: - Header (unified with app header)
 public struct LSLessonHeader: View {
     let title: String
@@ -222,46 +295,10 @@ public struct LSLessonHeader: View {
     // Use lessonsCount if provided, else fallback to progressTotal for compatibility
     private var totalLessons: Int? { lessonsCount ?? progressTotal }
 
-    // [[...]] segments are tinted with accent color
-    private func accentText(_ raw: String) -> Text {
-        var result = Text("")
-        var buffer = ""
-        var isAccent = false
-        for ch in raw {
-            if ch == "[" {
-                if buffer.hasSuffix("[") {
-                    // start accent
-                    buffer.removeLast()
-                    if !buffer.isEmpty { result = result + Text(buffer) }
-                    buffer = ""
-                    isAccent = true
-                } else {
-                    buffer.append(ch)
-                }
-            } else if ch == "]" {
-                if buffer.hasSuffix("]") {
-                    // end accent
-                    buffer.removeLast()
-                    if !buffer.isEmpty {
-                        result = result + Text(buffer).foregroundStyle(ThemeManager.shared.currentAccentFill)
-                    }
-                    buffer = ""
-                    isAccent = false
-                } else {
-                    buffer.append(ch)
-                }
-            } else {
-                buffer.append(ch)
-            }
-        }
-        if !buffer.isEmpty {
-            if isAccent {
-                result = result + Text(buffer).foregroundStyle(ThemeManager.shared.currentAccentFill)
-            } else {
-                result = result + Text(buffer)
-            }
-        }
-        return result
+    private var hasHeroCopy: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !(chipText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
     }
 
 
@@ -366,73 +403,34 @@ public struct LSLessonHeader: View {
     // Fixed card min height for consistent layout (balanced paddings/air)
     private let minHeight: CGFloat = 156
 
-    // Background: карточка; вырез в углу только когда нет кнопки «назад» в тулбаре.
+    // Background: карточка без выреза в углу — «в курсы» живёт над карточкой, не в тулбаре.
     @ViewBuilder
     private func cardBackgroundWithNotch() -> some View {
-        ZStack(alignment: .topLeading) {
-            let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-            if isCompletedCourse {
-                round
-                    .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.24)))
-                    .overlay(round.stroke(TaikaMasteryTokens.greenGlow.opacity(0.42), lineWidth: 1))
-            } else {
-                Theme.Surfaces.card(round)
-            }
-
-            if onBack == nil {
-                Circle()
-                    .frame(width: 18, height: 18)
-                    .offset(x: 12, y: 12)
-                    .blendMode(.destinationOut)
-            }
+        let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
+        if isCompletedCourse {
+            round
+                .fill(AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(0.24)))
+                .overlay(round.stroke(TaikaMasteryTokens.greenGlow.opacity(0.42), lineWidth: 1))
+        } else {
+            Theme.Surfaces.card(round)
         }
-        .compositingGroup()
     }
 
-    private var backToCoursesControl: some View {
-        Button(action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            onBack?()
-        }) {
-            HStack(spacing: 4) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .semibold))
-                Text("в курсы")
-                    .font(.system(size: 14, weight: .semibold))
-            }
-            .foregroundStyle(ThemeManager.shared.currentAccentFill)
-            .frame(minHeight: 44, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Назад к курсам")
-    }
-
-    /// Back + title on one baseline; trailing spacer mirrors back so title stays centered.
+    /// Title owns the full card width. Back control sits outside the card in LessonsView.
+    @ViewBuilder
     private var titleToolbarRow: some View {
-        let sideSlot: CGFloat = 108
-        return HStack(alignment: .center, spacing: 8) {
-            if onBack != nil {
-                backToCoursesControl
-                    .frame(width: sideSlot, alignment: .leading)
-            }
-
+        if !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             Text(title)
-                .font(.title2.weight(.semibold))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .minimumScaleFactor(0.85)
+                .lineLimit(3)
+                .minimumScaleFactor(0.88)
+                .lineSpacing(1)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .fixedSize(horizontal: false, vertical: true)
-
-            if onBack != nil {
-                Color.clear
-                    .frame(width: sideSlot, height: 44)
-                    .accessibilityHidden(true)
-            }
+                .accessibilityAddTraits(.isHeader)
         }
-        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -458,13 +456,10 @@ public struct LSLessonHeader: View {
     }
 
     public var body: some View {
-        // unified vertical metrics
         let sideInsetH: CGFloat = Theme.Layout.sectionInner
-        let edgeInsetTop: CGFloat = onBack != nil ? 12 : Theme.Layout.pageTopAfterHeader
-        // allow caller to reserve extra bottom space when needed
-        let edgeInsetBottom: CGFloat = (bottomReserve ?? 18)
+        let edgeInsetTop: CGFloat = hasHeroCopy ? 16 : 12
+        let edgeInsetBottom: CGFloat = bottomReserve ?? (hasHeroCopy ? 18 : 12)
         let titleSubtitleSpacing: CGFloat = 10
-        let subtitleProgressSpacing: CGFloat = 14
         let hasProgressRow: Bool = {
             if let slots = progressSlots, !slots.isEmpty { return true }
             if let done = progressCompleted, let ttl = totalLessons, ttl > 0 { return true }
@@ -472,40 +467,41 @@ public struct LSLessonHeader: View {
         }()
         let hasLowerBlock = hasProgressRow || completionSummary != nil || bottomAccessory != nil
 
-        // Inner content (title + subtitle + progress)
         let content = VStack(alignment: .center, spacing: 0) {
-            VStack(alignment: .center, spacing: titleSubtitleSpacing) {
-                titleToolbarRow
+            if hasHeroCopy {
+                VStack(alignment: .center, spacing: titleSubtitleSpacing) {
+                    titleToolbarRow
 
-                if let chip = chipText?.trimmingCharacters(in: .whitespacesAndNewlines), !chip.isEmpty {
-                    Text(chip)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Capsule(style: .continuous).fill(PD.ColorToken.chip.opacity(0.92)))
-                }
+                    if let chip = chipText?.trimmingCharacters(in: .whitespacesAndNewlines), !chip.isEmpty {
+                        Text(chip)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Capsule(style: .continuous).fill(PD.ColorToken.chip.opacity(0.92)))
+                    }
 
-                if !subtitle.isEmpty {
-                    accentText(subtitle)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.white.opacity(0.88))
-                        .lineSpacing(2)
-                        .shadow(color: Color.black.opacity(0.6), radius: 1, x: 0, y: 1)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(3)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        lsAccentMarkedText(subtitle)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Color.white.opacity(0.88))
+                            .lineSpacing(2)
+                            .shadow(color: Color.black.opacity(0.6), radius: 1, x: 0, y: 1)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
 
-            if hasLowerBlock {
-                Spacer(minLength: subtitleProgressSpacing).frame(height: subtitleProgressSpacing)
+            if hasHeroCopy, hasLowerBlock {
+                Spacer(minLength: 14).frame(height: 14)
             }
 
             if hasProgressRow {
                 progressRow
-                    .padding(.top, 8)
+                    .padding(.top, hasHeroCopy ? 8 : 0)
             }
 
             if let completionSummary {
@@ -515,31 +511,18 @@ public struct LSLessonHeader: View {
 
             if let bottomAccessory {
                 bottomAccessory
-                    .padding(.top, 14)
+                    .padding(.top, hasProgressRow || completionSummary != nil ? 12 : 0)
             }
         }
 
-        // With back in the title row, pin content to the top so the toolbar doesn't float mid-card.
-        return ZStack {
+        return ZStack(alignment: .top) {
             cardBackgroundWithNotch()
-            if onBack != nil {
-                VStack(spacing: 0) {
-                    content
-                        .padding(.horizontal, CGFloat(sideInsetH))
-                        .padding(.top, edgeInsetTop)
-                        .padding(.bottom, edgeInsetBottom)
-                    Spacer(minLength: 0)
-                }
-            } else {
-                VStack(spacing: 0) {
-                    Spacer(minLength: edgeInsetTop)
-                    content
-                        .padding(.horizontal, CGFloat(sideInsetH))
-                    Spacer(minLength: edgeInsetBottom)
-                }
-            }
+            content
+                .padding(.horizontal, CGFloat(sideInsetH))
+                .padding(.top, edgeInsetTop)
+                .padding(.bottom, edgeInsetBottom)
         }
-        .frame(minHeight: minHeight, alignment: .top)
+        .frame(minHeight: hasHeroCopy ? minHeight : nil, alignment: .top)
         .contentShape(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous))
         .frame(maxWidth: .infinity, alignment: .center)
     }
@@ -620,9 +603,9 @@ public struct LSProgressSlotsStrip: View {
             let base = RoundedRectangle(cornerRadius: 12, style: .continuous)
             GeometryReader { geo in
                 ZStack {
-                    // Unified, lighter card background layer
+                    // Mini-cards sit on the app canvas as well as inside a hero card.
                     base
-                        .fill(Color.black.opacity(0.15))
+                        .fill(PD.ColorToken.card)
                     // Apply glass tint only when the slot is fully completed
                     if fill >= 0.999 {
                         CD.GradientToken.pro

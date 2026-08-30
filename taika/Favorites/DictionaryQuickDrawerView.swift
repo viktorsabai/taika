@@ -110,17 +110,13 @@ struct DictionaryQuickDrawerView: View {
             DictionaryEditSheet(card: target.card) {
                 editingCard = nil
             }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(28)
+            .taikaDictionarySheetChrome()
         }
         .sheet(item: $breakdownCard) { target in
             DictionaryPhraseBreakdownSheet(card: target.card) {
                 breakdownCard = nil
             }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(28)
+            .taikaDictionarySheetChrome()
         }
     }
 
@@ -739,75 +735,97 @@ struct DictionaryPhraseBreakdownSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if !phonetic.isEmpty {
-                            TaikaPhoneticText.styled(
-                                phonetic,
-                                font: .system(size: 22, weight: .semibold),
-                                baseColor: CD.ColorToken.text
-                            )
-                        }
-                        if !card.title.isEmpty {
-                            Text(card.title)
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(CD.ColorToken.textSecondary)
-                        }
-                        let thai = card.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !thai.isEmpty {
-                            Text(thai)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.75))
-                        }
-                    }
+            ZStack {
+                CD.ColorToken.background
+                    .ignoresSafeArea()
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("РАЗБОР")
-                            .font(.system(size: 11, weight: .bold))
-                            .tracking(0.6)
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
-
-                        if repairInFlight {
-                            HStack(spacing: 8) {
-                                ProgressView()
-                                    .controlSize(.mini)
-                                Text("собираю разбор…")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.75))
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if !phonetic.isEmpty {
+                                TaikaPhoneticText.styled(
+                                    phonetic,
+                                    font: .system(size: 22, weight: .semibold),
+                                    baseColor: CD.ColorToken.text
+                                )
                             }
-                        } else if !storedPartsAreUsable {
-                            Text("У этой фразы разбора нет.")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(PD.ColorToken.textSecondary)
-                        } else {
-                            VStack(alignment: .leading, spacing: 12) {
-                                ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
-                                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                        Text(part.p)
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundStyle(PD.ColorToken.text.opacity(0.92))
-                                        Text("—")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.45))
-                                        Text(SpeakerManager.withoutThaiScript(part.m))
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.88))
-                                            .fixedSize(horizontal: false, vertical: true)
-                                        Spacer(minLength: 0)
+                            if !card.title.isEmpty {
+                                Text(card.title)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(CD.ColorToken.textSecondary)
+                            }
+                            let thai = card.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !thai.isEmpty {
+                                Text(thai)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.75))
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("РАЗБОР")
+                                .font(.system(size: 11, weight: .bold))
+                                .tracking(0.6)
+                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
+
+                            if repairInFlight {
+                                HStack(spacing: 8) {
+                                    ProgressView()
+                                        .controlSize(.mini)
+                                    Text("собираю разбор…")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.75))
+                                    Spacer(minLength: 0)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 14)
+                                .padding(.horizontal, 14)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(PD.ColorToken.card.opacity(0.72))
+                                )
+                            } else if !storedPartsAreUsable {
+                                Text("У этой фразы разбора нет.")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(PD.ColorToken.textSecondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, 14)
+                                    .padding(.horizontal, 14)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .fill(PD.ColorToken.card.opacity(0.72))
+                                    )
+                            } else {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                            Text(part.p)
+                                                .font(.system(size: 16, weight: .semibold))
+                                                .foregroundStyle(PD.ColorToken.text.opacity(0.92))
+                                            Text("—")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.45))
+                                            Text(SpeakerManager.withoutThaiScript(part.m))
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.88))
+                                                .fixedSize(horizontal: false, vertical: true)
+                                            Spacer(minLength: 0)
+                                        }
                                     }
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    .padding(.top, 8)
+                    .padding(.bottom, 28)
                 }
-                .padding(.horizontal, Theme.Layout.pageHorizontal)
-                .padding(.top, 8)
-                .padding(.bottom, 28)
             }
             .onAppear { repairPartsIfNeeded() }
-            .background(CD.ColorToken.background.ignoresSafeArea())
             .navigationTitle("Разбор")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -817,6 +835,21 @@ struct DictionaryPhraseBreakdownSheet: View {
                 }
             }
         }
+    }
+}
+
+extension View {
+    /// Bottom sheet над словарём/избранным: материал + затемнение, чтобы сетка не просвечивала.
+    func taikaDictionarySheetChrome() -> some View {
+        presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
+            .presentationBackground {
+                ZStack {
+                    Rectangle().fill(.ultraThinMaterial)
+                    PD.ColorToken.background.opacity(0.94)
+                }
+            }
     }
 }
 

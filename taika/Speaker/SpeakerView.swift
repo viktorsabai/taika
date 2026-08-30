@@ -99,14 +99,18 @@ struct SpeakerView: View {
     }
 
     /// Full tone breakdown: Pro, or still inside today's free attempts (incl. the last used one).
+    /// `used == 0` still counts: history/practice without a new translate today must not lock tones.
+    /// Pure read — never refresh stores here; `@Published` writes from `body` freeze the tab.
     private var hasFullToneBreakdownAccess: Bool {
         if pro.isPro { return true }
         if speaker.speakerUIMode == .conversation {
+            if conversationAttempts.canRecord { return true }
             let used = conversationAttempts.usedToday
-            return used > 0 && used <= 3
+            return used > 0 && used <= conversationAttempts.dailyLimit
         }
-        let used = SpeakerDailyAttemptsStore.shared.usedToday
-        return used > 0 && used <= 10
+        if trainingAttempts.canRecord { return true }
+        let used = trainingAttempts.usedToday
+        return used > 0 && used <= trainingAttempts.dailyLimit
     }
 
     private func onPlayReference() {
@@ -124,10 +128,6 @@ struct SpeakerView: View {
         speaker.playAttempt()
     }
 
-    private func onPlaySyllable(at index: Int) {
-        speaker.playAttemptSyllable(at: index)
-    }
-
     private func onPlayReferenceSyllable(at index: Int) {
         speaker.playReferenceSyllable(at: index)
     }
@@ -136,7 +136,11 @@ struct SpeakerView: View {
         if speaker.speakerUIMode == .conversation {
             switch speaker.phase {
             case .idle, .hint, .feedback:
-                speaker.startConversationRecording()
+                if speaker.conversationExpectedThai != nil {
+                    _ = speaker.startConversationPronunciationCheck()
+                } else {
+                    speaker.startConversationRecording()
+                }
             case .recording:
                 if speaker.conversationExpectedThai != nil {
                     speaker.stopConversationPronunciationCheck()
@@ -167,17 +171,30 @@ struct SpeakerView: View {
         return t.isEmpty ? nil : t
     }
 
-    /// Консьюмим legacy auto-record intent, но не начинаем запись без явного tap.
-    /// Speaker всегда открывается в ready/idle состоянии; live listening начинается только через main CTA.
-    private func clearPendingConversationAutoRecord() {
+    /// Main planet mic: one-shot listen after tab settle. Consume first so appear + onChange cannot double-start.
+    private func maybeStartPendingConversationAutoRecord() {
         guard speaker.speakerUIMode == .conversation else { return }
-        _ = speaker.consumePendingConversationAutoRecord()
+        if speaker.pendingConversationDemoRU != nil {
+            _ = speaker.consumePendingConversationAutoRecord()
+            return
+        }
+        switch speaker.phase {
+        case .recording, .analyzing, .analyzingTranslation:
+            _ = speaker.consumePendingConversationAutoRecord()
+            return
+        default:
+            break
+        }
+        guard speaker.consumePendingConversationAutoRecord() else { return }
+        speaker.scheduleConversationListening(after: 0.28)
     }
 
     /// Main kun-kru composer → translate this RU phrase in conversation mode.
     private func consumePendingConversationDemoIfNeeded() {
         guard speaker.speakerUIMode == .conversation else { return }
         guard let ru = speaker.consumePendingConversationDemoRU() else { return }
+        speaker.cancelScheduledConversationListening()
+        _ = speaker.consumePendingConversationAutoRecord()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
             self.speaker.startConversationDemoPhrase(ru)
         }
@@ -213,7 +230,6 @@ struct SpeakerView: View {
             lastPlayed: speaker.lastPlayed,
             onPlayReference: onPlayReference,
             onPlayAttempt: onPlayAttempt,
-            onPlaySyllableAtIndex: onPlaySyllable,
             onPlayReferenceSyllableAtIndex: onPlayReferenceSyllable,
             onPlayReferenceForId: { id in
                 speaker.playReference(for: id)
@@ -310,16 +326,26 @@ struct SpeakerView: View {
             speakerUIMode: speaker.speakerUIMode,
             onSpeakerUIModeChange: { mode in
                 speaker.setSpeakerUIMode(mode)
-                if mode == .training,
-                   SpeakerRequestedCourseId.shared.courseId == nil,
+                guard mode == .training else { return }
+                if let poolId = speaker.speakerContextCourseId,
+                   poolId == "__favorites__" || poolId == "__dictionary__" {
+                    if speaker.queue.isEmpty {
+                        speaker.startSpecialTraining(poolId: poolId)
+                    }
+                    return
+                }
+                if SpeakerRequestedCourseId.shared.courseId == nil,
                    pendingCourseId == nil,
-                   speaker.speakerContextCourseId == nil {
+                   speaker.speakerContextCourseId == nil,
+                   speaker.queue.isEmpty {
                     speaker.returnToTrainingHome()
                     speakerFilterState.selectedFilterId = nil
                 }
             },
             onPlayConversationTTS: { speaker.playConversationTTS() },
-            onConversationRepeat: { speaker.conversationRepeat() },
+            onConversationRepeat: { startListening in
+                speaker.conversationRepeat(startListening: startListening)
+            },
             onConversationDemoPhrase: { speaker.startConversationDemoPhrase($0) },
             onConfirmConversationDraft: { addDict, practice in
                 speaker.confirmConversationDraft(addToDictionary: addDict, startPractice: practice)
@@ -366,6 +392,10 @@ struct SpeakerView: View {
             guard newPhase.isFeedback else { return }
             requestToneBreakdownData()
         }
+        .onChange(of: speaker.lastAttempt) { _, url in
+            guard url != nil, speaker.phase.isFeedback else { return }
+            requestToneBreakdownData()
+        }
         .onChange(of: speaker.conversationHeardThaiASR) { _, newVal in
             if newVal != nil {
                 speaker.refreshUserPhoneticFromASRIfNeeded()
@@ -385,6 +415,8 @@ struct SpeakerView: View {
             }
         }
         .onAppear {
+            conversationAttempts.refreshDayIfNeeded()
+            trainingAttempts.refreshDayIfNeeded()
             // Контекст из Step/курса → одна очередь; multi-select lessons остаётся единым scope.
             let pending = pendingCourseId.map { ($0, pendingLessonId, pendingLessonIds, nil as [String]?) }
                 ?? SpeakerRequestedCourseId.shared.consume().map { ($0.courseId, $0.lessonId, $0.lessonIds, $0.cardKeys) }
@@ -403,8 +435,8 @@ struct SpeakerView: View {
             // и сбрасывал бы только что распознанную фразу. Сброс — при смене режима (`setSpeakerUIMode`).
             speaker.sanitizeConversationHistory()
 
-            clearPendingConversationAutoRecord()
             consumePendingConversationDemoIfNeeded()
+            maybeStartPendingConversationAutoRecord()
 
             UserSession.shared.logActivity(
                 .speakerOpened,
@@ -417,6 +449,15 @@ struct SpeakerView: View {
         .onChange(of: speaker.pendingConversationDemoRU) { _, newVal in
             guard newVal != nil else { return }
             consumePendingConversationDemoIfNeeded()
+        }
+        .onChange(of: speaker.pendingConversationAutoRecord) { _, pending in
+            guard pending else { return }
+            maybeStartPendingConversationAutoRecord()
+        }
+        .onChange(of: selectedTab) { _, tab in
+            if tab != 2 {
+                speaker.cancelScheduledConversationListening()
+            }
         }
         .overlay {
             // Итог круга — только для тренировки по очереди: в «Своей речи» очереди нет.

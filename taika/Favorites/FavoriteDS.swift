@@ -1086,7 +1086,7 @@ enum FDMiniCourseCardStyle {
     case reinforcement
 }
 
-// MARK: - Mini course card (подборка дня): категория сверху справа, outcomes под названием, мета+play внизу
+// MARK: - Mini course card (подборка дня): нейтральная карточка, фон-рисунок, шеврон вместо CTA
 struct FDMiniCourseCard: View {
     let item: FDCourseDTO
     var layoutWidth: CGFloat = 200
@@ -1140,6 +1140,9 @@ struct FDMiniCourseCard: View {
             .clipShape(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous))
             .onTapGesture { onOpen?() }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel("Открыть курс \(item.title)")
     }
 
     private var cardContent: some View {
@@ -1184,12 +1187,13 @@ struct FDMiniCourseCard: View {
             Spacer(minLength: 4)
             if resolvedStyle == .reinforcement {
                 Text("пройден")
-                    .font(.caption2.weight(.bold))
+                    .font(.caption2.weight(.medium))
                     .foregroundStyle(PD.ColorToken.textSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule(style: .continuous).fill(PD.ColorToken.chip.opacity(0.92)))
             }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.45))
+                .accessibilityHidden(true)
         }
     }
 
@@ -1199,11 +1203,7 @@ struct FDMiniCourseCard: View {
             if let chip = categoryChip?.trimmingCharacters(in: .whitespacesAndNewlines), !chip.isEmpty {
                 Text(chip)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(
-                        style == .reinforcement
-                            ? AnyShapeStyle(PD.ColorToken.textSecondary)
-                            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                    )
+                    .foregroundStyle(PD.ColorToken.textSecondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .minimumScaleFactor(0.85)
@@ -1259,9 +1259,7 @@ struct FDMiniCourseCard: View {
     }
 
     private var cardFooterRow: some View {
-        let style = resolvedStyle
-        return HStack(spacing: 10) {
-            footerPrimaryAction(style: style)
+        HStack(spacing: 10) {
             if let unfav = onUnfavorite {
                 Button(action: {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -1269,14 +1267,14 @@ struct FDMiniCourseCard: View {
                 }) {
                     Image(systemName: "heart.fill")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
                         .frame(minWidth: 34, minHeight: 32)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
             Spacer(minLength: 0)
-            if !showsProSell, style != .reinforcement {
+            if !showsProSell, resolvedStyle != .reinforcement {
                 HStack(spacing: 10) {
                     if let lc = lessonCount, lc > 0 {
                         Label("\(lc)", systemImage: "square.stack.3d.up")
@@ -1290,45 +1288,6 @@ struct FDMiniCourseCard: View {
                     }
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private func footerPrimaryAction(style: FDMiniCourseCardStyle) -> some View {
-        if showsProSell {
-            Text("Открыть")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                .padding(.horizontal, 12)
-                .frame(height: 30)
-                .background(Capsule(style: .continuous).fill(PD.ColorToken.chip.opacity(0.95)))
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(ThemeManager.shared.currentAccentTintColor.opacity(0.34), lineWidth: 1)
-                )
-        } else if style == .reinforcement {
-            HStack(spacing: 6) {
-                Image(systemName: "gamecontroller.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                Text("Закрепить")
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            .foregroundStyle(PD.ColorToken.text)
-            .padding(.horizontal, 12)
-            .frame(height: 30)
-            .background(Capsule(style: .continuous).fill(PD.ColorToken.chip.opacity(0.95)))
-            .overlay(Capsule(style: .continuous).stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
-        } else {
-            Button(action: { UIImpactFeedbackGenerator(style: .light).impactOccurred(); onOpen?() }) {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(PD.ColorToken.chip))
-                    .overlay(Circle().stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
         }
     }
 

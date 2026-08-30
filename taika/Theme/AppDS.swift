@@ -61,6 +61,20 @@ public enum TaikaMasteryTokens {
     )
 }
 
+/// Подписка в хедере: не бренд-акцент. Золото = статус членства.
+public enum TaikaProStatusTokens {
+    public static let gold = Color(red: 0.93, green: 0.74, blue: 0.28)
+    public static let goldGradient = LinearGradient(
+        colors: [
+            Color(red: 1.00, green: 0.93, blue: 0.66),
+            Color(red: 0.93, green: 0.72, blue: 0.24),
+            Color(red: 0.72, green: 0.50, blue: 0.12)
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+}
+
 // MARK: - Unified App Header Style
 public enum AppHeaderStyle {
     /// Root header; tab 0=Main, 1=Course, 2=Speaker, 3=Favorites, 4=Profile. onBack: when set (e.g. Speaker from Favorites), show back button left of logo.
@@ -239,6 +253,9 @@ public struct AppHeader: View {
     @ObservedObject private var favoritesFilter = FavoritesFilterState.shared
     @ObservedObject private var favoriteManager = FavoriteManager.shared
     @ObservedObject private var lessonsHeaderStore = LessonsHeaderStore.shared
+    @State private var dictionaryEventPulse = false
+    @State private var lastDictionaryCount: Int?
+    @State private var proShine = false
 
     public init(
         showSearch: Bool = true,
@@ -363,28 +380,64 @@ public struct AppHeader: View {
         AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.92))
     }
 
-    private func headerIconForeground(accent: Bool) -> AnyShapeStyle {
-        if lessonsHeaderStore.isCompletedCourse {
-            return AnyShapeStyle(TaikaMasteryTokens.greenGradient.opacity(accent ? 1.0 : 0.86))
+    /// Idle — серый. Event — короткая вспышка бренда. Pro — золото. Dim — лимит исчерпан.
+    private enum HeaderGlyphTone {
+        case idle
+        case event
+        case dim
+        case pro
+        case wayfinding
+    }
+
+    private func headerGlyphStyle(_ tone: HeaderGlyphTone) -> AnyShapeStyle {
+        switch tone {
+        case .idle:
+            return headerIconForeground
+        case .event, .wayfinding:
+            return AnyShapeStyle(theme.currentAccentFill)
+        case .dim:
+            return AnyShapeStyle(CD.ColorToken.textSecondary.opacity(0.42))
+        case .pro:
+            return AnyShapeStyle(TaikaProStatusTokens.goldGradient)
         }
-        return accent ? AnyShapeStyle(theme.currentAccentFill) : headerIconForeground
     }
 
     // MARK: Header controls — glass orbs + единый hit target (все вкладки / push)
 
     @ViewBuilder
-    private func headerIcon(_ system: String, isAccent: Bool = false) -> some View {
+    private func headerIcon(
+        _ system: String,
+        tone: HeaderGlyphTone = .idle,
+        showsBadge: Bool = false
+    ) -> some View {
         TaikaHeaderGlassButton(size: HeaderControlMetrics.glassSize) {
             Image(systemName: system)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(headerIconForeground(accent: isAccent))
+                .foregroundStyle(headerGlyphStyle(tone))
+                .shadow(
+                    color: tone == .pro ? TaikaProStatusTokens.gold.opacity(proShine ? 0.55 : 0.28) : .clear,
+                    radius: tone == .pro ? (proShine ? 8 : 5) : 0
+                )
+        }
+        .overlay(alignment: .topTrailing) {
+            if showsBadge {
+                Circle()
+                    .fill(theme.currentAccentTintColor)
+                    .frame(width: 8, height: 8)
+                    .offset(x: -7, y: 7)
+                    .accessibilityHidden(true)
+            }
         }
         .frame(width: HeaderControlMetrics.hitSize, height: HeaderControlMetrics.hitSize)
         .contentShape(Rectangle())
     }
 
     @ViewBuilder
-    private func headerCounterBadge(icon: String, text: String, active: Bool) -> some View {
+    private func headerCounterBadge(
+        icon: String,
+        text: String,
+        tone: HeaderGlyphTone = .idle
+    ) -> some View {
         TaikaHeaderGlassPill(height: HeaderControlMetrics.glassSize) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
@@ -393,8 +446,10 @@ public struct AppHeader: View {
                     .font(.system(size: 14, weight: .semibold))
                     .monospacedDigit()
             }
-            .foregroundStyle(headerIconForeground(accent: active))
+            .foregroundStyle(headerGlyphStyle(tone))
         }
+        .scaleEffect(tone == .event ? 1.12 : 1)
+        .animation(.spring(response: 0.28, dampingFraction: 0.62), value: tone == .event)
         .frame(minWidth: HeaderControlMetrics.hitSize, minHeight: HeaderControlMetrics.hitSize)
         .contentShape(Rectangle())
     }
@@ -404,7 +459,7 @@ public struct AppHeader: View {
             TaikaHeaderGlassButton(size: HeaderControlMetrics.glassSize) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(theme.currentAccentFill)
+                    .foregroundStyle(headerGlyphStyle(.wayfinding))
             }
             .frame(width: HeaderControlMetrics.hitSize, height: HeaderControlMetrics.hitSize)
             .contentShape(Rectangle())
@@ -414,13 +469,24 @@ public struct AppHeader: View {
 
     private func headerIconButton(
         _ system: String,
-        isAccent: Bool = false,
+        tone: HeaderGlyphTone = .idle,
+        showsBadge: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            headerIcon(system, isAccent: isAccent)
+            headerIcon(system, tone: tone, showsBadge: showsBadge)
         }
         .buttonStyle(TaikaHeaderButtonStyle())
+    }
+
+    private func headerProButton() -> some View {
+        Button(action: onTapPro) {
+            headerIcon(isPro ? "crown.fill" : "crown", tone: isPro ? .pro : .idle)
+                .scaleEffect(isPro && proShine ? 1.08 : 1)
+        }
+        .buttonStyle(TaikaHeaderButtonStyle())
+        .accessibilityLabel(isPro ? "Taika+" : "Открыть Taika+")
+        .animation(.spring(response: 0.36, dampingFraction: 0.7), value: proShine)
     }
 
     @ViewBuilder
@@ -443,21 +509,21 @@ public struct AppHeader: View {
 
     /// Режим микрофон: иконка микрофона + счётчик (стандартный спикер).
     private var speakerAttemptsBadge: some View {
-        let active = isPro || speakerDailyAttemptsRemaining > 0
+        let exhausted = !isPro && speakerDailyAttemptsRemaining <= 0
         return headerCounterBadge(
             icon: "mic.fill",
             text: isPro ? "∞" : "\(speakerDailyAttemptsRemaining)",
-            active: active
+            tone: exhausted ? .dim : .idle
         )
     }
 
     /// Режим умный спикер: счётчик вместо микрофона.
     private var speakerSmartCounterBadge: some View {
-        let active = isPro || speakerDailyAttemptsRemaining > 0
+        let exhausted = !isPro && speakerDailyAttemptsRemaining <= 0
         return headerCounterBadge(
             icon: "person.wave.2.fill",
             text: isPro ? "∞" : "\(speakerDailyAttemptsRemaining)",
-            active: active
+            tone: exhausted ? .dim : .idle
         )
     }
 
@@ -466,7 +532,7 @@ public struct AppHeader: View {
         headerCounterBadge(
             icon: "heart.fill",
             text: "\(favoritesTotalCount)",
-            active: favoritesTotalCount > 0
+            tone: .idle
         )
     }
 
@@ -476,36 +542,37 @@ public struct AppHeader: View {
         icon: String,
         count: Int,
         accessibilityLabel: String,
+        eventPulse: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
+        let tone: HeaderGlyphTone = eventPulse ? .event : .idle
         Button(action: action) {
             if count > 0 {
                 headerCounterBadge(
                     icon: icon,
                     text: "\(count)",
-                    active: true
+                    tone: tone
                 )
             } else {
-                headerIcon(icon, isAccent: false)
+                headerIcon(icon, tone: tone)
             }
         }
         .buttonStyle(TaikaHeaderButtonStyle())
         .accessibilityLabel(count > 0 ? "\(accessibilityLabel), \(count) фраз" : accessibilityLabel)
     }
 
-    /// Личный словарь: bookmark glyph (+ счётчик).
+    /// Личный словарь: idle + число. Акцент только вспышкой в момент добавления.
     @ViewBuilder
     private func dictionaryHeaderButton(
         count: Int,
-        /// Подсветка счётчика акцентом. На главном выключена: розовым там говорит только CTA.
-        active: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
+        let tone: HeaderGlyphTone = dictionaryEventPulse ? .event : .idle
         Button(action: action) {
             if count > 0 {
-                headerCounterBadge(icon: "bookmark.fill", text: "\(count)", active: active)
+                headerCounterBadge(icon: "bookmark.fill", text: "\(count)", tone: tone)
             } else {
-                headerIcon("bookmark")
+                headerIcon("bookmark", tone: tone)
             }
         }
         .buttonStyle(TaikaHeaderButtonStyle())
@@ -522,7 +589,7 @@ public struct AppHeader: View {
                     .font(.system(size: 14, weight: .semibold))
                     .monospacedDigit()
             }
-            .foregroundStyle(headerIconForeground(accent: isSelected))
+            .foregroundStyle(headerGlyphStyle(isSelected ? .event : .idle))
         }
         .frame(minWidth: HeaderControlMetrics.hitSize, minHeight: HeaderControlMetrics.hitSize)
         .contentShape(Rectangle())
@@ -585,12 +652,13 @@ public struct AppHeader: View {
                 headerTrailingCluster {
                     switch tab {
                     case 0:
-                        // Иконки хедера держим нейтральными: розовым на главном говорит
-                        // только основное действие, иначе экран превращается в ёлку.
-                        // TF: «Голос Таики» скрыт (stub «Скоро»).
-                        headerIconButton("gamecontroller.fill", action: onTapGamePark)
+                        headerIconButton(
+                            "gamecontroller.fill",
+                            showsBadge: gameParkActive,
+                            action: onTapGamePark
+                        )
                         if let onDict = onTapDictionary {
-                            dictionaryHeaderButton(count: dictionaryCount, active: false, action: onDict)
+                            dictionaryHeaderButton(count: dictionaryCount, action: onDict)
                         }
                     case 1:
                         // MVP: создание курса скрыто (как «Голос Таики» — позже).
@@ -629,7 +697,8 @@ public struct AppHeader: View {
                             collectionHeaderButton(
                                 icon: "bookmark.fill",
                                 count: dictionaryCount,
-                                accessibilityLabel: "Открыть словарь"
+                                accessibilityLabel: "Открыть словарь",
+                                eventPulse: dictionaryEventPulse
                             ) {
                                 if let onDict = onTapDictionary {
                                     onDict()
@@ -650,10 +719,7 @@ public struct AppHeader: View {
                         EmptyView()
                     }
                     if showPro {
-                        // Статус подписки читается заливкой глифа — красить его ещё и
-                        // акцентом незачем, хедер должен быть спокойным.
-                        let proGlyph = isPro ? "crown.fill" : "crown"
-                        headerIconButton(proGlyph, action: onTapPro)
+                        headerProButton()
                     }
                 }
 
@@ -698,17 +764,18 @@ public struct AppHeader: View {
                         .accessibilityLabel("Спикер")
                     }
                     if let onReinforce {
-                        headerIconButton("gamecontroller.fill", isAccent: gameParkActive, action: {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            onReinforce()
-                        })
+                        headerIconButton(
+                            "gamecontroller.fill",
+                            showsBadge: gameParkActive,
+                            action: {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                onReinforce()
+                            }
+                        )
                         .accessibilityLabel("Игры")
                     }
                     if showPro {
-                        // Статус подписки читается заливкой глифа — красить его ещё и
-                        // акцентом незачем, хедер должен быть спокойным.
-                        let proGlyph = isPro ? "crown.fill" : "crown"
-                        headerIconButton(proGlyph, action: onTapPro)
+                        headerProButton()
                     }
                 }
 
@@ -762,6 +829,39 @@ public struct AppHeader: View {
         // never a separate opaque strip with a visible horizontal seam.
         .background {
             TaikaLiquidGlassHeaderBackdrop()
+        }
+        .onAppear {
+            lastDictionaryCount = dictionaryCount
+        }
+        .onChange(of: dictionaryCount) { old, new in
+            handleDictionaryCountChange(from: old, to: new)
+        }
+        .onChange(of: isPro) { wasPro, nowPro in
+            if nowPro, !wasPro { playProShineIfNeeded(force: true) }
+        }
+    }
+
+    private func handleDictionaryCountChange(from old: Int, to new: Int) {
+        defer { lastDictionaryCount = new }
+        guard new > old else { return }
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.62)) {
+            dictionaryEventPulse = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
+            withAnimation(.easeOut(duration: 0.22)) {
+                dictionaryEventPulse = false
+            }
+        }
+    }
+
+    private func playProShineIfNeeded(force: Bool = false) {
+        guard isPro else { return }
+        if force { proShine = false }
+        DispatchQueue.main.async {
+            proShine = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+                proShine = false
+            }
         }
     }
 

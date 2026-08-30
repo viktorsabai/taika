@@ -2,16 +2,30 @@ import SwiftUI
 import RevenueCat
 import StoreKit
 
+enum TaikaPaywallPresentationStyle {
+    /// Full-screen overlay with glass card and dismiss scrim.
+    case overlay
+    /// Bottom sheet: hero + plans + checkout only.
+    case sheet
+}
+
 /// Paywall Taika+ — минимальный checkout: оффер + планы + CTA.
 /// Value-deck / aha живут до paywall; здесь не дублируем.
 struct TaikaPlusPaywallView: View {
 
     let courseId: String?
     let reason: ProGateReason
+    let presentationStyle: TaikaPaywallPresentationStyle
     let onClose: () -> Void
 
-    init(courseId: String?, reason: ProGateReason = .general, onClose: @escaping () -> Void) {
+    init(
+        courseId: String?,
+        reason: ProGateReason = .general,
+        presentationStyle: TaikaPaywallPresentationStyle = .overlay,
+        onClose: @escaping () -> Void
+    ) {
         self.courseId = courseId
+        self.presentationStyle = presentationStyle
         self.reason = {
             if reason == .general, let courseId, !courseId.isEmpty {
                 return .lockedCourse
@@ -89,28 +103,13 @@ struct TaikaPlusPaywallView: View {
     }
 
     var body: some View {
-        ZStack {
-            OverlayEtalonBackground(onDismiss: onClose)
-
-            mainPanel
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                .padding(.vertical, 24)
-                .scaleEffect(contentVisible ? 1 : 0.96)
-                .opacity(contentVisible && !showProSuccess ? 1 : 0)
-                .offset(y: contentVisible ? 0 : 18)
-                .animation(.spring(response: 0.42, dampingFraction: 0.88), value: contentVisible)
-                .allowsHitTesting(!showProSuccess)
-
-            if showProSuccess {
-                TaikaProSuccessView {
-                    onClose()
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                .zIndex(2)
+        Group {
+            if presentationStyle == .sheet {
+                sheetBody
+            } else {
+                overlayBody
             }
         }
-        .animation(.spring(response: 0.4, dampingFraction: 0.88), value: showProSuccess)
         .task {
             _ = courseId
             await ProManager.shared.syncRevenueCatIdentity(userId: AuthService.shared.currentUserID)
@@ -135,6 +134,61 @@ struct TaikaPlusPaywallView: View {
         }
     }
 
+    private var overlayBody: some View {
+        ZStack {
+            OverlayEtalonBackground(onDismiss: onClose)
+
+            mainPanel
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .padding(.vertical, 24)
+                .scaleEffect(contentVisible ? 1 : 0.96)
+                .opacity(contentVisible && !showProSuccess ? 1 : 0)
+                .offset(y: contentVisible ? 0 : 18)
+                .animation(.spring(response: 0.42, dampingFraction: 0.88), value: contentVisible)
+                .allowsHitTesting(!showProSuccess)
+
+            if showProSuccess {
+                TaikaProSuccessView {
+                    onClose()
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                .zIndex(2)
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.88), value: showProSuccess)
+    }
+
+    private var sheetBody: some View {
+        ZStack {
+            VStack(spacing: 0) {
+                headerBar
+
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        heroBlock
+                        planPicker
+                        checkoutBlock
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 4)
+                    .padding(.bottom, 20)
+                }
+            }
+            .opacity(contentVisible && !showProSuccess ? 1 : 0)
+            .animation(.easeOut(duration: 0.22), value: contentVisible)
+
+            if showProSuccess {
+                TaikaProSuccessView {
+                    onClose()
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                .zIndex(2)
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.88), value: showProSuccess)
+    }
+
     // MARK: - Panel
 
     private var mainPanel: some View {
@@ -143,7 +197,6 @@ struct TaikaPlusPaywallView: View {
                 headerBar
 
                 VStack(alignment: .leading, spacing: 16) {
-                    sourceContextBlock
                     quotaBlock
                     heroBlock
                     planPicker
@@ -164,25 +217,12 @@ struct TaikaPlusPaywallView: View {
     }
 
     @ViewBuilder
-    private var sourceContextBlock: some View {
-        if reason == .games {
-            GlassMessage(title: "Из Game Park", symbol: "gamecontroller.fill") {
-                Text("Ты открыл это предложение из закрытого игрового режима. После закрытия вернёшься в Game Park.")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.86))
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-
-    @ViewBuilder
     private var quotaBlock: some View {
         if reason == .speakerBreakdown {
             GlassQuota(
                 title: "Попытки Спикера",
                 detail: pro.isPro ? "без лимита" : "\(trainingAttempts.remainingToday) осталось сегодня",
-                progress: Double(trainingAttempts.remainingToday) / 10.0
+                progress: Double(trainingAttempts.remainingToday) / Double(max(1, trainingAttempts.dailyLimit))
             )
         }
     }

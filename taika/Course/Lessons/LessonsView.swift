@@ -299,9 +299,7 @@ private extension LessonsView {
     }
 
     private var showsCompletedTrainingBar: Bool {
-        guard isCompletedCourse, courseContentMode == .lessons, !isTheoryBonusCourse, !showGameOverlay else { return false }
-        let scope = currentReinforcementScope()
-        return !scope.lessonIds.isEmpty && scope.cardCount > 0
+        isCompletedCourse && courseContentMode == .lessons && !isTheoryBonusCourse && !showGameOverlay
     }
 
     private func updateReinforcementSelection(_ ids: Set<String>?) {
@@ -950,7 +948,7 @@ public struct LessonsView: View {
     @ViewBuilder
     private var mainContent: some View {
         TaikaRootVerticalScroll {
-            VStack(spacing: Theme.Layout.sectionGap) {
+            VStack(alignment: .leading, spacing: 0) {
                 headerSection
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
 
@@ -958,24 +956,25 @@ public struct LessonsView: View {
                     if isCompletedCourse {
                         completedTrainingDashboard
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
+                            .padding(.top, Theme.Layout.headerToSection)
                     } else {
-                LSSectionTitle("ТАЙКА FM")
-                    .padding(.horizontal, Theme.Layout.pageHorizontal)
-                    .padding(.top, Theme.Layout.sectionTop)
+                        VStack(alignment: .leading, spacing: Theme.Layout.sectionTitleToContent) {
+                            LSSectionTitle("ТАЙКА FM")
+                            TaikaFMRow(
+                                scope: .lessons,
+                                mode: .typing,
+                                showBubble: false,
+                                repeats: false
+                            )
+                        }
+                        .padding(.horizontal, Theme.Layout.pageHorizontal)
+                        .padding(.top, Theme.Layout.headerToSection)
 
-                        TaikaFMRow(
-                            scope: .lessons,
-                            mode: .typing,
-                            showBubble: false,
-                            repeats: false
-                )
-                .padding(.horizontal, Theme.Layout.pageHorizontal)
-                .padding(.top, Theme.Layout.sectionTitleToContent)
+                        lessonsReelsSection
+                            .padding(.horizontal, Theme.Layout.pageHorizontal)
+                            .padding(.top, Theme.Layout.sectionGap)
 
-                lessonsReelsSection
-                    .padding(.horizontal, Theme.Layout.pageHorizontal)
-
-                if !isTheoryBonusCourse {
+                        if !isTheoryBonusCourse {
                             LSCompletedLessonList(
                                 items: lessonItems().filter { $0.status == .completed },
                                 selectedIds: Set(effectiveReinforcementLessonIds),
@@ -1018,6 +1017,7 @@ public struct LessonsView: View {
                                 sectionTitle: "УРОКИ КУРСА"
                             )
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
+                            .padding(.top, Theme.Layout.sectionGap)
                         }
                     }
                 } else {
@@ -1028,23 +1028,24 @@ public struct LessonsView: View {
                             courseLifehacksReels
                         }
                         .padding(.horizontal, Theme.Layout.pageHorizontal)
+                        .padding(.top, Theme.Layout.headerToSection)
                     } else {
                         if isTheoryBonusCourse {
-                            LSSectionTitle("ТАЙКА FM")
-                                .padding(.horizontal, Theme.Layout.pageHorizontal)
-                                .padding(.top, Theme.Layout.sectionTop)
-
-                            TaikaFMRow(
-                                scope: .lessons,
-                                mode: .typing,
-                                showBubble: false,
-                                repeats: false
-                            )
-                    .padding(.horizontal, Theme.Layout.pageHorizontal)
-                    .padding(.top, Theme.Layout.sectionTitleToContent)
+                            VStack(alignment: .leading, spacing: Theme.Layout.sectionTitleToContent) {
+                                LSSectionTitle("ТАЙКА FM")
+                                TaikaFMRow(
+                                    scope: .lessons,
+                                    mode: .typing,
+                                    showBubble: false,
+                                    repeats: false
+                                )
+                            }
+                            .padding(.horizontal, Theme.Layout.pageHorizontal)
+                            .padding(.top, Theme.Layout.headerToSection)
                         }
                         courseLifehacksReels
                             .padding(.horizontal, Theme.Layout.pageHorizontal)
+                            .padding(.top, Theme.Layout.sectionGap)
                     }
                 }
 
@@ -1068,13 +1069,18 @@ public struct LessonsView: View {
 
     private func completedTrainingFloatingCTA() -> some View {
         let scope = currentReinforcementScope()
+        let canStart = !scope.lessonIds.isEmpty && scope.cardCount > 0
         let title: String = {
+            if !canStart {
+                return scope.isErrorScope ? "Повторить · выбери уроки" : "Закрепить · выбери уроки"
+            }
             if scope.isErrorScope {
                 return "Повторить · \(scope.cardCount) \(ruReinforcementCardLabel(scope.cardCount, error: true))"
             }
             return "Закрепить · \(scope.cardCount) \(ruReinforcementCardLabel(scope.cardCount, error: false))"
         }()
         return Button {
+            guard canStart else { return }
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             presentGameModePicker(for: scope.lessonIds, cardKeys: scope.cardKeys)
         } label: {
@@ -1082,10 +1088,15 @@ public struct LessonsView: View {
                 icon: scope.isErrorScope ? "exclamationmark.circle" : "mic.fill",
                 title: title
             )
+            .opacity(canStart ? 1 : 0.46)
         }
         .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.98))
-        .disabled(scope.cardCount == 0)
-        .accessibilityLabel(scope.isErrorScope ? "Повторить ошибки, \(scope.cardCount) карточек" : "Начать закрепление, \(scope.cardCount) карточек")
+        .disabled(!canStart)
+        .accessibilityLabel(
+            canStart
+                ? (scope.isErrorScope ? "Повторить ошибки, \(scope.cardCount) карточек" : "Начать закрепление, \(scope.cardCount) карточек")
+                : "Выбери уроки для закрепления"
+        )
     }
 
     @ViewBuilder
@@ -1477,6 +1488,7 @@ let withTasks = base
                 TaikaPlusPaywallView(
                     courseId: currentCourse?.courseID,
                     reason: .games,
+                    presentationStyle: .sheet,
                     onClose: {
                         showLocalGamesPaywall = false
                     }
@@ -1485,10 +1497,7 @@ let withTasks = base
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
                 .presentationBackground {
-                    ZStack {
-                        Rectangle().fill(.ultraThinMaterial)
-                        PD.ColorToken.background.opacity(0.92)
-                    }
+                    PD.ColorToken.background
                 }
             }
         return withChrome
@@ -1534,45 +1543,67 @@ extension LessonsView {
             : nil
         let courseIsCompleted = isCompletedCourse
         let subtitleResolved = headerSubtitleResolved.isEmpty ? headerSubtitle : headerSubtitleResolved
-        return VStack(spacing: 10) {
+        let showsMaterialsPicker = !(courseIsCompleted || isTheoryBonusCourse)
+        return VStack(alignment: .leading, spacing: 0) {
             if !courseIsCompleted {
-                LSLessonHeader(
-            title: headerTitle,
-                subtitle: courseIsCompleted ? "" : subtitleResolved,
-                chipText: nil,
-                progressSlots: courseIsCompleted ? nil : slotsResolved,
-                selectedIndex: showsLessonsContent ? activeLessonIndex : nil,
-                onTapSlot: showsLessonsContent ? { idx in
-                let arr = lessonsSorted
-                if idx >= 0 && idx < arr.count {
-                    let lid = arr[idx].lessonID
-                    guard openLessonIfAllowed(lid) else { return }
-                    LSLessonActivity.mark(lid)
-                    if let cid = currentCourse?.courseID {
-                        UserSession.shared.markActive(courseId: cid, lessonId: lid, stepIndex: 0)
-                        CarouselScrollPersistence.setLessonReelIndex(courseId: cid, index: idx)
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                        if !nav.path.isEmpty { nav.path.removeLast() }
                     }
-                    DispatchQueue.main.async {
-                        selectedLessonId = lid
-                        nav.go(.lesson(
-                            courseId: currentCourse?.courseID ?? "",
-                            lessonId: lid,
-                            presentation: .canonical
-                        ))
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text("в курсы")
+                            .font(.system(size: 15, weight: .medium))
                     }
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .frame(minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
-            } : nil,
-            onBack: {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
-                    if !nav.path.isEmpty { nav.path.removeLast() }
-                }
-                },
-                // Reinforcement is a post-course layer. An in-progress course must keep this hero focused on learning.
-                completionSummary: courseIsCompleted ? completedCourseSummary : nil,
-                isCompletedCourse: courseIsCompleted,
-                // In completed mode the training dock owns material selection; avoid a second, oversized picker in the header card.
-                                bottomAccessory: (courseIsCompleted || isTheoryBonusCourse) ? nil : AnyView(courseMaterialsPicker)
+                .buttonStyle(.plain)
+                .accessibilityLabel("Назад к курсам")
+
+                LSCourseHeroCopy(
+                    title: headerTitle,
+                    subtitle: subtitleResolved
                 )
+                .padding(.top, 2)
+
+                if let slotsResolved, !slotsResolved.isEmpty {
+                    LSProgressSlotsStrip(
+                        slots: slotsResolved,
+                        selectedIndex: showsLessonsContent ? activeLessonIndex : nil,
+                        onTapSlot: showsLessonsContent ? { idx in
+                            let arr = lessonsSorted
+                            if idx >= 0 && idx < arr.count {
+                                let lid = arr[idx].lessonID
+                                guard openLessonIfAllowed(lid) else { return }
+                                LSLessonActivity.mark(lid)
+                                if let cid = currentCourse?.courseID {
+                                    UserSession.shared.markActive(courseId: cid, lessonId: lid, stepIndex: 0)
+                                    CarouselScrollPersistence.setLessonReelIndex(courseId: cid, index: idx)
+                                }
+                                DispatchQueue.main.async {
+                                    selectedLessonId = lid
+                                    nav.go(.lesson(
+                                        courseId: currentCourse?.courseID ?? "",
+                                        lessonId: lid,
+                                        presentation: .canonical
+                                    ))
+                                }
+                            }
+                        } : nil,
+                        isCompletedCourse: false
+                    )
+                    .padding(.top, 16)
+                }
+
+                if showsMaterialsPicker {
+                    courseMaterialsPicker
+                        .padding(.top, 12)
+                }
             }
         }
     }

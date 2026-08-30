@@ -740,8 +740,14 @@ public struct MDDailyPicksComposite: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
             VStack(alignment: .leading, spacing: 8) {
-                // Таймер — это название секции (стиль pip + caps), без отдельного бейджа и без дубля «РАЗМИНКА».
-                TaikaSectionHeaderRow(sectionCountdownTitle)
+                TaikaSectionHeaderRow(sectionCountdownTitle) {
+                    if !items.isEmpty {
+                        Text("\(activeIndex + 1)/\(items.count)")
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .monospacedDigit()
+                    }
+                }
 
                 if !items.isEmpty {
                     let courseTitle = courseNameDerived(at: activeIndex)
@@ -755,39 +761,44 @@ public struct MDDailyPicksComposite: View {
                         && !lessonTitle.isEmpty
                         && normalizedLesson != normalizedCourse
 
-                    VStack(alignment: .leading, spacing: 5) {
-                        if isProActive {
-                            Text("TAIKA+ · ПОДБОРКА ДНЯ")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                                .lineLimit(1)
-                        } else if !courseTitle.isEmpty {
-                            Button {
-                                onOpenCourse(activeIndex)
-                            } label: {
-                                Text(courseTitle.uppercased())
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        Group {
+                            if isProActive {
+                                Text("TAIKA+ · ПОДБОРКА ДНЯ")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundStyle(ThemeManager.shared.currentAccentFill)
                                     .lineLimit(1)
-                                    .truncationMode(.tail)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            } else if !courseTitle.isEmpty {
+                                Button {
+                                    onOpenCourse(activeIndex)
+                                } label: {
+                                    Text(courseTitle.uppercased())
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Открыть курс \(courseTitle)")
+                            } else {
+                                Color.clear.frame(height: 1)
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Открыть курс \(courseTitle)")
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                         if showsLesson {
                             Button {
                                 onTapLesson(activeIndex)
                             } label: {
                                 Text(lessonTitle)
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 15, weight: .semibold))
                                     .foregroundStyle(PD.ColorToken.text)
-                                    .lineLimit(1)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.trailing)
                                     .truncationMode(.tail)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .buttonStyle(.plain)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
                             .accessibilityLabel("Открыть урок \(lessonTitle)")
                         }
                     }
@@ -1780,24 +1791,22 @@ public struct MDVoiceSphere: View {
     }
 }
 
-/// Главный сценарий Main: кун кру Тайки — одно поле входа в Спикер (без card chrome).
+/// Главный вход в Спикер: микрофон как в «скажи сам», без поля ввода на Main.
 public struct MDPromptHero: View {
     public var greeting: String
-    @Binding public var composeText: String
-    public var onSubmit: (String) -> Void
-
-    @FocusState private var composeFocused: Bool
+    public var onOpenSpeaker: () -> Void
+    public var onTapPhrase: (String) -> Void
 
     public init(
         greeting: String,
         tagline: String = "Скажи по-русски — покажу, как по-тайски",
-        composeText: Binding<String>,
-        onSubmit: @escaping (String) -> Void
+        onOpenSpeaker: @escaping () -> Void,
+        onTapPhrase: @escaping (String) -> Void
     ) {
         self.greeting = greeting
-        self._composeText = composeText
-        self.onSubmit = onSubmit
-        _ = tagline // kept in API for call-site stability; hero shows one line only
+        self.onOpenSpeaker = onOpenSpeaker
+        self.onTapPhrase = onTapPhrase
+        _ = tagline
     }
 
     private var headlineLines: [String] {
@@ -1806,10 +1815,6 @@ public struct MDPromptHero: View {
             "Чем помочь сегодня?",
             "Скажи по-русски — я переведу"
         ]
-    }
-
-    private var canSubmit: Bool {
-        !composeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     public var body: some View {
@@ -1821,106 +1826,24 @@ public struct MDPromptHero: View {
             )
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            kunKruComposeSurface
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                onOpenSpeaker()
+            } label: {
+                TaikaVoicePlanet(mode: .idle, kind: .voice, scale: 0.46, lite: true, inviteTap: true)
+                    .frame(width: 138, height: 138)
+                    .clipped()
+            }
+            .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.98))
+            .frame(maxWidth: .infinity)
+            .accessibilityLabel("Скажи по-русски")
+            .accessibilityHint("Открыть умный спикер")
 
-            if !composeFocused {
-                MDExamplePhraseMarquee { phrase in
-                    onSubmit(phrase)
-                }
-                .transition(.opacity)
+            MDExamplePhraseMarquee { phrase in
+                onTapPhrase(phrase)
             }
         }
         .padding(.horizontal, Theme.Layout.pageHorizontal)
-        .animation(.easeOut(duration: 0.18), value: composeFocused)
-    }
-
-    /// Главный вход кун кру. Поле ввода само по себе не действие — розовым здесь горит
-    /// только кнопка отправки; рамка и подпись нейтральные, иначе главный экран рябит.
-    private var kunKruComposeSurface: some View {
-        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
-        let accent = ThemeManager.shared.currentAccentTintColor
-
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: "character.bubble")
-                    .font(.system(size: 11, weight: .bold))
-                Text("СКАЖИ ПО-РУССКИ")
-                    .font(.system(size: 11, weight: .bold))
-                    .tracking(0.65)
-            }
-            .foregroundStyle(PD.ColorToken.textSecondary.opacity(composeFocused ? 0.9 : 0.7))
-
-            HStack(alignment: .center, spacing: 10) {
-                TextField("Напиши фразу — переведу по-тайски", text: $composeText, axis: .vertical)
-                    .font(.system(size: 18, weight: .medium, design: .rounded))
-                    .foregroundStyle(PD.ColorToken.text)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(1...3)
-                    .focused($composeFocused)
-                    .textInputAutocapitalization(.sentences)
-                    .submitLabel(.go)
-                    .onSubmit { submitCompose() }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .tint(ThemeManager.shared.currentAccentTintColor)
-                    .accessibilityLabel("Фраза по-русски")
-
-                Button {
-                    submitCompose()
-                } label: {
-                    // Empty state stays an accent outline — an invitation, not a dead grey button.
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(
-                            canSubmit
-                            ? AnyShapeStyle(Color.black)
-                            : AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                        )
-                        .frame(width: 38, height: 38)
-                        .background(
-                            Circle()
-                                .fill(
-                                    canSubmit
-                                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                                    : AnyShapeStyle(Color.white.opacity(0.06))
-                                )
-                        )
-                        .overlay(
-                            Circle()
-                                .stroke(accent.opacity(canSubmit ? 0 : 0.38), lineWidth: 1)
-                        )
-                        .shadow(
-                            color: canSubmit ? accent.opacity(0.28) : .clear,
-                            radius: canSubmit ? 10 : 0,
-                            y: canSubmit ? 3 : 0
-                        )
-                }
-                .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
-                .disabled(!canSubmit)
-                .accessibilityLabel("Перевести")
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background {
-            shape.fill(Color.white.opacity(composeFocused ? 0.09 : 0.06))
-        }
-        .overlay(
-            shape.stroke(
-                composeFocused
-                ? AnyShapeStyle(accent.opacity(0.42))
-                : AnyShapeStyle(Theme.Strokes.strokeSubtle),
-                lineWidth: composeFocused ? 1.2 : 1
-            )
-        )
-        .shadow(color: .black.opacity(0.22), radius: 14, y: 5)
-    }
-
-    private func submitCompose() {
-        let text = composeText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        composeFocused = false
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        onSubmit(text)
     }
 }
 

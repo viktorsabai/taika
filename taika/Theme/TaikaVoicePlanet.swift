@@ -2,7 +2,7 @@
 //  TaikaVoicePlanet.swift
 //  taika
 //
-//  Voice CTA: gradient core + two rings + one glow.
+//  Voice CTA: brand accent core + soft star glow.
 //  Cheap motion — no TimelineView / no blur storms.
 //
 
@@ -94,9 +94,7 @@ public struct TaikaVoicePlanet: View {
         case .text: return "keyboard"
         case .voice:
             switch mode {
-            // Ухо, а не волна: волна одинаково читается и как «слушаю», и как «говорю».
             case .listening: return "ear.fill"
-            // Лупа поверх крутящихся дуг однозначно говорит «разбираю», а не «идёт запись».
             case .cooking: return "magnifyingglass"
             case .result: return "checkmark"
             case .speaking: return "speaker.wave.2.fill"
@@ -110,7 +108,7 @@ public struct TaikaVoicePlanet: View {
             if kind == .text {
                 textKindPlaceholder
             } else if showsCarousel {
-                micWithWaves
+                micWithGlow
             } else {
                 micCore(size: 88)
             }
@@ -157,7 +155,7 @@ public struct TaikaVoicePlanet: View {
             cookSpin = false
             idlePulse = false
             sonarPhase = false
-            withAnimation(.easeInOut(duration: inviteTap ? 1.35 : 1.8).repeatForever(autoreverses: true)) {
+            withAnimation(.easeInOut(duration: inviteTap ? 1.5 : 2.2).repeatForever(autoreverses: true)) {
                 idlePulse = true
             }
         case .listening, .speaking:
@@ -171,104 +169,75 @@ public struct TaikaVoicePlanet: View {
         }
     }
 
-    // MARK: - Mic + waves
+    // MARK: - Brand core + soft glow (no plastic body)
 
-    private var micWithWaves: some View {
+    private var micWithGlow: some View {
         let core: CGFloat = lite ? 76 : 90
         let listenBoost = 0.55 + Double(level) * 0.45
 
         return ZStack {
-            glowDisk(listenBoost: listenBoost)
+            starGlow(listenBoost: listenBoost)
 
-            waveRings(listenBoost: listenBoost)
+            if mode == .cooking {
+                cookRings
+            } else if mode == .listening || mode == .speaking {
+                sonarRipples(base: lite ? 118 : 128)
+            }
 
             micCore(size: core)
                 .scaleEffect(listeningCoreScale)
         }
     }
 
-    private func glowDisk(listenBoost: Double) -> some View {
-        let size: CGFloat = lite ? 176 : 196
+    /// Soft brand bloom — identity tint only, no cloudy overlays.
+    private func starGlow(listenBoost: Double) -> some View {
+        let size: CGFloat = lite ? 200 : 228
         let peak: Double = {
             switch mode {
-            case .idle: return inviteTap ? 0.42 : 0.32
-            case .listening, .speaking: return 0.34 * listenBoost
-            case .cooking: return 0.40
-            case .result: return 0.18
+            case .idle: return inviteTap ? 0.50 : 0.38
+            case .listening, .speaking: return 0.42 * listenBoost
+            case .cooking: return 0.44
+            case .result: return 0.20
             }
         }()
-        let live = idlePulse ? peak * 1.18 : peak
+        let live = idlePulse ? peak * 1.2 : peak
 
         return Circle()
             .fill(
                 RadialGradient(
                     colors: [
                         accentTint.opacity(live),
-                        accentTint.opacity(live * 0.28),
+                        accentTint.opacity(live * 0.35),
                         .clear
                     ],
                     center: .center,
-                    startRadius: size * 0.08,
-                    endRadius: size * 0.52
+                    startRadius: size * 0.06,
+                    endRadius: size * 0.50
                 )
             )
             .frame(width: size, height: size)
-            .scaleEffect(idlePulse ? 1.05 : 1.0)
+            .scaleEffect(idlePulse ? 1.06 : 1.0)
             .allowsHitTesting(false)
     }
 
     private var listeningCoreScale: CGFloat {
         guard mode == .listening || mode == .speaking else {
-            return idlePulse ? 1.025 : 1
+            return idlePulse ? 1.03 : 1
         }
         return 0.97 + level * 0.08
     }
 
-    @ViewBuilder
-    private func waveRings(listenBoost: Double) -> some View {
-        let inner: CGFloat = lite ? 118 : 128
-        let outer: CGFloat = lite ? 156 : 172
-
-        switch mode {
-        case .cooking:
-            cookRings
-        case .listening, .speaking:
-            // Sonar: ripples leave the core, so "слушаю" never reads like a brighter idle.
-            sonarRipples(base: inner)
-            ring(
-                size: inner,
-                lineWidth: 2.4 + level * 0.8,
-                opacity: ringOpacity(inner: true),
-                listenScale: 1 + listenBoost * 0.06
-            )
-        case .idle, .result:
-            ring(
-                size: inner,
-                lineWidth: 2.2,
-                opacity: ringOpacity(inner: true),
-                listenScale: 1
-            )
-            ring(
-                size: outer,
-                lineWidth: 1.6,
-                opacity: ringOpacity(inner: false),
-                listenScale: 1
-            )
-        }
-    }
-
-    /// Expanding rings emitted by the core — the "I'm hearing you" signal.
     private func sonarRipples(base: CGFloat) -> some View {
-        let strength = 0.34 + Double(level) * 0.46
+        let strength = 0.28 + Double(level) * 0.40
         return ZStack {
             ForEach(0..<3, id: \.self) { i in
                 Circle()
                     .stroke(
                         accentTint.opacity(sonarPhase ? 0 : strength),
-                        style: StrokeStyle(lineWidth: 1.8, lineCap: .round)
+                        style: StrokeStyle(lineWidth: 1.6, lineCap: .round)
                     )
                     .frame(width: base, height: base)
-                    .scaleEffect(sonarPhase ? 1.62 : 0.94)
+                    .scaleEffect(sonarPhase ? 1.55 : 0.94)
                     .animation(
                         .easeOut(duration: 2.1)
                             .repeatForever(autoreverses: false)
@@ -280,7 +249,6 @@ public struct TaikaVoicePlanet: View {
         .allowsHitTesting(false)
     }
 
-    /// Gradient arc spinner — identity colors, no dashed “loading” rings.
     private var cookRings: some View {
         let inner: CGFloat = lite ? 122 : 134
         let outer: CGFloat = lite ? 158 : 172
@@ -310,40 +278,7 @@ public struct TaikaVoicePlanet: View {
         .allowsHitTesting(false)
     }
 
-    private func ringOpacity(inner: Bool) -> Double {
-        let base: Double = inner ? 0.85 : 0.48
-        switch mode {
-        // Idle is deliberately quieter than listening — the jump reads as "она включилась".
-        case .idle: return (idlePulse ? base : base * 0.82) * 0.7
-        case .listening, .speaking: return min(1, base + Double(level) * 0.18)
-        case .cooking: return base * 0.9
-        case .result: return base * 0.45
-        }
-    }
-
-    private func ring(
-        size: CGFloat,
-        lineWidth: CGFloat,
-        opacity: Double,
-        listenScale: Double
-    ) -> some View {
-        let style = StrokeStyle(lineWidth: lineWidth, lineCap: .round)
-        let scale: CGFloat = {
-            switch mode {
-            case .idle: return idlePulse ? 1.03 : 1
-            case .listening, .speaking: return CGFloat(listenScale)
-            case .result: return 0.96
-            default: return 1
-            }
-        }()
-
-        return Circle()
-            .stroke(accentFill.opacity(opacity), style: style)
-            .frame(width: size, height: size)
-            .scaleEffect(scale)
-            .allowsHitTesting(false)
-    }
-
+    /// Brand gradient pill — same language as buttons / chips.
     private func micCore(size: CGFloat) -> some View {
         ZStack {
             Circle()
@@ -353,7 +288,7 @@ public struct TaikaVoicePlanet: View {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(0.28),
+                                    Color.white.opacity(0.22),
                                     Color.white.opacity(0.04),
                                     .clear
                                 ],
@@ -364,9 +299,9 @@ public struct TaikaVoicePlanet: View {
                 )
                 .overlay(
                     Circle()
-                        .stroke(Color.white.opacity(mode == .listening ? 0.42 : 0.22), lineWidth: 1)
+                        .stroke(Color.white.opacity(mode == .listening ? 0.35 : 0.18), lineWidth: 1)
                 )
-                .shadow(color: accentTint.opacity(0.42), radius: 14, y: 4)
+                .shadow(color: accentTint.opacity(0.40), radius: 14, y: 4)
 
             Image(systemName: micSymbol)
                 .font(.system(size: size * 0.34, weight: .semibold))

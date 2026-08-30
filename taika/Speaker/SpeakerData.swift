@@ -158,6 +158,7 @@ public final class SpeakerDailyAttemptsStore: ObservableObject {
     @Published public private(set) var usedToday: Int
 
     private let limit: Int
+    public var dailyLimit: Int { limit }
 
     public init(limit: Int = 10) {
         self.limit = limit
@@ -191,8 +192,9 @@ public final class SpeakerDailyAttemptsStore: ObservableObject {
     public func refreshDayIfNeeded() {
         ensureDayReset()
         let used = Self.loadUsedToday()
-        usedToday = used
-        remainingToday = max(0, limit - used)
+        let remaining = max(0, limit - used)
+        if usedToday != used { usedToday = used }
+        if remainingToday != remaining { remainingToday = remaining }
     }
 
     /// Product decision: if user explicitly clears all recordings in current block,
@@ -232,6 +234,7 @@ public final class SpeakerConversationAttemptsStore: ObservableObject {
 
     @Published public private(set) var remainingToday: Int
     @Published public private(set) var usedToday: Int
+    public var dailyLimit: Int { conversationAttemptsLimit }
 
     public init() {
         self.remainingToday = conversationAttemptsLimit
@@ -259,8 +262,9 @@ public final class SpeakerConversationAttemptsStore: ObservableObject {
     public func refreshDayIfNeeded() {
         ensureDayReset()
         let used = Self.loadUsedToday()
-        usedToday = used
-        remainingToday = max(0, conversationAttemptsLimit - used)
+        let remaining = max(0, conversationAttemptsLimit - used)
+        if usedToday != used { usedToday = used }
+        if remainingToday != remaining { remainingToday = remaining }
     }
 
     private func ensureDayReset() {

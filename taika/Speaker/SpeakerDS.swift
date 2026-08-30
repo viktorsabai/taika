@@ -58,7 +58,6 @@ public struct SpeakerDSRoot: View {
         let lastPlayed: SpeakerManager.LastPlayed
         let onPlayReference: () -> Void
         let onPlayAttempt: () -> Void
-        let onPlaySyllableAtIndex: ((Int) -> Void)?
         let onPlayReferenceSyllableAtIndex: ((Int) -> Void)?
         let onPlayReferenceForId: ((UUID) -> Void)?
         let onMicTap: () -> Void
@@ -118,8 +117,8 @@ public struct SpeakerDSRoot: View {
         let onSpeakerUIModeChange: (SpeakerManager.SpeakerUIMode) -> Void
         /// Conversation mode: play TTS of the Thai result.
         let onPlayConversationTTS: () -> Void
-        /// Conversation mode: reset and record again ("Повтори на тайском" or new phrase).
-        let onConversationRepeat: () -> Void
+        /// Conversation mode: reset; `true` = сразу слушать, `false` = только idle (закрытие).
+        let onConversationRepeat: (Bool) -> Void
         /// Conversation mode free-demo: run prepared RU phrase without recording.
         let onConversationDemoPhrase: ((String) -> Void)?
         /// Confirm draft: addToDictionary, startPractice.
@@ -396,7 +395,6 @@ public struct SpeakerDSRoot: View {
         lastPlayed: SpeakerManager.LastPlayed = .none,
         onPlayReference: @escaping () -> Void,
         onPlayAttempt: @escaping () -> Void,
-        onPlaySyllableAtIndex: ((Int) -> Void)? = nil,
         onPlayReferenceSyllableAtIndex: ((Int) -> Void)? = nil,
         onPlayReferenceForId: ((UUID) -> Void)? = nil,
         onMicTap: @escaping () -> Void,
@@ -441,7 +439,7 @@ public struct SpeakerDSRoot: View {
         speakerUIMode: SpeakerManager.SpeakerUIMode = .training,
         onSpeakerUIModeChange: @escaping (SpeakerManager.SpeakerUIMode) -> Void = { _ in },
         onPlayConversationTTS: @escaping () -> Void = {},
-        onConversationRepeat: @escaping () -> Void = {},
+        onConversationRepeat: @escaping (Bool) -> Void = { _ in },
         onConversationDemoPhrase: ((String) -> Void)? = nil,
         onConfirmConversationDraft: ((Bool, Bool) -> Void)? = nil,
         onRetranslateConversationDraft: ((String) -> Void)? = nil,
@@ -450,7 +448,7 @@ public struct SpeakerDSRoot: View {
         trainingRemainingToday: Int = 10,
         trainingCanRecord: Bool = true,
         hasFullToneBreakdownAccess: Bool = false,
-        conversationRemainingToday: Int = 3,
+        conversationRemainingToday: Int = 10,
         conversationRecordingElapsed: TimeInterval = 0,
         conversationRecordingMaxDuration: TimeInterval = 45,
         conversationCanRecord: Bool = true,
@@ -500,7 +498,6 @@ public struct SpeakerDSRoot: View {
             lastPlayed: lastPlayed,
             onPlayReference: onPlayReference,
             onPlayAttempt: onPlayAttempt,
-            onPlaySyllableAtIndex: onPlaySyllableAtIndex,
             onPlayReferenceSyllableAtIndex: onPlayReferenceSyllableAtIndex,
             onPlayReferenceForId: onPlayReferenceForId,
             onMicTap: onMicTap,
@@ -616,7 +613,7 @@ public struct SpeakerDSRoot: View {
         return SpeakerItem(
             id: externalResolveId(cur),
             phrase: cur.face.subtitleTH,
-            translit: cur.face.phonetic,
+            translit: SpeakerManager.canonicalTeachingPhonetic(cur.face.phonetic),
             hint: cur.face.titleRU,
             lessonTitle: speakerItemLessonTitle(for: cur.lessonId),
             kindTag: "фраза",
@@ -810,34 +807,30 @@ public struct SpeakerDSRoot: View {
             return false
         }()
         let isAnalyzing = phase.isProcessing
-        return ZStack(alignment: .bottom) {
-            VStack(spacing: 0) {
+
+        return VStack(spacing: 0) {
             topCarousel
                 .frame(maxWidth: .infinity)
                 .frame(height: CardDS.Metrics.speakerPhraseCardHeight + 12)
                 .padding(.top, gap)
 
+            // Как в умном спикере: чип над основным контролом, без второй волны у таба.
+            if isRecording || isAnalyzing {
+                trainingLiveListenChrome
+                    .padding(.top, 14)
+                    .padding(.horizontal, padH)
+                    .transition(.opacity)
+            }
+
             speakerPlayerPanel
-                .padding(.top, gap + 4)
+                .padding(.top, (isRecording || isAnalyzing) ? 10 : (gap + 4))
                 .padding(.horizontal, padH)
 
-            Group {
-                switch phase {
-                case .recording:
-                    trainingRecordingBlock
-                        .transition(.opacity)
-                case .analyzing:
-                    trainingAnalyzingBlock
-                        .transition(.opacity)
-                case .feedback:
-                    EmptyView()
-                default:
-                    idleHelperHint
-                }
+            if !isRecording, !isAnalyzing, !phase.isFeedback {
+                idleHelperHint
+                    .padding(.top, gap)
+                    .padding(.horizontal, padH)
             }
-            .animation(.easeInOut(duration: 0.35), value: phase.label)
-            .padding(.top, gap)
-            .padding(.horizontal, padH)
 
             Spacer(minLength: 8)
 
@@ -861,26 +854,12 @@ public struct SpeakerDSRoot: View {
                 Color.clear
                     .frame(height: ToolBar.recommendedBottomInset + (phase.isFeedback ? 8 : 12))
             }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .animation(.easeInOut(duration: 0.22), value: phase.label)
-            .animation(.easeInOut(duration: 0.22), value: onReturn != nil)
-
-            if isRecording {
-                SpeakerRecordingAmbient(meter: recordingMeter, style: .training)
-                    .frame(height: 340)
-                    .allowsHitTesting(false)
-                    .transition(.opacity)
-            } else if isAnalyzing {
-                SpeakerRecordingAmbient(meter: 0.35, style: .analyzing)
-                    .frame(height: 280)
-                    .allowsHitTesting(false)
-                    .transition(.opacity)
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .animation(.easeInOut(duration: 0.35), value: isRecording)
-        .animation(.easeInOut(duration: 0.35), value: isAnalyzing)
+        .animation(.easeInOut(duration: 0.22), value: phase.label)
+        .animation(.easeInOut(duration: 0.22), value: onReturn != nil)
+        .animation(.easeInOut(duration: 0.22), value: isRecording)
+        .animation(.easeInOut(duration: 0.22), value: isAnalyzing)
     }
 
     // MARK: - Своя речь: один живой виджет (лента + live + sticky mic)
@@ -901,6 +880,15 @@ public struct SpeakerDSRoot: View {
     private var conversationCanSwipePlanets: Bool {
         !conversationIsRecording
             && !phase.isProcessing
+            && !phase.isFeedback
+            && !conversationHasResult
+            && !conversationIsPracticeFlow
+            && phase != .hint
+    }
+
+    /// Кнопка «Текст» остаётся и во время слушания — свайп по микрофону в записи не трогаем, чтобы не сбить захват.
+    private var conversationShowsTextModeSwitch: Bool {
+        !phase.isProcessing
             && !phase.isFeedback
             && !conversationHasResult
             && !conversationIsPracticeFlow
@@ -1094,7 +1082,7 @@ public struct SpeakerDSRoot: View {
                                 .frame(maxHeight: 72)
                         }
 
-                        if conversationCanSwipePlanets {
+                        if conversationShowsTextModeSwitch {
                             conversationModeSwitchControl(to: .text)
                         }
                     }
@@ -1122,15 +1110,16 @@ public struct SpeakerDSRoot: View {
 
     @ViewBuilder private var conversationUnifiedHero: some View {
         VStack(spacing: 14) {
-            conversationVoicePlanetButton
-
-            // While recording the sphere + live transcript already say "слушаю" — no third signal.
-            if phase.isProcessing
-                || (conversationIsPracticeFlow && !conversationIsRecording)
-                || phase == .hint {
+            // Над сферой: «СЛУШАЮ» / «РАСПОЗНАЮ». Под сферой — переключение на текст.
+            if conversationIsRecording
+                || phase.isProcessing
+                || phase == .hint
+                || (conversationIsPracticeFlow && !conversationIsRecording) {
                 conversationLiveStatusChip
                     .frame(height: 28)
             }
+
+            conversationVoicePlanetButton
         }
         .frame(maxWidth: .infinity)
     }
@@ -1426,6 +1415,9 @@ public struct SpeakerDSRoot: View {
     private func setConversationPlanetScene(_ scene: ConversationPlanetScene) {
         guard conversationPlanetScene != scene else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        if scene == .text {
+            conversationEngine.abandonConversationListeningForText()
+        }
         withAnimation(.easeInOut(duration: 0.28)) {
             conversationPlanetScene = scene
         }
@@ -1508,7 +1500,11 @@ public struct SpeakerDSRoot: View {
     private var conversationErrorActionBar: some View {
         Button {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            external?.onConversationRepeat()
+            if conversationIsPracticeFlow {
+                external?.onConversationRepeatAndCheck()
+            } else {
+                external?.onConversationRepeat(true)
+            }
         } label: {
             Label("Сказать ещё раз", systemImage: "arrow.clockwise")
                 .font(.system(size: 16, weight: .semibold))
@@ -2440,11 +2436,13 @@ public struct SpeakerDSRoot: View {
     /// графику не читает, для него «ты сказала: คุณ» это пустая строка. Нет кириллицы —
     /// прячем блок целиком, оценка выше и так всё сказала.
     private var conversationFeedbackUserText: String {
-        let ph = SpeakerManager.withoutThaiScript(external?.conversationHeardPhoneticFromASR ?? "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let ph = SpeakerManager.canonicalTeachingPhonetic(
+            SpeakerManager.withoutThaiScript(external?.conversationHeardPhoneticFromASR ?? "")
+        )
         if !ph.isEmpty { return ph }
-        let fallback = SpeakerManager.withoutThaiScript(heardTranslitText)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallback = SpeakerManager.canonicalTeachingPhonetic(
+            SpeakerManager.withoutThaiScript(heardTranslitText)
+        )
         return fallback.isEmpty ? "—" : fallback
     }
 
@@ -2622,7 +2620,7 @@ public struct SpeakerDSRoot: View {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 conversationEditFocused = false
                 conversationEditRU = ""
-                external?.onConversationRepeat()
+                external?.onConversationRepeat(true)
             } label: {
                 Label("Сказать ещё одну фразу", systemImage: "plus")
                     .font(.system(size: 14, weight: .semibold))
@@ -2674,7 +2672,7 @@ public struct SpeakerDSRoot: View {
                     accessibility: "Закрыть"
                 ) {
                     setEffectiveShowBreakdown(false)
-                    external?.onConversationRepeat()
+                    external?.onConversationRepeat(false)
                 }
 
                 Spacer(minLength: 0)
@@ -2716,7 +2714,7 @@ public struct SpeakerDSRoot: View {
                     setEffectiveShowBreakdown(false)
                     conversationEditFocused = false
                     conversationEditRU = ""
-                    external?.onConversationRepeat()
+                    external?.onConversationRepeat(true)
                 } label: {
                     Label("Ещё фраза", systemImage: "plus")
                         .font(.system(size: 15, weight: .bold))
@@ -2744,14 +2742,7 @@ public struct SpeakerDSRoot: View {
 
     private var conversationTextEntryButton: some View {
         Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
-                conversationPlanetScene = .text
-                conversationTextComposerExpanded = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                conversationComposeFocused = true
-            }
+            setConversationPlanetScene(.text)
         } label: {
             Image(systemName: "keyboard")
                 .font(.system(size: 16, weight: .semibold))
@@ -3933,8 +3924,6 @@ public struct SpeakerDSRoot: View {
         toneLoading: Bool,
         toneLocked: Bool,
         usesHybridOverall: Bool,
-        expectedThai: String,
-        asrThai: String?,
         originalRussian: String?,
         secondaryLabel: String?,
         onSecondary: (() -> Void)?,
@@ -3953,7 +3942,7 @@ public struct SpeakerDSRoot: View {
                 layout: .feedback,
                 centered: true
             )
-            .padding(.bottom, 22)
+            .padding(.bottom, 16)
 
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -3961,12 +3950,6 @@ public struct SpeakerDSRoot: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
                     highlightedExpectedText(userText: userDisplay, expected: expectedDisplay)
-                    if !expectedThai.isEmpty {
-                        Text(expectedThai)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.text.opacity(0.78))
-                            .lineLimit(2)
-                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -3976,14 +3959,6 @@ public struct SpeakerDSRoot: View {
                         .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
                     highlightedUserText(userText: userDisplay, expected: expectedDisplay)
                         .fixedSize(horizontal: false, vertical: true)
-                    if let asr = asrThai?.trimmingCharacters(in: .whitespacesAndNewlines),
-                       !asr.isEmpty,
-                       asr != expectedThai.trimmingCharacters(in: .whitespacesAndNewlines) {
-                        Text(asr)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(ThemeManager.shared.currentAccentFill.opacity(0.72))
-                            .lineLimit(2)
-                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -4042,8 +4017,6 @@ public struct SpeakerDSRoot: View {
             toneLoading: toneLoading,
             toneLocked: toneLocked,
             usesHybridOverall: external?.breakdownHybridScore != nil,
-            expectedThai: (currentItem?.phrase ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
-            asrThai: external?.trainingHeardThaiASR,
             originalRussian: originalRussian,
             secondaryLabel: secondaryLabel,
             onSecondary: onSecondary,
@@ -4071,64 +4044,28 @@ public struct SpeakerDSRoot: View {
         external?.hasFullToneBreakdownAccess ?? external?.isProUser ?? false
     }
 
-    /// Training mode: recording UI lives in the bottom section (card stays static).
-    @ViewBuilder private var trainingRecordingBlock: some View {
+    /// Training listen chrome — same tokens as smart speaker: status chip + compact wave, no ambient slab.
+    @ViewBuilder private var trainingLiveListenChrome: some View {
+        let isRec: Bool = {
+            if case .recording = phase { return true }
+            return false
+        }()
         VStack(spacing: 10) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(Color.red.opacity(0.9))
-                    .frame(width: 6, height: 6)
-                    .opacity(idleMicPulse ? 1 : 0.4)
-                Text("идёт запись")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
+            conversationLiveStatusChip
+                .frame(height: 28)
+            if phase.isProcessing {
+                ConversationLiveProcessTicks()
+                    .frame(height: 14)
+            } else if isRec {
+                MiniWaveform(meter: recordingMeter)
+                    .frame(height: 26)
+                    .frame(maxWidth: 160)
             }
-            .animation(
-                .easeInOut(duration: 0.9).repeatForever(autoreverses: true),
-                value: idleMicPulse
-            )
-            .onAppear { idleMicPulse = true }
-
-            TaikaTechWaveform(meter: max(0.28, recordingMeter), pace: .recording, lineCount: 2)
-                .frame(maxWidth: .infinity)
-                .frame(height: 48)
-                .padding(.horizontal, 8)
-                .transition(.opacity)
-
-            Text("нажми микрофон, чтобы остановить")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.8))
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-                .lineLimit(2)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 4)
-        .padding(.horizontal, 4)
+        .accessibilityElement(children: .combine)
     }
 
-    /// Training mode: analyzing continues the same wave — soft, not a hard cut to a spinner.
-    @ViewBuilder private var trainingAnalyzingBlock: some View {
-        VStack(spacing: 10) {
-            Text("собираю разбор…")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-
-            TaikaTechWaveform(meter: 0.42, pace: .analyzing, lineCount: 2)
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .padding(.horizontal, 8)
-
-            Text("волна затихает — сейчас покажу, куда смотреть")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.8))
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-                .lineLimit(2)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 4)
-    }
     @ViewBuilder
     private func highlightedUserText(userText: String, expected: String) -> some View {
         if userText == Self.conversationPhoneticLoadingToken {
@@ -4608,7 +4545,6 @@ public struct SpeakerDSRoot: View {
                             toneExpected: item.toneExpected,
                             toneActual: item.toneActual,
                             f0Contour: item.f0Contour,
-                            canPlaySyllable: external?.lastAttempt != nil,
                             isPlaceholder: false
                         )
                         if index < syllableFeedback.count - 1 {
@@ -4625,7 +4561,6 @@ public struct SpeakerDSRoot: View {
                             toneExpected: item?.toneExpected ?? Self.toneNameFromTranslitChunk(rawChunk),
                             toneActual: item?.toneActual,
                             f0Contour: item?.f0Contour,
-                            canPlaySyllable: external?.lastAttempt != nil && item != nil,
                             isPlaceholder: item == nil
                         )
                         if index < chunks.count - 1 {
@@ -4656,7 +4591,6 @@ public struct SpeakerDSRoot: View {
         toneExpected: String?,
         toneActual: String?,
         f0Contour: [Double]?,
-        canPlaySyllable: Bool,
         isPlaceholder: Bool = false
     ) -> some View {
         let scoreValue = (!isPlaceholder ? score : nil)
@@ -4672,7 +4606,6 @@ public struct SpeakerDSRoot: View {
             score: scoreValue,
             toneMatch: toneMatch
         )
-        let canPlayAttempt = canPlaySyllable && external?.lastAttempt != nil
         let canPlayReference = external?.onPlayReferenceSyllableAtIndex != nil && !isPlaceholder
         let showReferenceContour = toneExpected != nil
         let showUserContour = (f0Contour?.count ?? 0) >= 2
@@ -4722,12 +4655,12 @@ public struct SpeakerDSRoot: View {
                 .padding(.top, 8)
             }
 
-            // Always offer listen controls when we have audio — not only after expand.
-            if !isPlaceholder, canPlayAttempt || canPlayReference {
+            // Эталон по слогу — да. Нарезку «как ты» не показываем: сегменты API
+            // часто режут слово не по слогам, и слушать это бессмысленно.
+            if !isPlaceholder, canPlayReference {
                 breakdownSyllableListenBar(
                     index: index,
                     label: label,
-                    canPlayAttempt: canPlayAttempt,
                     canPlayReference: canPlayReference
                 )
                 .padding(.top, 10)
@@ -4819,23 +4752,12 @@ public struct SpeakerDSRoot: View {
     private func breakdownSyllableListenBar(
         index: Int,
         label: String,
-        canPlayAttempt: Bool,
         canPlayReference: Bool
     ) -> some View {
         let last = external?.lastPlayed ?? .none
-        let attemptPlaying = last == .attempt && (external?.attemptPlaybackProgress ?? 1) < 0.98
         let referencePlaying = last == .reference && (external?.referencePlaybackProgress ?? 1) < 0.98
 
         HStack(spacing: 0) {
-            if canPlayAttempt {
-                TaikaListenActionSlot(
-                    systemName: "waveform",
-                    title: "как ты",
-                    playbackActive: attemptPlaying,
-                    action: { external?.onPlaySyllableAtIndex?(index) }
-                )
-                .accessibilityLabel("Послушать слог \(label) — как ты сказала")
-            }
             if canPlayReference {
                 TaikaListenActionSlot(
                     systemName: "speaker.wave.2.fill",
@@ -5942,7 +5864,7 @@ public struct SpeakerDSRoot: View {
 
     /// Для отображения в разборе: эталон без дефисов между слогами (разделитель — пробел; тон уже в стрелке).
     private static func phoneticDisplayWithoutHyphens(_ phonetic: String) -> String {
-        var result = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+        var result = SpeakerManager.canonicalTeachingPhonetic(phonetic)
         for arrow in ["→", "↓", "↘", "↑", "↗"] {
             result = result.replacingOccurrences(of: arrow + "-", with: arrow + " ")
         }
@@ -5951,7 +5873,7 @@ public struct SpeakerDSRoot: View {
 
     /// Разбиение эталона на подписи по слогам: по пробелу — слова, внутри слова по "-" и "·" (са-ват-ди кхрап → [са, ват, ди, кхрап]).
     private static func translitChunksForSyllables(_ expectedTranslit: String) -> [String] {
-        let words = expectedTranslit
+        let words = SpeakerManager.canonicalTeachingPhonetic(expectedTranslit)
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .split(separator: " ")
             .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -6101,23 +6023,16 @@ public struct SpeakerDSRoot: View {
         .frame(height: 22, alignment: .center)
     }
     // MARK: sub-header — заголовок + режим; курсы — в иконке хедера (бывшая плашка попыток).
-    private var isSpecialTrainingContext: Bool {
-        guard let cid = external?.courseContextCourseId else { return false }
-        return cid == "__dictionary__" || cid == "__favorites__"
-    }
-
-    private var isLessonScopedCourseContext: Bool {
-        guard let courseId = external?.courseContextCourseId,
-              courseId != "__dictionary__",
-              courseId != "__favorites__" else { return false }
-        return external?.learnedLessonFilter?.isEmpty == false
-    }
 
     private var trainingScopeLessonIds: [String] {
         external?.learnedLessonIds ?? []
     }
 
     private var trainingScopePickerTitles: [String] {
+        // В «Скажи сам» — только переключение режима, без выбора курсов/уроков.
+        if speakerUIMode == .conversation {
+            return ["Закрепление курсов", "Скажи сам"]
+        }
         let lessonTitles = trainingScopeLessonIds.map { id in
             external?.lessonTitleForLessonId?(id) ?? id
         }
@@ -6221,6 +6136,7 @@ public struct SpeakerDSRoot: View {
                             return
                         }
                         external?.onSpeakerUIModeChange(.training)
+                        guard trainingScopePickerTitles.count > 2 else { return }
                         if index == 0 {
                             external?.onSelectLearnedLessonFilter?(nil)
                         } else {
@@ -6292,7 +6208,7 @@ public struct SpeakerDSRoot: View {
                     SpeakerItem(
                         id: id,
                         phrase: cur.face.subtitleTH,
-                        translit: cur.face.phonetic,
+                        translit: SpeakerManager.canonicalTeachingPhonetic(cur.face.phonetic),
                         hint: cur.face.titleRU,
                         lessonTitle: speakerItemLessonTitle(for: cur.lessonId),
                         kindTag: "фраза",
@@ -7026,38 +6942,10 @@ public struct SpeakerDSRoot: View {
 private enum TaikaSmartSpeakerPhonetic {
     private static let toneArrows: Set<Character> = ["→", "↓", "↘", "↑", "↗"]
 
-    /// Схлопывание emoji-стрелок → текстовые, «буква пробел стрелка», затем «стрелка-дефис».
+    /// Схлопывание emoji-стрелок → текстовые, цифры в кириллицу, «буква пробел стрелка».
+    /// Дефис после стрелки НЕ режем: в эталоне это стык слогов внутри слова («ру↑-сык↘»).
     static func normalize(_ raw: String) -> String {
-        var t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let emojiMap: [(String, String)] = [
-            ("↘️", "↘"), ("↗️", "↗"), ("➡️", "→"), ("⬇️", "↓"), ("⬆️", "↑"),
-            ("➡︎", "→"), ("⬇︎", "↓"), ("⬆︎", "↑"), ("↘︎", "↘"), ("↗︎", "↗"),
-            ("➡", "→"), ("⬇", "↓"), ("⬆", "↑")
-        ]
-        for (from, to) in emojiMap {
-            t = t.replacingOccurrences(of: from, with: to)
-        }
-        var changed = true
-        while changed {
-            changed = false
-            let chars = Array(t)
-            let n = chars.count
-            if n < 3 { break }
-            for i in 0..<(n - 2) {
-                let a = chars[i], b = chars[i + 1], c = chars[i + 2]
-                guard b.isWhitespace, Self.toneArrows.contains(c) else { continue }
-                guard Self.isPhoneticBodyScalar(a) else { continue }
-                let start = t.index(t.startIndex, offsetBy: i)
-                let end = t.index(start, offsetBy: 3)
-                t.replaceSubrange(start..<end, with: String([a, c]))
-                changed = true
-                break
-            }
-        }
-        for arrow in Self.toneArrows {
-            t = t.replacingOccurrences(of: String(arrow) + "-", with: String(arrow) + " ")
-        }
-        return t
+        return SpeakerManager.canonicalTeachingPhonetic(raw)
     }
 
     private static func isPhoneticBodyScalar(_ ch: Character) -> Bool {
@@ -8144,62 +8032,6 @@ private struct SpeakerCountingScore<S: ShapeStyle>: View {
                 withAnimation(.easeOut(duration: 0.06)) {
                     displayed = next
                 }
-            }
-        }
-    }
-}
-
-/// Линия в реальном времени по уровню записи (график «Ты сказал» во время «Записать ещё раз»).
-private struct SpeakerRecordingAmbient: View {
-    enum Style {
-        case training
-        case sheet
-        case analyzing
-    }
-
-    let meter: Double
-    var style: Style = .training
-    @State private var pulse = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private var baseColor: Color {
-        switch style {
-        case .training, .sheet: return Color.red
-        case .analyzing: return ThemeManager.shared.currentAccentTintColor
-        }
-    }
-
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            LinearGradient(
-                colors: [
-                    baseColor.opacity(pulse ? 0.22 : 0.10),
-                    baseColor.opacity(pulse ? 0.08 : 0.03),
-                    Color.clear
-                ],
-                startPoint: .bottom,
-                endPoint: .top
-            )
-
-            if style == .training || style == .sheet {
-                TaikaTechWaveform(
-                    meter: max(0.24, meter),
-                    pace: style == .sheet ? .recording : .recording,
-                    lineCount: 3
-                )
-                .frame(height: style == .sheet ? 72 : 88)
-                .padding(.horizontal, 24)
-                .padding(.bottom, style == .sheet ? 18 : 28)
-                .opacity(0.55)
-            }
-        }
-        .onAppear {
-            guard !reduceMotion else {
-                pulse = true
-                return
-            }
-            withAnimation(.easeInOut(duration: 1.05).repeatForever(autoreverses: true)) {
-                pulse = true
             }
         }
     }

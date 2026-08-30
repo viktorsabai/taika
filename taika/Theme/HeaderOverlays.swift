@@ -527,11 +527,11 @@ struct SpeakerAttemptsOverlayView: View {
     }
 
     private var used: Int {
-        isConversation ? max(0, 3 - conversationAttempts.remainingToday) : trainingAttempts.usedToday
+        isConversation ? conversationAttempts.usedToday : trainingAttempts.usedToday
     }
 
     private var limitLabel: String {
-        isConversation ? "3" : "10"
+        isConversation ? "\(conversationAttempts.dailyLimit)" : "\(trainingAttempts.dailyLimit)"
     }
 
     private var modeTitle: String {
@@ -560,9 +560,7 @@ struct SpeakerAttemptsOverlayView: View {
                     Text(
                         pro.isPro
                         ? "С Taika+ попытки не заканчиваются — тренируйся сколько нужно."
-                        : isConversation
-                            ? "В режиме «Скажи сам» у free‑аккаунта \(limitLabel) попытки в день. Завтра лимит обновится."
-                            : "В «Закреплении курсов» у free‑аккаунта \(limitLabel) попыток в день. Завтра лимит обновится."
+                        : "В режиме «\(modeTitle)» у free‑аккаунта \(limitLabel) попыток в день. Завтра лимит обновится."
                     )
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(PD.ColorToken.text.opacity(0.88))
@@ -606,6 +604,34 @@ struct SpeakerAttemptsOverlayView: View {
 }
 
 // MARK: - Speaker courses overlay (канон: курсы + уроки + старт)
+
+private struct SpeakerCoursesInsetGroup<Content: View>: View {
+    let content: Content
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) { content }
+            .background(shape.fill(PD.ColorToken.card.opacity(0.52)))
+            .overlay(shape.stroke(PD.ColorToken.stroke.opacity(0.42), lineWidth: 1))
+            .clipShape(shape)
+    }
+}
+
+@ViewBuilder
+private func speakerCoursesInsetGroup<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    SpeakerCoursesInsetGroup(content: content())
+}
+
+private func speakerCoursesInsetDivider(leading: CGFloat = 14) -> some View {
+    Rectangle()
+        .fill(PD.ColorToken.stroke.opacity(0.32))
+        .frame(height: 1)
+        .padding(.leading, leading)
+}
+
 struct SpeakerCoursesOverlayView: View {
     @ObservedObject private var speaker = SpeakerManager.shared
     @State private var selectedCourseIds: Set<String>? = nil
@@ -648,13 +674,13 @@ struct SpeakerCoursesOverlayView: View {
     var body: some View {
         ZStack {
             OverlayEtalonBackground(onDismiss: onDismiss)
-            UnifiedOverlayChrome(title: "Курсы для тренировки", onDismiss: onDismiss) {
+            UnifiedOverlayChrome(title: "Курсы для тренировки", onDismiss: onDismiss, role: .workbench) {
                 TaikaRootVerticalScroll {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 16) {
                         let favCount = speaker.trainingFavoritesCount()
                         let dictCount = speaker.trainingDictionaryCount()
-                        HStack(spacing: 10) {
-                            overlayPoolButton(
+                        speakerCoursesInsetGroup {
+                            overlayPoolRow(
                                 title: "Избранное",
                                 count: favCount,
                                 enabled: favCount > 0
@@ -663,7 +689,8 @@ struct SpeakerCoursesOverlayView: View {
                                 SpeakerFilterState.shared.selectedFilterId = nil
                                 onDismiss()
                             }
-                            overlayPoolButton(
+                            speakerCoursesInsetDivider()
+                            overlayPoolRow(
                                 title: "Словарь",
                                 count: dictCount,
                                 enabled: dictCount > 0
@@ -680,10 +707,10 @@ struct SpeakerCoursesOverlayView: View {
                                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.85))
                                 .fixedSize(horizontal: false, vertical: true)
                         } else {
-                            HStack {
+                            HStack(alignment: .firstTextBaseline) {
                                 Text("\(selectedTotal) \(Self.phraseUnit(selectedTotal))")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.75))
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(PD.ColorToken.textSecondary)
                                 Spacer(minLength: 8)
                                 Button {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -701,16 +728,21 @@ struct SpeakerCoursesOverlayView: View {
                                 } label: {
                                     Text(selected.count == options.count ? "снять всё" : "выбрать все")
                                         .font(.system(size: 13, weight: .semibold))
-                                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                        .foregroundStyle(PD.ColorToken.textSecondary)
                                 }
                                 .buttonStyle(.plain)
                             }
 
-                            ForEach(options) { option in
-                                courseBlock(option: option)
+                            speakerCoursesInsetGroup {
+                                ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
+                                    courseBlock(option: option)
+                                    if index < options.count - 1 {
+                                        speakerCoursesInsetDivider(leading: 44)
+                                    }
+                                }
                             }
 
-                            Button {
+                            OverlayEtalonPrimaryButton(title: "Начать тренировку") {
                                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                 if speaker.speakerUIMode != .training {
                                     speaker.setSpeakerUIMode(.training)
@@ -722,26 +754,14 @@ struct SpeakerCoursesOverlayView: View {
                                 )
                                 SpeakerFilterState.shared.selectedFilterId = nil
                                 onDismiss()
-                            } label: {
-                                Text("Начать тренировку")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundStyle(Color.black.opacity(0.9))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
-                                    .background(
-                                        Capsule(style: .continuous)
-                                            .fill(ThemeManager.shared.currentAccentFill)
-                                    )
                             }
-                            .buttonStyle(.plain)
                             .disabled(selectedTotal == 0)
-                            .opacity(selectedTotal == 0 ? 0.5 : 1)
-                            .padding(.top, 8)
+                            .opacity(selectedTotal == 0 ? 0.45 : 1)
                         }
                     }
                     .padding(CD.Spacing.screen)
                 }
-                .frame(maxHeight: UIScreen.main.bounds.height * 0.55)
+                .frame(maxHeight: UIScreen.main.bounds.height * 0.58)
             }
         }
         .onAppear {
@@ -761,7 +781,7 @@ struct SpeakerCoursesOverlayView: View {
         let lessons = speaker.learnedTrainingLessonOptions(courseId: option.id)
         let picked = selectedLessonIdsByCourse[option.id] ?? defaultLessons(for: option.id)
 
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -781,7 +801,7 @@ struct SpeakerCoursesOverlayView: View {
                         .foregroundStyle(
                             isSelected
                             ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4))
+                            : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.38))
                         )
                 }
                 .buttonStyle(.plain)
@@ -802,21 +822,21 @@ struct SpeakerCoursesOverlayView: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         Text(option.title)
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 15, weight: isSelected ? .semibold : .medium))
                             .foregroundStyle(PD.ColorToken.text)
                             .lineLimit(1)
                             .truncationMode(.tail)
                         Spacer(minLength: 8)
                         Text("\(option.count) \(Self.phraseUnit(option.count))")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.55))
                             .rotationEffect(.degrees(isExpanded ? 180 : 0))
                     }
                     .contentShape(Rectangle())
@@ -824,84 +844,61 @@ struct SpeakerCoursesOverlayView: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        isSelected
-                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.1))
-                        : AnyShapeStyle(PD.ColorToken.chip.opacity(0.4))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(
-                                isSelected
-                                ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.5))
-                                : AnyShapeStyle(Theme.Strokes.strokeSubtle),
-                                lineWidth: Theme.Strokes.strokeLineWidth
-                            )
-                    )
-            )
+            .padding(.vertical, 11)
 
             if isExpanded, !lessons.isEmpty {
-                VStack(spacing: 6) {
-                    ForEach(lessons) { lesson in
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            var next = picked
-                            if next.contains(lesson.id) {
-                                next.remove(lesson.id)
-                            } else {
-                                next.insert(lesson.id)
-                            }
-                            selectedLessonIdsByCourse[option.id] = next
-                            var courses = selected
-                            if next.isEmpty {
-                                courses.remove(option.id)
-                            } else {
-                                courses.insert(option.id)
-                            }
-                            selectedCourseIds = courses
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: picked.contains(lesson.id) ? "checkmark.circle.fill" : "circle")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(
-                                        picked.contains(lesson.id)
-                                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                                        : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4))
-                                    )
-                                Text(lesson.title)
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(PD.ColorToken.text)
-                                    .lineLimit(2)
-                                    .multilineTextAlignment(.leading)
-                                Spacer(minLength: 8)
-                                Text("\(lesson.count)")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
-                                    .monospacedDigit()
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(
-                                        picked.contains(lesson.id)
-                                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.08))
-                                        : AnyShapeStyle(PD.ColorToken.chip.opacity(0.28))
-                                    )
-                            )
-                        }
-                        .buttonStyle(.plain)
+                ForEach(Array(lessons.enumerated()), id: \.element.id) { index, lesson in
+                    if index > 0 {
+                        speakerCoursesInsetDivider(leading: 44)
                     }
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        var next = picked
+                        if next.contains(lesson.id) {
+                            next.remove(lesson.id)
+                        } else {
+                            next.insert(lesson.id)
+                        }
+                        selectedLessonIdsByCourse[option.id] = next
+                        var courses = selected
+                        if next.isEmpty {
+                            courses.remove(option.id)
+                        } else {
+                            courses.insert(option.id)
+                        }
+                        selectedCourseIds = courses
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: picked.contains(lesson.id) ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(
+                                    picked.contains(lesson.id)
+                                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                                    : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35))
+                                )
+                            Text(lesson.title)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(PD.ColorToken.text.opacity(0.92))
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                            Spacer(minLength: 8)
+                            Text("\(lesson.count)")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(PD.ColorToken.textSecondary)
+                                .monospacedDigit()
+                        }
+                        .padding(.leading, 44)
+                        .padding(.trailing, 14)
+                        .padding(.vertical, 9)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
-                .padding(.leading, 12)
             }
         }
     }
 
-    private func overlayPoolButton(
+    private func overlayPoolRow(
         title: String,
         count: Int,
         enabled: Bool,
@@ -912,36 +909,27 @@ struct SpeakerCoursesOverlayView: View {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             action()
         } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(PD.ColorToken.text)
-                Text(enabled ? "\(count) \(Self.phraseUnit(count))" : "пусто")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.8))
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.text)
+                    Text(enabled ? "\(count) \(Self.phraseUnit(count))" : "пусто")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.45))
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(enabled
-                          ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.1))
-                          : AnyShapeStyle(PD.ColorToken.chip.opacity(0.35)))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(
-                                enabled
-                                ? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.45))
-                                : AnyShapeStyle(Theme.Strokes.strokeSubtle),
-                                lineWidth: Theme.Strokes.strokeLineWidth
-                            )
-                    )
-            )
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.55)
+        .opacity(enabled ? 1 : 0.5)
     }
 
     private static func phraseUnit(_ n: Int) -> String {
@@ -1200,8 +1188,9 @@ struct GameParkOverlayView: View {
             }
             return {
                 onDismiss()
-                SpeakerManager.shared.setSpeakerUIMode(.conversation)
-                SpeakerRequestedCourseId.shared.set(nil)
+                SpeakerManager.shared.setSpeakerUIMode(.training)
+                SpeakerManager.shared.prepareTrainingPoolIfNeeded()
+                SpeakerManager.shared.applyFilter(SpeakerMode.learnedMode.id)
                 SpeakerReturnContext.shared.saveFromRootTab(0)
                 nav.requestTab(2)
             }

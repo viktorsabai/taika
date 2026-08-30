@@ -75,6 +75,10 @@ public final class SpeakerManager: ObservableObject {
     /// иначе, например, подсказка «демо готово…» из «Своей речи» протекает в «По фразам» (общий `taikaHints`/`phase`).
     public func setSpeakerUIMode(_ mode: SpeakerUIMode) {
         guard speakerUIMode != mode else { return }
+        if mode != .conversation {
+            cancelScheduledConversationListening()
+            pendingConversationAutoRecord = false
+        }
         speakerUIMode = mode
         clearConversationResult()
         taikaHints = []
@@ -106,8 +110,7 @@ public final class SpeakerManager: ObservableObject {
         conversationHeardThaiASR = nil
         conversationHeardPhoneticFromASR = nil
         clearConversationCoach()
-        phrasePartsRequestKey = nil
-        phrasePartsInFlight = false
+        clearPhrasePartsState()
         recordingPartialRU = ""
         recordingPartialThai = nil
         recordingPartialTranslit = nil
@@ -123,11 +126,14 @@ public final class SpeakerManager: ObservableObject {
     // Default to training: Smart Speaker is PRO-only and should be user-initiated.
     @Published var speakerUIMode: SpeakerUIMode = .conversation
 
-    /// Main mic / example chip: после перехода на вкладку Спикер сразу стартовать запись.
+    /// Main mic: после перехода на вкладку Спикер сразу стартовать запись (не чипы с фразой).
     @Published var pendingConversationAutoRecord: Bool = false
 
     /// Main kun-kru composer: открыть Спикер и сразу перевести эту русскую фразу.
     @Published var pendingConversationDemoRU: String? = nil
+
+    /// One-shot token: delayed auto-listen must not fire twice or after cancel.
+    private var conversationListenKickToken = UUID()
 
     @Published private(set) var phase: Phase = .idle
 
@@ -265,6 +271,8 @@ public final class SpeakerManager: ObservableObject {
         breakdownHybridScore = nil
         breakdownRequestFailed = false
         breakdownCacheAttemptPath = nil
+        breakdownRequestInFlight = false
+        breakdownRequestGeneration = UUID()
     }
 
     private static func compactStoredSyllables(from items: [SyllableFeedback]) -> [StoredSyllableFeedback] {
@@ -293,7 +301,7 @@ public final class SpeakerManager: ObservableObject {
         lastAttemptURL = url
         heardConfidence = entry.heardConfidence
         conversationHeardThaiASR = entry.heardThaiASR
-        conversationHeardPhoneticFromASR = entry.heardPhoneticFromASR
+        conversationHeardPhoneticFromASR = Self.teachingPhoneticOrNil(entry.heardPhoneticFromASR)
         applyBreakdownCache(
             syllables: Self.syllables(from: entry.toneSyllables),
             hybrid: entry.toneHybridScore,
@@ -329,6 +337,8 @@ public final class SpeakerManager: ObservableObject {
 
     /// Path of the recording the in-memory breakdown belongs to.
     private var breakdownCacheAttemptPath: String?
+    /// Invalidates a stale /assess response after the user starts a new phrase.
+    private var breakdownRequestGeneration = UUID()
 
     private static func storedSyllables(from items: [SyllableFeedback]) -> [StoredSyllableFeedback] {
         items.map {
@@ -414,7 +424,9 @@ public final class SpeakerManager: ObservableObject {
                !entry.toneSyllables.isEmpty {
                 let cachedPath = Self.normalizedRecordingPath(entry.recordingPath)
                 let livePath = Self.normalizedRecordingPath(path)
-                if livePath == nil || livePath == cachedPath {
+                // `livePath == nil` used to count as a hit and restored the previous
+                // phrase's syllables onto the next attempt.
+                if livePath != nil, livePath == cachedPath {
                     if syllableFeedback.isEmpty {
                         _ = restoreConversationBreakdownFromCache(itemId: id)
                     }
@@ -512,6 +524,8 @@ public final class SpeakerManager: ObservableObject {
     @Published private(set) var phrasePartsInFlight: Bool = false
     /// Фраза, по которой уже ходили за разбором: не долбим сервер на каждый ре-рендер.
     private var phrasePartsRequestKey: String? = nil
+    /// Invalidates an in-flight word-gloss fetch when the user starts a new phrase.
+    private var phrasePartsFetchGeneration = UUID()
     /// Лента прошлых переводов «Своя речь» (newest first). Персистится; не чистится при «Новая фраза».
     @Published private(set) var conversationHistory: [SpeakerConversationHistoryItem] = SpeakerConversationHistoryStore.load()
     /// Карточка ленты, по которой сейчас идёт тренировка произношения (не создавать дубль).
@@ -638,9 +652,9 @@ public final class SpeakerManager: ObservableObject {
         
         if let stored = SpeakerAttemptsStore.load(forKey: key) {
             heardThai = stored.heardThai
-            heardTranslit = stored.heardTranslit
+            heardTranslit = Self.teachingPhoneticOrNil(stored.heardTranslit)
             trainingHeardThaiASR = stored.heardThaiASR
-            trainingHeardPhoneticFromASR = stored.heardPhoneticFromASR
+            trainingHeardPhoneticFromASR = Self.teachingPhoneticOrNil(stored.heardPhoneticFromASR)
             heardConfidence = stored.heardConfidence
             attemptCount = stored.attemptCount
             
@@ -1281,6 +1295,8 @@ public final class SpeakerManager: ObservableObject {
         if courseId == "__favorites__" || courseId == "__dictionary__" {
             speakerContextCourseId = courseId
             activeFilterId = SpeakerMode.favoritesMode.id
+            learnedLessonIds = []
+            learnedLessonFilter = nil
             if baseQueue.isEmpty { prepareTrainingPoolIfNeeded() }
             let fav: [StepData.SpeakerResolved] = {
                 if courseId == "__dictionary__" {
@@ -1605,7 +1621,7 @@ public final class SpeakerManager: ObservableObject {
 
         let ru = (heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let thai = (heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let ph = (heardTranslit ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let ph = Self.teachingPhoneticOrNil(heardTranslit) ?? ""
         // Без русского не коммитим — иначе в ленте появляются фантомы вроде «са-ва-тд-и-и» без смысла.
         guard !ru.isEmpty, !thai.isEmpty || !ph.isEmpty else { return }
 
@@ -1631,6 +1647,7 @@ public final class SpeakerManager: ObservableObject {
 
     /// End first-entry / demo pronunciation so main Speaker opens on a clean start — not the leftover onboarding phrase.
     func endEphemeralPracticeSession() {
+        cancelScheduledConversationListening()
         pendingConversationAutoRecord = false
         pendingConversationDemoRU = nil
         activeAttemptToken = nil
@@ -1669,31 +1686,65 @@ public final class SpeakerManager: ObservableObject {
         lastPlayed = .none
         syllableFeedback = []
         breakdownHybridScore = nil
+        clearToneBreakdownState()
+        clearPhrasePartsState()
         setPhase(.idle)
     }
 
+    /// Drop a pending delayed auto-listen so it cannot start after the user left or chose another action.
+    func cancelScheduledConversationListening() {
+        conversationListenKickToken = UUID()
+    }
+
+    /// Start free conversation listening after UI/tab has settled. Token + phase guards prevent double-start.
+    func scheduleConversationListening(after delay: TimeInterval) {
+        let token = UUID()
+        conversationListenKickToken = token
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self else { return }
+            guard self.conversationListenKickToken == token else { return }
+            guard self.speakerUIMode == .conversation else { return }
+            guard self.conversationExpectedThai == nil, self.activePracticeHistoryId == nil else { return }
+            switch self.phase {
+            case .recording, .analyzing, .analyzingTranslation:
+                return
+            default:
+                self.startConversationRecording()
+            }
+        }
+    }
+
     /// «Новая фраза» / закрытие фокуса: без лишнего commit при тренировке.
-    func conversationRepeat() {
+    /// `startListening` — сразу слушать, без второго тапа по микрофону.
+    func conversationRepeat(startListening: Bool = false) {
+        if !startListening {
+            cancelScheduledConversationListening()
+        }
         if activePracticeHistoryId != nil || conversationExpectedThai != nil {
             finishConversationPractice(saveScore: true)
-            return
+        } else {
+            conversationExpectedThai = nil
+            conversationExpectedTranslitForFeedback = nil
+            conversationHeardThaiASR = nil
+            conversationHeardPhoneticFromASR = nil
+            heardThai = nil
+            heardRU = nil
+            heardTranslit = nil
+            heardConfidence = 0
+            taikaHints = []
+            lastAttemptURL = nil
+            lastAttempt = nil
+            lastPlayed = .none
+            syllableFeedback = []
+            breakdownHybridScore = nil
+            activePracticeHistoryId = nil
+            clearToneBreakdownState()
+            clearPhrasePartsState()
+            setPhase(.idle)
         }
-        conversationExpectedThai = nil
-        conversationExpectedTranslitForFeedback = nil
-        conversationHeardThaiASR = nil
-        conversationHeardPhoneticFromASR = nil
-        heardThai = nil
-        heardRU = nil
-        heardTranslit = nil
-        heardConfidence = 0
-        taikaHints = []
-        lastAttemptURL = nil
-        lastAttempt = nil
-        lastPlayed = .none
-        syllableFeedback = []
-        breakdownHybridScore = nil
-        activePracticeHistoryId = nil
-        setPhase(.idle)
+        if startListening {
+            scheduleConversationListening(after: 0.16)
+        }
     }
 
     func removeConversationHistoryItem(id: UUID) {
@@ -1705,12 +1756,14 @@ public final class SpeakerManager: ObservableObject {
 
     /// Restore a history phrase as the active result (for «Тренировка» / listen from row).
     func activateConversationHistoryItem(_ item: SpeakerConversationHistoryItem) {
+        cancelScheduledConversationListening()
         activePracticeHistoryId = item.id
         conversationExpectedThai = item.thai.isEmpty ? nil : item.thai
-        conversationExpectedTranslitForFeedback = item.phonetic.isEmpty ? nil : item.phonetic
+        let ph = Self.teachingPhoneticOrNil(item.phonetic)
+        conversationExpectedTranslitForFeedback = ph
         heardRU = item.russian.isEmpty ? nil : item.russian
         heardThai = item.thai.isEmpty ? nil : item.thai
-        heardTranslit = item.phonetic.isEmpty ? nil : item.phonetic
+        heardTranslit = ph
         taikaHints = []
         lastPlayed = .none
         attemptPlayer?.stop()
@@ -1742,8 +1795,38 @@ public final class SpeakerManager: ObservableObject {
         setPhase(.hint)
     }
 
+    /// User chose text mode: drop pending auto-listen and abort free capture so the mic does not keep running.
+    func abandonConversationListeningForText() {
+        cancelScheduledConversationListening()
+        pendingConversationAutoRecord = false
+        guard speakerUIMode == .conversation else { return }
+        guard conversationExpectedThai == nil, activePracticeHistoryId == nil else { return }
+
+        switch phase {
+        case .analyzing, .analyzingTranslation:
+            return
+        case .recording:
+            conversationRecordingTimer?.invalidate()
+            conversationRecordingTimer = nil
+            conversationRecordingStartTime = nil
+            conversationRecordingElapsed = 0
+            activeAttemptToken = nil
+            _ = recorder.stop()
+            stopMeter()
+            recordingPartialThai = nil
+            recordingPartialTranslit = nil
+            recordingPartialRU = ""
+            recordingMeter = 0
+            setPhase(.idle)
+        default:
+            // Permission may still be in-flight with phase idle — invalidate so beginCapture no-ops.
+            activeAttemptToken = nil
+        }
+    }
+
     /// Conversation mode: start recording (no card required). Free: limited to conversation attempts per day; max duration enforced.
     func startConversationRecording() {
+        cancelScheduledConversationListening()
         if phase == .recording || phase == .analyzing || phase == .analyzingTranslation { return }
 
         SpeakerConversationAttemptsStore.shared.refreshDayIfNeeded()
@@ -1774,6 +1857,8 @@ public final class SpeakerManager: ObservableObject {
         heardConfidence = 0
         taikaHints = []
         lastPlayed = .none
+        clearPhrasePartsState()
+        clearToneBreakdownState()
 
         let token = UUID()
         activeAttemptToken = token
@@ -1838,6 +1923,8 @@ public final class SpeakerManager: ObservableObject {
 
     /// Typed compose or edit-and-retranslate. `consumeAttempt` false when correcting ASR/draft.
     func startConversationFromText(_ ruText: String, consumeAttempt: Bool = true) {
+        cancelScheduledConversationListening()
+        pendingConversationAutoRecord = false
         if phase == .recording || phase == .analyzing || phase == .analyzingTranslation { return }
         let ruTrimmed = ruText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !ruTrimmed.isEmpty else { return }
@@ -1891,12 +1978,13 @@ public final class SpeakerManager: ObservableObject {
                 await MainActor.run {
                     self.heardRU = ruTrimmed
                     let thai = thText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let ph = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let ph = Self.teachingPhoneticOrNil(phonetic)
                     self.heardThai = thai.isEmpty ? nil : thai
-                    self.heardTranslit = ph.isEmpty ? nil : ph
+                    self.heardTranslit = ph
+                    self.conversationExpectedTranslitForFeedback = ph
                     self.heardPhraseParts = parts
                     self.heardConfidence = 0
-                    if thai.isEmpty && ph.isEmpty {
+                    if thai.isEmpty && ph == nil {
                         self.heardPhraseParts = []
                         self.taikaHints = ["не удалось перевести. попробуй другую формулировку"]
                         self.setPhase(.hint)
@@ -1934,7 +2022,7 @@ public final class SpeakerManager: ObservableObject {
 
         let ru = (heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let thai = (heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let ph = (heardTranslit ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let ph = Self.teachingPhoneticOrNil(heardTranslit) ?? ""
         guard !ru.isEmpty, !thai.isEmpty || !ph.isEmpty else { return }
 
         if startPractice {
@@ -2054,13 +2142,14 @@ public final class SpeakerManager: ObservableObject {
 
                     self.heardRU = ruTrimmed
                     let thai = thText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let ph = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let ph = Self.teachingPhoneticOrNil(phonetic)
                     self.heardThai = thai.isEmpty ? nil : thai
-                    self.heardTranslit = ph.isEmpty ? nil : ph
+                    self.heardTranslit = ph
+                    self.conversationExpectedTranslitForFeedback = ph
                     self.heardPhraseParts = parts
                     self.heardConfidence = 0
 
-                    if thai.isEmpty && ph.isEmpty {
+                    if thai.isEmpty && ph == nil {
                         self.heardPhraseParts = []
                         self.taikaHints = ["не удалось перевести. попробуй другую формулировку"]
                         self.setPhase(.hint)
@@ -2224,6 +2313,9 @@ public final class SpeakerManager: ObservableObject {
         // Не ждём здесь — фраза важнее, а разбор догрузит `refreshPhrasePartsIfNeeded()`.
         parts = Self.resolvedTeachingParts(api: parts, phonetic: ph, thai: th, ru: ru)
         parts = Self.canonicalizeTrailingPolitenessGloss(parts)
+        if !Self.partsMatchPhonetic(phonetic: ph, parts: parts) {
+            parts = []
+        }
         return (thai: th, phonetic: ph, parts: parts)
     }
 
@@ -2291,11 +2383,13 @@ public final class SpeakerManager: ObservableObject {
         ru: String = ""
     ) -> [SmartSpeakerPart] {
         _ = thai
-        let spaced = normalizePhoneticWordSpaces(phonetic)
+        // Не режем «ру↑-сык↘» по стрелке: дефис внутри слова — слог, не граница.
+        // Старый word_spaces превращал 4 слова в 5 чанков и разбор тихо пропадал.
+        let shaped = shapeThaiPhonetic(phonetic)
         let apiClean = api.filter {
             isGoodTeachingMeaning($0.m) && !isWholePhraseGloss($0.m, ru: ru)
         }
-        let groups = phoneticWordGroups(spaced)
+        let groups = phoneticWordGroups(shaped)
         guard !groups.isEmpty else { return apiClean }
         return alignPartsToPhoneticGroups(groups: groups, api: apiClean)
     }
@@ -2353,7 +2447,10 @@ public final class SpeakerManager: ObservableObject {
         let t = m.trimmingCharacters(in: .whitespacesAndNewlines)
         if t.isEmpty || t == "…" || t == "часть слова" || t == "слово" { return true }
         let letters = t.lowercased().filter { $0.isLetter }
-        if letters.count <= 1 { return true }
+        if letters.count <= 1 {
+            let ok: Set<String> = ["я", "и", "а"]
+            if !ok.contains(String(letters)) { return true }
+        }
         let compact = t.lowercased().replacingOccurrences(of: " ", with: "")
         if compact == "в/у" || compact == "у/в" { return true }
         return false
@@ -2386,6 +2483,8 @@ public final class SpeakerManager: ObservableObject {
 
     /// LLM often hyphenates every syllable after tones («кун-ю↘-тхи↗-ни↘»).
     /// After a tone arrow, hyphen = word boundary → space (teaching chunks split on spaces).
+    /// Вызывать только на legacy-строках. На ответе /smart_speaker — нет: там дефис после
+    /// стрелки это стык слогов внутри слова («ру↑-сык↘»), и резка убивает разбор.
     static func normalizePhoneticWordSpaces(_ phonetic: String) -> String {
         let arrows: [Character] = ["→", "↓", "↘", "↑", "↗", "↕", "↔"]
         var out = phonetic
@@ -2397,6 +2496,144 @@ public final class SpeakerManager: ObservableObject {
             out = out.replacingOccurrences(of: "  ", with: " ")
         }
         return out.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Единственная каноническая фонетика спикера: цифры проговорены, обрубки склеены, ว = у.
+    /// Сюда должны сходиться перевод, тренировка, история, «ты сказала» и любая отрисовка.
+    nonisolated static func canonicalTeachingPhonetic(_ raw: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !s.isEmpty else { return s }
+        let emojiMap: [(String, String)] = [
+            ("↘️", "↘"), ("↗️", "↗"), ("➡️", "→"), ("⬇️", "↓"), ("⬆️", "↑"),
+            ("➡︎", "→"), ("⬇︎", "↓"), ("⬆︎", "↑"), ("↘︎", "↘"), ("↗︎", "↗"),
+            ("➡", "→"), ("⬇", "↓"), ("⬆", "↑")
+        ]
+        for (from, to) in emojiMap {
+            s = s.replacingOccurrences(of: from, with: to)
+        }
+        s = collapseLetterSpaceArrow(s)
+        s = shapeThaiPhonetic(s)
+        return s
+    }
+
+    nonisolated static func teachingPhoneticOrNil(_ raw: String?) -> String? {
+        let trimmed = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let canon = canonicalTeachingPhonetic(trimmed)
+        return canon.isEmpty ? nil : canon
+    }
+
+    /// «э ↗» → «э↗».
+    nonisolated static func collapseLetterSpaceArrow(_ phonetic: String) -> String {
+        let arrows: Set<Character> = ["→", "↓", "↘", "↑", "↗"]
+        var chars = Array(phonetic)
+        var i = 0
+        while i + 2 < chars.count {
+            let a = chars[i], b = chars[i + 1], c = chars[i + 2]
+            let isBody: Bool = {
+                if a == "-" { return true }
+                guard let v = a.unicodeScalars.first?.value else { return false }
+                return (0x0400...0x04FF).contains(v) || v == 0x0451 || v == 0x0401
+            }()
+            if isBody, b.isWhitespace, arrows.contains(c) {
+                chars.remove(at: i + 1)
+                continue
+            }
+            i += 1
+        }
+        return String(chars)
+    }
+
+    /// Цифры → кириллица, обрубок после стрелки → обратно в слог. Границы слов не трогает.
+    nonisolated static func shapeThaiPhonetic(_ phonetic: String) -> String {
+        var s = expandPhoneticDigits(phonetic)
+        s = glueLettersAfterArrows(s)
+        s = houseWCoda(s)
+        return s.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Конечная ว — гласный. Курс пишет хиу / лэу / кхиу, не хив.
+    nonisolated static func houseWCoda(_ phonetic: String) -> String {
+        let arrows = "→↓↘↑↗"
+        func replaceCoda(pattern: String, template: String, in s: String) -> String {
+            guard let re = try? NSRegularExpression(pattern: pattern) else { return s }
+            let range = NSRange(s.startIndex..<s.endIndex, in: s)
+            return re.stringByReplacingMatches(in: s, range: range, withTemplate: template)
+        }
+        var s = phonetic
+        s = replaceCoda(pattern: "([аеёиоуыэюя])в(?=[\(arrows)\\s-]|$)", template: "$1у", in: s)
+        s = replaceCoda(pattern: "ио(?=[\(arrows)\\s-]|$)", template: "иу", in: s)
+        s = replaceCoda(pattern: "ью(?=[\(arrows)\\s-]|$)", template: "иу", in: s)
+        return s
+    }
+
+    /// หิว is one syllable. «хи↘в» / «хи↘-в» / «хи↘ в» склеивается, затем ว→у → «хиу».
+    /// Не склеиваем, если у следующих букв уже есть своя стрелка («хи↘ кхрап↘»).
+    nonisolated static func glueLettersAfterArrows(_ phonetic: String) -> String {
+        let pattern = #"([а-яёА-ЯЁ\-]+)([→↓↘↑↗])(?:[\s\-]*)([а-яёА-ЯЁ]+)(?![а-яёА-ЯЁ\-]*[→↓↘↑↗])"#
+        guard let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return phonetic
+        }
+        var s = phonetic
+        var prev = ""
+        while prev != s {
+            prev = s
+            let range = NSRange(s.startIndex..<s.endIndex, in: s)
+            s = re.stringByReplacingMatches(in: s, range: range, withTemplate: "$1$3$2")
+        }
+        return s
+    }
+
+    /// 90 → кау→-сип→, 1669 → нынг→-хок→-хок→-кау→, 4x6 / 4кс6 → си→-кху→-хок→.
+    nonisolated static func expandPhoneticDigits(_ phonetic: String) -> String {
+        let digits = ["сун→", "нынг→", "сонг→", "сам→", "си→", "ха→", "хок→", "чет→", "пэт→", "кау→"]
+        let onesPlace = ["сун→", "эт→", "сонг→", "сам→", "си→", "ха→", "хок→", "чет→", "пэт→", "кау→"]
+        func spoken(_ n: Int) -> String {
+            if n < 10 { return digits[n] }
+            if n == 10 { return "сип→" }
+            if n < 20 { return "сип→-" + onesPlace[n - 10] }
+            if n < 100 {
+                let tens = n / 10
+                let ones = n % 10
+                let tensMap = [2: "ий-сип→", 3: "сам→-сип→", 4: "си→-сип→", 5: "ха→-сип→",
+                               6: "хок→-сип→", 7: "чет→-сип→", 8: "пэт→-сип→", 9: "кау→-сип→"]
+                let head = tensMap[tens] ?? digits[tens]
+                return ones == 0 ? head : head + "-" + onesPlace[ones]
+            }
+            return String(n).compactMap { Int(String($0)).map { digits[$0] } }.joined(separator: "-")
+        }
+        var s = phonetic
+        func replaceTimes(pattern: String) {
+            guard let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return }
+            let range = NSRange(s.startIndex..<s.endIndex, in: s)
+            let matches = re.matches(in: s, range: range).reversed()
+            for m in matches {
+                guard m.numberOfRanges >= 3,
+                      let r1 = Range(m.range(at: 1), in: s),
+                      let r2 = Range(m.range(at: 2), in: s),
+                      let a = Int(s[r1]), let b = Int(s[r2]),
+                      let full = Range(m.range, in: s) else { continue }
+                s.replaceSubrange(full, with: "\(spoken(a))-кху→-\(spoken(b))")
+            }
+        }
+        replaceTimes(pattern: #"(\d+)\s*[xх×]\s*(\d+)"#)
+        replaceTimes(pattern: #"(\d+)\s*кс\s*(\d+)"#)
+        guard let numRe = try? NSRegularExpression(pattern: #"(\d+)[→↓↘↑↗]?"#) else { return s }
+        var prev = ""
+        while prev != s {
+            prev = s
+            let range = NSRange(s.startIndex..<s.endIndex, in: s)
+            guard let m = numRe.firstMatch(in: s, range: range),
+                  let r1 = Range(m.range(at: 1), in: s),
+                  let full = Range(m.range, in: s) else { break }
+            let raw = String(s[r1])
+            guard let n = Int(raw) else { break }
+            let spokenForm = raw.count >= 3
+                ? raw.compactMap { Int(String($0)).map { digits[$0] } }.joined(separator: "-")
+                : spoken(n)
+            s.replaceSubrange(full, with: spokenForm)
+        }
+        return s
     }
 
     private static func normalizeTeachingKey(_ p: String) -> String {
@@ -2439,7 +2676,7 @@ public final class SpeakerManager: ObservableObject {
 
     /// Тайская графика в пояснении для пользователя бесполезна: он её не читает, всё тайское
     /// приходит к нему кириллицей. Фильтр держим и на клиенте — сервер может быть старой версии.
-    static func withoutThaiScript(_ text: String) -> String {
+    nonisolated static func withoutThaiScript(_ text: String) -> String {
         guard text.unicodeScalars.contains(where: { (0x0E00...0x0E7F).contains($0.value) }) else {
             return text
         }
@@ -2523,20 +2760,36 @@ public final class SpeakerManager: ObservableObject {
         return Self.partsMatchPhonetic(phonetic: ph, parts: parts) ? parts : []
     }
 
+    /// Drop leftover word-gloss from the previous phrase so the next one can load its own.
+    private func clearPhrasePartsState() {
+        phrasePartsFetchGeneration = UUID()
+        heardPhraseParts = []
+        phrasePartsRequestKey = nil
+        phrasePartsInFlight = false
+    }
+
     /// Сервер отдаёт разбор только когда тот сошёлся с фонетикой — иначе его нет вовсе.
     /// Дотягиваем тихо и отдельно: фраза уже на экране, разбор появляется следом.
     /// Не сошлось и со второй попытки — секции просто не будет, без объяснений и плашек.
     func refreshPhrasePartsIfNeeded() {
-        guard heardPhraseParts.isEmpty, !phrasePartsInFlight else { return }
         let ru = (heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let thai = (heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let phonetic = (heardTranslit ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !thai.isEmpty, !phonetic.isEmpty else { return }
 
         let key = "\(thai)|\(phonetic)"
-        guard phrasePartsRequestKey != key else { return }
+        if !heardPhraseParts.isEmpty {
+            phrasePartsRequestKey = key
+            return
+        }
+        if phrasePartsInFlight, phrasePartsRequestKey == key {
+            return
+        }
+
         phrasePartsRequestKey = key
         phrasePartsInFlight = true
+        let generation = UUID()
+        phrasePartsFetchGeneration = generation
 
         Task { [weak self] in
             guard let self else { return }
@@ -2552,6 +2805,7 @@ public final class SpeakerManager: ObservableObject {
                 }
             }
             await MainActor.run {
+                guard self.phrasePartsFetchGeneration == generation else { return }
                 self.phrasePartsInFlight = false
                 // Пока ходили за разбором, фраза могла смениться — тогда он уже не к ней.
                 let curThai = (self.heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2599,16 +2853,7 @@ public final class SpeakerManager: ObservableObject {
         var ph = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !ph.isEmpty else { return ph }
 
-        // Mirror UI normalizer (emoji → text arrows) without depending on private SpeakerDS type.
-        let emojiMap: [(String, String)] = [
-            ("↘️", "↘"), ("↗️", "↗"), ("➡️", "→"), ("⬇️", "↓"), ("⬆️", "↑"),
-            ("➡︎", "→"), ("⬇︎", "↓"), ("⬆︎", "↑"), ("↘︎", "↘"), ("↗︎", "↗")
-        ]
-        for (from, to) in emojiMap {
-            ph = ph.replacingOccurrences(of: from, with: to)
-        }
-
-        ph = normalizePhoneticWordSpaces(ph)
+        ph = Self.canonicalTeachingPhonetic(ph)
 
         guard Self.phoneticLooksOverFragmented(ph) else { return ph }
 
@@ -2802,6 +3047,61 @@ public final class SpeakerManager: ObservableObject {
         }
     }
 
+    /// After pronunciation feedback: wait a beat for tones, then one coach line. Failure stays silent.
+    private func runSemanticCoachAfterPronunciation(
+        expectedThai: String,
+        expectedRU: String,
+        expectedPhonetic: String,
+        heardThai: String,
+        textScore: Int,
+        attemptToken: UUID?
+    ) async {
+        let heard = heardThai.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !heard.isEmpty else {
+            await MainActor.run { self.conversationCoachInFlight = false }
+            return
+        }
+        for _ in 0..<6 {
+            let waiting = await MainActor.run { self.breakdownRequestInFlight }
+            if !waiting { break }
+            try? await Task.sleep(nanoseconds: 250_000_000)
+        }
+        let ctx = await MainActor.run {
+            (
+                heardPhonetic: self.speakerUIMode == .conversation
+                    ? (self.conversationHeardPhoneticFromASR ?? "")
+                    : (self.trainingHeardPhoneticFromASR ?? self.heardTranslit ?? ""),
+                tone: self.toneAverageScore,
+                weak: self.syllableFeedback
+            )
+        }
+        let coach = await fetchConversationCoach(
+            expectedThai: expectedThai,
+            expectedRU: expectedRU,
+            expectedPhonetic: expectedPhonetic,
+            heardThai: heard,
+            heardPhonetic: ctx.heardPhonetic,
+            textScore: textScore,
+            toneScore: ctx.tone,
+            weakSyllables: ctx.weak
+        )
+        await MainActor.run {
+            if let t = attemptToken, self.activeAttemptToken != nil, self.activeAttemptToken != t { return }
+            guard self.phase.isFeedback else {
+                self.conversationCoachInFlight = false
+                return
+            }
+            if let coach, let usable = Self.usableCoach(headline: coach.headline, detail: coach.detail) {
+                self.conversationCoachHeadline = usable.headline
+                self.conversationCoachDetail = usable.detail
+            } else {
+                self.conversationCoachHeadline = nil
+                self.conversationCoachDetail = nil
+            }
+            self.conversationCoachInFlight = false
+        }
+    }
+
     /// Совпадает с API: в phonetic — русский исходник по буквам или слогам (тво→я→пер→…), не чтение тайского.
     private static func phoneticLooksLikeRussianSpellout(ru: String, phonetic: String) -> Bool {
         let ruLetters = Self.cyrillicLettersJoined(Self.normalizeRuForCompare(ru))
@@ -2880,10 +3180,10 @@ public final class SpeakerManager: ObservableObject {
 
         heardRU = ru.trimmingCharacters(in: .whitespacesAndNewlines)
         heardThai = t
-        let ph = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
-        heardTranslit = ph.isEmpty ? nil : ph
+        let ph = Self.teachingPhoneticOrNil(phonetic)
+        heardTranslit = ph
         conversationExpectedThai = t
-        conversationExpectedTranslitForFeedback = ph.isEmpty ? nil : ph
+        conversationExpectedTranslitForFeedback = ph
         conversationHeardThaiASR = nil
         conversationHeardPhoneticFromASR = nil
         taikaHints = []
@@ -2897,11 +3197,13 @@ public final class SpeakerManager: ObservableObject {
     @discardableResult
     func startConversationPronunciationCheck() -> Bool {
         guard speakerUIMode == .conversation else { return false }
+        cancelScheduledConversationListening()
+        pendingConversationAutoRecord = false
         let fromHeard = heardThai?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let fromExpected = conversationExpectedThai?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let thai = !fromHeard.isEmpty ? fromHeard : fromExpected
-        let translitFromHeard = heardTranslit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let translitFromExpected = conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let translitFromHeard = Self.teachingPhoneticOrNil(heardTranslit) ?? ""
+        let translitFromExpected = Self.teachingPhoneticOrNil(conversationExpectedTranslitForFeedback) ?? ""
         let translit = !translitFromHeard.isEmpty ? translitFromHeard : translitFromExpected
         guard !thai.isEmpty else { return false }
 
@@ -2914,6 +3216,7 @@ public final class SpeakerManager: ObservableObject {
         conversationExpectedTranslitForFeedback = translit.isEmpty ? nil : translit
         conversationHeardThaiASR = nil
         conversationHeardPhoneticFromASR = nil
+        clearConversationCoach()
 
         attemptPlayer?.stop()
         attemptPlayer = nil
@@ -3039,50 +3342,30 @@ public final class SpeakerManager: ObservableObject {
                     }
                     if let ph = userPhonetic?.trimmingCharacters(in: .whitespacesAndNewlines), !ph.isEmpty {
                         await MainActor.run {
-                            self.conversationHeardPhoneticFromASR = ph
+                            self.conversationHeardPhoneticFromASR = Self.teachingPhoneticOrNil(ph)
                         }
                     }
 
-                    let ctx = await MainActor.run {
-                        (
-                            ru: self.heardRU ?? "",
-                            phonetic: self.conversationExpectedTranslitForFeedback ?? "",
-                            heardPhonetic: self.conversationHeardPhoneticFromASR ?? "",
-                            tone: self.toneAverageScore,
-                            weak: self.syllableFeedback
-                        )
-                    }
-                    let coach = await self.fetchConversationCoach(
+                    let ru = await MainActor.run { self.heardRU ?? "" }
+                    let phonetic = await MainActor.run { self.conversationExpectedTranslitForFeedback ?? "" }
+                    await self.runSemanticCoachAfterPronunciation(
                         expectedThai: expectedThai,
-                        expectedRU: ctx.ru,
-                        expectedPhonetic: ctx.phonetic,
+                        expectedRU: ru,
+                        expectedPhonetic: phonetic,
                         heardThai: spoken,
-                        heardPhonetic: ctx.heardPhonetic,
                         textScore: score,
-                        toneScore: ctx.tone,
-                        weakSyllables: ctx.weak
+                        attemptToken: token
                     )
-                    await MainActor.run {
-                        if let t = token, self.activeAttemptToken != nil && self.activeAttemptToken != t { return }
-                        guard self.phase.isFeedback else {
-                            self.conversationCoachInFlight = false
-                            return
-                        }
-                        self.conversationCoachHeadline = coach?.headline
-                        self.conversationCoachDetail = coach?.detail
-                        self.conversationCoachInFlight = false
-                    }
                 }
             } catch {
                 await MainActor.run {
                     if let t = token, self.activeAttemptToken != nil && self.activeAttemptToken != t { return }
                     self.taikaHints = ["не удалось распознать. попробуй ещё раз"]
                     self.setPhase(.hint)
-                    self.conversationExpectedThai = nil
-                    self.conversationExpectedTranslitForFeedback = nil
                     self.conversationHeardThaiASR = nil
                     self.conversationHeardPhoneticFromASR = nil
                     self.clearConversationCoach()
+                    // Keep expectedThai: retry must stay on this phrase, not start a free listen.
                 }
             }
         }
@@ -3324,6 +3607,12 @@ public final class SpeakerManager: ObservableObject {
             append(expectedTones)
             append("\r\n")
         }
+        if !phon.isEmpty {
+            append("--\(boundary)\r\n")
+            append("Content-Disposition: form-data; name=\"phonetic\"\r\n\r\n")
+            append(Self.canonicalTeachingPhonetic(phon))
+            append("\r\n")
+        }
 
         append("--\(boundary)\r\n")
         append("Content-Disposition: form-data; name=\"file\"; filename=\"recording.m4a\"\r\n")
@@ -3554,35 +3843,6 @@ public final class SpeakerManager: ObservableObject {
         playAttemptSegment(start: nil, end: nil)
     }
 
-    /// Play a slice of the user's last recording (syllable segment from tone assess).
-    /// If API omitted start_s/end_s, fall back to equal slices across the recording.
-    func playAttemptSyllable(at index: Int) {
-        guard syllableFeedback.indices.contains(index) else {
-            playAttempt()
-            return
-        }
-        let item = syllableFeedback[index]
-        if let start = item.segmentStart, let end = item.segmentEnd, end > start {
-            playAttemptSegment(start: start, end: end)
-            return
-        }
-        guard let url = lastAttempt else {
-            playAttempt()
-            return
-        }
-        do {
-            let probe = try AVAudioPlayer(contentsOf: url)
-            let duration = max(0.12, probe.duration)
-            let count = max(1, syllableFeedback.count)
-            let slice = duration / Double(count)
-            let start = Double(index) * slice
-            let end = min(duration, start + slice)
-            playAttemptSegment(start: start, end: max(start + 0.08, end))
-        } catch {
-            playAttempt()
-        }
-    }
-
     private func playAttemptSegment(start: Double?, end: Double?) {
         guard let url = lastAttempt else { return }
         syllablePlaybackStopWork?.cancel()
@@ -3698,6 +3958,7 @@ public final class SpeakerManager: ObservableObject {
         heardConfidence = 0
         taikaHints = []
         clearToneBreakdownState()
+        clearConversationCoach()
 
         let token = UUID()
         activeAttemptToken = token
@@ -3796,7 +4057,7 @@ public final class SpeakerManager: ObservableObject {
                         let formattedPhonetic = self.formattedSyllables(from: expectedPhonetic)
                         await MainActor.run {
                             self.heardThai = formattedPhonetic.isEmpty ? (api.heardThai.map { self.formattedSyllables(from: $0) } ?? formattedPhonetic) : formattedPhonetic
-                            self.heardTranslit = api.heardTranslit ?? api.heardThai
+                            self.heardTranslit = Self.teachingPhoneticOrNil(api.heardTranslit ?? api.heardThai)
                             self.heardRU = nil
                             self.heardConfidence = safeScore
                             self.registerSessionScore(safeScore)
@@ -3846,7 +4107,7 @@ public final class SpeakerManager: ObservableObject {
                             let safeScore = max(0, min(100, serverScore))
                             let formattedPhonetic = self.formattedSyllables(from: expectedPhonetic)
                             self.heardThai = formattedPhonetic
-                            self.heardTranslit = formattedPhonetic.isEmpty ? nil : formattedPhonetic
+                            self.heardTranslit = Self.teachingPhoneticOrNil(formattedPhonetic)
                             self.heardRU = nil
                             self.heardConfidence = safeScore
                             self.registerSessionScore(safeScore)
@@ -3918,7 +4179,7 @@ public final class SpeakerManager: ObservableObject {
                     self.trainingHeardThaiASR = spoken
                     self.trainingHeardPhoneticFromASR = nil
                     self.heardThai = formattedPhonetic.isEmpty ? nil : formattedPhonetic
-                    self.heardTranslit = formattedSpoken
+                    self.heardTranslit = Self.teachingPhoneticOrNil(formattedSpoken)
                     self.heardRU = nil
                     self.clearToneBreakdownState()
 
@@ -3946,7 +4207,7 @@ public final class SpeakerManager: ObservableObject {
                         lessonId: cur.lessonId,
                         stepIndex: cur.index,
                         heardThai: formattedPhonetic.isEmpty ? nil : formattedPhonetic,
-                        heardTranslit: formattedSpoken,
+                        heardTranslit: Self.teachingPhoneticOrNil(formattedSpoken),
                         heardThaiASR: spoken,
                         heardPhoneticFromASR: nil,
                         heardConfidence: score,
@@ -3955,6 +4216,8 @@ public final class SpeakerManager: ObservableObject {
                     )
                     self.refreshUserPhoneticFromASRIfNeeded()
                     self.clearASRDegradedIfNeeded()
+                    self.clearConversationCoach()
+                    self.conversationCoachInFlight = !spoken.isEmpty
 
                     let attemptId = url.lastPathComponent
                     self.session.logActivity(
@@ -3963,6 +4226,26 @@ public final class SpeakerManager: ObservableObject {
                         lessonId: cur.lessonId,
                         stepIndex: cur.index,
                         refId: "free_asr:\(cur.courseId):\(cur.lessonId):idx\(cur.index):\(attemptId):try\(self.attemptCount):score\(score)"
+                    )
+                }
+
+                if !spoken.isEmpty {
+                    for _ in 0..<8 {
+                        let ready = await MainActor.run {
+                            !(self.trainingHeardPhoneticFromASR ?? "")
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                                .isEmpty
+                        }
+                        if ready { break }
+                        try? await Task.sleep(nanoseconds: 200_000_000)
+                    }
+                    await self.runSemanticCoachAfterPronunciation(
+                        expectedThai: expectedThai,
+                        expectedRU: cur.face.titleRU,
+                        expectedPhonetic: cur.face.phonetic,
+                        heardThai: spoken,
+                        textScore: score,
+                        attemptToken: token
                     )
                 }
             } catch {
@@ -3992,7 +4275,7 @@ public final class SpeakerManager: ObservableObject {
                         let phonetic = cur.face.phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
                         let formattedPhonetic = self.formattedSyllables(from: phonetic)
                         self.heardThai = formattedPhonetic
-                        self.heardTranslit = formattedPhonetic.isEmpty ? nil : formattedPhonetic
+                        self.heardTranslit = Self.teachingPhoneticOrNil(formattedPhonetic)
                         self.heardRU = nil
                         self.heardConfidence = safeScore
                         self.registerSessionScore(safeScore)
@@ -4402,19 +4685,36 @@ public final class SpeakerManager: ObservableObject {
         taikaHints = []
     }
 
-    /// Из phonetic — по одному ожидаемому тону на каждую стрелку в строке (кху↘н↘ → два Falling, не один).
+    /// Из phonetic — по одному тону на каждый учебный чанк (пробел + дефис), как строки разбора.
+    /// Не по числу стрелок: «кху↘н↘» — один слог, не два.
     private static func expectedTonesFromPhonetic(_ phonetic: String?) -> String? {
-        guard let raw = phonetic?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
-        let arrows: [(Character, String)] = [
-            ("↘", "Falling"), ("→", "Mid"), ("↗", "Rising"), ("↓", "Low"), ("↑", "High"),
-        ]
-        var tones: [String] = []
-        for ch in raw {
-            if let name = arrows.first(where: { $0.0 == ch })?.1 {
-                tones.append(name)
-            }
+        let chunks = phoneticSyllableChunks(phonetic)
+        guard !chunks.isEmpty else { return nil }
+        return chunks.map(toneNameFromPhoneticChunk).joined(separator: ",")
+    }
+
+    /// Same split as `SpeakerDSRoot.translitChunksForSyllables` / server `phonetic_syllable_chunks`.
+    nonisolated static func phoneticSyllableChunks(_ phonetic: String?) -> [String] {
+        let raw = canonicalTeachingPhonetic(phonetic ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return [] }
+        let words = raw.split(separator: " ")
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return words.flatMap { word in
+            word.split(omittingEmptySubsequences: true) { "-·".contains($0) }
+                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
         }
-        return tones.isEmpty ? nil : tones.joined(separator: ",")
+    }
+
+    private static func toneNameFromPhoneticChunk(_ chunk: String) -> String {
+        if chunk.contains("↘") { return "Falling" }
+        if chunk.contains("↗") { return "Rising" }
+        if chunk.contains("→") { return "Mid" }
+        if chunk.contains("↓") { return "Low" }
+        if chunk.contains("↑") { return "High" }
+        return "Mid"
     }
 
     // MARK: - Tone assessment API (Phase C backend)
@@ -4524,6 +4824,8 @@ public final class SpeakerManager: ObservableObject {
         // Не обнуляем syllableFeedback здесь — иначе displayScore скачет на текст-only до ответа API.
         breakdownRequestFailed = false
         breakdownRequestInFlight = true
+        let generation = UUID()
+        breakdownRequestGeneration = generation
         let requestAttemptURL = audioURL
         let url = URL(string: base.hasSuffix("/") ? base + "assess" : base + "/assess")!
         var req = URLRequest(url: url)
@@ -4543,6 +4845,12 @@ public final class SpeakerManager: ObservableObject {
             body.append(Data(expectedTones.utf8))
             append("\r\n")
         }
+        if let ph = Self.teachingPhoneticOrNil(phoneticForTones) {
+            append("--\(boundary)\r\n")
+            append("Content-Disposition: form-data; name=\"phonetic\"\r\n\r\n")
+            body.append(Data(ph.utf8))
+            append("\r\n")
+        }
         let textScore = phase.isFeedback ? (heardConfidence) : 0
         append("--\(boundary)\r\n")
         append("Content-Disposition: form-data; name=\"text_score\"\r\n\r\n")
@@ -4558,7 +4866,9 @@ public final class SpeakerManager: ObservableObject {
             print("[speaker] tone API: ошибка чтения файла записи: \(error.localizedDescription)")
             #endif
             persistBreakdownFailureUnlessCached(requestAttemptPath: audioURL.path)
-            breakdownRequestInFlight = false
+            if breakdownRequestGeneration == generation {
+                breakdownRequestInFlight = false
+            }
             completion()
             return
         }
@@ -4568,8 +4878,11 @@ public final class SpeakerManager: ObservableObject {
         URLSession.shared.dataTask(with: req) { [weak self] data, response, error in
             DispatchQueue.main.async {
                 guard let self else { return }
+                guard self.breakdownRequestGeneration == generation else { return }
                 defer {
-                    self.breakdownRequestInFlight = false
+                    if self.breakdownRequestGeneration == generation {
+                        self.breakdownRequestInFlight = false
+                    }
                     completion()
                 }
                 guard self.lastAttempt == requestAttemptURL else {
@@ -4674,8 +4987,8 @@ public final class SpeakerManager: ObservableObject {
                     await MainActor.run {
                         let cur = self.trainingHeardPhoneticFromASR?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                         if cur.isEmpty {
-                            self.trainingHeardPhoneticFromASR = trimmed
-                            self.heardTranslit = trimmed
+                            self.trainingHeardPhoneticFromASR = Self.teachingPhoneticOrNil(trimmed)
+                            self.heardTranslit = Self.teachingPhoneticOrNil(trimmed)
                             self.persistCurrentAttemptIfNeeded()
                         }
                     }
@@ -4711,7 +5024,7 @@ public final class SpeakerManager: ObservableObject {
                     await MainActor.run {
                         let cur = self.conversationHeardPhoneticFromASR?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                         if cur.isEmpty {
-                            self.conversationHeardPhoneticFromASR = trimmed
+                            self.conversationHeardPhoneticFromASR = Self.teachingPhoneticOrNil(trimmed)
                         }
                     }
                     return
