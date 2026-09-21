@@ -20,6 +20,9 @@ enum TaikaProConfig {
         static let annual = "$rc_annual"
         static let monthly = "$rc_monthly"
         static let lifetime = "$rc_lifetime"
+        /// Non-consumable gift SKU без entitlement у покупателя (ASC + RevenueCat).
+        /// Пока пакета нет в Offering — paywall gift-режим использует demo issue при DEBUG / GIFT_DEMO.
+        static let giftLifetime = "taika_gift_lifetime"
     }
 
     /// Маркетинговые fallback-цены (THB), пока offerings не загрузились / для бейджей.
@@ -78,9 +81,9 @@ enum TaikaProConfig {
         return "дней"
     }
 
-    /// Юридические URL (замените при публикации страниц).
+    /// Юридические URL (публичные страницы на taikaa.online).
     enum Legal {
-        static let privacyPolicy = URL(string: "https://taika.app/privacy")!
-        static let termsOfUse = URL(string: "https://taika.app/terms")!
+        static let privacyPolicy = URL(string: "https://www.taikaa.online/privacy")!
+        static let termsOfUse = URL(string: "https://www.taikaa.online/terms")!
     }
 }
