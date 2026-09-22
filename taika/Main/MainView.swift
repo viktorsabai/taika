@@ -60,14 +60,17 @@ struct MainView: View {
     @State private var kunKruCourses: [MainManager.CourseCardModel] = []
     /// Умная подборка курсов: показывается в секции «ПОДБОРКА ДНЯ».
     @State private var forYouCourses: [MainManager.CourseCardModel] = []
-    /// Пройденные курсы для закрепления (отдельный ряд на Main).
-    @State private var reinforcementCourses: [MainManager.CourseCardModel] = []
     @State private var didCenterForYouCarousel = false
     @State private var forYouAutoIndex: Int = 0
     @State private var forYouAutoScrollPausedUntil: Date = .distantPast
+    /// Hero-сфера: Спикер → Обучение → Избранное.
+    @State private var mainHubMode: MDMainHubMode = .speaker
     private let forYouAutoScrollTimer = Timer.publish(every: 3.6, on: .main, in: .common).autoconnect()
     /// Нативный индикатор при «Начни обучение» — без кастомного «случайный курс…» оверлея.
     @State private var isStartingRandomCourse = false
+    /// Не прячем хаб вторым чёрным кадром. Карточки дописываются, когда лента готова.
+    @State private var isPreparingHub = false
+    @State private var showHubSpinner = false
 
     // MARK: - Thailand canonical calendar (match MainManager)
     private static let bangkokTZ: TimeZone = TimeZone(identifier: "Asia/Bangkok") ?? .current
@@ -286,6 +289,16 @@ struct MainView: View {
         openCourse(Self.conversationalStartCourseId)
     }
 
+    private var heroLeadPhrases: [String] {
+        Array(
+            main.dailyPicks.items
+                .filter { !$0.isPro }
+                .map { $0.titleRU.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .prefix(4)
+        )
+    }
+
     private func continuePillTitle() -> String {
         guard let item = activeResumeItem() else {
             return "Начать обучение"
@@ -297,23 +310,194 @@ struct MainView: View {
         return name.isEmpty ? "Продолжить" : "Продолжить \(name)"
     }
 
-    /// Daily free entry point: stable visual surface with a value-led invitation.
-    private var warmupRow: some View {
-        MDDailyWarmupPillCTA {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                showDailyPicksSheet = true
+    private func cardWord(_ n: Int) -> String {
+        let mod10 = n % 10
+        let mod100 = n % 100
+        if mod100 >= 11 && mod100 <= 14 { return "карточек" }
+        switch mod10 {
+        case 1: return "карточка"
+        case 2, 3, 4: return "карточки"
+        default: return "карточек"
+        }
+    }
+
+    private func continueCourseShortName(_ item: MainBannerItem) -> String {
+        let (courseId, _) = parseResumeItemIds(item)
+        let courseTitle = LessonsManager.shared.courseTitle(for: courseId)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return courseTitle.isEmpty ? item.title : courseTitle
+    }
+
+    private var warmupRemainingCount: Int {
+        let picks = main.dailyPicks
+        let learned = computeLearnedIdx(
+            itemsCount: picks.items.count,
+            courseIds: picks.refs.map(\.courseId),
+            lessonIds: picks.refs.map(\.lessonId),
+            indices: picks.refs.map(\.index)
+        )
+        var remaining = 0
+        for i in picks.items.indices {
+            guard i < picks.refs.count else { break }
+            if picks.items[i].isPro || picks.refs[i].courseId == "__pro__" { continue }
+            if !learned.contains(i) { remaining += 1 }
+        }
+        return remaining
+    }
+
+    /// Кун кру: коротко и ясно, что сделать сейчас.
+    private var khruHeroLines: [String] {
+        hubHeroLines(for: .speaker)
+    }
+
+    private func hubHeroLines(for mode: MDMainHubMode? = nil) -> [String] {
+        let mode = mode ?? mainHubMode
+        var lines: [String] = [heroGreetingText]
+
+        switch mode {
+        case .speaker:
+            if let item = activeResumeItem() {
+                let name = continueCourseShortName(item)
+                if !name.isEmpty { lines.append("Продолжи «\(name)»") }
+            } else {
+                lines.append("Свайпни сферу — или скажи фразу")
+                lines.append("Тап по сфере — умный спикер")
             }
+            let remaining = warmupRemainingCount
+            if remaining > 0 {
+                lines.append("В разминке ещё \(remaining) \(cardWord(remaining))")
+            }
+            if activeResumeItem() != nil {
+                lines.append("Или скажи новую фразу — разберём")
+            }
+        case .learn:
+            lines.append("Тап по сфере — к курсам")
+            if let item = activeResumeItem() {
+                let name = continueCourseShortName(item)
+                if !name.isEmpty { lines.append("Или продолжи «\(name)»") }
+            } else {
+                lines.append("Или начни с первой фразы в курсе")
+            }
+            let remaining = warmupRemainingCount
+            if remaining > 0 {
+                lines.append("Разминка: ещё \(remaining) \(cardWord(remaining))")
+            }
+        case .favorites:
+            lines.append("Твои фразы — всегда под рукой")
+            lines.append("Тап по сфере — открыть избранное")
+            lines.append("Свайпни обратно — к спикеру или курсам")
+        }
+
+        var seen = Set<String>()
+        return Array(lines.filter { seen.insert($0).inserted }.prefix(4))
+    }
+
+    private func hubPrimaryCTA() -> TaikaAssistantHubPrimaryCTA {
+        switch mainHubMode {
+        case .speaker, .learn:
+            return TaikaAssistantHubPrimaryCTA(
+                title: continuePillTitle(),
+                icon: "graduationcap.fill",
+                action: handleContinueCardTap
+            )
+        case .favorites:
+            return TaikaAssistantHubPrimaryCTA(
+                title: "Открыть избранное",
+                icon: "heart.fill",
+                action: openFavoritesHub
+            )
         }
     }
 
-    private var canReinforce: Bool {
-        !reinforcementCourses.isEmpty || LearnedGameSource.hasPlayableCards
+    private func hubGhostCTA() -> TaikaAssistantHubGhostCTA {
+        switch mainHubMode {
+        case .speaker, .learn:
+            return TaikaAssistantHubGhostCTA(
+                icon: "bolt.fill",
+                title: "Разминка",
+                action: {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                        showDailyPicksSheet = true
+                    }
+                }
+            )
+        case .favorites:
+            return TaikaAssistantHubGhostCTA(
+                icon: "bookmark.fill",
+                title: "Словарь",
+                action: openDictionaryFromHub
+            )
+        }
     }
 
-    private var reinforceRow: some View {
-        MDMainReinforcePillCTA(isEnabled: canReinforce) {
-            overlay.present(.reinforcePick)
+    private func syncHubAtmosphere(_ mode: MDMainHubMode) {
+        let atmosphere: ThemeManager.HubAtmosphere
+        switch mode {
+        case .speaker: atmosphere = .speaker
+        case .learn: atmosphere = .learn
+        case .favorites: atmosphere = .favorites
         }
+        withAnimation(.easeInOut(duration: 0.34)) {
+            ThemeManager.shared.hubAtmosphere = atmosphere
+        }
+    }
+
+    @ViewBuilder
+    private var hubChipZone: some View {
+        switch mainHubMode {
+        case .speaker:
+            MDExamplePhraseMarquee(leadPhrases: heroLeadPhrases) { phrase in
+                openSpeakerConversationWithPhrase(phrase)
+            }
+        case .learn:
+            MDMainLearnChipMarquee(
+                courseTitles: forYouCourses.map(\.title),
+                onOpenCourses: openCoursesHub
+            )
+        case .favorites:
+            MDMainFavoritesChipMarquee(onOpenFavorites: openFavoritesHub)
+        }
+    }
+
+    private func activateHubMode(_ mode: MDMainHubMode) {
+        switch mode {
+        case .speaker:
+            openSpeakerConversationIdle()
+        case .learn:
+            openCoursesHub()
+        case .favorites:
+            openFavoritesHub()
+        }
+    }
+
+    private func openCoursesHub() {
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+            overlay.dismiss()
+        }
+        ThemeManager.shared.hubAtmosphere = nil
+        nav.popToRoot()
+        nav.requestTab(1)
+    }
+
+    private func openFavoritesHub() {
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+            overlay.dismiss()
+        }
+        ThemeManager.shared.hubAtmosphere = nil
+        FavoritesFilterState.shared.selectedTab = .cards
+        nav.popToRoot()
+        nav.requestTab(3)
+    }
+
+    private func openDictionaryFromHub() {
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+            overlay.dismiss()
+        }
+        ThemeManager.shared.hubAtmosphere = nil
+        // Полноэкранный Словарь в Избранном — не боковой drawer.
+        FavoritesFilterState.shared.selectedTab = .dictionary
+        nav.popToRoot()
+        nav.requestTab(3)
     }
 
     private func dayWord(_ n: Int) -> String {
@@ -846,66 +1030,37 @@ struct MainView: View {
         return "\(base), \(firstName) 👋"
     }
 
-    private var continueSection: some View {
-        continueSectionContent
-            .padding(.horizontal, Theme.Layout.pageHorizontal)
-    }
-
-    private var continueSectionContent: some View {
-        MDMainFilledPillCTA(
-            title: continuePillTitle(),
-            icon: "graduationcap.fill"
-        ) {
-            handleContinueCardTap()
-        }
-    }
-
-    private var mainUtilityRow: some View {
-        mainUtilityRowContent
-            .padding(.horizontal, Theme.Layout.pageHorizontal)
-    }
-
-    private var mainUtilityRowContent: some View {
-        warmupRow
-    }
-
     private var mainScrollBlock: some View {
         let isModalPresented = overlay.isPresented
 
-        // Главная: кун кру → воронка обучения → подборка.
-        let sectionBreath: CGFloat = 36
-
-        return TaikaRootVerticalScroll {
-            VStack(spacing: 0) {
-                MDPromptHero(
-                    greeting: heroGreetingText,
-                    onOpenSpeaker: openSpeakerConversationIdle,
-                    onTapPhrase: openSpeakerConversationWithPhrase
-                )
-                .padding(.top, 6)
-
-                // Одна воронка: один primary во всю ширину + два вторичных чипа строкой.
-                VStack(spacing: 10) {
-                    continueSectionContent
-                    HStack(spacing: 10) {
-                        mainUtilityRowContent
-                        reinforceRow
-                    }
-                }
-                .padding(.horizontal, Theme.Layout.pageHorizontal)
-                .padding(.top, 36)
-
-                forYouSection
-                    .padding(.top, sectionBreath)
+        return GeometryReader { geo in
+            TaikaAssistantHub(
+                lines: hubHeroLines(),
+                assembleGateKey: TaikaCatalogBoot.isReady ? nil : "tab.main.hero",
+                layout: .mainEmbedded,
+                primaryCTA: hubPrimaryCTA(),
+                ghostCTA: hubGhostCTA()
+            ) {
+                MDMainHubSphere(mode: $mainHubMode, onActivate: { mode in
+                    activateHubMode(mode)
+                }, onBootFinished: {
+                    showHubSpinner = false
+                })
+            } chipZone: {
+                hubChipZone
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .padding(.bottom, ToolBar.recommendedBottomInset + 12)
             .allowsHitTesting(!isModalPresented)
+            .frame(width: geo.size.width, height: geo.size.height)
+            .animation(.easeOut(duration: 0.22), value: mainHubMode)
         }
         .onAppear {
+            syncHubAtmosphere(mainHubMode)
             suppressReactiveRefreshUntil = Date().addingTimeInterval(0.55)
             progress.refreshProfileState()
             weekProgressState = progress.publishedState
+        }
+        .onChange(of: mainHubMode) { _, newMode in
+            syncHubAtmosphere(newMode)
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ProgressDidChange"))) { _ in
             guard Date() >= suppressReactiveRefreshUntil else { return }
@@ -915,9 +1070,7 @@ struct MainView: View {
             rebuildLearnedState()
             Task {
                 await main.reloadDailyCoursePicks()
-                await main.reloadReinforcementCourseCards()
                 forYouCourses = main.dailyCourseCards
-                reinforcementCourses = main.reinforcementCourseCards
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("FavoritesDidChange"))) { _ in
@@ -948,60 +1101,11 @@ struct MainView: View {
             Task { @MainActor in
                 await main.reloadDailyPicks()
                 await main.reloadDailyCoursePicks()
-                await main.reloadReinforcementCourseCards()
                 forYouCourses = main.dailyCourseCards
-                reinforcementCourses = main.reinforcementCourseCards
                 let targetIndex: Int = (main.dailyPicks.items.first?.isPro == true && main.dailyPicks.items.count > 1) ? 1 : 0
                 dailyIndex = min(targetIndex, max(0, main.dailyPicks.items.count - 1))
                 rebuildLearnedState()
                 rebuildFavoritesState()
-            }
-        }
-        .safeAreaPadding(.bottom, Theme.Layout.pageBottomSafeGap)
-        .task {
-            if Self.didRunInitialBootstrapShared {
-                // On re-appear keep current feed stable and only refresh lightweight local state.
-                progress.refreshProfileState()
-                weekProgressState = progress.publishedState
-                // Пересобираем при смене PRO/free (кэш иначе оставляет 10 карточек free-юзеру).
-                await main.reloadDailyPicks()
-                if main.weekSummary.isEmpty {
-                    await main.rebuildWeekSummary()
-                }
-                await main.reloadDailyCoursePicks()
-                await main.reloadReinforcementCourseCards()
-                forYouCourses = main.dailyCourseCards
-                reinforcementCourses = main.reinforcementCourseCards
-                rebuildLearnedState()
-                rebuildFavoritesState()
-                return
-            }
-            Self.didRunInitialBootstrapShared = true
-
-            StepData.shared.preload()
-            await main.refresh()
-            progress.refreshProfileState()
-            weekProgressState = progress.publishedState
-            await main.reloadDailyPicks()
-            if main.weekSummary.isEmpty {
-                await main.rebuildWeekSummary()
-            }
-
-            let targetIndex: Int = (main.dailyPicks.items.first?.isPro == true && main.dailyPicks.items.count > 1) ? 1 : 0
-            dailyIndex = targetIndex
-
-            rebuildLearnedState()
-            rebuildFavoritesState()
-
-            // Daily course picks: stable set for the current Bangkok day (prepared by MainManager).
-            await main.reloadDailyCoursePicks()
-            await main.reloadReinforcementCourseCards()
-            forYouCourses = main.dailyCourseCards
-            reinforcementCourses = main.reinforcementCourseCards
-
-            // Прогрев индекса поиска в фоне: к первому открытию оверлея данные чаще уже собраны.
-            Task(priority: .utility) {
-                await SearchOverlayState.shared.ensureConfigured(overlay: OverlayPresenter.shared)
             }
         }
     }
@@ -1009,16 +1113,28 @@ struct MainView: View {
 
 var body: some View {
     ZStack {
-        PD.ColorToken.background
+        TaikaTechnoSpaceBackdrop(intensity: 0.52, heroAnchor: UnitPoint(x: 0.5, y: 0.38))
             .ignoresSafeArea()
+            .animation(.easeInOut(duration: 0.34), value: mainHubMode)
 
-        VStack(spacing: 0) {
-            mainScrollBlock
-                // Clearance уже на внешней VStack — внутри скролла не дублируем (как в CourseView).
-                .environment(\.taikaRootHeaderClearance, 0)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        if !isPreparingHub {
+            VStack(spacing: 0) {
+                TaikaScreenPageTitle(title: "Главная")
+                    .padding(.top, 4)
+
+                mainScrollBlock
+                    .environment(\.taikaRootHeaderClearance, 0)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            }
+            .padding(.top, Theme.Layout.rootHeaderClearance)
+            .opacity(showHubSpinner ? 0 : 1)
         }
-        .padding(.top, Theme.Layout.rootHeaderClearance)
+
+        if isPreparingHub || showHubSpinner {
+            hubBootOverlay
+                .opacity(showHubSpinner || isPreparingHub ? 1 : 0)
+                .zIndex(40)
+        }
 
         if let o = overlay.overlay {
             switch o {
@@ -1055,6 +1171,12 @@ var body: some View {
         dailyPicksFullOverlay
     }
     .ignoresSafeArea(.keyboard, edges: .bottom)
+    .animation(.easeInOut(duration: 0.55), value: showHubSpinner)
+    .task {
+        await prepareHubIfNeeded()
+        await Task.yield()
+        TaikaCatalogBoot.markHubReady()
+    }
 }
     // MARK: - Search overlay
 
@@ -1601,6 +1723,65 @@ var body: some View {
 
     // Taika FM убран с главной (был дублем: он уже есть в разделе «Курсы» — courseFmSection).
 
+    private func prepareHubIfNeeded() async {
+        if TaikaCatalogBoot.isReady {
+            Self.didRunInitialBootstrapShared = true
+            hydrateHubFromStore()
+            Task(priority: .utility) {
+                await SearchOverlayState.shared.ensureConfigured(overlay: OverlayPresenter.shared)
+            }
+            return
+        }
+        if Self.didRunInitialBootstrapShared {
+            progress.refreshProfileState()
+            weekProgressState = progress.publishedState
+            await main.reloadDailyPicks()
+            if main.weekSummary.isEmpty {
+                await main.rebuildWeekSummary()
+            }
+            await main.reloadDailyCoursePicks()
+            forYouCourses = main.dailyCourseCards
+            rebuildLearnedState()
+            rebuildFavoritesState()
+            return
+        }
+        Self.didRunInitialBootstrapShared = true
+        await Task.detached(priority: .userInitiated) {
+            StepData.shared.preload()
+            LessonsData.shared.preload()
+        }.value
+        await Task.yield()
+        await main.refresh()
+        progress.refreshProfileState()
+        weekProgressState = progress.publishedState
+        await main.reloadDailyPicks()
+        if main.weekSummary.isEmpty {
+            await main.rebuildWeekSummary()
+        }
+        let targetIndex: Int = (main.dailyPicks.items.first?.isPro == true && main.dailyPicks.items.count > 1) ? 1 : 0
+        dailyIndex = targetIndex
+        rebuildLearnedState()
+        rebuildFavoritesState()
+        await main.reloadDailyCoursePicks()
+        forYouCourses = main.dailyCourseCards
+        Task(priority: .utility) {
+            await SearchOverlayState.shared.ensureConfigured(overlay: OverlayPresenter.shared)
+        }
+        isPreparingHub = false
+    }
+
+    private func hydrateHubFromStore() {
+        progress.refreshProfileState()
+        weekProgressState = progress.publishedState
+        forYouCourses = main.dailyCourseCards
+        let targetIndex: Int = (main.dailyPicks.items.first?.isPro == true && main.dailyPicks.items.count > 1) ? 1 : 0
+        dailyIndex = min(targetIndex, max(0, main.dailyPicks.items.count - 1))
+        rebuildLearnedState()
+        rebuildFavoritesState()
+        isPreparingHub = false
+        showHubSpinner = false
+    }
+
     private func allowReactiveRefresh(minInterval: TimeInterval) -> Bool {
         let now = Date()
         guard now.timeIntervalSince(lastReactiveRefreshAt) >= minInterval else { return false }
@@ -1610,6 +1791,33 @@ var body: some View {
     // MARK: - Random course loading overlay (scoped to MainView)
 
     /// Нативный индикатор старта курса — системный ProgressView, без кастомного макета.
+    private var hubBootOverlay: some View {
+        ZStack {
+            PD.ColorToken.background.ignoresSafeArea()
+            VStack(spacing: 22) {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .tint(.white)
+                    .scaleEffect(1.05)
+                MDCyclingTypewriter(
+                    lines: [
+                        "Одну минутку.",
+                        "Тайка уже бежит."
+                    ],
+                    font: .system(size: 22, weight: .semibold, design: .rounded),
+                    holdSeconds: 1.15,
+                    charInterval: 0.038,
+                    minHeight: 32,
+                    isCentered: true
+                )
+                .frame(maxWidth: 280)
+            }
+        }
+        .transition(.opacity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Одну минутку. Тайка уже бежит.")
+    }
+
     private var nativeCourseStartOverlay: some View {
         ZStack {
             Color.black.opacity(0.28)
@@ -1628,7 +1836,7 @@ var body: some View {
         }
         .transition(.opacity)
         .zIndex(30)
-        .accessibilityLabel("Загрузка курса")
+        .accessibilityLabel(isPreparingHub ? "Загрузка" : "Загрузка курса")
     }
 
     // MARK: - Step handlers (mirror StepView)

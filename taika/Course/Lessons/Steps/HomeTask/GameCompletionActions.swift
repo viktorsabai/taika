@@ -3,7 +3,7 @@ import SwiftUI
 /// Кнопки итогов закрепления.
 /// - Курс (зачётка): очередь ошибок → 2a/2b/2c, без «следующий урок».
 /// - Из урока/степа: повторить → произношение → следующий урок/курс → закрыть.
-/// - Из игрового парка: повторить → следующая игра (или замок Taika+) → закрыть.
+/// - Из игрового парка: повторить → следующая игра (или замок Taika Pro) → закрыть.
 struct GameCompletionActions: View {
     var isFromLessonStep: Bool
     var isCourseReinforcement: Bool = false
@@ -136,7 +136,7 @@ struct GameCompletionActions: View {
                 .font(.system(size: 14, weight: .semibold))
             Text(nextGameTitle ?? "Следующая игра")
                 .font(CD.FontToken.body(15, weight: .medium))
-            Text("· Taika+")
+            Text("· Taika Pro")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(theme.currentAccentFill)
         }
@@ -147,7 +147,7 @@ struct GameCompletionActions: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(PD.ColorToken.card.opacity(0.55))
         )
-        .accessibilityLabel("Следующая игра недоступна, нужен Taika+")
+        .accessibilityLabel("Следующая игра недоступна, нужен Taika Pro")
     }
 
     private func primaryButton(title: String, action: @escaping () -> Void) -> some View {

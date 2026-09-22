@@ -258,6 +258,39 @@ public enum Theme {
             endPoint: .bottomTrailing
         )
 
+        /// Hub · Обучение — зелёный с лёгким розовым бликом (не плоский blue).
+        public static let accentCourseGreen = LinearGradient(
+            colors: [
+                Color(red: 0.06, green: 0.42, blue: 0.28),
+                Color(red: 0.28, green: 0.78, blue: 0.52),
+                Color(red: 0.92, green: 0.72, blue: 0.88)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+
+        /// Закрепление / консоль — янтарно-золотой, не бренд-розовый спикера.
+        public static let consoleGold = LinearGradient(
+            colors: [
+                Color(red: 1.00, green: 0.90, blue: 0.48),
+                Color(red: 0.96, green: 0.68, blue: 0.18),
+                Color(red: 0.82, green: 0.42, blue: 0.08)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+
+        /// Hub · Избранное — небесно-голубой → облачный белый (не сливается с brand pink).
+        public static let accentHeart = LinearGradient(
+            colors: [
+                Color(red: 0.10, green: 0.52, blue: 0.95),
+                Color(red: 0.42, green: 0.78, blue: 1.00),
+                Color(red: 0.92, green: 0.97, blue: 1.00)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+
         /// Accent variant — Sun (yolk yellow → ember)
         public static let accentSun = LinearGradient(
             colors: [
@@ -913,6 +946,13 @@ struct TaikaSectionHeaderRow<Trailing: View>: View {
             trailing()
         }
     }
+}
+
+/// Нейтральный chrome сегментов и переключателей — без бренд-розового.
+enum TaikaNeutralPickerChrome {
+    static let selectedFill = Color.white.opacity(0.12)
+    static let selectedForeground = Color.white.opacity(0.92)
+    static let selectedStroke = Color.white.opacity(0.22)
 }
 
 /// Крупный заголовок корневой вкладки; опционально — интерактивный фильтр справа (одна строка).

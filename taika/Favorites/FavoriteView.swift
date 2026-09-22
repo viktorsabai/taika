@@ -19,6 +19,8 @@ struct FavoriteView_Previews: PreviewProvider {
 public final class FavoritesFilterState: ObservableObject {
     public static let shared = FavoritesFilterState()
     @Published public var selectedTab: FavoriteScreenTab = .cards
+    /// Шапка Избранного открывает карусель всех сохранённых лайфхаков, не третью вкладку.
+    @Published public var showSavedLifehacks = false
     private init() {}
 }
 
@@ -66,18 +68,30 @@ struct FavoriteView: View {
         case .cards where cardsList.isEmpty:
             return FavEmptySpec(
                 systemImage: "heart",
-                title: "Собери свои фразы",
-                subtitle: "Лайкни первую фразу в уроке — она появится здесь.",
-                actionTitle: "к урокам",
-                action: openCoursesBase
+                assembleGateKey: "tab.favorites.cards",
+                lines: [
+                    "Собери свои фразы",
+                    "Лайкни первую в уроке — она появится здесь"
+                ],
+                primaryCTA: TaikaAssistantHubPrimaryCTA(
+                    title: "К урокам",
+                    accent: Color(red: 0.28, green: 0.72, blue: 0.98),
+                    action: openCoursesBase
+                )
             )
         case .dictionary where dictionaryList.isEmpty:
             return FavEmptySpec(
                 systemImage: "bookmark",
-                title: "Свои слова под рукой",
-                subtitle: "Скажи фразу в «Скажи сам» и нажми «Добавить».",
-                actionTitle: "скажи сам",
-                action: openOwnSpeech
+                assembleGateKey: "tab.favorites.dictionary",
+                lines: [
+                    "Свои слова под рукой",
+                    "Скажи фразу и сохрани — она появится здесь"
+                ],
+                primaryCTA: TaikaAssistantHubPrimaryCTA(
+                    title: "Добавить фразу",
+                    icon: "plus.circle.fill",
+                    action: openOwnSpeech
+                )
             )
         default:
             return nil
@@ -102,13 +116,12 @@ struct FavoriteView: View {
                 if let empty = currentEmptySpec {
                     favEmptyState(
                         systemImage: empty.systemImage,
-                        title: empty.title,
-                        subtitle: empty.subtitle,
-                        actionTitle: empty.actionTitle,
-                        action: empty.action
+                        lines: empty.lines,
+                        assembleGateKey: empty.assembleGateKey,
+                        primaryCTA: empty.primaryCTA,
+                        onSelectCourse: openFavoriteCourse
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.bottom, bottomContentInset)
                 } else {
                     TaikaRootVerticalScroll {
                         VStack(spacing: 0) {
@@ -129,6 +142,11 @@ struct FavoriteView: View {
                 }
             }
             .padding(.top, Theme.Layout.rootHeaderClearance)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.34)) {
+                    ThemeManager.shared.hubAtmosphere = .favorites
+                }
+            }
 
             if showsBottomTrainingBar {
                 favoritesTrainingCTA()
@@ -193,6 +211,9 @@ struct FavoriteView: View {
                 favFilter.selectedTab = normalized
             }
         }
+        .sheet(isPresented: $favFilter.showSavedLifehacks) {
+            SavedLifehacksCarouselSheet()
+        }
         .onChange(of: favFilter.selectedTab) { _, newValue in
             let normalized: FavoriteScreenTab = (newValue == .hacks || newValue == .courses) ? .cards : newValue
             if selectedTab != normalized {
@@ -209,12 +230,30 @@ struct FavoriteView: View {
     }
 
     private func favoritesScreenHeader() -> some View {
-        TaikaScreenPageTitle(title: collectionTitle) {
-            if showsViewModeToggle {
-                FDFavViewModeToggle(viewMode: activeViewMode)
+        VStack(alignment: .leading, spacing: 10) {
+            TaikaScreenPageTitle(title: collectionTitle) {
+                if showsViewModeToggle {
+                    FDFavViewModeToggle(viewMode: activeViewMode)
+                }
             }
+            FDCollectionSwitch(selection: collectionSelection)
+                .padding(.horizontal, CD.Spacing.screen)
         }
         .padding(.top, 4)
+    }
+
+    private var collectionSelection: Binding<FavoriteScreenTab> {
+        Binding(
+            get: {
+                selectedTab == .dictionary ? .dictionary : .cards
+            },
+            set: { next in
+                let normalized: FavoriteScreenTab = next == .dictionary ? .dictionary : .cards
+                guard selectedTab != normalized else { return }
+                selectedTab = normalized
+                favFilter.selectedTab = normalized
+            }
+        )
     }
 
     private func favoritesCollectionSummary() -> some View {
@@ -353,12 +392,122 @@ struct FavoriteView: View {
     }
 }
 
+/// Все сохранённые лайфхаки со всех уроков. Та же карточка, не третья вкладка.
+private struct SavedLifehacksCarouselSheet: View {
+    @ObservedObject private var manager = FavoriteManager.shared
+    @Environment(\.dismiss) private var dismiss
+
+    private var hacks: [FDHackDTO] { manager.hacksDTO }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                PD.ColorToken.background.ignoresSafeArea()
+                if hacks.isEmpty {
+                    emptyState
+                } else {
+                    carousel
+                }
+            }
+            .navigationTitle("Лайфхаки")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Готово") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+        .presentationContentInteraction(.scrolls)
+        .tint(TaikaLifehackCrayonPalette.primary)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 14) {
+            lifehackMark
+                .frame(width: 28, height: 38)
+            Text("Пока нет лайфхаков")
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundStyle(PD.ColorToken.text)
+            Text("Сердце на карточке в уроке — он появится здесь")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 32)
+    }
+
+    private var carousel: some View {
+        GeometryReader { geo in
+            let cardWidth = min(260, max(210, geo.size.width - 88))
+            let cardHeight = min(292, max(220, geo.size.height - 20))
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 14) {
+                    ForEach(hacks) { hack in
+                        StepLifehackCardVisual(
+                            item: SDStepItem(
+                                kind: .tip,
+                                titleRU: bodyText(for: hack),
+                                subtitleTH: "",
+                                phonetic: ""
+                            ),
+                            label: "лайфхак",
+                            size: CGSize(width: cardWidth, height: cardHeight),
+                            isFavorite: true,
+                            onFavorite: {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                manager.remove(id: hack.sourceId)
+                            },
+                            favoriteOnly: true
+                        )
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 8)
+            }
+        }
+    }
+
+    private func bodyText(for hack: FDHackDTO) -> String {
+        if let item = manager.items.first(where: { $0.id.caseInsensitiveCompare(hack.sourceId) == .orderedSame }) {
+            let stored = item.th.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !stored.isEmpty { return stored }
+        }
+        var meta = hack.meta.trimmingCharacters(in: .whitespacesAndNewlines)
+        if meta.lowercased().hasPrefix("hack:") {
+            meta = String(meta.dropFirst(5)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if !meta.isEmpty { return meta }
+        let title = hack.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? "Лайфхак" : title
+    }
+
+    private var lifehackMark: some View {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [
+                        TaikaLifehackCrayonPalette.colors[2],
+                        TaikaLifehackCrayonPalette.primary,
+                        TaikaLifehackCrayonPalette.deep
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(Color.white.opacity(0.38), lineWidth: 0.8)
+            )
+    }
+}
+
 private struct FavEmptySpec {
     let systemImage: String
-    let title: String
-    let subtitle: String
-    var actionTitle: String? = nil
-    var action: (() -> Void)? = nil
+    var assembleGateKey: String? = nil
+    let lines: [String]
+    let primaryCTA: TaikaAssistantHubPrimaryCTA
 }
 
 private func canonicalId(_ c: FDCardDTO) -> String {

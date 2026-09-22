@@ -5,8 +5,9 @@ enum RevenueCatBootstrap {
 
     private(set) static var isConfigured = false
 
-    /// Вызов из `taikaApp.init()` — без ключа SDK не трогаем.
+    /// Вызов из `taikaApp.init()` — без ключа SDK не трогаем. В Previews — никогда.
     static func configureIfNeeded() {
+        guard !TaikaRuntime.isXcodePreview else { return }
         guard !isConfigured else { return }
         guard let raw = Bundle.main.object(forInfoDictionaryKey: "REVENUECAT_PUBLIC_API_KEY") as? String else { return }
         let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)

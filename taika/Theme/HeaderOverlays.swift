@@ -512,22 +512,48 @@ private func loadCourseCategoriesFromBundle() -> [String] {
 
 // MARK: - Speaker attempts overlay (лимит на сегодня — не фильтры режима)
 struct SpeakerAttemptsOverlayView: View {
+    var onDismiss: () -> Void
+    @State private var showSheet = true
+
+    var body: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .sheet(isPresented: $showSheet) {
+                SpeakerAttemptsLimitSheet(
+                    onOpenPro: {
+                        showSheet = false
+                        onDismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            OverlayPresenter.shared.presentPro(reason: .speakerBreakdown)
+                        }
+                    },
+                    onDismiss: {
+                        showSheet = false
+                        onDismiss()
+                    }
+                )
+                .environmentObject(ThemeManager.shared)
+            }
+            .onChange(of: showSheet) { _, isShown in
+                if !isShown { onDismiss() }
+            }
+    }
+}
+
+private struct SpeakerAttemptsLimitSheet: View {
     @ObservedObject private var trainingAttempts = SpeakerDailyAttemptsStore.shared
     @ObservedObject private var conversationAttempts = SpeakerConversationAttemptsStore.shared
     @ObservedObject private var speaker = SpeakerManager.shared
     @ObservedObject private var pro = ProManager.shared
-    var onDismiss: () -> Void
+    let onOpenPro: () -> Void
+    let onDismiss: () -> Void
 
     private var isConversation: Bool {
         speaker.speakerUIMode == .conversation
     }
 
     private var remaining: Int {
-        isConversation ? conversationAttempts.remainingToday : trainingAttempts.remainingToday
-    }
-
-    private var used: Int {
-        isConversation ? conversationAttempts.usedToday : trainingAttempts.usedToday
+        pro.isPro ? 1 : (isConversation ? conversationAttempts.remainingToday : trainingAttempts.remainingToday)
     }
 
     private var limitLabel: String {
@@ -538,64 +564,46 @@ struct SpeakerAttemptsOverlayView: View {
         isConversation ? "Скажи сам" : "Закрепление курсов"
     }
 
+    private var title: String {
+        if pro.isPro { return "Без лимита" }
+        if remaining <= 0 { return "Попытки на сегодня кончились" }
+        return "Осталось \(remaining) из \(limitLabel)"
+    }
+
+    private var subtitle: String {
+        if pro.isPro { return "С Taika Pro попытки не заканчиваются." }
+        return "\(modeTitle). Завтра обновятся."
+    }
+
     var body: some View {
-        ZStack {
-            OverlayEtalonBackground(onDismiss: onDismiss)
-            UnifiedOverlayChrome(title: "Попытки сегодня", onDismiss: onDismiss, role: .quota) {
-                VStack(alignment: .leading, spacing: 18) {
-                    Text(modeTitle)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(pro.isPro ? "∞" : "\(remaining)")
-                            .font(.system(size: 40, weight: .bold).monospacedDigit())
-                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                        Text(pro.isPro ? "без лимита" : "из \(limitLabel)")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                        Spacer(minLength: 0)
+        ProfileGlassBackdrop {
+            VStack(alignment: .leading, spacing: 16) {
+                ProfileDestinationIntro(
+                    eyebrow: "СПИКЕР",
+                    title: title,
+                    subtitle: subtitle
+                )
+                if !pro.isPro {
+                    ProfileGlassRow(
+                        title: "Открыть Taika Pro",
+                        subtitle: "Без лимита на попытки",
+                        systemImage: "crown.fill",
+                        trailing: "chevron.right"
+                    ) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        onOpenPro()
                     }
-
-                    Text(
-                        pro.isPro
-                        ? "С Taika+ попытки не заканчиваются — тренируйся сколько нужно."
-                        : "В режиме «\(modeTitle)» у free‑аккаунта \(limitLabel) попыток в день. Завтра лимит обновится."
-                    )
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.text.opacity(0.88))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                    if !pro.isPro {
-                        Text("Сегодня использовано: \(used)")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            onDismiss()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                OverlayPresenter.shared.presentPro(reason: .speakerBreakdown)
-                            }
-                        } label: {
-                            Text("Открыть Taika+")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundStyle(Color.black.opacity(0.9))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(ThemeManager.shared.currentAccentFill)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.top, 4)
-                    }
+                    .environmentObject(ThemeManager.shared)
                 }
-                .padding(CD.Spacing.screen)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .padding(.horizontal, PD.Spacing.screen)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+        .presentationDetents([.height(pro.isPro ? 220 : 292)])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(PD.ColorToken.background)
         .onAppear {
             trainingAttempts.refreshDayIfNeeded()
             conversationAttempts.refreshDayIfNeeded()
@@ -655,7 +663,7 @@ struct SpeakerCoursesOverlayView: View {
         var out = Set<String>()
         for cid in selected {
             let available = defaultLessons(for: cid)
-            let picked = selectedLessonIdsByCourse[cid] ?? available
+            let picked = effectiveLessons(for: cid, courseSelected: true)
             out.formUnion(picked.intersection(available))
         }
         return out
@@ -665,10 +673,27 @@ struct SpeakerCoursesOverlayView: View {
         var total = 0
         for cid in selected {
             let lessons = speaker.learnedTrainingLessonOptions(courseId: cid)
-            let picked = selectedLessonIdsByCourse[cid] ?? defaultLessons(for: cid)
+            let picked = effectiveLessons(for: cid, courseSelected: true)
             total += lessons.filter { picked.contains($0.id) }.reduce(0) { $0 + $1.count }
         }
         return total
+    }
+
+    private func effectiveLessons(for courseId: String, courseSelected: Bool) -> Set<String> {
+        guard courseSelected else { return [] }
+        return selectedLessonIdsByCourse[courseId] ?? defaultLessons(for: courseId)
+    }
+
+    private enum CourseCheckState { case none, partial, all }
+
+    private func courseCheckState(courseId: String, isSelected: Bool) -> CourseCheckState {
+        guard isSelected else { return .none }
+        let all = defaultLessons(for: courseId)
+        guard !all.isEmpty else { return .all }
+        let picked = effectiveLessons(for: courseId, courseSelected: true)
+        if picked.isEmpty { return .none }
+        if picked.isSuperset(of: all) { return .all }
+        return .partial
     }
 
     var body: some View {
@@ -750,7 +775,7 @@ struct SpeakerCoursesOverlayView: View {
                                 let lessons = selectedLessonIds
                                 speaker.startTraining(
                                     withCourseIds: selected,
-                                    lessonIds: lessons.isEmpty ? nil : lessons
+                                    lessonIds: lessons
                                 )
                                 SpeakerFilterState.shared.selectedFilterId = nil
                                 onDismiss()
@@ -779,7 +804,15 @@ struct SpeakerCoursesOverlayView: View {
         let isSelected = selected.contains(option.id)
         let isExpanded = expandedCourseId == option.id
         let lessons = speaker.learnedTrainingLessonOptions(courseId: option.id)
-        let picked = selectedLessonIdsByCourse[option.id] ?? defaultLessons(for: option.id)
+        let picked = effectiveLessons(for: option.id, courseSelected: isSelected)
+        let check = courseCheckState(courseId: option.id, isSelected: isSelected)
+        let checkIcon: String = {
+            switch check {
+            case .none: return "circle"
+            case .partial: return "minus.circle.fill"
+            case .all: return "checkmark.circle.fill"
+            }
+        }()
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
@@ -789,17 +822,16 @@ struct SpeakerCoursesOverlayView: View {
                     if updated.contains(option.id) {
                         updated.remove(option.id)
                         selectedLessonIdsByCourse[option.id] = []
-                        if expandedCourseId == option.id { expandedCourseId = nil }
                     } else {
                         updated.insert(option.id)
                         selectedLessonIdsByCourse[option.id] = defaultLessons(for: option.id)
                     }
                     selectedCourseIds = updated
                 } label: {
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: checkIcon)
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(
-                            isSelected
+                            check != .none
                             ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
                             : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.38))
                         )
@@ -813,12 +845,9 @@ struct SpeakerCoursesOverlayView: View {
                             expandedCourseId = nil
                         } else {
                             expandedCourseId = option.id
-                            if selectedLessonIdsByCourse[option.id] == nil {
+                            if isSelected, selectedLessonIdsByCourse[option.id] == nil {
                                 selectedLessonIdsByCourse[option.id] = defaultLessons(for: option.id)
                             }
-                            var updated = selected
-                            updated.insert(option.id)
-                            selectedCourseIds = updated
                         }
                     }
                 } label: {
@@ -853,7 +882,15 @@ struct SpeakerCoursesOverlayView: View {
                     }
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        var next = picked
+                        let courseWasSelected = selected.contains(option.id)
+                        var next: Set<String>
+                        if let existing = selectedLessonIdsByCourse[option.id] {
+                            next = existing
+                        } else if courseWasSelected {
+                            next = defaultLessons(for: option.id)
+                        } else {
+                            next = []
+                        }
                         if next.contains(lesson.id) {
                             next.remove(lesson.id)
                         } else {

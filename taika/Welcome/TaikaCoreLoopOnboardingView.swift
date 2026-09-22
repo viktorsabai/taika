@@ -4,19 +4,23 @@ import SwiftUI
 /// Attention choreography around one TaikaVoicePlanet: craft → reveal → speak → score.
 struct TaikaCoreLoopOnboardingView: View {
     let onFinished: (_ courseId: String) -> Void
+    let onOpenHome: () -> Void
     let onRequestPro: () -> Void
 
     init(
         onFinished: @escaping (_ courseId: String) -> Void,
+        onOpenHome: @escaping () -> Void = {},
         onRequestPro: @escaping () -> Void = {}
     ) {
         self.onFinished = onFinished
+        self.onOpenHome = onOpenHome
         self.onRequestPro = onRequestPro
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var theme = ThemeManager.shared
     @ObservedObject private var speaker = SpeakerManager.shared
+    @ObservedObject private var pro = ProManager.shared
 
     @State private var phase: Phase = .hook
     @State private var hasPlayedPhrase = false
@@ -29,19 +33,21 @@ struct TaikaCoreLoopOnboardingView: View {
     @State private var listenTask: Task<Void, Never>?
     @State private var craftTask: Task<Void, Never>?
     @State private var resultTask: Task<Void, Never>?
+    @State private var analyzeWatchdogTask: Task<Void, Never>?
     @State private var isPreparingRecording = false
     @State private var accessCoach: String? = nil
     @State private var accessCoachTitle: String? = nil
     @State private var permissionTask: Task<Void, Never>?
     @State private var phraseRevealed = false
     @State private var isCookingResult = false
+    @State private var isBurstingReveal = false
+    @State private var onboardingBurstProgress: CGFloat = 0
     @State private var showBreakdownSheet = false
-    /// Freeze score on feedback so tone API can't jump 100→82 behind the user.
-    @State private var lockedFeedbackScore: Int? = nil
     @State private var brandVisible = false
-    @State private var brandLogoPulse: CGFloat = 1
-    @State private var brandCursorOn = true
-    @Namespace private var heroNamespace
+    /// After reference audio plays, user can advance from listen without waiting for auto-jump.
+    @State private var listenReadyToSpeak = false
+    /// After a missed/empty take, ignore late ASR `.feedback` until the user starts recording again.
+    @State private var suppressFeedbackUntilNextRecord = false
 
     private let painPoints = ["Не понимаю тоны", "Боюсь говорить", "Забываю фразы", "Не знаю, что учить дальше"]
     private let levelOptions = ["Никогда не учил", "Знаю основы", "Уже говорю"]
@@ -76,6 +82,7 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var orbMode: TaikaVoicePlanetMode {
+        if isBurstingReveal { return .burst }
         if phase == .crafting { return .cooking }
         if phase == .listen { return .speaking }
         if phase == .feedback { return .result }
@@ -107,11 +114,9 @@ struct TaikaCoreLoopOnboardingView: View {
         OnboardingPracticePhrase.seed(level: selectedLevel ?? 0, politeness: selectedGender ?? "female")
     }
 
+    /// Итог тот же, что в спикере: hybrid с сервера, иначе min(текст, тон). Пока тона нет — это текст.
     private var overallScore: Int {
-        if let lockedFeedbackScore { return lockedFeedbackScore }
-        // Onboarding hero uses text confidence until tone breakdown arrives —
-        // never silently rewrite the big number when syllables load.
-        return max(0, speaker.heardConfidence)
+        max(0, speaker.displayScore)
     }
 
     private var practiceEyebrow: String {
@@ -137,12 +142,13 @@ struct TaikaCoreLoopOnboardingView: View {
         case .phrase:
             return "Сначала услышь — потом повтори"
         case .listen:
-            return "Слушай тоны внимательно"
+            return "Слушай тоны — можно включить ещё раз"
         case .speak:
             if let accessCoach { return accessCoach }
             if isPreparingRecording { return "Одну секунду — готовлю доступ…" }
             if speaker.phase == .recording { return "Говори спокойно — я ловлю тоны" }
             if isCookingResult || speaker.phase == .analyzing { return "Собираю разбор…" }
+            if !captureAccessGranted { return "Сначала микрофон и речь. Потом скажешь фразу." }
             return "Когда готов — нажми «Говорить»"
         case .feedback:
             return feedbackFocusLine
@@ -167,15 +173,18 @@ struct TaikaCoreLoopOnboardingView: View {
 
     var body: some View {
         ZStack {
-            Group {
-                if phase == .reinforce {
-                    PD.ColorToken.background
-                } else {
-                    Color.black
-                }
+            PD.ColorToken.background
+                .ignoresSafeArea()
+
+            if isPracticeStage || (phase == .hook && introFrame == .brand) {
+                TaikaTechnoSpaceBackdrop(
+                    intensity: isPracticeStage ? 0.44 : 0.34,
+                    isLive: speaker.phase == .recording,
+                    audioLevel: onboardingOrbAudioLevel,
+                    heroAnchor: UnitPoint(x: 0.5, y: phase == .hook ? 0.42 : 0.48)
+                )
+                .ignoresSafeArea()
             }
-            .ignoresSafeArea()
-            ambientGlow
 
             VStack(spacing: 0) {
                 Spacer(minLength: phase == .hook ? 10 : (phase == .reinforce ? 4 : 8))
@@ -190,17 +199,16 @@ struct TaikaCoreLoopOnboardingView: View {
             .safeAreaPadding(.bottom)
         }
         .sheet(isPresented: $showBreakdownSheet) {
-            OnboardingBreakdownSheet(
-                words: speaker.heardConfidence,
-                tone: speaker.toneAverageScore ?? speaker.displayScore,
-                syllables: speaker.syllableFeedback,
-                hint: speaker.taikaHints.first ?? "",
-                phraseRU: phraseRU,
-                phrasePhonetic: phrasePhonetic,
-                loading: speaker.breakdownRequestInFlight
+            SpeakerDSRoot(
+                liveBreakdownFrom: speaker,
+                isProUser: pro.isPro,
+                hasFullToneBreakdownAccess: true,
+                showBreakdownOverlay: $showBreakdownSheet
             )
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.large, .medium])
             .presentationDragIndicator(.visible)
+            .presentationCornerRadius(28)
+            .presentationBackground(Theme.Colors.backgroundPrimary)
         }
         .onAppear {
             speaker.setSpeakerUIMode(.conversation)
@@ -212,16 +220,14 @@ struct TaikaCoreLoopOnboardingView: View {
             craftTask?.cancel()
             resultTask?.cancel()
             permissionTask?.cancel()
+            analyzeWatchdogTask?.cancel()
             // Shared SpeakerManager must not keep the demo phrase / recording focus after first-entry.
             speaker.endEphemeralPracticeSession()
-        }
-        .onReceive(Timer.publish(every: 0.55, on: .main, in: .common).autoconnect()) { _ in
-            guard phase == .hook, introFrame == .brand else { return }
-            brandCursorOn.toggle()
         }
         .onChange(of: speaker.phase) { _, newPhase in
             if phase == .speak, newPhase == .recording {
                 isPreparingRecording = false
+                suppressFeedbackUntilNextRecord = false
                 clearAccessCoach()
                 scheduleRecordingAutoStop()
             }
@@ -230,41 +236,20 @@ struct TaikaCoreLoopOnboardingView: View {
             }
             guard phase == .speak else { return }
             if newPhase == .analyzing {
-                withAnimation(transition) { isCookingResult = true }
+                scheduleAnalyzeWatchdog()
+            }
+            if newPhase == .hint {
+                // Системные окна доступа не должны выглядеть как «не расслышал».
+                if isPreparingRecording { return }
+                let micMiss = speaker.taikaHints.first { $0.contains("микрофон") }
+                recoverSpeakAfterMiss(message: micMiss ?? "Не расслышал — нажми «Говорить» и скажи фразу ещё раз")
             }
             if case .feedback = newPhase {
                 recordingTask?.cancel()
+                analyzeWatchdogTask?.cancel()
+                if suppressFeedbackUntilNextRecord { return }
                 presentFeedbackAfterCook()
             }
-        }
-    }
-
-    private var ambientGlow: some View {
-        ZStack {
-            Circle()
-                .fill(theme.currentAccentFill.opacity(glowOpacity))
-                .frame(width: 300, height: 300)
-                .blur(radius: 100)
-                .offset(y: isPracticeStage ? 40 : 10)
-                .scaleEffect(orbMode == .speaking || orbMode == .listening ? 1.12 : 1)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 2.4).repeatForever(autoreverses: true), value: orbMode)
-            LinearGradient(
-                colors: [.clear, theme.currentAccentTintColor.opacity(0.05), .clear],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        }
-        .allowsHitTesting(false)
-    }
-
-    private var glowOpacity: Double {
-        switch orbMode {
-        case .speaking: return 0.28
-        case .listening: return 0.24
-        case .cooking: return 0.22
-        case .result: return 0.18
-        case .idle: return isPracticeStage ? 0.14 : 0.12
         }
     }
 
@@ -282,10 +267,7 @@ struct TaikaCoreLoopOnboardingView: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: phase == .reinforce ? 460 : 520)
-        .animation(transition, value: phase)
-        .animation(transition, value: introFrame)
-        .animation(transition, value: phraseRevealed)
-        .animation(transition, value: isCookingResult)
+        .id(phase)
     }
 
     private var hookHero: some View {
@@ -302,32 +284,17 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var brandReveal: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 6) {
-                Text("tai")
-                    .font(.custom("Onmark Trial", size: 52))
-                    .foregroundStyle(.white)
-                Text("kAAA")
-                    .font(.custom("Onmark Trial", size: 52))
-                    .foregroundStyle(AnyShapeStyle(theme.currentAccentFill))
+        TaikaBootAssembleView(
+            caption: "твоя персональная кун кру",
+            finishesAutomatically: false,
+            onWordmarkAppeared: {
+                brandVisible = true
             }
-            .scaleEffect(brandLogoPulse)
-
-            HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text("твоя персональная кун кру")
-                Text("_")
-                    .foregroundStyle(theme.currentAccentTintColor)
-                    .opacity(brandCursorOn ? 1 : 0.18)
-            }
-            .font(.system(size: 15, weight: .medium))
-            .foregroundStyle(.white.opacity(0.72))
-        }
-        .multilineTextAlignment(.center)
-        .opacity(brandVisible ? 1 : 0)
-        .scaleEffect(brandVisible ? 1 : 0.96)
-        .blur(radius: brandVisible ? 0 : 8)
+        )
         .frame(maxWidth: .infinity)
-        .onAppear { runBrandReveal() }
+        .onAppear {
+            brandVisible = reduceMotion
+        }
     }
 
     private var levelReveal: some View {
@@ -491,6 +458,7 @@ struct TaikaCoreLoopOnboardingView: View {
         practiceLoopHero
     }
 
+    @ViewBuilder
     private var practiceLoopHero: some View {
         VStack(spacing: 0) {
             Text(practiceEyebrow)
@@ -510,36 +478,39 @@ struct TaikaCoreLoopOnboardingView: View {
 
             Spacer(minLength: 0)
 
-            ZStack {
-                TaikaVoicePlanet(
-                    mode: orbMode,
-                    scale: orbScale * 0.87,
-                    lite: orbMode == .idle,
-                    audioLevel: onboardingOrbAudioLevel
-                )
-                    .matchedGeometryEffect(id: "core-orb", in: heroNamespace)
-                    .frame(width: 260, height: 260)
+            TaikaVoicePlanet(
+                mode: orbMode,
+                scale: orbScale * (phase == .feedback ? 0.72 : 0.87),
+                centerText: nil,
+                audioLevel: onboardingOrbAudioLevel,
+                burstProgress: isBurstingReveal ? onboardingBurstProgress : nil
+            )
+            .frame(width: phase == .feedback ? 168 : 260, height: phase == .feedback ? 168 : 260)
 
-                practiceOrbCenterMark
-                    .transition(.opacity.combined(with: .scale(scale: 0.88)))
-            }
-            .frame(height: 270)
-
-            Spacer(minLength: 12)
+            Spacer(minLength: 8)
 
             if phase == .feedback {
                 VStack(spacing: 8) {
                     Text(feedbackVerdictTitle)
                         .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(PD.ColorToken.text)
                         .multilineTextAlignment(.center)
+                    SpeakerTripleScoreHeader(
+                        textScore: max(0, speaker.heardConfidence),
+                        toneScore: speaker.toneAverageScore,
+                        overallScore: max(0, speaker.displayScore),
+                        toneLoading: speaker.breakdownRequestInFlight && speaker.toneAverageScore == nil,
+                        toneLocked: false,
+                        usesHybridOverall: speaker.breakdownHybridScore != nil,
+                        layout: .feedback,
+                        centered: true
+                    )
                     Text(feedbackFocusLine)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.68))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
                         .multilineTextAlignment(.center)
                 }
-                .frame(maxWidth: 300)
-                .frame(minHeight: 56, alignment: .top)
+                .frame(maxWidth: 320)
                 .padding(.bottom, 4)
             } else {
                 Text(practiceStatus)
@@ -557,8 +528,9 @@ struct TaikaCoreLoopOnboardingView: View {
 
     private var orbScale: CGFloat {
         switch orbMode {
-        case .idle: return 0.88
+        case .idle, .assemble: return 0.88
         case .cooking: return 0.94
+        case .burst: return 1.06
         case .speaking: return 1.02
         case .listening: return speaker.phase == .recording ? 1.04 : 0.98
         case .result: return 1.0
@@ -570,7 +542,7 @@ struct TaikaCoreLoopOnboardingView: View {
         VStack(spacing: 10) {
             Text(phraseRU)
                 .font(.system(size: 28, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(PD.ColorToken.text)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.78)
@@ -582,45 +554,11 @@ struct TaikaCoreLoopOnboardingView: View {
             if phase != .feedback {
                 Text(phraseThai)
                     .font(.system(size: 22, weight: .regular))
-                    .foregroundStyle(.white.opacity(0.70))
+                    .foregroundStyle(PD.ColorToken.text.opacity(0.70))
                     .lineLimit(1)
             }
         }
         .frame(maxWidth: 320)
-    }
-
-    @ViewBuilder
-    private var practiceOrbCenterMark: some View {
-        switch orbMode {
-        case .result:
-            Text("\(overallScore)%")
-                .font(.system(size: 40, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .monospacedDigit()
-                .shadow(color: theme.currentAccentTintColor.opacity(0.55), radius: 16)
-        case .speaking:
-            Image(systemName: "speaker.wave.2.fill")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.92))
-                .symbolEffect(.variableColor.iterative, options: .repeating, isActive: !reduceMotion)
-        case .listening:
-            if speaker.phase == .recording {
-                Image(systemName: "waveform")
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.92))
-                    .symbolEffect(.variableColor.iterative, options: .repeating, isActive: !reduceMotion)
-            } else {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
-            }
-        case .cooking:
-            ProgressView()
-                .tint(.white)
-                .scaleEffect(1.2)
-        case .idle:
-            EmptyView()
-        }
     }
 
     private var reinforceHero: some View {
@@ -715,13 +653,26 @@ struct TaikaCoreLoopOnboardingView: View {
                 }
                 .opacity(phraseRevealed ? 1 : 0)
             case .listen:
-                primaryCTA("Taika говорит…") { }
-                    .opacity(0.7)
+                primaryCTA(listenReadyToSpeak ? "Дальше" : "Taika говорит…") {
+                    guard listenReadyToSpeak else { return }
+                    advanceToSpeakFromListen()
+                }
+                .opacity(listenReadyToSpeak ? 1 : 0.7)
+                secondaryCTA("Послушать ещё раз") {
+                    replayReferenceAudio()
+                }
             case .speak:
                 primaryCTA(speakCTATitle) {
                     guard !isPreparingRecording, !isCookingResult else { return }
                     if speaker.phase == .analyzing { return }
-                    toggleRecording()
+                    handleSpeakCTA()
+                }
+                .opacity(isCookingResult || speaker.phase == .analyzing ? 0.55 : 1)
+                .disabled(isCookingResult || speaker.phase == .analyzing)
+                if canReplayReference {
+                    secondaryCTA("Послушать ещё раз") {
+                        replayReferenceAudio()
+                    }
                 }
             case .feedback:
                 primaryCTA("Что улучшить") { openBreakdownSheet() }
@@ -731,31 +682,53 @@ struct TaikaCoreLoopOnboardingView: View {
                     .buttonStyle(.plain)
             case .reinforce:
                 primaryCTA(TaikaProConfig.introTrialCTAFree) { onRequestPro() }
-                Button("Открыть первый урок") { onFinished("course_b_1") }
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
+                Button("Открыть Главную") { onOpenHome() }
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
                     .buttonStyle(.plain)
+                Button {
+                    OverlayPresenter.shared.presentGiftRedeem()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "gift.fill")
+                        Text("У меня есть подарок")
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                }
+                .buttonStyle(.plain)
                 Text(TaikaProConfig.introTrialLegalLine)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 18)
             }
+            if phase != .reinforce {
+                skipLink
+            }
         }
-        .animation(transition, value: phase)
+        .id(phase)
+    }
+
+    private var captureAccessGranted: Bool {
+        let recorder = SpeakerRecorder.shared
+        return recorder.hasMicrophoneAccess && recorder.hasSpeechAccess
     }
 
     private var speakCTATitle: String {
-        if isPreparingRecording { return "Подготовка…" }
+        if isPreparingRecording { return "Секунду…" }
         if speaker.phase == .recording { return "Остановить" }
-        if isCookingResult || speaker.phase == .analyzing { return "Подсказываю…" }
+        if isCookingResult || speaker.phase == .analyzing { return "Разбираю фразу…" }
+        if !captureAccessGranted { return "Разрешить доступ" }
         return "Говорить"
     }
 
     private func primaryCTA(_ title: String, action: @escaping () -> Void) -> some View {
-        Button {
-            withAnimation(transition) { action() }
-        } label: {
+        Button(action: action) {
             Text(title)
                 .font(.system(size: 17, weight: .bold, design: .rounded))
                 .foregroundStyle(.black)
@@ -779,31 +752,18 @@ struct TaikaCoreLoopOnboardingView: View {
         selectedGender = nil
         selectedPains.removeAll()
         brandVisible = false
-        brandLogoPulse = 1
-        brandCursorOn = true
         phraseRevealed = false
         isCookingResult = false
+        isBurstingReveal = false
+        onboardingBurstProgress = 0
         showBreakdownSheet = false
-    }
-
-    private func runBrandReveal() {
-        brandVisible = false
-        brandLogoPulse = 1
-        if reduceMotion {
-            brandVisible = true
-            return
-        }
-        withAnimation(.spring(response: 0.62, dampingFraction: 0.86).delay(0.05)) {
-            brandVisible = true
-        }
-        withAnimation(.easeInOut(duration: 1.9).repeatForever(autoreverses: true)) {
-            brandLogoPulse = 1.025
-        }
+        listenReadyToSpeak = false
+        suppressFeedbackUntilNextRecord = false
+        analyzeWatchdogTask?.cancel()
     }
 
     private func advance(_ next: Phase) {
-        if next != .feedback { lockedFeedbackScore = nil }
-        withAnimation(transition) { phase = next }
+        phase = next
     }
 
     private func ensurePracticePhrase() {
@@ -819,11 +779,8 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private func openBreakdownSheet() {
+        // Разбор уже запрошен до показа цифры. Повторный запрос переписывал итог с текста на тон.
         showBreakdownSheet = true
-        speaker.requestToneBreakdownFromAPI(
-            expectedThaiForAssess: phraseThai,
-            expectedPhoneticForTones: phrasePhonetic
-        ) { }
     }
 
     /// After questionnaire: orb cooks, then phrase floats in.
@@ -847,17 +804,87 @@ struct TaikaCoreLoopOnboardingView: View {
 
     private func beginListening() {
         listenTask?.cancel()
+        listenReadyToSpeak = false
         ensurePracticePhrase()
         playReference()
         withAnimation(transition) { phase = .listen }
+        scheduleListenReady()
+    }
 
+    private var canReplayReference: Bool {
+        guard phase == .speak else { return false }
+        if isPreparingRecording || isCookingResult { return false }
+        if speaker.phase == .recording || speaker.phase == .analyzing { return false }
+        return true
+    }
+
+    private func secondaryCTA(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.72))
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var skipLink: some View {
+        Button("Пропустить") { skipToOffer() }
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.72))
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Пропустить онбординг")
+            .accessibilityHint("Перейти к семи дням бесплатно")
+    }
+
+    private func skipToOffer() {
+        recordingTask?.cancel()
+        listenTask?.cancel()
+        craftTask?.cancel()
+        resultTask?.cancel()
+        permissionTask?.cancel()
+        analyzeWatchdogTask?.cancel()
+        showBreakdownSheet = false
+        speaker.endEphemeralPracticeSession()
+        if selectedGender == nil {
+            selectedGender = "female"
+        }
+        if let g = selectedGender {
+            speaker.setSmartSpeakerPoliteness(g)
+        }
+        withAnimation(transition) { phase = .reinforce }
+    }
+
+    private func scheduleListenReady() {
+        listenTask?.cancel()
         listenTask = Task { @MainActor in
-            // Give the orb time to "speak" the phrase — don't rush to mic.
-            let speakNs: UInt64 = reduceMotion ? 900_000_000 : 2_800_000_000
+            let speakNs: UInt64 = reduceMotion ? 900_000_000 : 2_400_000_000
             try? await Task.sleep(nanoseconds: speakNs)
             guard !Task.isCancelled, phase == .listen else { return }
+            withAnimation(transition) { listenReadyToSpeak = true }
+            // Soft auto-advance; replay stays available before that.
+            try? await Task.sleep(nanoseconds: reduceMotion ? 400_000_000 : 1_200_000_000)
+            guard !Task.isCancelled, phase == .listen else { return }
+            advanceToSpeakFromListen()
+        }
+    }
 
-            withAnimation(transition) { phase = .speak }
+    private func advanceToSpeakFromListen() {
+        listenTask?.cancel()
+        listenReadyToSpeak = true
+        withAnimation(transition) { phase = .speak }
+    }
+
+    private func replayReferenceAudio() {
+        guard phase == .listen || phase == .speak else { return }
+        guard speaker.phase != .recording, speaker.phase != .analyzing else { return }
+        playReference()
+        if phase == .listen {
+            listenReadyToSpeak = false
+            scheduleListenReady()
         }
     }
 
@@ -870,25 +897,53 @@ struct TaikaCoreLoopOnboardingView: View {
             }()
     }
 
-    private func presentFeedbackAfterCook() {
+    /// Empty / failed ASR must not leave onboarding stuck on «Подсказываю…».
+    private func recoverSpeakAfterMiss(
+        message: String = "Не расслышал — нажми «Говорить» и скажи фразу ещё раз"
+    ) {
+        recordingTask?.cancel()
         resultTask?.cancel()
+        analyzeWatchdogTask?.cancel()
+        permissionTask?.cancel()
+        isCookingResult = false
+        isBurstingReveal = false
         isPreparingRecording = false
-        withAnimation(transition) { isCookingResult = true }
+        onboardingBurstProgress = 0
+        suppressFeedbackUntilNextRecord = true
+        accessCoachTitle = "НЕ РАССЛЫШАЛ"
+        accessCoach = message
+        phase = .speak
+    }
 
-        resultTask = Task { @MainActor in
-            let cookNs: UInt64 = reduceMotion ? 200_000_000 : 1_100_000_000
-            try? await Task.sleep(nanoseconds: cookNs)
-            guard !Task.isCancelled else { return }
-            lockedFeedbackScore = max(0, speaker.heardConfidence)
-            withAnimation(transition) {
-                isCookingResult = false
-                phraseRevealed = true
-                phase = .feedback
-            }
+    private func scheduleAnalyzeWatchdog() {
+        analyzeWatchdogTask?.cancel()
+        analyzeWatchdogTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 40_000_000_000)
+            guard !Task.isCancelled, phase == .speak else { return }
+            if case .feedback = speaker.phase { return }
+            let stuckAnalyzing = speaker.phase == .analyzing || isCookingResult
+            guard stuckAnalyzing else { return }
+            recoverSpeakAfterMiss(message: "Разбор затянулся — давай ещё раз. Нажми «Говорить».")
         }
     }
 
-    private func toggleRecording() {
+    private func presentFeedbackAfterCook() {
+        resultTask?.cancel()
+        analyzeWatchdogTask?.cancel()
+        isPreparingRecording = false
+        isBurstingReveal = false
+        isCookingResult = false
+        guard !suppressFeedbackUntilNextRecord, phase == .speak else { return }
+        speaker.refreshUserPhoneticFromASRIfNeeded()
+        speaker.requestToneBreakdownFromAPI(
+            expectedThaiForAssess: phraseThai,
+            expectedPhoneticForTones: phrasePhonetic
+        ) { }
+        phraseRevealed = true
+        phase = .feedback
+    }
+
+    private func handleSpeakCTA() {
         if speaker.phase == .recording {
             recordingTask?.cancel()
             permissionTask?.cancel()
@@ -897,7 +952,15 @@ struct TaikaCoreLoopOnboardingView: View {
             speaker.stopConversationPronunciationCheck()
             return
         }
+        if !captureAccessGranted {
+            requestCaptureAccess()
+            return
+        }
+        beginSpeakRecording()
+    }
 
+    /// Системные окна сначала. Запись не стартует, пока человек сам не нажмёт «Говорить».
+    private func requestCaptureAccess() {
         permissionTask?.cancel()
         isPreparingRecording = true
         ensurePracticePhrase()
@@ -905,25 +968,31 @@ struct TaikaCoreLoopOnboardingView: View {
             let ready = await ensureCaptureAccessWithCoach()
             guard !Task.isCancelled, phase == .speak else {
                 isPreparingRecording = false
-                clearAccessCoach()
                 return
             }
-            guard ready else {
-                isPreparingRecording = false
-                return
-            }
-            clearAccessCoach()
-            let started = speaker.startConversationPronunciationCheck()
-            if !started || (speaker.phase != .recording && !SpeakerRecorder.shared.hasMicrophoneAccess) {
-                // Permission path may still be finishing inside manager — keep preparing until .recording.
-                if speaker.phase != .recording {
-                    isPreparingRecording = false
-                }
+            isPreparingRecording = false
+            guard ready else { return }
+            SpeakerRecorder.shared.prepareRecordSession()
+            withAnimation(transition) {
+                accessCoachTitle = "ГОТОВО"
+                accessCoach = "Теперь нажми «Говорить» и скажи фразу."
             }
         }
     }
 
-    /// Soft Kun Kru coach: mic → speech, then record. Never capture audio before both are ready.
+    private func beginSpeakRecording() {
+        permissionTask?.cancel()
+        isPreparingRecording = false
+        clearAccessCoach()
+        ensurePracticePhrase()
+        SpeakerRecorder.shared.prepareRecordSession()
+        let started = speaker.startConversationPronunciationCheck()
+        if !started, speaker.phase != .recording {
+            isPreparingRecording = false
+        }
+    }
+
+    /// Soft Kun Kru coach: mic → speech. Does not record.
     @MainActor
     private func ensureCaptureAccessWithCoach() async -> Bool {
         let recorder = SpeakerRecorder.shared
@@ -958,11 +1027,6 @@ struct TaikaCoreLoopOnboardingView: View {
             }
         }
 
-        withAnimation(transition) {
-            accessCoachTitle = "ГОТОВО"
-            accessCoach = "Отлично — теперь говори."
-        }
-        try? await Task.sleep(nanoseconds: reduceMotion ? 120_000_000 : 280_000_000)
         return true
     }
 
@@ -974,7 +1038,7 @@ struct TaikaCoreLoopOnboardingView: View {
     private func scheduleRecordingAutoStop() {
         recordingTask?.cancel()
         recordingTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 4_500_000_000)
+            try? await Task.sleep(nanoseconds: 8_000_000_000)
             guard !Task.isCancelled, phase == .speak, speaker.phase == .recording else { return }
             speaker.stopConversationPronunciationCheck()
         }
@@ -983,26 +1047,12 @@ struct TaikaCoreLoopOnboardingView: View {
     private func repeatWithHint() {
         resultTask?.cancel()
         isCookingResult = false
+        isBurstingReveal = false
+        onboardingBurstProgress = 0
         ensurePracticePhrase()
         withAnimation(transition) { phase = .speak }
-        permissionTask?.cancel()
-        isPreparingRecording = true
-        permissionTask = Task { @MainActor in
-            let ready = await ensureCaptureAccessWithCoach()
-            guard !Task.isCancelled, phase == .speak else {
-                isPreparingRecording = false
-                clearAccessCoach()
-                return
-            }
-            guard ready else {
-                isPreparingRecording = false
-                return
-            }
-            clearAccessCoach()
-            let started = speaker.startConversationPronunciationCheck()
-            if !started, speaker.phase != .recording {
-                isPreparingRecording = false
-            }
+        if !captureAccessGranted {
+            requestCaptureAccess()
         }
     }
 }
@@ -1020,309 +1070,6 @@ private enum OnboardingPracticePhrase {
             return ("ขอบคุณ\(pThai)", "коп-ку́н \(pPh)", "Спасибо")
         default:
             return ("ขอโทษ\(pThai)", "хо̂-то̂т \(pPh)", "Извините")
-        }
-    }
-}
-
-private struct OnboardingToneSparklineShape: Shape {
-    let values: [Double]
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        guard values.count >= 2 else { return path }
-        let minV = values.min() ?? 0
-        let maxV = values.max() ?? 0
-        let scale = max(maxV - minV, 1)
-        let r = rect.insetBy(dx: 2, dy: 1)
-        for (i, y) in values.enumerated() {
-            let x = r.minX + CGFloat(i) / CGFloat(max(1, values.count - 1)) * r.width
-            let yNorm = 1 - CGFloat((y - minV) / scale)
-            let point = CGPoint(x: x, y: yNorm * r.height + r.minY)
-            if i == 0 { path.move(to: point) }
-            else { path.addLine(to: point) }
-        }
-        return path
-    }
-}
-
-private struct OnboardingToneSparkline: View {
-    let values: [Double]
-    var muted: Bool = false
-    var lineWidth: CGFloat = 2.4
-    @ObservedObject private var theme = ThemeManager.shared
-    @State private var progress: CGFloat = 0
-
-    var body: some View {
-        OnboardingToneSparklineShape(values: values)
-            .trim(from: 0, to: progress)
-            .stroke(
-                muted
-                    ? AnyShapeStyle(Color.white.opacity(0.35))
-                    : AnyShapeStyle(theme.currentAccentFill),
-                style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
-            )
-            .onAppear {
-                progress = 0
-                withAnimation(.easeInOut(duration: muted ? 0.75 : 1.05)) {
-                    progress = 1
-                }
-            }
-    }
-}
-
-private struct OnboardingBreakdownSheet: View {
-    let words: Int
-    let tone: Int
-    let syllables: [SpeakerManager.SyllableFeedback]
-    let hint: String
-    let phraseRU: String
-    let phrasePhonetic: String
-    let loading: Bool
-
-    @ObservedObject private var theme = ThemeManager.shared
-
-    private var phoneticChunks: [String] {
-        Self.chunks(from: phrasePhonetic)
-    }
-
-    private var focusTitle: String {
-        if tone + 12 < words { return "Смотри тоны" }
-        if words + 12 < tone { return "Смотри слова" }
-        return "Смотри слоги"
-    }
-
-    private var focusBody: String {
-        if tone + 12 < words {
-            return "Слова уже читаются. Главный рычаг сейчас — тоны на каждом слоге."
-        }
-        if words + 12 < tone {
-            return "Тоны живые. Сделай слоги чуть чётче — и фраза соберётся."
-        }
-        return "Посмотри график и слоги: где линия совпала — держи, где нет — повтори."
-    }
-
-    private var referenceContour: [Double] {
-        phoneticChunks.flatMap { Self.referenceSegment(for: Self.toneFromChunk($0)) }
-    }
-
-    private var userContour: [Double] {
-        syllables.flatMap { $0.f0Contour ?? [] }
-    }
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(focusTitle)
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundStyle(PD.ColorToken.text)
-                        Text(focusBody)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(phraseRU)
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .foregroundStyle(PD.ColorToken.text)
-                        Text(phrasePhonetic)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(theme.currentAccentFill)
-                    }
-
-                    if referenceContour.count >= 2 || userContour.count >= 2 {
-                        toneGraphBlock
-                    }
-
-                    if loading {
-                        HStack(spacing: 10) {
-                            ProgressView()
-                            Text("Смотрю слоги…")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(PD.ColorToken.textSecondary)
-                        }
-                        .padding(.top, 4)
-                    } else if syllables.isEmpty {
-                        Text("Пока без послогового разбора — опирайся на общий результат и попробуй ещё в уроке.")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                    } else {
-                        Text("По слогам")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-
-                        VStack(spacing: 10) {
-                            ForEach(Array(syllables.enumerated()), id: \.element.id) { index, item in
-                                syllableRow(item, label: labelForSyllable(at: index, fallback: item.syllable))
-                            }
-                        }
-                    }
-
-                    if !hint.isEmpty, !hint.lowercased().hasPrefix("оценка") {
-                        Text(hint)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                    }
-                }
-                .padding(22)
-            }
-            .background(PD.ColorToken.background.ignoresSafeArea())
-            .navigationTitle("Разбор")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-
-    private var toneGraphBlock: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("График тона")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-
-            if referenceContour.count >= 2 {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Эталон")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                    OnboardingToneSparkline(values: referenceContour, muted: true)
-                        .frame(height: 30)
-                }
-            }
-
-            if userContour.count >= 2 {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Ты сказал")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                    OnboardingToneSparkline(values: userContour)
-                        .frame(height: 30)
-                }
-            }
-
-            if !phoneticChunks.isEmpty {
-                HStack(spacing: 0) {
-                    ForEach(Array(phoneticChunks.enumerated()), id: \.offset) { _, chunk in
-                        Text(Self.stripToneMarks(chunk))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .padding(.top, 4)
-            }
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(PD.ColorToken.chip)
-        )
-    }
-
-    private func syllableRow(_ item: SpeakerManager.SyllableFeedback, label: String) -> some View {
-        let status = syllableStatus(item.score)
-        return HStack(alignment: .center, spacing: 14) {
-            Circle()
-                .fill(status.color.opacity(0.9))
-                .frame(width: 10, height: 10)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(label)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(PD.ColorToken.text)
-                Text(status.label)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-                if let tip = toneTip(expected: item.toneExpected, actual: item.toneActual) {
-                    Text(tip)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(theme.currentAccentFill)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(PD.ColorToken.chip)
-        )
-    }
-
-    private func labelForSyllable(at index: Int, fallback: String) -> String {
-        if index < phoneticChunks.count {
-            return Self.stripToneMarks(phoneticChunks[index])
-        }
-        // Never show Thai script in onboarding breakdown — phonetic only.
-        if fallback.unicodeScalars.contains(where: { $0.value >= 0x0E00 && $0.value <= 0x0E7F }) {
-            return "слог \(index + 1)"
-        }
-        return Self.stripToneMarks(fallback)
-    }
-
-    private func syllableStatus(_ score: Int) -> (label: String, color: Color) {
-        if score >= 80 { return ("Держи так", Color.green.opacity(0.85)) }
-        if score >= 55 { return ("Почти — ещё раз", theme.currentAccentTintColor) }
-        return ("Вот сюда внимание", Color.orange.opacity(0.9))
-    }
-
-    private func toneTip(expected: String?, actual: String?) -> String? {
-        let exp = toneRU(expected)
-        let act = toneRU(actual)
-        guard !exp.isEmpty, !act.isEmpty else { return nil }
-        if exp == act { return "Тон \(exp) — верно" }
-        return "Нужен \(exp), сейчас \(act)"
-    }
-
-    private func toneRU(_ raw: String?) -> String {
-        switch (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-        case "mid", "middle", "m": return "средний"
-        case "low", "l": return "низкий"
-        case "falling", "fall", "f": return "падающий"
-        case "high", "h": return "высокий"
-        case "rising", "rise", "r": return "восходящий"
-        case "": return ""
-        default: return (raw ?? "").lowercased()
-        }
-    }
-
-    private static func chunks(from phonetic: String) -> [String] {
-        phonetic
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .split(separator: " ")
-            .map(String.init)
-            .flatMap { word in
-                word.split(omittingEmptySubsequences: true) { "-·".contains($0) }
-                    .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-                    .filter { !$0.isEmpty }
-            }
-    }
-
-    private static func stripToneMarks(_ label: String) -> String {
-        let arrows = CharacterSet(charactersIn: "↘↗→−↓↑↔—")
-        return label.unicodeScalars.filter { !arrows.contains($0) }.map(String.init).joined()
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private static func toneFromChunk(_ chunk: String) -> String {
-        if chunk.contains("↘") { return "Falling" }
-        if chunk.contains("↗") { return "Rising" }
-        if chunk.contains("→") { return "Mid" }
-        if chunk.contains("↓") { return "Low" }
-        if chunk.contains("↑") { return "High" }
-        return "Mid"
-    }
-
-    private static func referenceSegment(for tone: String) -> [Double] {
-        let n = 8
-        switch tone {
-        case "Low": return (0..<n).map { _ in -2.0 }
-        case "High": return (0..<n).map { _ in 2.0 }
-        case "Falling": return (0..<n).map { 2.0 - 4.0 * Double($0) / Double(n - 1) }
-        case "Rising": return (0..<n).map { -2.0 + 4.0 * Double($0) / Double(n - 1) }
-        default: return (0..<n).map { _ in 0.0 }
         }
     }
 }

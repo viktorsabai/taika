@@ -17,6 +17,9 @@ final class StepAudio: NSObject, ObservableObject {
     private var finishCallback: (() -> Void)?
     private var currentUtteranceLength: Int = 0
     private var pendingStepItemId: UUID?
+    private var thaiVoice: AVSpeechSynthesisVoice?
+    private var didWarmEngine = false
+    private var isWarmupUtterance = false
 
     // default voice params
     private let defaultRate: Float = 0.48  // 0.0...1.0 (system maps to AVSpeechUtteranceDefaultSpeechRate scale)
@@ -48,6 +51,7 @@ final class StepAudio: NSObject, ObservableObject {
             }
             return
         }
+        isWarmupUtterance = false
         prepareSessionIfNeeded()
 
         bindStepSpeechItem(stepItemId)
@@ -92,6 +96,20 @@ final class StepAudio: NSObject, ObservableObject {
         }
     }
 
+    /// Cold-start Thai TTS on splash, so the first lesson card is not the first `speak`.
+    func warmEngineIfNeeded() {
+        guard !didWarmEngine else { return }
+        didWarmEngine = true
+        prepareSessionIfNeeded()
+        _ = cachedThaiVoice()
+        isWarmupUtterance = true
+        let utt = AVSpeechUtterance(string: "า")
+        utt.voice = cachedThaiVoice()
+        utt.rate = AVSpeechUtteranceMaximumSpeechRate
+        utt.volume = 0
+        synth.speak(utt)
+    }
+
     func stop() {
         finishCallback = nil
         synth.stopSpeaking(at: .immediate)
@@ -102,15 +120,20 @@ final class StepAudio: NSObject, ObservableObject {
     // MARK: - Internals
 
     private func prepareSessionIfNeeded() {
-        guard !sessionConfigured else { return }
         let session = AVAudioSession.sharedInstance()
         do {
-            // spokenAudio keeps system routing/ducking behavior sane for TTS
-            try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-            try session.setActive(true, options: [])
-            sessionConfigured = true
-            sessionActive = true
-            observeInterruptions()
+            let needsPlaybackRoute = session.category != .playback || session.mode != .spokenAudio
+            if needsPlaybackRoute {
+                try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            }
+            if needsPlaybackRoute || !sessionActive {
+                try session.setActive(true, options: [])
+                sessionActive = true
+            }
+            if !sessionConfigured {
+                sessionConfigured = true
+                observeInterruptions()
+            }
         } catch {
             print("[StepAudio] session error: \(error)")
         }
@@ -127,15 +150,19 @@ final class StepAudio: NSObject, ObservableObject {
         }
     }
 
+    private func cachedThaiVoice() -> AVSpeechSynthesisVoice? {
+        if let thaiVoice { return thaiVoice }
+        let voice = AVSpeechSynthesisVoice(language: "th-TH")
+        thaiVoice = voice
+        return voice
+    }
+
     private func bestVoice(for lang: String) -> AVSpeechSynthesisVoice? {
-        // prefer an exact match; otherwise any voice with the same base language
-        if let exact = AVSpeechSynthesisVoice(language: lang) { return exact }
-        let base = lang.split(separator: "-").first.map(String.init)
-        let fallback = AVSpeechSynthesisVoice.speechVoices().first { v in
-            guard let base = base else { return false }
-            return v.language.hasPrefix(base)
+        if lang.hasPrefix("th") {
+            return cachedThaiVoice()
         }
-        return fallback ?? AVSpeechSynthesisVoice(language: AVSpeechSynthesisVoice.currentLanguageCode())
+        if let exact = AVSpeechSynthesisVoice(language: lang) { return exact }
+        return AVSpeechSynthesisVoice(language: AVSpeechSynthesisVoice.currentLanguageCode())
     }
 
     private func mappedRate(_ normalized: Float) -> Float {
@@ -167,6 +194,7 @@ final class StepAudio: NSObject, ObservableObject {
 
 extension StepAudio: AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+        guard !isWarmupUtterance else { return }
         DispatchQueue.main.async {
             self.activeStepSpeechItemId = self.pendingStepItemId
         }
@@ -182,6 +210,10 @@ extension StepAudio: AVSpeechSynthesizerDelegate {
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        if isWarmupUtterance {
+            isWarmupUtterance = false
+            return
+        }
         if let cb = progressCallback {
             DispatchQueue.main.async { cb(1.0) }
         }
@@ -194,10 +226,13 @@ extension StepAudio: AVSpeechSynthesizerDelegate {
         if let finish {
             DispatchQueue.main.async { finish() }
         }
-        deactivateSessionIfNeeded()
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        if isWarmupUtterance {
+            isWarmupUtterance = false
+            return
+        }
         if let cb = progressCallback {
             DispatchQueue.main.async { cb(1.0) }
         }
@@ -206,6 +241,5 @@ extension StepAudio: AVSpeechSynthesizerDelegate {
         finishCallback = nil
         print("[StepAudio] didCancel")
         clearActiveStepSpeechItem()
-        deactivateSessionIfNeeded()
     }
 }

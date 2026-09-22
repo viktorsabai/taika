@@ -946,7 +946,7 @@ extension MainManager {
             let before = SDStepItem(
                 kind: .word,
                 titleRU: "ещё 5 карточек",
-                subtitleTH: "расширь разминку с Taika+",
+                subtitleTH: "расширь разминку с Taika Pro",
                 phonetic: "",
                 isPro: true
             )

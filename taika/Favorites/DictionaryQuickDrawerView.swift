@@ -254,7 +254,12 @@ struct DictionaryQuickDrawerView: View {
             .opacity(isSelectionMode && selectedIds.isEmpty ? 0.45 : 1)
 
             Button {
-                withAnimation { gamePickerExpanded = true }
+                DictionarySessionSelection.shared.activate(effectiveSelection)
+                dismissAnimated()
+                GameParkHubState.shared.preselect(DictionaryGameSource.courseId)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
+                    nav.requestTab(4)
+                }
             } label: {
                 footerActionLabel(icon: "gamecontroller.fill", title: reinforceButtonTitle)
             }
@@ -320,26 +325,49 @@ struct DictionaryQuickDrawerView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 14) {
-            Spacer(minLength: 24)
-            Image(systemName: "bookmark")
-                .font(.system(size: 32, weight: .medium))
-                .foregroundStyle(accent)
-            Text("Твои фразы появятся здесь")
-                .font(.system(size: 17, weight: .bold))
-                .foregroundStyle(CD.ColorToken.text)
-            Text("Скажи фразу в Speaker и сохрани её в словарь.")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(CD.ColorToken.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-            Button("Открыть Speaker", action: onOpenSpeaker)
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(accent)
-                .buttonStyle(.plain)
-            Spacer()
+        TaikaAssistantHub(
+            lines: [
+                "Скажи фразу в Speaker",
+                "Сохрани её — она появится здесь"
+            ],
+            assembleGateKey: "tab.dictionary.drawer",
+            layout: .mainEmbedded,
+            primaryCTA: TaikaAssistantHubPrimaryCTA(
+                title: "Добавить фразу",
+                icon: "plus.circle.fill",
+                accent: Color(red: 0.28, green: 0.72, blue: 0.98),
+                action: onOpenSpeaker
+            ),
+            bottomInset: Theme.Layout.bottomToolbarHeight + 12
+        ) {
+            TaikaEmptyPlanet(systemImage: "bookmark", gateKey: "tab.dictionary.drawer")
+        } chipZone: {
+            TaikaCourseMarquee(
+                courses: MainManager.shared.dailyCourseCards.map {
+                    TaikaCourseMarqueeItem(courseId: $0.courseId, title: $0.title, isPro: $0.isPro)
+                },
+                onSelectCourse: { courseId in
+                openDrawerCourse(courseId)
+            }
+            )
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task {
+            if MainManager.shared.dailyCourseCards.isEmpty {
+                await MainManager.shared.reloadDailyCoursePicks()
+            }
+        }
+    }
+
+    private func openDrawerCourse(_ courseId: String) {
+        let id = courseId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !id.isEmpty, id != "other" else { return }
+        if let c = CourseData.shared.course(with: id), c.isPro, !ProManager.shared.isPro {
+            overlay.presentPro(reason: .lockedCourse, courseId: id)
+            return
+        }
+        CourseAnimation.markLastOpened(id)
+        onDismiss()
+        nav.go(.lessons(courseId: id))
     }
 
     private func toggleSelectionMode() {

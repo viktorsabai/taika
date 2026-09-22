@@ -381,7 +381,7 @@ struct ProfileLegalView: View {
                             UIApplication.shared.open(TaikaProConfig.Legal.privacyPolicy)
                         }
                         .environmentObject(theme)
-                        ProfileGlassRow(title: "Условия использования", subtitle: "Правила доступа к материалам и Taika+", systemImage: "doc.text", trailing: "arrow.up.right") {
+                        ProfileGlassRow(title: "Условия использования", subtitle: "Правила доступа к материалам и Taika Pro", systemImage: "doc.text", trailing: "arrow.up.right") {
                             UIApplication.shared.open(TaikaProConfig.Legal.termsOfUse)
                         }
                         .environmentObject(theme)
@@ -792,7 +792,7 @@ struct ProfileRootContent: View {
                 )
                 Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
                 ProfileAppRow(
-                    title: "Taika+",
+                    title: "Taika Pro",
                     subtitle: pro.isPro ? "Подписка открыта" : "Курсы, Speaker и игры",
                     systemImage: "crown",
                     action: onTaikaPlus
@@ -1076,7 +1076,7 @@ private struct ProfileHeroCarousel: View {
                 }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(selectedSlide == 0 ? "Слайд Taika+" : "Слайд Твой ритм")
+            .accessibilityLabel(selectedSlide == 0 ? "Слайд Taika Pro" : "Слайд Твой ритм")
         }
         .onReceive(slideTimer) { _ in
             guard !reduceMotion else { return }
@@ -1262,7 +1262,7 @@ private struct ProfileTaikaPlusCard: View {
     private var brandColor: Color { theme.currentAccentTintColor }
 
     private var headline: String {
-        pro.isPro ? "Taika+ с тобой" : "Открой весь Taika"
+        pro.isPro ? "Taika Pro с тобой" : "Открой весь Taika"
     }
 
     private var offerLine: String {
@@ -1343,10 +1343,21 @@ private struct ProfileTaikaPlusCard: View {
                 .buttonStyle(.plain)
                 .disabled(restoreInFlight)
                 Spacer()
-                Text(pro.isPro ? "Все функции доступны" : "Уже есть подписка?")
-                    .font(PD.FontToken.caption(11))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
-                    .lineLimit(1)
+                Button {
+                    if pro.isPro {
+                        OverlayPresenter.shared.presentGiftPaywall()
+                    } else {
+                        OverlayPresenter.shared.presentGiftRedeem()
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "gift.fill")
+                        Text(pro.isPro ? "Подарить" : "Есть подарок")
+                    }
+                    .font(PD.FontToken.caption(11, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
+                }
+                .buttonStyle(.plain)
             }
 
             HStack(spacing: 0) {

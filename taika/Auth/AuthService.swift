@@ -70,6 +70,7 @@ public final class AuthService: NSObject, ObservableObject {
 
     /// Call once at app launch when Firebase may be configured (e.g. after adding GoogleService-Info.plist).
     public func configureIfNeeded() {
+        guard !TaikaRuntime.isXcodePreview else { return }
         guard FirebaseApp.app() == nil,
               Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else { return }
         FirebaseApp.configure()

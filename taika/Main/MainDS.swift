@@ -1272,7 +1272,6 @@ public struct MDContinueHeroCard: View {
     private let cardCorner: CGFloat = Theme.Radii.card
 
     public var body: some View {
-        let accent = ThemeManager.shared.currentAccentFill
         let shape = RoundedRectangle(cornerRadius: cardCorner, style: .continuous)
 
         Button(action: onContinue) {
@@ -1296,7 +1295,7 @@ public struct MDContinueHeroCard: View {
 
                 Text(model.isEmpty ? "Начать →" : "Продолжить →")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(accent)
+                    .foregroundStyle(PD.ColorToken.text.opacity(0.92))
                     .padding(.top, 2)
             }
             .padding(.horizontal, 16)
@@ -1343,7 +1342,7 @@ public struct MDContinueCard: View {
     }
 
     public var body: some View {
-        let accent = ThemeManager.shared.currentAccentFill
+        let neutralStroke = Color.white.opacity(0.24)
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: Theme.Layout.Section.itemGap) {
                 HStack(alignment: .top) {
@@ -1364,7 +1363,7 @@ public struct MDContinueCard: View {
                                 .fill(PD.ColorToken.textSecondary.opacity(0.2))
                                 .frame(maxWidth: .infinity, maxHeight: 6)
                             RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(AnyShapeStyle(accent))
+                                .fill(Color.white.opacity(0.55))
                                 .scaleEffect(x: max(0.001, CGFloat(progress)), y: 1, anchor: .leading)
                                 .frame(maxWidth: .infinity, maxHeight: 6)
                         }
@@ -1379,12 +1378,12 @@ public struct MDContinueCard: View {
                     Spacer(minLength: 0)
                     Text(isEmpty ? "Начать" : "Продолжить")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(accent)
+                        .foregroundStyle(PD.ColorToken.text.opacity(0.92))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
                         .background(
                             Capsule(style: .continuous)
-                                .stroke(accent, lineWidth: 1.5)
+                                .stroke(neutralStroke, lineWidth: 1.2)
                         )
                 }
             }
@@ -1518,6 +1517,10 @@ public struct MDCyclingTypewriter: View {
     /// Цифры в строке — акцент + Skifer (для норм/статов внутри сообщения).
     public var accentDigits: Bool
     public var digitSize: CGFloat
+    public var isCentered: Bool
+    /// One pass through all lines, then stop (boot / splash).
+    public var playOnce: Bool
+    public var onSequenceFinished: (() -> Void)?
 
     @State private var lineIndex = 0
     @State private var visibleCount = 0
@@ -1531,7 +1534,10 @@ public struct MDCyclingTypewriter: View {
         charInterval: TimeInterval = 0.034,
         minHeight: CGFloat = 58,
         accentDigits: Bool = false,
-        digitSize: CGFloat = 26
+        digitSize: CGFloat = 26,
+        isCentered: Bool = false,
+        playOnce: Bool = false,
+        onSequenceFinished: (() -> Void)? = nil
     ) {
         self.lines = lines.filter { !$0.isEmpty }
         self.font = font
@@ -1540,6 +1546,9 @@ public struct MDCyclingTypewriter: View {
         self.minHeight = minHeight
         self.accentDigits = accentDigits
         self.digitSize = digitSize
+        self.isCentered = isCentered
+        self.playOnce = playOnce
+        self.onSequenceFinished = onSequenceFinished
     }
 
     private var currentLine: String {
@@ -1548,19 +1557,20 @@ public struct MDCyclingTypewriter: View {
     }
 
     public var body: some View {
-        let tint = ThemeManager.shared.currentAccentTintColor
         let visible = String(currentLine.prefix(visibleCount))
         HStack(alignment: .firstTextBaseline, spacing: 1) {
             styledVisibleText(visible)
                 .lineLimit(2)
+                .multilineTextAlignment(isCentered ? .center : .leading)
                 .minimumScaleFactor(0.82)
                 .animation(nil, value: visibleCount)
             Text("▍")
                 .font(font)
-                .foregroundStyle(tint)
+                .foregroundStyle(PD.ColorToken.text.opacity(0.72))
                 .opacity(cursorOn ? 1 : 0.12)
         }
-        .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .leading)
+        .frame(minHeight: minHeight)
+        .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
         .onAppear { startLoop() }
         .onChange(of: lines) { _, _ in startLoop() }
         .onDisappear { task?.cancel() }
@@ -1631,6 +1641,10 @@ public struct MDCyclingTypewriter: View {
                     if Task.isCancelled { return }
                     try? await Task.sleep(nanoseconds: 350_000_000)
                     cursorOn.toggle()
+                }
+                if playOnce, lineIndex >= lines.count - 1 {
+                    onSequenceFinished?()
+                    return
                 }
                 // erase
                 for i in stride(from: chars.count, through: 0, by: -1) {
@@ -1791,67 +1805,960 @@ public struct MDVoiceSphere: View {
     }
 }
 
-/// Главный вход в Спикер: микрофон как в «скажи сам», без поля ввода на Main.
+// MARK: - Taika Assistant Screen (единая композиция: гайд → сфера → чипы/CTA)
+
+public enum TaikaAssistantLayout {
+    /// Внутри скролла (Main).
+    case embedded
+    /// На весь экран (пустые состояния, Game Park).
+    case fullscreen
+}
+
+public struct TaikaNeutralChipItem: Identifiable, Equatable {
+    public let id: String
+    public let title: String
+    public var isSelected: Bool
+    public var isEnabled: Bool
+    public var trailingIcon: String?
+
+    public init(
+        id: String,
+        title: String,
+        isSelected: Bool = false,
+        isEnabled: Bool = true,
+        trailingIcon: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.isSelected = isSelected
+        self.isEnabled = isEnabled
+        self.trailingIcon = trailingIcon
+    }
+}
+
+/// Нейтральный чип в стиле Main marquee — без розового акцента.
+public struct TaikaNeutralChip: View {
+    public var title: String
+    public var isSelected: Bool
+    public var isEnabled: Bool
+    public var trailingIcon: String?
+    public var action: () -> Void
+
+    public init(
+        title: String,
+        isSelected: Bool = false,
+        isEnabled: Bool = true,
+        trailingIcon: String? = nil,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.isSelected = isSelected
+        self.isEnabled = isEnabled
+        self.trailingIcon = trailingIcon
+        self.action = action
+    }
+
+    public var body: some View {
+        Button {
+            guard isEnabled else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                if let trailingIcon {
+                    Image(systemName: trailingIcon)
+                        .font(.system(size: 9, weight: .bold))
+                }
+            }
+            .foregroundStyle(
+                isEnabled
+                ? (isSelected ? PD.ColorToken.text : PD.ColorToken.textSecondary.opacity(0.88))
+                : PD.ColorToken.textSecondary.opacity(0.38)
+            )
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(
+                        isSelected && isEnabled
+                        ? Color.white.opacity(0.10)
+                        : Color.white.opacity(0.05)
+                    )
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(
+                        isSelected && isEnabled
+                        ? Color.white.opacity(0.22)
+                        : Theme.Strokes.strokeSubtle,
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// Горизонтальный ряд нейтральных чипов по центру.
+public struct TaikaNeutralChipRow: View {
+    public var items: [TaikaNeutralChipItem]
+    public var onSelect: (String) -> Void
+
+    public init(items: [TaikaNeutralChipItem], onSelect: @escaping (String) -> Void) {
+        self.items = items
+        self.onSelect = onSelect
+    }
+
+    public var body: some View {
+        GeometryReader { geo in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(items) { item in
+                        TaikaNeutralChip(
+                            title: item.title,
+                            isSelected: item.isSelected,
+                            isEnabled: item.isEnabled,
+                            trailingIcon: item.trailingIcon
+                        ) {
+                            onSelect(item.id)
+                        }
+                    }
+                }
+                .padding(.horizontal, 2)
+                .frame(minWidth: geo.size.width, alignment: .center)
+            }
+        }
+        .frame(height: 34)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// Главная pill-CTA внизу hub-экранов.
+public struct TaikaAssistantHubPrimaryCTA {
+    public var title: String
+    public var icon: String
+    public var isEnabled: Bool
+    public var accent: Color?
+    public var action: () -> Void
+
+    public init(
+        title: String,
+        icon: String = "graduationcap.fill",
+        isEnabled: Bool = true,
+        accent: Color? = nil,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.icon = icon
+        self.isEnabled = isEnabled
+        self.accent = accent
+        self.action = action
+    }
+}
+
+/// Вторичная ghost-команда под pill (как «Разминка» на Main).
+public struct TaikaAssistantHubGhostCTA {
+    public var icon: String
+    public var title: String
+    public var accent: Color?
+    public var action: () -> Void
+
+    public init(icon: String, title: String, accent: Color? = nil, action: @escaping () -> Void) {
+        self.icon = icon
+        self.title = title
+        self.accent = accent
+        self.action = action
+    }
+}
+
+/// Единый регистр и копирайт hub-кнопок — как «Разминка» / «Продолжить» на Main.
+public enum TaikaHubButtonCopy {
+    public static func display(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmed.first else { return trimmed }
+        return first.uppercased() + trimmed.dropFirst()
+    }
+}
+
+public enum TaikaAssistantHubLayout {
+    /// Main: hero по центру, dock прибит к низу.
+    case mainEmbedded
+    /// Таб / drawer: на всю высоту.
+    case tabFullscreen
+}
+
+/// Единый hub: сфера → typewriter → чипы → pill (каскад после assemble).
+public struct TaikaAssistantHub<ChipZone: View>: View {
+    public var lines: [String]
+    public var assembleGateKey: String?
+    public var layout: TaikaAssistantHubLayout
+    public var primaryCTA: TaikaAssistantHubPrimaryCTA?
+    public var ghostCTA: TaikaAssistantHubGhostCTA?
+    public var showsGhostSlot: Bool
+    public var bottomInset: CGFloat
+    @ViewBuilder public var hero: () -> AnyView
+    @ViewBuilder public var chipZone: () -> ChipZone
+    @ViewBuilder public var ghostSlot: () -> AnyView
+
+    @StateObject private var assembleCoordinator = TaikaAssembleCoordinator()
+    @State private var showDock = false
+    @State private var cascadeTask: Task<Void, Never>?
+
+    public init(
+        lines: [String],
+        assembleGateKey: String? = nil,
+        layout: TaikaAssistantHubLayout = .tabFullscreen,
+        primaryCTA: TaikaAssistantHubPrimaryCTA? = nil,
+        ghostCTA: TaikaAssistantHubGhostCTA? = nil,
+        showsGhostSlot: Bool = false,
+        bottomInset: CGFloat = Theme.Layout.bottomToolbarHeight + 12,
+        @ViewBuilder hero: @escaping () -> some View,
+        @ViewBuilder chipZone: @escaping () -> ChipZone,
+        @ViewBuilder ghostSlot: @escaping () -> some View = { EmptyView() }
+    ) {
+        self.lines = lines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        self.assembleGateKey = assembleGateKey
+        self.layout = layout
+        self.primaryCTA = primaryCTA
+        self.ghostCTA = ghostCTA
+        self.showsGhostSlot = showsGhostSlot
+        self.bottomInset = bottomInset
+        self.hero = { AnyView(hero()) }
+        self.chipZone = chipZone
+        self.ghostSlot = { AnyView(ghostSlot()) }
+        // Без gate — сразу UI; с gate — ждём сборку сферы, кроме холодного старта после сплэша.
+        _showDock = State(initialValue: assembleGateKey == nil || TaikaCatalogBoot.isReady)
+    }
+
+    private var screenLayout: TaikaAssistantLayout { .embedded }
+
+    private var topBreathing: CGFloat {
+        layout == .mainEmbedded ? 0 : 0
+    }
+
+    private var showsDock: Bool {
+        primaryCTA != nil || ghostCTA != nil || showsGhostSlot
+    }
+
+    private var dockContentId: String {
+        let accentKey: String = {
+            guard let c = primaryCTA?.accent else { return "n" }
+            // Stable-enough fingerprint so mode tint swaps animate even if title stays.
+            return String(format: "%.2f", c.cgColor?.components?.first ?? 0)
+        }()
+        return [
+            primaryCTA?.title ?? "",
+            primaryCTA?.icon ?? "",
+            ghostCTA?.title ?? "",
+            ghostCTA?.icon ?? "",
+            accentKey
+        ].joined(separator: "|")
+    }
+
+    public var body: some View {
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+                Spacer(minLength: topBreathing)
+
+                TaikaAssistantScreen(
+                    lines: lines,
+                    layout: screenLayout,
+                    assembleGateKey: assembleGateKey
+                ) {
+                    hero()
+                } footer: {
+                    chipZone()
+                }
+                .environmentObject(assembleCoordinator)
+
+                Spacer(minLength: 16)
+
+                if showsDock {
+                    VStack(spacing: 0) {
+                        if let primaryCTA {
+                            TaikaHubAgentSwitchCTA(
+                                title: primaryCTA.title,
+                                icon: primaryCTA.icon,
+                                isEnabled: primaryCTA.isEnabled,
+                                accent: primaryCTA.accent,
+                                action: primaryCTA.action
+                            )
+                        }
+                        if let ghostCTA {
+                            TaikaHubGhostCTA(
+                                icon: ghostCTA.icon,
+                                title: ghostCTA.title,
+                                accent: ghostCTA.accent,
+                                action: ghostCTA.action
+                            )
+                        }
+                        if showsGhostSlot {
+                            ghostSlot()
+                        }
+                    }
+                    .id(dockContentId)
+                    .transition(
+                        .asymmetric(
+                            insertion: .opacity.combined(with: .move(edge: .bottom)).combined(with: .scale(scale: 0.98)),
+                            removal: .opacity.combined(with: .scale(scale: 1.02))
+                        )
+                    )
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    .opacity(showDock ? 1 : 0)
+                    .offset(y: showDock ? 0 : 10)
+                    .allowsHitTesting(showDock)
+                    .animation(.easeOut(duration: 0.34), value: showDock)
+                    .animation(.spring(response: 0.38, dampingFraction: 0.86), value: dockContentId)
+                }
+            }
+            .padding(.bottom, bottomInset)
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+        }
+        .onAppear {
+            if assembleGateKey == nil || TaikaCatalogBoot.isReady {
+                assembleCoordinator.skipToComplete()
+                showDock = true
+            } else if !assembleCoordinator.isComplete {
+                showDock = false
+            }
+        }
+        .onChange(of: assembleCoordinator.isComplete) { _, done in
+            if !done { showDock = false }
+        }
+        .onChange(of: assembleCoordinator.revealGeneration) { _, _ in
+            syncDockReveal(complete: assembleCoordinator.isComplete)
+        }
+        .onChange(of: assembleCoordinator.shouldCascadeUI) { _, cascading in
+            if cascading, !assembleCoordinator.isComplete {
+                showDock = false
+            }
+        }
+        .onDisappear {
+            cascadeTask?.cancel()
+            cascadeTask = nil
+        }
+    }
+
+    private func syncDockReveal(complete: Bool) {
+        cascadeTask?.cancel()
+        guard complete else {
+            showDock = false
+            return
+        }
+        guard assembleCoordinator.shouldCascadeUI else {
+            showDock = true
+            return
+        }
+        // typewriter ~100ms, chips ~280ms, dock ~420ms после complete
+        cascadeTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 420_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.34)) {
+                showDock = true
+            }
+        }
+    }
+}
+
+/// Лёгкий primary в стиле AI-агента: текст + иконка, без серой «таблетки».
+public struct TaikaHubAgentSwitchCTA: View {
+    public var title: String
+    public var icon: String
+    public var isEnabled: Bool
+    public var accent: Color?
+    public var action: () -> Void
+
+    public init(
+        title: String,
+        icon: String = "graduationcap.fill",
+        isEnabled: Bool = true,
+        accent: Color? = nil,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.icon = icon
+        self.isEnabled = isEnabled
+        self.accent = accent
+        self.action = action
+    }
+
+    public var body: some View {
+        Button {
+            guard isEnabled else { return }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(iconStyle)
+                    .contentTransition(.symbolEffect(.replace))
+
+                Text(TaikaHubButtonCopy.display(title))
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text.opacity(0.94))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.45))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.9))
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.42)
+        .accessibilityLabel(TaikaHubButtonCopy.display(title))
+    }
+
+    /// Brand gradient (header kAAA family) — never a flat red solid.
+    private var iconStyle: AnyShapeStyle {
+        if let accent {
+            return AnyShapeStyle(accent.opacity(0.92))
+        }
+        return AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+    }
+}
+
+/// Ghost-команда под primary — лёгкая системная строка (без «прогресс-бара»).
+public struct TaikaHubGhostCTA: View {
+    public var icon: String
+    public var title: String
+    public var accent: Color?
+    public var action: () -> Void
+
+    public init(icon: String, title: String, accent: Color? = nil, action: @escaping () -> Void) {
+        self.icon = icon
+        self.title = title
+        self.accent = accent
+        self.action = action
+    }
+
+    public var body: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(iconStyle)
+                    .contentTransition(.symbolEffect(.replace))
+                Text(TaikaHubButtonCopy.display(title))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.text.opacity(0.78))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .frame(maxWidth: .infinity)
+        .buttonStyle(PressDownStyle(scale: 0.985, fade: 0.88))
+    }
+
+    private var iconStyle: AnyShapeStyle {
+        if let accent {
+            return AnyShapeStyle(accent.opacity(0.85))
+        }
+        return AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+    }
+}
+
+/// Общая разметка ghost-строки (кнопка или меню).
+public struct TaikaHubGhostCTALabel: View {
+    public var icon: String
+    public var title: String
+    public var showsChevron: Bool
+
+    public init(icon: String, title: String, showsChevron: Bool = false) {
+        self.icon = icon
+        self.title = title
+        self.showsChevron = showsChevron
+    }
+
+    public var body: some View {
+        ZStack {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                Text(TaikaHubButtonCopy.display(title))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.text.opacity(0.92))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+
+            if showsChevron {
+                HStack {
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.55))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .contentShape(Rectangle())
+    }
+}
+
+/// Ghost-меню под pill — выбор колоды / курса (как «Разминка», но с picker).
+public struct TaikaHubGhostMenu: View {
+    public var icon: String
+    public var title: String
+    public var options: [TaikaHubGhostMenuOption]
+    public var onSelect: (String) -> Void
+
+    public init(
+        icon: String,
+        title: String,
+        options: [TaikaHubGhostMenuOption],
+        onSelect: @escaping (String) -> Void
+    ) {
+        self.icon = icon
+        self.title = title
+        self.options = options
+        self.onSelect = onSelect
+    }
+
+    public var body: some View {
+        Menu {
+            ForEach(options) { option in
+                Button {
+                    guard option.isEnabled else { return }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onSelect(option.id)
+                } label: {
+                    if option.isSelected {
+                        Label(option.title, systemImage: "checkmark")
+                    } else {
+                        Text(option.title)
+                    }
+                }
+                .disabled(!option.isEnabled)
+            }
+        } label: {
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .overlay {
+                    TaikaHubGhostCTALabel(icon: icon, title: title, showsChevron: true)
+                        .allowsHitTesting(false)
+                }
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .frame(maxWidth: .infinity)
+        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.88))
+    }
+}
+
+public struct TaikaHubGhostMenuOption: Identifiable {
+    public let id: String
+    public let title: String
+    public var isSelected: Bool
+    public var isEnabled: Bool
+
+    public init(id: String, title: String, isSelected: Bool = false, isEnabled: Bool = true) {
+        self.id = id
+        self.title = title
+        self.isSelected = isSelected
+        self.isEnabled = isEnabled
+    }
+}
+
+/// Элемент бесконечной карусели нейтральных чипов.
+public struct TaikaMarqueeChipItem: Identifiable {
+    public let id: String
+    public let title: String
+    public var trailingIcon: String?
+
+    public init(id: String, title: String, trailingIcon: String? = nil) {
+        self.id = id
+        self.title = title
+        self.trailingIcon = trailingIcon
+    }
+}
+
+/// Бесконечная карусель нейтральных чипов (фразы, курсы и т.д.).
+public struct TaikaNeutralChipMarquee: View {
+    public var items: [TaikaMarqueeChipItem]
+    public var onSelect: (String) -> Void
+    public var accessibilityLabel: String
+
+    @State private var rowWidth: CGFloat = 0
+
+    public init(
+        items: [TaikaMarqueeChipItem],
+        accessibilityLabel: String,
+        onSelect: @escaping (String) -> Void
+    ) {
+        self.items = items
+        self.accessibilityLabel = accessibilityLabel
+        self.onSelect = onSelect
+    }
+
+    public var body: some View {
+        Group {
+            if items.isEmpty {
+                Color.clear.frame(height: 34)
+            } else {
+                Color.clear
+                    .frame(height: 34)
+                    .overlay(alignment: .leading) {
+                        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+                            let speed: CGFloat = 26
+                            let shift: CGFloat = {
+                                guard rowWidth > 1 else { return 0 }
+                                let t = context.date.timeIntervalSinceReferenceDate
+                                return CGFloat(t * Double(speed)).truncatingRemainder(dividingBy: rowWidth)
+                            }()
+
+                            HStack(spacing: 0) {
+                                chipRow
+                                    .background(
+                                        GeometryReader { g in
+                                            Color.clear.preference(key: MDMarqueeWidthKey.self, value: g.size.width)
+                                        }
+                                    )
+                                chipRow
+                                    .accessibilityHidden(true)
+                            }
+                            .fixedSize(horizontal: true, vertical: false)
+                            .offset(x: -shift)
+                        }
+                    }
+                    .clipped()
+                    .mask(
+                        LinearGradient(
+                            colors: [.clear, .white, .white, .clear],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .onPreferenceChange(MDMarqueeWidthKey.self) { rowWidth = $0 }
+                    .accessibilityLabel(accessibilityLabel)
+            }
+        }
+    }
+
+    private var chipRow: some View {
+        HStack(spacing: 8) {
+            ForEach(items) { item in
+                TaikaNeutralChip(
+                    title: item.title,
+                    trailingIcon: item.trailingIcon
+                ) {
+                    onSelect(item.id)
+                }
+            }
+        }
+        .padding(.trailing, 8)
+    }
+}
+
+/// Курс для карусели на пустых hub-экранах.
+public struct TaikaCourseMarqueeItem: Identifiable, Equatable {
+    public let courseId: String
+    public let title: String
+    public var isPro: Bool
+
+    public var id: String { courseId }
+
+    public init(courseId: String, title: String, isPro: Bool = false) {
+        self.courseId = courseId
+        self.title = title
+        self.isPro = isPro
+    }
+}
+
+/// Карусель курсов для пустых экранов избранного / словаря.
+public struct TaikaCourseMarquee: View {
+    public var courses: [TaikaCourseMarqueeItem]
+    public var onSelectCourse: (String) -> Void
+
+    public init(
+        courses: [TaikaCourseMarqueeItem],
+        onSelectCourse: @escaping (String) -> Void
+    ) {
+        self.courses = courses
+        self.onSelectCourse = onSelectCourse
+    }
+
+    private var items: [TaikaMarqueeChipItem] {
+        courses.map {
+            TaikaMarqueeChipItem(
+                id: $0.courseId,
+                title: $0.title,
+                trailingIcon: $0.isPro ? "crown.fill" : nil
+            )
+        }
+    }
+
+    public var body: some View {
+        TaikaNeutralChipMarquee(
+            items: items,
+            accessibilityLabel: "Курсы для начала обучения",
+            onSelect: onSelectCourse
+        )
+    }
+}
+
+/// Единый каркас assistant-экранов: сфера → typewriter → footer (чипы).
+public struct TaikaAssistantScreen<Footer: View>: View {
+    public var lines: [String]
+    public var layout: TaikaAssistantLayout
+    public var assembleGateKey: String?
+    @ViewBuilder public var hero: () -> AnyView
+    @ViewBuilder public var footer: () -> Footer
+
+    @EnvironmentObject private var assembleCoordinator: TaikaAssembleCoordinator
+    @State private var showTypewriter = false
+    @State private var showFooter = false
+    @State private var cascadeTask: Task<Void, Never>?
+
+    public init(
+        lines: [String],
+        layout: TaikaAssistantLayout = .fullscreen,
+        assembleGateKey: String? = nil,
+        @ViewBuilder hero: @escaping () -> some View,
+        @ViewBuilder footer: @escaping () -> Footer = { EmptyView() }
+    ) {
+        self.lines = lines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        self.layout = layout
+        self.assembleGateKey = assembleGateKey
+        self.hero = { AnyView(hero()) }
+        self.footer = footer
+        let instant = assembleGateKey == nil || TaikaCatalogBoot.isReady
+        _showTypewriter = State(initialValue: instant)
+        _showFooter = State(initialValue: instant)
+    }
+
+    public var body: some View {
+        VStack(spacing: 18) {
+            if layout == .fullscreen { Spacer(minLength: 0) }
+
+            if !lines.isEmpty {
+                ZStack {
+                    Color.clear.frame(minHeight: 62)
+                    if showTypewriter {
+                        MDCyclingTypewriter(
+                            lines: lines,
+                            font: .system(size: 22, weight: .bold),
+                            holdSeconds: 2.6,
+                            minHeight: 62,
+                            isCentered: true
+                        )
+                        .transition(
+                            .opacity.combined(with: .offset(y: 10))
+                        )
+                    }
+                }
+                .animation(.easeOut(duration: 0.32), value: showTypewriter)
+            }
+
+            hero()
+
+            footer()
+                .opacity(showFooter ? 1 : 0)
+                .offset(y: showFooter ? 0 : 8)
+                .allowsHitTesting(showFooter)
+                .animation(.easeOut(duration: 0.34), value: showFooter)
+
+            if layout == .fullscreen { Spacer(minLength: 0) }
+        }
+        .padding(.horizontal, Theme.Layout.pageHorizontal)
+        .frame(maxWidth: .infinity, maxHeight: layout == .fullscreen ? .infinity : nil)
+        .onAppear {
+            if assembleGateKey == nil || TaikaCatalogBoot.isReady {
+                assembleCoordinator.skipToComplete()
+                showTypewriter = true
+                showFooter = true
+            } else if !assembleCoordinator.isComplete {
+                showTypewriter = false
+                showFooter = false
+            }
+        }
+        .onChange(of: assembleCoordinator.isComplete) { _, done in
+            if !done {
+                showTypewriter = false
+                showFooter = false
+            }
+        }
+        .onChange(of: assembleCoordinator.revealGeneration) { _, _ in
+            syncChromeReveal(complete: assembleCoordinator.isComplete)
+        }
+        .onChange(of: assembleCoordinator.shouldCascadeUI) { _, cascading in
+            if cascading, !assembleCoordinator.isComplete {
+                showTypewriter = false
+                showFooter = false
+            }
+        }
+        .onDisappear {
+            cascadeTask?.cancel()
+            cascadeTask = nil
+        }
+    }
+
+    private func syncChromeReveal(complete: Bool) {
+        cascadeTask?.cancel()
+        guard complete else {
+            showTypewriter = false
+            showFooter = false
+            return
+        }
+        guard assembleCoordinator.shouldCascadeUI else {
+            showTypewriter = true
+            showFooter = true
+            return
+        }
+        // Сфера уже собрана → пауза → текст → чипы.
+        cascadeTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.32)) {
+                showTypewriter = true
+            }
+            try? await Task.sleep(nanoseconds: 180_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.34)) {
+                showFooter = true
+            }
+        }
+    }
+}
+
+/// Пустой экран: сфера + карусель курсов + pill внизу.
+public struct TaikaAssistantEmptyHero: View {
+    public var systemImage: String
+    public var lines: [String]
+    public var assembleGateKey: String?
+    public var primaryCTA: TaikaAssistantHubPrimaryCTA
+    public var courses: [TaikaCourseMarqueeItem]
+    public var onSelectCourse: (String) -> Void
+    public var bottomInset: CGFloat
+
+    @ObservedObject private var main = MainManager.shared
+
+    public init(
+        systemImage: String,
+        lines: [String],
+        assembleGateKey: String? = nil,
+        primaryCTA: TaikaAssistantHubPrimaryCTA,
+        courses: [TaikaCourseMarqueeItem] = [],
+        bottomInset: CGFloat = Theme.Layout.bottomToolbarHeight + 12,
+        onSelectCourse: @escaping (String) -> Void
+    ) {
+        self.systemImage = systemImage
+        self.lines = lines
+        self.assembleGateKey = assembleGateKey
+        self.primaryCTA = primaryCTA
+        self.courses = courses
+        self.bottomInset = bottomInset
+        self.onSelectCourse = onSelectCourse
+    }
+
+    private var marqueeCourses: [TaikaCourseMarqueeItem] {
+        if !courses.isEmpty { return courses }
+        return main.dailyCourseCards.map {
+            TaikaCourseMarqueeItem(courseId: $0.courseId, title: $0.title, isPro: $0.isPro)
+        }
+    }
+
+    public var body: some View {
+        let gate = assembleGateKey ?? "empty.\(systemImage)"
+        TaikaAssistantHub(
+            lines: lines,
+            assembleGateKey: gate,
+            layout: .mainEmbedded,
+            primaryCTA: primaryCTA,
+            bottomInset: bottomInset
+        ) {
+            TaikaEmptyPlanet(systemImage: systemImage, gateKey: gate)
+        } chipZone: {
+            TaikaCourseMarquee(courses: marqueeCourses, onSelectCourse: onSelectCourse)
+        }
+        .task {
+            if main.dailyCourseCards.isEmpty {
+                await main.reloadDailyCoursePicks()
+            }
+        }
+    }
+}
+
+/// Главный вход в Спикер: сфера + marquee фраз.
 public struct MDPromptHero: View {
-    public var greeting: String
+    public var lines: [String]
+    public var leadPhrases: [String]
     public var onOpenSpeaker: () -> Void
     public var onTapPhrase: (String) -> Void
 
     public init(
-        greeting: String,
-        tagline: String = "Скажи по-русски — покажу, как по-тайски",
+        lines: [String],
+        leadPhrases: [String] = [],
         onOpenSpeaker: @escaping () -> Void,
         onTapPhrase: @escaping (String) -> Void
     ) {
-        self.greeting = greeting
+        self.lines = lines
+        self.leadPhrases = leadPhrases
         self.onOpenSpeaker = onOpenSpeaker
         self.onTapPhrase = onTapPhrase
-        _ = tagline
-    }
-
-    private var headlineLines: [String] {
-        [
-            greeting,
-            "Чем помочь сегодня?",
-            "Скажи по-русски — я переведу"
-        ]
     }
 
     public var body: some View {
-        VStack(spacing: 16) {
-            MDCyclingTypewriter(
-                lines: headlineLines,
-                font: .system(size: 22, weight: .bold),
-                minHeight: 48
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-
+        TaikaAssistantHub(
+            lines: lines,
+            assembleGateKey: "tab.main.hero",
+            layout: .mainEmbedded,
+            primaryCTA: nil,
+            ghostCTA: nil
+        ) {
             Button {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 onOpenSpeaker()
             } label: {
-                TaikaVoicePlanet(mode: .idle, kind: .voice, scale: 0.46, lite: true, inviteTap: true)
-                    .frame(width: 138, height: 138)
-                    .clipped()
+                TaikaAssemblingPlanet(
+                    gateKey: "tab.main.hero",
+                    kind: .voice,
+                    scale: 0.62,
+                    inviteTap: true,
+                    frameSize: 188
+                )
+                .clipped()
             }
             .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.98))
             .frame(maxWidth: .infinity)
             .accessibilityLabel("Скажи по-русски")
             .accessibilityHint("Открыть умный спикер")
-
-            MDExamplePhraseMarquee { phrase in
+        } chipZone: {
+            MDExamplePhraseMarquee(leadPhrases: leadPhrases) { phrase in
                 onTapPhrase(phrase)
             }
         }
-        .padding(.horizontal, Theme.Layout.pageHorizontal)
     }
 }
 
 /// Бесконечная карусель чипов с примерами фраз — лёгкий marquee без паузы.
 public struct MDExamplePhraseMarquee: View {
+    public var leadPhrases: [String]
     public var onTapPhrase: (String) -> Void
 
-    private static let phrases: [String] = [
+    private static let stockPhrases: [String] = [
         "Можно счёт, пожалуйста",
         "Где туалет?",
         "Сколько стоит?",
@@ -1869,77 +2776,28 @@ public struct MDExamplePhraseMarquee: View {
         "Подождите минутку"
     ]
 
-    @State private var rowWidth: CGFloat = 0
-
-    public init(onTapPhrase: @escaping (String) -> Void) {
+    public init(leadPhrases: [String] = [], onTapPhrase: @escaping (String) -> Void) {
+        self.leadPhrases = leadPhrases
         self.onTapPhrase = onTapPhrase
     }
 
+    private var phrases: [String] {
+        var seen = Set<String>()
+        var out: [String] = []
+        for raw in leadPhrases + Self.stockPhrases {
+            let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !t.isEmpty, seen.insert(t).inserted else { continue }
+            out.append(t)
+        }
+        return out
+    }
+
     public var body: some View {
-        Color.clear
-            .frame(height: 34)
-            .overlay(alignment: .leading) {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
-                    let speed: CGFloat = 26
-                    let shift: CGFloat = {
-                        guard rowWidth > 1 else { return 0 }
-                        let t = context.date.timeIntervalSinceReferenceDate
-                        return CGFloat(t * Double(speed)).truncatingRemainder(dividingBy: rowWidth)
-                    }()
-
-                    HStack(spacing: 0) {
-                        phraseRow
-                            .background(
-                                GeometryReader { g in
-                                    Color.clear.preference(key: MDMarqueeWidthKey.self, value: g.size.width)
-                                }
-                            )
-                        phraseRow
-                            .accessibilityHidden(true)
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
-                    .offset(x: -shift)
-                }
-            }
-            .clipped()
-            .mask(
-                LinearGradient(
-                    colors: [.clear, .white, .white, .clear],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .onPreferenceChange(MDMarqueeWidthKey.self) { rowWidth = $0 }
-            .accessibilityLabel("Примеры фраз для спикера")
-    }
-
-    private var phraseRow: some View {
-        HStack(spacing: 8) {
-            ForEach(Array(Self.phrases.enumerated()), id: \.offset) { _, phrase in
-                phraseChip(phrase)
-            }
-        }
-        .padding(.trailing, 8)
-    }
-
-    private func phraseChip(_ phrase: String) -> some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            onTapPhrase(phrase)
-        } label: {
-            Text(phrase)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.88))
-                .lineLimit(1)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(Color.white.opacity(0.05))
-                )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(phrase)
+        TaikaNeutralChipMarquee(
+            items: phrases.map { TaikaMarqueeChipItem(id: $0, title: $0) },
+            accessibilityLabel: "Примеры фраз для спикера",
+            onSelect: onTapPhrase
+        )
     }
 }
 
@@ -1952,50 +2810,83 @@ private struct MDMarqueeWidthKey: PreferenceKey {
 
 // MARK: - Main pill CTAs (как «Начать тренировку» в Спикере)
 
-/// Залитая градиентная pill-CTA на Main: «Начать обучение» / «Продолжить …».
+/// Нейтральный chrome для главных pill-кнопок — заметный тап без бренд-розового.
+public struct TaikaNeutralPrimaryPillChrome: View {
+    public var cornerRadius: CGFloat?
+
+    public init(cornerRadius: CGFloat? = nil) {
+        self.cornerRadius = cornerRadius
+    }
+
+    public var body: some View {
+        let shape: RoundedRectangle = {
+            if let cornerRadius {
+                return RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            }
+            return RoundedRectangle(cornerRadius: 999, style: .continuous)
+        }()
+
+        shape
+            .fill(Color.white.opacity(0.10))
+            .overlay(
+                shape
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.08), Color.clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .blendMode(.plusLighter)
+            )
+            .overlay(
+                shape.stroke(Color.white.opacity(0.24), lineWidth: 1.2)
+            )
+    }
+}
+
+/// Залитая pill-CTA hub-экранов: «Продолжить», «начать закрепление», «к урокам».
 public struct MDMainFilledPillCTA: View {
     public var title: String
     public var icon: String
+    public var isEnabled: Bool
     public var action: () -> Void
 
     public init(
         title: String,
         icon: String = "graduationcap.fill",
+        isEnabled: Bool = true,
         action: @escaping () -> Void
     ) {
         self.title = title
         self.icon = icon
+        self.isEnabled = isEnabled
         self.action = action
     }
 
     public var body: some View {
         Button {
+            guard isEnabled else { return }
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             action()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 15, weight: .bold))
-                Text(title)
+                Text(TaikaHubButtonCopy.display(title))
                     .font(.system(size: 16, weight: .bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
             }
-            .foregroundColor(.black)
-            .frame(maxWidth: .infinity)
+            .foregroundStyle(PD.ColorToken.text)
+            .frame(maxWidth: .infinity, alignment: .center)
             .padding(.vertical, 15)
             .padding(.horizontal, 18)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(ThemeManager.shared.currentAccentFill)
-            )
-            .shadow(
-                color: ThemeManager.shared.currentAccentTintColor.opacity(0.32),
-                radius: 14,
-                y: 4
-            )
+            .background(TaikaNeutralPrimaryPillChrome())
         }
         .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.45)
     }
 }
 
@@ -2071,9 +2962,8 @@ private struct MDSecondaryFunnelChip: View {
     let action: () -> Void
 
     var body: some View {
-        // Не акцент, а обычная вторичная кнопка системного вида: плотная поверхность,
-        // светлая подпись и обводка. Нажать хочется от того, что она выглядит кнопкой,
-        // а не от того, что она розовая — розовое остаётся за «Продолжить».
+        // Команды агента одного веса: ни одна не красится акцентом.
+        // Акцент остаётся у сферы и цифр в тексте кун кру.
         let label: AnyShapeStyle = isEnabled
             ? AnyShapeStyle(PD.ColorToken.text)
             : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.42))
@@ -2112,6 +3002,60 @@ private struct MDSecondaryFunnelChip: View {
     }
 }
 
+/// Продолжить / начать — главный путь в обучение.
+public struct MDMainContinuePillCTA: View {
+    public var title: String
+    public var accessibilityTitle: String
+    public var action: () -> Void
+
+    public init(
+        title: String,
+        accessibilityTitle: String,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.accessibilityTitle = accessibilityTitle
+        self.action = action
+    }
+
+    public var body: some View {
+        MDSecondaryFunnelChip(icon: "graduationcap.fill", title: title, action: action)
+            .accessibilityLabel(accessibilityTitle)
+            .accessibilityHint("Открыть текущий курс")
+    }
+}
+
+/// Текстовая команда под главным CTA: системный цвет, без чипа и без акцента.
+private struct MDMainGhostCommand: View {
+    let icon: String
+    let title: String
+    var isEnabled: Bool = true
+    var action: () -> Void
+
+    var body: some View {
+        Button {
+            guard isEnabled else { return }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.text.opacity(0.92))
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .contentShape(Rectangle())
+            .opacity(isEnabled ? 1 : 0.34)
+        }
+        .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.88))
+        .disabled(!isEnabled)
+    }
+}
+
 /// Daily warmup entry point — compact chip; the value copy lives inside the overlay it opens.
 public struct MDDailyWarmupPillCTA: View {
     public let action: () -> Void
@@ -2121,31 +3065,9 @@ public struct MDDailyWarmupPillCTA: View {
     }
 
     public var body: some View {
-        MDSecondaryFunnelChip(icon: "bolt.fill", title: "Разминка", action: action)
+        MDMainGhostCommand(icon: "bolt.fill", title: "Разминка", action: action)
             .accessibilityLabel("Разминка, ежедневная подборка фраз")
             .accessibilityHint("Открыть бесплатную практику на сегодня")
-    }
-}
-
-/// Закрепление пройденного — вторая половина строки; неактивна, пока нечего закреплять.
-public struct MDMainReinforcePillCTA: View {
-    public var isEnabled: Bool
-    public var action: () -> Void
-
-    public init(isEnabled: Bool, action: @escaping () -> Void) {
-        self.isEnabled = isEnabled
-        self.action = action
-    }
-
-    public var body: some View {
-        MDSecondaryFunnelChip(
-            icon: "gamecontroller.fill",
-            title: "Закрепить",
-            isEnabled: isEnabled,
-            action: action
-        )
-        .accessibilityLabel("Закрепить пройденное")
-        .accessibilityHint(isEnabled ? "Выбрать курс или выученные фразы для закрепления" : "Пока нечего закреплять")
     }
 }
 
@@ -2251,7 +3173,8 @@ public enum MDDailyRefreshCountdown {
 }
 
 // MARK: - Preview
- #Preview("Main DS") {
+#if DEBUG
+#Preview("Main DS") {
     ZStack {
         PD.ColorToken.background.ignoresSafeArea()
         TaikaRootVerticalScroll {
@@ -2289,3 +3212,5 @@ public enum MDDailyRefreshCountdown {
         .safeAreaPadding(.bottom, 24)
     }
 }
+#endif
+

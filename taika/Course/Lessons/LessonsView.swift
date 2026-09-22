@@ -561,6 +561,24 @@ private extension LessonsView {
                     .multilineTextAlignment(.trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
+
+            LSLessonReels(
+                "УРОКИ",
+                items: lessonItems().filter { $0.status == .completed },
+                collapsible: false,
+                startExpanded: true,
+                onTap: { item in
+                    toggleTrainingSelection(item.id)
+                },
+                onTapAccessory: isTheoryBonusCourse ? nil : { item in
+                    launchGameTraining(for: [item.id])
+                },
+                onSpeaker: isTheoryBonusCourse ? nil : { item in
+                    launchSpeakerTraining(for: [item.id])
+                },
+                selectedLessonIds: Set(effectiveReinforcementLessonIds)
+            )
+
             completedTaikaFMSection
             courseMaterialsPicker
             LSCompletedTrainingHero(

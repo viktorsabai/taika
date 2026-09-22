@@ -23,7 +23,6 @@ from api import (
     _parts_match_phonetic,
     _politeness_part,
     _segmentation_problems,
-    _smart_translate_words,
     _strip_thai_from_explanation,
     _thai_word_tokens,
     _usable_coach,
@@ -42,11 +41,27 @@ def _fake_llm(*responses):
     return fake
 
 
-def _run(monkeypatch_target, *responses, ru="как ваше настроение", politeness="male"):
+def _run(monkeypatch_target, *responses, ru="как ваше настроение", politeness="male", thai: str | None = None):
+    """Нарезка по уже готовому тайскому. Первый `{words}` задаёт locked Thai, если thai не передан."""
+    if thai is None:
+        first = responses[0] if responses else None
+        if isinstance(first, dict) and isinstance(first.get("words"), list):
+            thai = "".join(str(w.get("th") or "") for w in first["words"] if isinstance(w, dict))
+        else:
+            thai = ""
     original = api._openai_chat_json
     api._openai_chat_json = _fake_llm(*responses)
     try:
-        return _smart_translate_words(ru, politeness)
+        return api._teach_from_thai(ru, thai, politeness)
+    finally:
+        api._openai_chat_json = original
+
+
+def _live_run(*responses, ru="как ваше настроение", politeness="male"):
+    original = api._openai_chat_json
+    api._openai_chat_json = _fake_llm(*responses)
+    try:
+        return api._smart_speaker_live(ru, politeness)
     finally:
         api._openai_chat_json = original
 
@@ -180,6 +195,83 @@ def test_validate_accepts_single_word_phrase():
     assert _validate_words("привет", [{"th": "สวัสดี", "ph": "са-ват-ди↘", "m": "привет"}]) == []
 
 
+def test_validate_rejects_noun_hung_on_function_word():
+    """Прод: «Будет дождь» → จะ+มี, มี подписали «дождь». Это согласованная ложь."""
+    problems = _validate_words(
+        "будет дождь",
+        [
+            {"th": "จะ", "ph": "ча↘", "m": "будет"},
+            {"th": "มี", "ph": "ми→", "m": "дождь"},
+        ],
+    )
+    assert any("grammar word" in p or "content is missing" in p for p in problems)
+
+
+def test_validate_rejects_glued_function_run():
+    problems = _validate_words(
+        "будет дождь",
+        [{"th": "จะมี", "ph": "ча↘-ми→", "m": "будет дождь"}],
+    )
+    assert problems
+
+
+def test_validate_rejects_dropped_noun_examples():
+    for ru, gloss in (
+        ("будет кофе", "кофе"),
+        ("где туалет", "туалет"),
+        ("счёт пожалуйста", "счёт"),
+    ):
+        problems = _validate_words(
+            ru,
+            [
+                {"th": "จะ", "ph": "ча↘", "m": "будет"},
+                {"th": "มี", "ph": "ми→", "m": gloss},
+            ],
+        )
+        assert problems, ru
+
+
+def test_validate_accepts_rain_with_real_noun():
+    assert _validate_words(
+        "будет дождь",
+        [
+            {"th": "ฝน", "ph": "фон↗", "m": "дождь"},
+            {"th": "จะ", "ph": "ча↘", "m": "будет"},
+            {"th": "ตก", "ph": "ток↘", "m": "идти"},
+        ],
+    ) == []
+
+
+def test_validate_accepts_hungry_idiom():
+    # Идиома «я хочу есть» → ฉันหิว: русские слова не обязаны буквально стоять в gloss.
+    assert _validate_words(
+        "я хочу есть",
+        [
+            {"th": "ฉัน", "ph": "чхан→", "m": "я"},
+            {"th": "หิว", "ph": "хиу↗", "m": "голоден"},
+        ],
+    ) == []
+
+
+def test_have_construction_keeps_existence_verb():
+    # «у меня есть кошка»: มี = есть — это грамматика, кошка должна быть своим словом.
+    assert _validate_words(
+        "у меня есть кошка",
+        [
+            {"th": "ฉัน", "ph": "чхан→", "m": "я"},
+            {"th": "มี", "ph": "ми→", "m": "есть"},
+            {"th": "แมว", "ph": "мэу→", "m": "кошка"},
+        ],
+    ) == []
+    assert _validate_words(
+        "у меня есть кошка",
+        [
+            {"th": "ฉัน", "ph": "чхан→", "m": "я"},
+            {"th": "มี", "ph": "ми→", "m": "кошка"},
+        ],
+    )
+
+
 # --- полный проход с подменённой моделью --------------------------------------
 
 
@@ -232,6 +324,36 @@ def test_rejects_russian_spellout():
     assert _run(None, bad, bad, ru=ru) is None
 
 
+def test_dropped_rain_noun_is_not_shipped():
+    ru = "будет дождь"
+    bad = {"words": [
+        {"th": "จะ", "ph": "ча↘", "m": "будет"},
+        {"th": "มี", "ph": "ми→", "m": "дождь"},
+    ]}
+    assert _run(None, bad, bad, ru=ru) is None
+
+
+def test_dropped_rain_noun_recovers_on_repair():
+    ru = "будет дождь"
+    good = {"words": [
+        {"th": "ฝน", "ph": "фон↗", "m": "дождь"},
+        {"th": "จะ", "ph": "ча↘", "m": "будет"},
+        {"th": "ตก", "ph": "ток↘", "m": "идти"},
+    ]}
+    built = _live_run(
+        {"thai": "จะมี"},
+        {"thai": "ฝนจะตก"},
+        {"ok": True, "missing": []},
+        good,
+        ru=ru,
+    )
+    assert built is not None
+    thai, phonetic, parts = built
+    assert "ฝน" in thai
+    assert [p["m"] for p in parts] == ["дождь", "будет", "идти"]
+    assert _parts_match_phonetic(phonetic, parts)
+
+
 def test_full_phonetic_normalizer_also_fixes_latin():
     # Legacy-путь тоже перестал пропускать латиницу наружу.
     assert "ng" not in _normalize_phonetic("я↘ng-рай↘ кхрап↘")
@@ -262,6 +384,11 @@ def _endpoint_case(politeness: str):
 
     def fake(**kwargs):
         calls["n"] += 1
+        tag = str(kwargs.get("tag") or "")
+        if tag.endswith("translate"):
+            return {"thai": "คุณรู้สึกอย่างไร"}
+        if tag.endswith("judge"):
+            return {"ok": True, "missing": []}
         return {"words": [
             {"th": "คุณ", "ph": "кхун→", "m": "вы"},
             {"th": "รู้สึก", "ph": "ру↑-сык↘", "m": "чувствуете"},
@@ -278,19 +405,21 @@ def _endpoint_case(politeness: str):
         fresh = client.post(
             "/smart_speaker", json={"text_ru": "как ваше настроение?", "politeness": politeness}
         ).json()
+        n_first = calls["n"]
         cached = client.post(
             "/smart_speaker", json={"text_ru": "Как ваше настроение", "politeness": politeness}
         ).json()
-        return fresh, cached, calls["n"]
+        return fresh, cached, n_first, calls["n"]
     finally:
         api._openai_chat_json, api.OPENAI_API_KEY, api._cache_db_path = original_llm, original_key, original_db
 
 
 def test_endpoint_alignment_survives_cache_roundtrip():
     for politeness, particle, gloss in (("male", "ครับ", "вежливость (м)"), ("female", "ค่ะ", "вежливость (ж)")):
-        fresh, cached, calls = _endpoint_case(politeness)
+        fresh, cached, n_first, n_total = _endpoint_case(politeness)
         assert fresh == cached, f"{politeness}: кэш изменил ответ\n{fresh}\n{cached}"
-        assert calls == 1, f"{politeness}: второй запрос не попал в кэш"
+        assert n_first >= 1, f"{politeness}: живой путь не вызывал модель"
+        assert n_total == n_first, f"{politeness}: второй запрос не попал в кэш"
         assert fresh["thai"] == f"คุณรู้สึกอย่างไร {particle}", fresh["thai"]
         assert fresh["thai"].count(particle) == 1
         groups = api._phonetic_word_groups(fresh["phonetic"])
@@ -326,7 +455,7 @@ def test_aligned_parts_pass_through_untouched():
 
 
 def test_endpoint_ships_phrase_without_broken_gloss():
-    """Легаси-путь: перевод и фонетика доезжают, разбор — нет, если он не сошёлся."""
+    """Живой путь: перевод и фонетика доезжают, разбор — нет, если нарезка не сошлась."""
     import tempfile
 
     from fastapi.testclient import TestClient
@@ -335,23 +464,17 @@ def test_endpoint_ships_phrase_without_broken_gloss():
     db.close()
 
     originals = (
-        api._openai_chat_json,
         api.OPENAI_API_KEY,
         api._cache_db_path,
-        api._smart_translate_words,
-        api._llm_translate_ru_to_th,
-        api._llm_phrase_parts,
+        api._smart_speaker_live,
     )
     api.OPENAI_API_KEY = "test-key"
     api._cache_db_path = lambda: __import__("pathlib").Path(db.name)
-    # Пословный путь «отказал» → уходим в легаси, который отдаёт разбор не по словам.
-    api._smart_translate_words = lambda ru, politeness: None
-    api._llm_translate_ru_to_th = lambda ru, politeness: (
+    api._smart_speaker_live = lambda ru, politeness: (
         "คุณสบายดีไหม",
         "кхун→ са-баи→-ди→ май↑",
-        [{"p": "кхун", "m": "вы"}, {"p": "май", "m": "хорошо"}],
+        [],
     )
-    api._llm_phrase_parts = lambda ru, thai, phonetic: []
     try:
         api._init_cache_db()
         client = TestClient(api.app)
@@ -363,12 +486,74 @@ def test_endpoint_ships_phrase_without_broken_gloss():
         assert out["parts"] == [], out["parts"]
     finally:
         (
-            api._openai_chat_json,
             api.OPENAI_API_KEY,
             api._cache_db_path,
-            api._smart_translate_words,
-            api._llm_translate_ru_to_th,
-            api._llm_phrase_parts,
+            api._smart_speaker_live,
+        ) = originals
+
+
+def test_canon_ships_rain_without_llm():
+    import tempfile
+
+    from fastapi.testclient import TestClient
+
+    db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    db.close()
+    originals = (api.OPENAI_API_KEY, api._cache_db_path, api._openai_chat_json)
+    api.OPENAI_API_KEY = ""
+    api._cache_db_path = lambda: __import__("pathlib").Path(db.name)
+
+    def boom(**kwargs):
+        raise AssertionError("canon must not call the model")
+
+    api._openai_chat_json = boom
+    try:
+        api._init_cache_db()
+        client = TestClient(api.app)
+        out = client.post(
+            "/smart_speaker", json={"text_ru": "Будет дождь", "politeness": "male"}
+        ).json()
+        assert "ฝน" in out["thai"], out
+        assert any(p.get("m") == "дождь" for p in out["parts"]), out["parts"]
+        assert out["thai"].endswith("ครับ")
+    finally:
+        api.OPENAI_API_KEY, api._cache_db_path, api._openai_chat_json = originals
+
+
+def test_endpoint_refuses_dropped_noun():
+    """Фраза не из канона: จะมี на «ливень» не учить и не кэшировать."""
+    import tempfile
+
+    from fastapi.testclient import TestClient
+
+    db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    db.close()
+
+    originals = (
+        api.OPENAI_API_KEY,
+        api._cache_db_path,
+        api._smart_speaker_live,
+    )
+    api.OPENAI_API_KEY = "test-key"
+    api._cache_db_path = lambda: __import__("pathlib").Path(db.name)
+    api._smart_speaker_live = lambda ru, politeness: (
+        "จะมี",
+        "ча↘ ми→",
+        [{"p": "ча", "m": "будет"}, {"p": "ми", "m": "ливень"}],
+    )
+    try:
+        api._init_cache_db()
+        client = TestClient(api.app)
+        payload = {"text_ru": "будет ливень на марсе", "politeness": "male"}
+        resp = client.post("/smart_speaker", json=payload)
+        assert resp.status_code == 404, resp.text
+        cached = client.post("/smart_speaker", json=payload)
+        assert cached.status_code == 404
+    finally:
+        (
+            api.OPENAI_API_KEY,
+            api._cache_db_path,
+            api._smart_speaker_live,
         ) = originals
 
 

@@ -37,7 +37,7 @@ struct TaikaProSuccessView: View {
                     }
                     .padding(.top, 8)
 
-                    Text(pro.isInIntroTrial ? "Пробный период открыт" : "Taika+ с тобой")
+                    Text(pro.isInIntroTrial ? "Пробный период открыт" : "Taika Pro с тобой")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(CD.ColorToken.text)
                         .multilineTextAlignment(.center)

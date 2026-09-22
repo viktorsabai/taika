@@ -30,6 +30,8 @@ final class OverlayPresenter: ObservableObject {
 
         // pro gating (data only)
         case proCoursePaywall(courseId: String, reason: ProGateReason)
+        /// Paywall сразу во вкладке «В подарок».
+        case proGiftPaywall
         /// PRO paywall from Speaker "получить разбор" (сквозной процесс завлечения на разбор)
         case speakerPaywall
 
@@ -58,6 +60,12 @@ final class OverlayPresenter: ObservableObject {
         /// Game park for a specific completed course (legacy / other entry points).
         case gameParkForCourse(courseId: String)
         case favoritesFilters
+        /// Компактный ID с короны (не пейвол).
+        case profileID
+        /// Активация подарочного кода Taika Pro.
+        case giftRedeem
+        /// Код после покупки подарка (share / copy).
+        case giftIssued(code: String)
         /// Поиск по избранным фразам (вкладка «Карточки»).
         case favoritesSearch
         /// Быстрый личный словарь поверх текущего экрана; не меняет Speaker flow.
@@ -143,19 +151,7 @@ final class OverlayPresenter: ObservableObject {
     }
 
     func present(_ overlay: Overlay) {
-        // Один раз перед paywall: интерактивный разбор тонов (Sprint B).
-        if SpeakerToneAhaState.shouldShowBeforePaywall {
-            switch overlay {
-            case .speakerPaywall:
-                self.overlay = .speakerToneAha(courseId: "", reason: .speakerBreakdown, fromSpeakerPaywall: true)
-                return
-            case .proCoursePaywall(let courseId, let reason):
-                self.overlay = .speakerToneAha(courseId: courseId, reason: reason, fromSpeakerPaywall: false)
-                return
-            default:
-                break
-            }
-        }
+        // Старый тон-шаг перед paywall больше не подменяем: первый тап — стандартный оффер.
         self.overlay = overlay
     }
 
@@ -167,6 +163,20 @@ final class OverlayPresenter: ObservableObject {
     /// Онбординг: оффер без микро-шага тонов (aha остаётся на живом Спикере).
     func presentProDirect(reason: ProGateReason = .general) {
         overlay = .proCoursePaywall(courseId: "", reason: reason)
+    }
+
+    func presentGiftPaywall() {
+        overlay = .proGiftPaywall
+    }
+
+    func presentGiftRedeem() {
+        overlay = .giftRedeem
+    }
+
+    func presentGiftIssued(code: String) {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        overlay = .giftIssued(code: trimmed)
     }
 
     func dismiss() {

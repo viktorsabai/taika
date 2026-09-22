@@ -1070,7 +1070,8 @@ public final class SpeakerManager: ObservableObject {
             rebuildQueue()
         }
         var selected = baseQueue.filter { courseIds.contains($0.courseId) }
-        if let lessonIds, !lessonIds.isEmpty {
+        if let lessonIds {
+            // nil = без фильтра по урокам (весь курс); пустой set = ничего не выбрано.
             let needles = Set(lessonIds.map { $0.lowercased() })
             selected = selected.filter { needles.contains($0.lessonId.lowercased()) }
         }
@@ -1831,9 +1832,7 @@ public final class SpeakerManager: ObservableObject {
 
         SpeakerConversationAttemptsStore.shared.refreshDayIfNeeded()
         guard SpeakerConversationAttemptsStore.shared.canRecord else {
-            UINotificationFeedbackGenerator().notificationOccurred(.warning)
-            taikaHints = ["демо попытки на сегодня закончились. переходи на Taika+ — безлимит"]
-            setPhase(.hint)
+            OverlayPresenter.shared.present(.speakerAttempts)
             return
         }
 
@@ -1932,9 +1931,7 @@ public final class SpeakerManager: ObservableObject {
         SpeakerConversationAttemptsStore.shared.refreshDayIfNeeded()
         if consumeAttempt {
             guard SpeakerConversationAttemptsStore.shared.canRecord else {
-                UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                taikaHints = ["демо попытки на сегодня закончились. переходи на Taika+ — безлимит"]
-                setPhase(.hint)
+                OverlayPresenter.shared.present(.speakerAttempts)
                 return
             }
         }
@@ -3293,13 +3290,28 @@ public final class SpeakerManager: ObservableObject {
         analyzingStartedAt = Date()
         taikaHints = ["слушаю…"]
 
+        // Meter ran and the take was still quieter than a whisper. Don't wait on a silent file.
+        let peak = recorder.lastCapturePeakDB
+        if peak > -159, peak < -50 {
+            taikaHints = ["микрофон не услышал — говори ближе к телефону"]
+            conversationHeardThaiASR = nil
+            conversationHeardPhoneticFromASR = nil
+            clearConversationCoach()
+            setPhase(.hint)
+            return
+        }
+
         Task { [weak self] in
             guard let self else { return }
             do {
-                let spokenRaw = try await self.withTimeout(seconds: 15) {
-                    try await self.recognizeThai(url: url)
+                let spokenRaw = try await self.withTimeout(seconds: 9) {
+                    try await self.recognizeThai(url: url, contextual: expectedThai)
                 }
                 let spoken = spokenRaw.trimmingCharacters(in: .whitespacesAndNewlines)
+                if spoken.isEmpty {
+                    await self.finishTakeFromToneAPI(token: token, expectedThai: expectedThai)
+                    return
+                }
                 let similarityScore = self.similarity(a: spoken, b: expectedThai)
                 let score = Int((similarityScore * 100.0).rounded())
                 let hint = self.feedbackHint(for: score)
@@ -3308,10 +3320,10 @@ public final class SpeakerManager: ObservableObject {
                 await MainActor.run {
                     if let t = token, self.activeAttemptToken != nil && self.activeAttemptToken != t { return }
 
-                    self.conversationHeardThaiASR = spoken.isEmpty ? nil : spoken
+                    self.conversationHeardThaiASR = spoken
                     self.conversationHeardPhoneticFromASR = nil
                     self.clearConversationCoach()
-                    self.conversationCoachInFlight = !spoken.isEmpty
+                    self.conversationCoachInFlight = true
                     self.heardConfidence = score
                     self.taikaHints = ["оценка: \(score)", hint]
 
@@ -3325,50 +3337,75 @@ public final class SpeakerManager: ObservableObject {
                     self.setPhase(.feedback(result: result))
                 }
 
-                if !spoken.isEmpty {
-                    var userPhonetic: String?
-                    for attempt in 0..<2 {
-                        do {
-                            userPhonetic = try await self.smartSpeakerPhoneticFromThai(thai: spoken)
-                            break
-                        } catch {
-                            #if DEBUG
-                            print("[speaker] thai_phonetic (attempt \(attempt + 1)): \(error.localizedDescription)")
-                            #endif
-                            if attempt == 0 {
-                                try? await Task.sleep(nanoseconds: 450_000_000)
-                            }
+                var userPhonetic: String?
+                for attempt in 0..<2 {
+                    do {
+                        userPhonetic = try await self.smartSpeakerPhoneticFromThai(thai: spoken)
+                        break
+                    } catch {
+                        #if DEBUG
+                        print("[speaker] thai_phonetic (attempt \(attempt + 1)): \(error.localizedDescription)")
+                        #endif
+                        if attempt == 0 {
+                            try? await Task.sleep(nanoseconds: 450_000_000)
                         }
                     }
-                    if let ph = userPhonetic?.trimmingCharacters(in: .whitespacesAndNewlines), !ph.isEmpty {
-                        await MainActor.run {
-                            self.conversationHeardPhoneticFromASR = Self.teachingPhoneticOrNil(ph)
-                        }
+                }
+                if let ph = userPhonetic?.trimmingCharacters(in: .whitespacesAndNewlines), !ph.isEmpty {
+                    await MainActor.run {
+                        self.conversationHeardPhoneticFromASR = Self.teachingPhoneticOrNil(ph)
                     }
+                }
 
-                    let ru = await MainActor.run { self.heardRU ?? "" }
-                    let phonetic = await MainActor.run { self.conversationExpectedTranslitForFeedback ?? "" }
-                    await self.runSemanticCoachAfterPronunciation(
-                        expectedThai: expectedThai,
-                        expectedRU: ru,
-                        expectedPhonetic: phonetic,
-                        heardThai: spoken,
-                        textScore: score,
-                        attemptToken: token
-                    )
-                }
+                let ru = await MainActor.run { self.heardRU ?? "" }
+                let phonetic = await MainActor.run { self.conversationExpectedTranslitForFeedback ?? "" }
+                await self.runSemanticCoachAfterPronunciation(
+                    expectedThai: expectedThai,
+                    expectedRU: ru,
+                    expectedPhonetic: phonetic,
+                    heardThai: spoken,
+                    textScore: score,
+                    attemptToken: token
+                )
             } catch {
-                await MainActor.run {
-                    if let t = token, self.activeAttemptToken != nil && self.activeAttemptToken != t { return }
-                    self.taikaHints = ["не удалось распознать. попробуй ещё раз"]
-                    self.setPhase(.hint)
-                    self.conversationHeardThaiASR = nil
-                    self.conversationHeardPhoneticFromASR = nil
-                    self.clearConversationCoach()
-                    // Keep expectedThai: retry must stay on this phrase, not start a free listen.
-                }
+                await self.finishTakeFromToneAPI(token: token, expectedThai: expectedThai)
             }
         }
+    }
+
+    /// Apple `th-TH` on device often returns nothing even when the file has speech.
+    /// The tone server already scored this same recording on the simulator — use it instead of discarding the take.
+    private func finishTakeFromToneAPI(token: UUID?, expectedThai: String) async {
+        let phonetic = conversationExpectedTranslitForFeedback
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            requestToneBreakdownFromAPI(
+                expectedThaiForAssess: expectedThai,
+                expectedPhoneticForTones: phonetic
+            ) {
+                cont.resume()
+            }
+        }
+        if let t = token, activeAttemptToken != nil && activeAttemptToken != t { return }
+        guard let tone = toneAverageScore else {
+            taikaHints = ["не расслышал — попробуй ещё раз"]
+            conversationHeardThaiASR = nil
+            conversationHeardPhoneticFromASR = nil
+            clearConversationCoach()
+            setPhase(.hint)
+            return
+        }
+        let score = breakdownHybridScore ?? tone
+        heardConfidence = score
+        let hint = feedbackHint(for: score)
+        taikaHints = ["оценка: \(score)", hint]
+        let result = PronunciationResult(
+            totalScore: score,
+            accuracy: score,
+            fluency: score,
+            completeness: score,
+            hint: hint
+        )
+        setPhase(.feedback(result: result))
     }
 
     /// Оценка тайской записи против эталона (как сравнение в режиме диалога), без требования `speakerUIMode == .conversation`.
@@ -3935,8 +3972,7 @@ public final class SpeakerManager: ObservableObject {
 
         SpeakerDailyAttemptsStore.shared.refreshDayIfNeeded()
         guard SpeakerDailyAttemptsStore.shared.canRecord else {
-            taikaHints = ["лимит попыток на сегодня исчерпан", "на Taika+ — безлимит практики"]
-            setPhase(.hint)
+            OverlayPresenter.shared.present(.speakerAttempts)
             return
         }
 
@@ -4405,7 +4441,7 @@ public final class SpeakerManager: ObservableObject {
     // MARK: - asr (v0)
 
     /// kAFAssistantErrorDomain 1107 = too much silence / aborted; 1101 often follows. Retry once and prefer on-device.
-    private func recognizeThai(url: URL?) async throws -> String {
+    private func recognizeThai(url: URL?, contextual: String? = nil) async throws -> String {
         guard let url else { return "" }
 
         let auth = SFSpeechRecognizer.authorizationStatus()
@@ -4426,42 +4462,34 @@ public final class SpeakerManager: ObservableObject {
         if !recognizer.isAvailable {
             throw NSError(domain: "speaker.asr", code: 4)
         }
-        #if DEBUG
-        print("[speaker] th-TH: isAvailable=\(recognizer.isAvailable) supportsOnDevice=\(recognizer.supportsOnDeviceRecognition)")
-        #endif
 
-        let onDeviceFirst = recognizer.supportsOnDeviceRecognition
+        // Phone cannot reliably read a short m4a via URL recognition — that path
+        // is what the simulator uses and why it scored while the device said "не расслышал".
+        // Feed PCM first, with the expected phrase as a hint.
         var lastError: Error?
-        var sawRetryableError = false
-        for attempt in 0..<2 {
-            let useOnDevice = (attempt == 0) ? onDeviceFirst : !onDeviceFirst
-            do {
-                let text = try await recognizeThaiAttempt(url: url, recognizer: recognizer, onDevice: useOnDevice)
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                if !text.isEmpty { return text }
-                // Empty hypothesis (silence / timeout) — try alternate mode once, but don't pile buffer ASR.
-            } catch {
-                lastError = error
-                let ns = error as NSError
-                let isRetryable = (ns.code == 1107 || ns.code == 1101)
-                #if DEBUG
-                if isRetryable { print("[speaker] retry recognition (attempt \(attempt + 1)) after \(ns.domain) \(ns.code)") }
-                #endif
-                if !isRetryable { throw error }
-                sawRetryableError = true
-            }
-        }
-        // Buffer fallback only after hard retryable ASR errors — not for quiet empty takes.
-        guard sawRetryableError else { return "" }
         do {
-            let text = try await recognizeThaiViaBuffer(url: url, recognizer: recognizer)
-            return text
+            let buffered = try await recognizeThaiViaBuffer(url: url, recognizer: recognizer, contextual: contextual)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !buffered.isEmpty { return buffered }
         } catch {
+            lastError = error
             #if DEBUG
             print("[speaker] buffer recognition failed: \(error)")
             #endif
-            throw lastError ?? error
         }
+        do {
+            let text = try await recognizeThaiAttempt(url: url, recognizer: recognizer, onDevice: false, contextual: contextual)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty { return text }
+        } catch {
+            #if DEBUG
+            let ns = error as NSError
+            print("[speaker] url recognition failed \(ns.domain) \(ns.code)")
+            #endif
+            if let lastError { throw lastError }
+            throw error
+        }
+        return ""
     }
 
     /// Keep at most one active th-TH recognition task to avoid overlapping tasks
@@ -4469,7 +4497,7 @@ public final class SpeakerManager: ObservableObject {
     private var activeThaiRecognitionTask: SFSpeechRecognitionTask?
 
     /// Fallback when URL recognition returns 1107: read file, convert to 16kHz PCM, feed buffer request.
-    private func recognizeThaiViaBuffer(url: URL, recognizer: SFSpeechRecognizer) async throws -> String {
+    private func recognizeThaiViaBuffer(url: URL, recognizer: SFSpeechRecognizer, contextual: String? = nil) async throws -> String {
         let file = try AVAudioFile(forReading: url)
         let srcFormat = file.processingFormat
         guard let dstFormat = AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1) else {
@@ -4506,7 +4534,10 @@ public final class SpeakerManager: ObservableObject {
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
-        request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
+        request.requiresOnDeviceRecognition = false
+        if let contextual, !contextual.isEmpty {
+            request.contextualStrings = [contextual]
+        }
         request.append(outputBuffer)
         request.endAudio()
 
@@ -4548,15 +4579,23 @@ public final class SpeakerManager: ObservableObject {
             }
             Task {
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
+                if !lastText.isEmpty {
+                    finish(returning: lastText)
+                    return
+                }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
                 finish(returning: lastText)
             }
         }
     }
 
-    private func recognizeThaiAttempt(url: URL, recognizer: SFSpeechRecognizer, onDevice: Bool) async throws -> String {
+    private func recognizeThaiAttempt(url: URL, recognizer: SFSpeechRecognizer, onDevice: Bool, contextual: String? = nil) async throws -> String {
         let request = SFSpeechURLRecognitionRequest(url: url)
         request.shouldReportPartialResults = true
         request.requiresOnDeviceRecognition = onDevice
+        if let contextual, !contextual.isEmpty {
+            request.contextualStrings = [contextual]
+        }
 
         return try await withCheckedThrowingContinuation { (c: CheckedContinuation<String, Error>) in
             var lastText = ""
@@ -4600,6 +4639,11 @@ public final class SpeakerManager: ObservableObject {
 
             Task {
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
+                if !lastText.isEmpty {
+                    finish(returning: lastText)
+                    return
+                }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
                 finish(returning: lastText)
             }
         }
@@ -4851,11 +4895,13 @@ public final class SpeakerManager: ObservableObject {
             body.append(Data(ph.utf8))
             append("\r\n")
         }
-        let textScore = phase.isFeedback ? (heardConfidence) : 0
-        append("--\(boundary)\r\n")
-        append("Content-Disposition: form-data; name=\"text_score\"\r\n\r\n")
-        append("\(textScore)")
-        append("\r\n")
+        let textScore = phase.isFeedback ? heardConfidence : 0
+        if textScore > 0 {
+            append("--\(boundary)\r\n")
+            append("Content-Disposition: form-data; name=\"text_score\"\r\n\r\n")
+            append("\(textScore)")
+            append("\r\n")
+        }
         append("--\(boundary)\r\n")
         append("Content-Disposition: form-data; name=\"file\"; filename=\"recording.m4a\"\r\n")
         append("Content-Type: application/octet-stream\r\n\r\n")

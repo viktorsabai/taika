@@ -3,7 +3,6 @@ import SwiftUI
 /// Floating bottom bar (Instagram-style liquid glass) with Taika center mic.
 struct ToolBar: View {
     @Binding var selectedTab: Int   // 0...4
-    @EnvironmentObject var theme: ThemeManager
 
     // MARK: Tokens
     private let capsuleHeight: CGFloat = 48
@@ -27,7 +26,7 @@ struct ToolBar: View {
             Spacer(minLength: 0)
             tab(icon: "heart", selectedIcon: "heart.fill", index: 3)
             Spacer(minLength: 0)
-            tab(icon: "person", selectedIcon: "person.fill", index: 4)
+            tab(icon: "gamecontroller", selectedIcon: "gamecontroller.fill", index: 4)
         }
         .padding(.horizontal, 10)
         .frame(height: capsuleHeight)
@@ -64,17 +63,24 @@ struct ToolBar: View {
 
     @ViewBuilder
     private func tabIcon(system: String, selected: Bool) -> some View {
-        Image(systemName: system)
-            .symbolRenderingMode(.monochrome)
-            .renderingMode(.template)
-            .font(.system(size: iconSize, weight: selected ? .semibold : .regular))
-            .foregroundStyle(iconColor(selected: selected))
-            .scaleEffect(selected ? 1.0 : 0.94)
-            .frame(width: tapSize, height: tapSize)
-            .contentShape(Rectangle())
-            .contentTransition(.symbolEffect(.replace))
-            .animation(.spring(response: 0.34, dampingFraction: 0.78), value: selected)
-            .symbolEffect(.bounce, value: selected ? selectedTab : -1)
+        VStack(spacing: 3) {
+            Image(systemName: system)
+                .symbolRenderingMode(.monochrome)
+                .renderingMode(.template)
+                .font(.system(size: iconSize, weight: selected ? .semibold : .regular))
+                .foregroundStyle(iconColor(selected: selected))
+                .scaleEffect(selected ? 1.0 : 0.94)
+                .frame(width: tapSize, height: tapSize - 6)
+                .contentShape(Rectangle())
+                .contentTransition(.symbolEffect(.replace))
+                .animation(.spring(response: 0.34, dampingFraction: 0.78), value: selected)
+                .symbolEffect(.bounce, value: selected ? selectedTab : -1)
+
+            Circle()
+                .fill(Color.white.opacity(selected ? 0.88 : 0))
+                .frame(width: 4, height: 4)
+        }
+        .frame(width: tapSize, height: tapSize)
     }
 
     private func selectTab(_ index: Int) {
@@ -87,9 +93,9 @@ struct ToolBar: View {
 
     private func iconColor(selected: Bool) -> AnyShapeStyle {
         if selected {
-            return AnyShapeStyle(theme.currentAccentFill)
+            return AnyShapeStyle(Color.white.opacity(0.95))
         }
-        return AnyShapeStyle(Color.white.opacity(0.58))
+        return AnyShapeStyle(Color.white.opacity(0.45))
     }
 }
 
@@ -115,6 +121,5 @@ struct ToolBar_Previews: PreviewProvider {
                 }
         }
         .previewDisplayName("Tool Bar — liquid glass")
-        .environmentObject(ThemeManager.shared)
     }
 }

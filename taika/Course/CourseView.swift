@@ -602,7 +602,7 @@ struct CourseView: View {
                         .frame(width: 48, height: 48)
                     Image(systemName: "bookmark")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                        .foregroundStyle(PD.ColorToken.textSecondary)
                 }
             }
             .padding(16)
@@ -664,7 +664,8 @@ struct CourseView: View {
                         AppInlineFilterPicker(
                             titles: categories,
                             selectedIndex: selectedIndex,
-                            showsSelectedTitle: false
+                            showsSelectedTitle: false,
+                            selectionAccent: AnyShapeStyle(Color.white.opacity(0.88))
                         ) { index in
                             guard categories.indices.contains(index) else { return }
                             withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
@@ -778,20 +779,9 @@ struct CourseView: View {
                 .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 28)
-            Button(action: action) {
-                Text(actionTitle)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.black.opacity(0.88))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(ThemeManager.shared.currentAccentFill)
-                    )
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 48)
-            .padding(.top, 4)
+            MDMainFilledPillCTA(title: actionTitle, action: action)
+                .padding(.horizontal, 48)
+                .padding(.top, 4)
             Spacer(minLength: 24)
         }
         .padding(.horizontal, CD.Spacing.screen)
@@ -933,13 +923,10 @@ struct CourseView: View {
                 Text("Открыть спикер")
                     .font(.system(size: 15, weight: .semibold))
             }
-            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+            .foregroundStyle(PD.ColorToken.text.opacity(0.92))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(ThemeManager.shared.currentAccentFill.opacity(0.55), lineWidth: 1.2)
-            )
+            .background(TaikaNeutralPrimaryPillChrome(cornerRadius: 16))
         }
         .buttonStyle(.plain)
     }
@@ -1012,7 +999,7 @@ struct CourseView: View {
 #endif
                 } label: {
                     Text("собрать")
-                        .taikaSubsectionStyle(accent: true)
+                        .taikaSubsectionStyle(accent: false)
                 }
                 .buttonStyle(.plain)
             }
@@ -1038,13 +1025,10 @@ struct CourseView: View {
             } label: {
                 Text("Начать урок")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color(white: 0.12))
+                    .foregroundStyle(PD.ColorToken.text)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(ThemeManager.shared.currentAccentFill)
-                    )
+                    .background(TaikaNeutralPrimaryPillChrome(cornerRadius: 16))
             }
             .buttonStyle(.plain)
             .padding(.horizontal, CD.Spacing.screen)
@@ -1170,6 +1154,7 @@ struct CourseView: View {
             let isPaywallPresented: Bool = {
                 if let o = overlay.overlay {
                     if case .proCoursePaywall = o { return true }
+                    if case .proGiftPaywall = o { return true }
                 }
                 return false
             }()
@@ -1448,7 +1433,7 @@ private struct CourseInfoPreviewGlass: View {
                 }
 
                 OverlayEtalonPrimaryButton(
-                    title: isProLocked ? "Открыть с Taika+" : "Открыть курс",
+                    title: isProLocked ? "Открыть с Taika Pro" : "Открыть курс",
                     action: isProLocked ? onOpenPro : onOpenCourse
                 )
                     .padding(.top, 6)
@@ -1638,15 +1623,10 @@ private struct ProCoursePaywallGlass: View {
                 Button(action: onOpenCourse ?? onOpenPro) {
                     Text(onOpenCourse != nil ? "Открыть курс" : "открыть pro")
                         .font(PD.FontToken.body(16, weight: .semibold))
-                        .foregroundStyle(Color.black.opacity(0.92))
+                        .foregroundStyle(PD.ColorToken.text)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(ThemeManager.shared.currentAccentFill)
-                        .clipShape(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                        )
+                        .background(TaikaNeutralPrimaryPillChrome(cornerRadius: PD.Radius.card))
                 }
                 .buttonStyle(.plain)
 
@@ -1691,15 +1671,10 @@ private struct ProCoursePaywallGlass: View {
                 Button(action: onOpenCourse ?? onOpenPro) {
                     Text(onOpenCourse != nil ? "Открыть курс" : "открыть pro")
                         .font(PD.FontToken.body(16, weight: .semibold))
-                        .foregroundStyle(Color.black.opacity(0.92))
+                        .foregroundStyle(PD.ColorToken.text)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(ThemeManager.shared.currentAccentFill)
-                        .clipShape(RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
-                                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                        )
+                        .background(TaikaNeutralPrimaryPillChrome(cornerRadius: PD.Radius.card))
                 }
                 .buttonStyle(.plain)
             }

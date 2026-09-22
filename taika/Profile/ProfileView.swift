@@ -2,7 +2,7 @@
 //  ProfileView.swift
 //  taika
 //
-//  Компактный корень: аккаунт · Taika+ · ценность · Ещё.
+//  Компактный корень: аккаунт · Taika Pro · ценность · Ещё.
 //  Детали Pro / legal / beta — в sheet’ах.
 //
 
@@ -40,7 +40,7 @@ enum TaikaBuildChannel {
     static var badgeSubtitle: String? {
         if isDebug { return "Локальная сборка для разработки" }
         if isTestFlight {
-            return "Тестовая сборка с taikaa.online · \(TaikaProConfig.introTrialDaysPhrase) Taika+"
+            return "Тестовая сборка с taikaa.online · \(TaikaProConfig.introTrialDaysPhrase) Taika Pro"
         }
         return nil
     }
@@ -222,7 +222,7 @@ struct ProfileView: View {
                 onOpenPaywall: {
                     showProSheet = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        overlay.presentPro(reason: .general)
+                        overlay.presentProDirect(reason: .general)
                     }
                 },
                 onRestore: {
@@ -289,7 +289,7 @@ struct ProfileView: View {
             if pro.isPro {
                 storeRestoreMessage = pro.isInIntroTrial
                     ? "Пробный период восстановлен."
-                    : "Taika+ восстановлен."
+                    : "Taika Pro восстановлен."
             } else {
                 storeRestoreMessage = "Активных покупок не найдено."
             }
@@ -319,7 +319,7 @@ struct ProfileView: View {
     }
 }
 
-// MARK: - Taika+ details
+// MARK: - Taika Pro details
 
 private struct ProfileProSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -340,7 +340,7 @@ private struct ProfileProSheet: View {
                             subtitle: pro.subscriptionStatusSubtitle
                         )
                         ProfileGlassRow(
-                            title: pro.isPro ? "Taika+ открыт" : "Открыть Taika+",
+                            title: pro.isPro ? "Taika Pro открыт" : "Открыть Taika Pro",
                             subtitle: pro.isPro ? "Курсы, Speaker и игры доступны" : "7 дней бесплатно — разминка, курсы и Speaker",
                             systemImage: "crown.fill",
                             trailing: pro.isPro ? "checkmark" : "chevron.right"
@@ -357,7 +357,7 @@ private struct ProfileProSheet: View {
                         .environmentObject(theme)
                         ProfileGlassRow(
                             title: restoreInFlight ? "Восстановление…" : "Восстановить покупки",
-                            subtitle: pro.isPro ? "Проверить доступ на этом Apple ID" : "Если ты уже покупал Taika+",
+                            subtitle: pro.isPro ? "Проверить доступ на этом Apple ID" : "Если ты уже покупал Taika Pro",
                             systemImage: "arrow.triangle.2.circlepath",
                             trailing: restoreInFlight ? "hourglass" : "chevron.right"
                         ) {
@@ -367,6 +367,34 @@ private struct ProfileProSheet: View {
                         }
                         .environmentObject(theme)
                         .opacity(restoreInFlight ? 0.72 : 1)
+                        ProfileGlassRow(
+                            title: "У меня есть подарок",
+                            subtitle: "Активировать код от друга",
+                            systemImage: "gift.fill",
+                            trailing: "chevron.right"
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            dismiss()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                OverlayPresenter.shared.presentGiftRedeem()
+                            }
+                        }
+                        .environmentObject(theme)
+                        if pro.isPro {
+                            ProfileGlassRow(
+                                title: "Подарить Taika Pro",
+                                subtitle: "Купить код для друга — без почты",
+                                systemImage: "gift",
+                                trailing: "chevron.right"
+                            ) {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                dismiss()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                    OverlayPresenter.shared.presentGiftPaywall()
+                                }
+                            }
+                            .environmentObject(theme)
+                        }
                         Text("Доступ и покупки синхронизируются через Apple ID. Если что-то не совпало, открой поддержку из профиля.")
                             .font(PD.FontToken.caption(12))
                             .foregroundStyle(PD.ColorToken.textSecondary)
@@ -378,7 +406,7 @@ private struct ProfileProSheet: View {
                     .padding(.bottom, 34)
                 }
             }
-            .navigationTitle("Taika+")
+            .navigationTitle("Taika Pro")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -536,10 +564,11 @@ private struct ProfileMoreSheet: View {
 
 // MARK: - Debug
 
-private struct ProfileDebugSheet: View {
+struct ProfileDebugSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var theme: ThemeManager
     @ObservedObject private var pro = ProManager.shared
+    @State private var showStoryLab = false
 
     var body: some View {
         NavigationStack {
@@ -553,7 +582,7 @@ private struct ProfileDebugSheet: View {
                             UINotificationFeedbackGenerator().notificationOccurred(.success)
                         }
                     )) {
-                        Text("Taika+ режим (тест)")
+                        Text("Taika Pro режим (тест)")
                             .foregroundStyle(PD.ColorToken.text)
                     }
                     .tint(theme.currentAccentFill)
@@ -565,7 +594,9 @@ private struct ProfileDebugSheet: View {
                     .foregroundStyle(PD.ColorToken.text)
                     .listRowBackground(PD.ColorToken.background)
                     Button("Сбросить онбординг v2") {
-                        UserDefaults.standard.removeObject(forKey: "taika.onboarding.v2.done")
+                        // Явно false, не removeObject: иначе migrateOnboardingFlagIfNeeded
+                        // видит nil-ключ + welcomeSeen и снова ставит done=true.
+                        UserDefaults.standard.set(false, forKey: "taika.onboarding.v2.done")
                         UserDefaults.standard.set(false, forKey: "taika.welcome.seen.v1")
                         TaikaProductDemoFlags.resetAllForDebug()
                         NotificationCenter.default.post(
@@ -573,6 +604,7 @@ private struct ProfileDebugSheet: View {
                             object: nil
                         )
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        dismiss()
                     }
                     .foregroundStyle(PD.ColorToken.text)
                     .listRowBackground(PD.ColorToken.background)
@@ -584,6 +616,36 @@ private struct ProfileDebugSheet: View {
                     .listRowBackground(PD.ColorToken.background)
                 } header: {
                     Text("Отладка")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .textCase(.uppercase)
+                }
+
+                Section {
+                    Button {
+                        showStoryLab = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "film.stack")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.white.opacity(0.88))
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Story Lab")
+                                    .foregroundStyle(PD.ColorToken.text)
+                                Text("Cinematic workspace · Главная")
+                                    .font(.caption)
+                                    .foregroundStyle(PD.ColorToken.textSecondary)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(PD.ColorToken.textSecondary)
+                        }
+                    }
+                    .listRowBackground(PD.ColorToken.background)
+                } header: {
+                    Text("Контент / блог")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(PD.ColorToken.textSecondary)
                         .textCase(.uppercase)
@@ -600,6 +662,11 @@ private struct ProfileDebugSheet: View {
                     Button("Готово") { dismiss() }
                 }
             }
+            #if DEBUG
+            .fullScreenCover(isPresented: $showStoryLab) {
+                TaikaStoryLabView()
+            }
+            #endif
         }
     }
 }

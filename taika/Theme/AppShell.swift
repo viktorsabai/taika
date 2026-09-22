@@ -20,7 +20,7 @@ struct AppShell: View {
     /// Value-онбординг + быстрый старт пройдены.
     @AppStorage("taika.onboarding.v2.done") private var onboardingDone: Bool = false
     /// Брендовый сплэш на каждом cold start → дальше Main (только returning).
-    @State private var showBootSplash: Bool = true
+    /// Сама заставка — отдельное окно, не этот флаг.
     @State private var didStartDataPreload: Bool = false
     /// Фаза первого входа после Welcome.
     @State private var firstEntryPhase: FirstEntryPhase = .none
@@ -33,14 +33,12 @@ struct AppShell: View {
     }
 
     /// Hide chrome header while fullscreen park / reinforce overlays are up.
+    /// Keep it mounted during splash cover so the header lays out under the window.
     private var showsShellHeaderChrome: Bool {
-        guard welcomeSeen, onboardingDone, !showBootSplash, firstEntryPhase == .none else { return false }
+        guard welcomeSeen, onboardingDone, firstEntryPhase == .none else { return false }
         switch overlay.overlay {
         case .dictionaryQuickDrawer,
-             .gamePark,
-             .gameParkFromFavorites,
-             .gameParkFromDictionary,
-             .reinforcePick,
+             .profileID,
              .gameParkForCourse:
             return false
         default:
@@ -55,10 +53,30 @@ struct AppShell: View {
                 if newValue == 2, selectedTab != 2 {
                     openSpeakerFromToolbarIfNeeded()
                 }
-                // Avoid extra spring-driven layout work on heavy root tabs.
+                if newValue != selectedTab {
+                    if !nav.path.isEmpty {
+                        nav.popToRoot()
+                    }
+                    // Never leak Main hub tint into other tabs / header.
+                    ThemeManager.shared.hubAtmosphere = nil
+                    TaikaAssembleGate.shared.postTabActivated(newValue)
+                }
                 selectedTab = newValue
+                syncTabAtmosphere(newValue)
             }
         )
+    }
+
+    /// Избранное красит хедер в небесный, закрепление — в золото консоли. Главная сама ставит атмосферу режима.
+    private func syncTabAtmosphere(_ tab: Int) {
+        guard tab != 0 else { return }
+        withAnimation(.easeInOut(duration: 0.34)) {
+            switch tab {
+            case 3: ThemeManager.shared.hubAtmosphere = .favorites
+            case 4: ThemeManager.shared.hubAtmosphere = .console
+            default: ThemeManager.shared.hubAtmosphere = nil
+            }
+        }
     }
 
     /// Тап по иконке Спикер в тулбаре → умный спикер, если нет контекста тренировки курса/избранного.
@@ -73,6 +91,13 @@ struct AppShell: View {
         }
     }
 
+    private func openGameParkHub(_ courseId: String) {
+        overlay.dismiss()
+        GameParkHubState.shared.preselect(courseId)
+        nav.popToRoot()
+        nav.requestTab(4)
+    }
+
     @ObservedObject private var overlay = OverlayPresenter.shared
     @ObservedObject private var gameHeaderStore = GameHeaderStore.shared
     @EnvironmentObject private var nav: NavigationIntent
@@ -82,6 +107,30 @@ struct AppShell: View {
     @State private var speakerPendingLessonIds: [String]? = nil
 
     var body: some View {
+        // Direct #Preview of AppShell still must stay light — full tabs + JSON kill Canvas.
+        if TaikaRuntime.isXcodePreview {
+            previewStub
+        } else {
+            appBody
+        }
+    }
+
+    private var previewStub: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            VStack(spacing: 10) {
+                Text("taikAAA")
+                    .font(.custom("Onmark Trial", size: 28))
+                    .foregroundStyle(.white)
+                Text("AppShell preview stub")
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var appBody: some View {
         ZStack {
             if onboardingDone {
                 TaikaContinuousCanvasBackground()
@@ -91,27 +140,22 @@ struct AppShell: View {
             }
 
             // Вход:
-            // • первый раз → единый splash внутри core loop → LessonsView стартового курса
-            // • returning → короткий Splash → Main
+            // • первый раз → assemble-шар внутри core loop
+            // • returning → тот же assemble-шар → Main
             if !onboardingDone {
                 TaikaCoreLoopOnboardingView(
                     onFinished: { courseId in
                         finishFirstEntry(with: .baseCourse, landingCourseId: courseId)
                     },
+                    onOpenHome: {
+                        finishFirstEntry(with: .home)
+                    },
                     onRequestPro: {
-                        // Paywall поверх offer; first-entry закрываем только через «Открыть первый урок».
                         DispatchQueue.main.async {
                             overlay.presentProDirect(reason: .general)
                         }
                     }
                 )
-                .transition(.opacity)
-            } else if showBootSplash {
-                SplashTaikaView {
-                    withAnimation(.easeOut(duration: 0.28)) {
-                        showBootSplash = false
-                    }
-                }
                 .transition(.opacity)
             } else {
                 mainShellContent
@@ -130,6 +174,21 @@ struct AppShell: View {
                     }
                 case .proCoursePaywall(let courseId, let reason):
                     PROView(courseId: courseId.isEmpty ? nil : courseId, reason: reason) {
+                        let leaveOnboarding = !onboardingDone
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                            overlay.dismiss()
+                        }
+                        if leaveOnboarding {
+                            finishFirstEntry(with: .home)
+                        }
+                    }
+                case .proGiftPaywall:
+                    TaikaPlusPaywallView(
+                        courseId: nil,
+                        reason: .general,
+                        presentationStyle: .overlay,
+                        startInGiftIntent: true
+                    ) {
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
                             overlay.dismiss()
                         }
@@ -171,70 +230,46 @@ struct AppShell: View {
                 case .voiceSettings:
                     VoiceSettingsOverlayView(onDismiss: { overlay.dismiss() })
                 case .gamePark:
-                    GameParkOverlayView(
-                        source: .main,
-                        onDismiss: { overlay.dismiss() },
-                        onOpenCourses: {
-                            overlay.dismiss()
-                            nav.popToRoot()
-                            nav.requestTab(1)
-                        }
-                    )
+                    Color.clear.onAppear {
+                        openGameParkHub(LearnedGameSource.pseudoCourseId)
+                    }
                 case .gameParkFromFavorites:
-                    GameParkOverlayView(
-                        source: .favorites,
-                        onDismiss: { overlay.dismiss() },
-                        onOpenCourses: {
-                            overlay.dismiss()
-                            nav.popToRoot()
-                            nav.requestTab(1)
-                        }
-                    )
+                    Color.clear.onAppear {
+                        openGameParkHub("__favorites__")
+                    }
                 case .gameParkFromDictionary:
-                    GameParkOverlayView(
-                        source: .dictionary,
-                        onDismiss: { overlay.dismiss() },
-                        onOpenCourses: {
-                            overlay.dismiss()
-                            nav.popToRoot()
-                            nav.requestTab(1)
-                        }
-                    )
+                    Color.clear.onAppear {
+                        openGameParkHub(DictionaryGameSource.courseId)
+                    }
                 case .reinforcePick:
-                    ReinforcePickOverlayView(
-                        courses: MainManager.shared.reinforcementCourseCards.map {
-                            .init(
-                                id: $0.courseId,
-                                title: $0.title,
-                                subtitle: $0.subtitle.isEmpty ? "Пройденный курс" : $0.subtitle
-                            )
-                        },
-                        hasAllLearnedPool: LearnedGameSource.hasPlayableCards,
-                        onDismiss: { overlay.dismiss() },
-                        onStartGame: { courseId, mode in
-                            nav.go(.game(
-                                courseId: courseId,
-                                lessonId: nil,
-                                gameType: mode.rawValue
-                            ))
-                        },
-                        onStartSpeaker: { courseId in
-                            SpeakerReturnContext.shared.save(tab: selectedTab, path: nav.path)
-                            if let courseId, !courseId.isEmpty {
-                                SpeakerManager.shared.setSpeakerUIMode(.training)
-                                SpeakerRequestedCourseId.shared.set(courseId)
-                            } else {
-                                SpeakerManager.shared.setSpeakerUIMode(.conversation)
-                                SpeakerRequestedCourseId.shared.set(nil)
-                            }
-                            nav.requestTab(2)
-                        },
-                        onOpenCourses: {
+                    Color.clear.onAppear {
+                        openGameParkHub(LearnedGameSource.pseudoCourseId)
+                    }
+                case .profileID:
+                    ProfileIDOverlayView(onDismiss: {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
                             overlay.dismiss()
-                            nav.popToRoot()
-                            nav.requestTab(1)
+                        }
+                    })
+                case .giftRedeem:
+                    TaikaGiftRedeemSheet(
+                        onDismiss: {
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                overlay.dismiss()
+                            }
+                        },
+                        onActivated: {
+                            if !onboardingDone {
+                                finishFirstEntry(with: .home)
+                            }
                         }
                     )
+                case .giftIssued(let code):
+                    TaikaGiftIssuedSheet(code: code) {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                            overlay.dismiss()
+                        }
+                    }
                 case .gameParkForCourse(let courseId):
                     GameParkOverlayView(
                         source: .main,
@@ -303,41 +338,31 @@ struct AppShell: View {
         }
         .animation(.spring(response: 0.5, dampingFraction: 0.9), value: welcomeSeen)
         .animation(.spring(response: 0.5, dampingFraction: 0.9), value: firstEntryPhase)
-        .animation(.easeOut(duration: 0.28), value: showBootSplash)
         .onAppear {
             migrateOnboardingFlagIfNeeded()
             if !onboardingDone, firstEntryPhase == .none {
-                showBootSplash = false
+                TaikaSplashCover.dismissNow()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: TaikaProductDemoFlags.debugResetOnboardingNotification)) { _ in
             pendingQuickStart = nil
-            showBootSplash = false
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.9)) {
-                firstEntryPhase = .splash
-                selectedTab = 0
-            }
+            TaikaSplashCover.dismissNow()
+            welcomeSeen = false
+            onboardingDone = false
+            firstEntryPhase = .none
+            selectedTab = 0
             nav.popToRoot()
+            overlay.dismiss()
         }
         .overlay(alignment: .top) {
             if showsShellHeaderChrome {
-                ZStack(alignment: .top) {
-                    // The transition layer is behind the header content and extends
-                    // into the canvas without becoming an opaque page strip.
-                    TaikaLiquidGlassHeaderBackdrop()
-                        .frame(height: 124)
-                        .frame(maxWidth: .infinity, alignment: .top)
-                        .opacity(0.84)
-                        .allowsHitTesting(false)
-
-                    ShellHeaderHost(
-                        selectedTab: $selectedTab,
-                        speakerPendingCourseId: $speakerPendingCourseId,
-                        speakerPendingLessonId: $speakerPendingLessonId
-                    )
-                    .frame(maxWidth: .infinity)
-                    .zIndex(1)
-                }
+                // Single glass layer lives on AppHeader — avoid double-stacking blur.
+                ShellHeaderHost(
+                    selectedTab: $selectedTab,
+                    speakerPendingCourseId: $speakerPendingCourseId,
+                    speakerPendingLessonId: $speakerPendingLessonId
+                )
+                .frame(maxWidth: .infinity)
             }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -345,37 +370,29 @@ struct AppShell: View {
         .environmentObject(FavoriteManager.shared)
         .environmentObject(overlay)
         .environmentObject(ProManager.shared)
-        .task(id: showBootSplash) {
-            guard welcomeSeen, onboardingDone, showBootSplash, firstEntryPhase == .none else { return }
-            try? await Task.sleep(nanoseconds: 2_500_000_000)
-            if showBootSplash {
-                withAnimation(.easeOut(duration: 0.28)) {
-                    showBootSplash = false
-                }
-            }
+        .task {
+            guard !TaikaRuntime.isXcodePreview else { return }
+            guard welcomeSeen, onboardingDone, firstEntryPhase == .none else { return }
+            TaikaSplashCover.showIfNeeded()
+            TaikaSplashCover.dismissWhenAppReady()
         }
         .task {
+            guard !TaikaRuntime.isXcodePreview else { return }
             try? await Task.sleep(nanoseconds: 300_000_000)
             ProManager.shared.start(session: UserSession.shared)
             await ProManager.shared.syncRevenueCatIdentity(userId: AuthService.shared.currentUserID)
             await ProManager.shared.syncCustomerInfoFromRevenueCat()
         }
         .onAppear {
+            guard !TaikaRuntime.isXcodePreview else { return }
             guard !didStartDataPreload else { return }
             didStartDataPreload = true
-            Task.detached(priority: .utility) {
-                StepData.shared.preload()
-                LessonsData.shared.preload()
-#if DEBUG
-                await MainActor.run {
-                    ProgressManager.shared.debugAuditProgressIfEnabled()
-                }
-#endif
-            }
+            TaikaCatalogBoot.start()
         }
     }
 
     /// Существующие пользователи с welcome.seen не гоняем через новый онбординг.
+    /// Важно: ключ `nil` = «ещё не мигрировали». Явный `false` = debug-сброс / незавершённый проход.
     private func migrateOnboardingFlagIfNeeded() {
         if welcomeSeen, UserDefaults.standard.object(forKey: "taika.onboarding.v2.done") == nil {
             onboardingDone = true
@@ -398,7 +415,7 @@ struct AppShell: View {
         pendingQuickStart = nil
         welcomeSeen = true
         onboardingDone = true
-        showBootSplash = false
+        TaikaSplashCover.dismissNow()
 
         switch action {
         case .baseCourse:
@@ -423,6 +440,12 @@ struct AppShell: View {
             }
             DispatchQueue.main.async {
                 nav.openCourseCatalog(tab: .base)
+            }
+        case .home:
+            selectedTab = 0
+            nav.path = []
+            withAnimation(.easeOut(duration: 0.32)) {
+                firstEntryPhase = .none
             }
         }
     }
@@ -531,9 +554,18 @@ struct AppShell: View {
                     speakerPendingLessonIds = ctx.lessonIds
                 }
             }
-            nav.popToRoot()
-            selectedTab = tab
             nav.clearRequestedTab()
+            // path + tab в том же кадре, что и requestedTab, бьют NavigationStack дважды
+            // («Update NavigationRequestObserver tried to update multiple times per frame»).
+            let applyTab = tab
+            Task { @MainActor in
+                if !nav.path.isEmpty {
+                    nav.popToRoot()
+                }
+                selectedTab = applyTab
+                syncTabAtmosphere(applyTab)
+                TaikaAssembleGate.shared.postTabActivated(applyTab)
+            }
         }
         .onChange(of: nav.path) { _, newPath in
             let onGame = newPath.last.map { if case .game = $0 { return true }; return false } ?? false
@@ -563,7 +595,7 @@ struct AppShell: View {
         case 3:
             FavoriteView()
         case 4:
-            ProfileView()
+            GameParkView()
         default:
             MainView()
         }
@@ -634,7 +666,7 @@ private struct ShellHeaderHost: View {
         let conversationAttempts = SpeakerConversationAttemptsStore.shared
 
         AppHeader(
-            onTapPro: { overlay.presentPro() },
+            onTapPro: { overlay.present(.profileID) },
             onTapVoice: { overlay.present(.voiceSettings) },
             onTapGamePark: { overlay.present(.gamePark) },
             onTapCourseSearch: { overlay.presentSearch() },
@@ -642,7 +674,13 @@ private struct ShellHeaderHost: View {
             onTapPersonalCourseCreate: { overlay.present(.personalCourseCreate) },
             onTapSpeakerFilters: {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                if SpeakerManager.shared.speakerUIMode == .conversation {
+                let mode = SpeakerManager.shared.speakerUIMode
+                let exhausted = !pro.isPro && (
+                    mode == .conversation
+                        ? conversationAttempts.remainingToday <= 0
+                        : speakerAttempts.remainingToday <= 0
+                )
+                if exhausted || mode == .conversation {
                     overlay.present(.speakerAttempts)
                 } else {
                     overlay.present(.speakerCourses)
@@ -679,7 +717,11 @@ private struct ShellHeaderHost: View {
                     selectedTab = 2
                 }
             },
-            onTapFavoritesGamePark: { overlay.present(.gameParkFromFavorites) },
+            onTapFavoritesGamePark: {
+                GameParkHubState.shared.preselect("__favorites__")
+                nav.popToRoot()
+                nav.requestTab(4)
+            },
             onTapFavoritesSearch: { overlay.present(.favoritesSearch) },
             onTapDictionary: {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -855,10 +897,10 @@ private struct GameView: View {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 36, weight: .semibold))
                     .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                Text("Этот режим — Taika+")
+                Text("Этот режим — Taika Pro")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(CD.ColorToken.text)
-                Text("Расширенные игры доступны с подпиской Taika+.")
+                Text("Расширенные игры доступны с подпиской Taika Pro.")
                     .font(.system(size: 14, weight: .regular))
                     .foregroundStyle(CD.ColorToken.textSecondary)
                     .multilineTextAlignment(.center)
@@ -866,7 +908,7 @@ private struct GameView: View {
                 Button {
                     overlay.presentPro(reason: .games, courseId: courseId)
                 } label: {
-                    Text("оформить Taika+")
+                    Text("оформить Taika Pro")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
@@ -902,4 +944,6 @@ private struct GameView: View {
 
 #Preview {
     AppShell()
+        .environmentObject(NavigationIntent())
+        .environmentObject(ThemeManager.shared)
 }

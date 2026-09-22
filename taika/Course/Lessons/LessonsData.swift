@@ -23,55 +23,67 @@ final class LessonsData: ObservableObject {
 
     @Published private(set) var bundle: LessonsBundle = .empty
 
-    private var loadOnce = Once()
+    private let gate = NSLock()
+    private var didLoad = false
+    private var isLoading = false
+    private var cached: LessonsBundle = .empty
+    private var waiters: [DispatchSemaphore] = []
+    private var didLogEmpty = false
 
     /// Call early (e.g., on app start) or rely on lazy loading via accessors.
+    /// Returns only after the catalog is in memory. Background preload must not
+    /// publish later — callers used to snapshot an empty bundle in that window.
     func preload() {
-        loadOnce.perform { [weak self] in
-            do {
-                let loaded = try LessonsLoader.load()
-                // publish immediately when we're already on main thread (prevents a 1-runloop "empty bundle" window)
-                if Thread.isMainThread {
-                    self?.bundle = loaded
-                } else {
-                    DispatchQueue.main.async { [weak self] in
-                        self?.bundle = loaded
-                    }
-                }
-            } catch {
-                print("Ошибка парсинга lessons.json")
-                if case DecodingError.dataCorrupted(let ctx) = error {
-                    print("dataCorrupted at path: \(ctx.codingPath.map { $0.stringValue }.joined(separator: ".")) — \(ctx.debugDescription)")
-                } else if case DecodingError.keyNotFound(let key, let ctx) = error {
-                    print("keyNotFound: \(key.stringValue) at path: \(ctx.codingPath.map { $0.stringValue }.joined(separator: ".")) — \(ctx.debugDescription)")
-                } else if case DecodingError.typeMismatch(_, let ctx) = error {
-                    print("typeMismatch at path: \(ctx.codingPath.map { $0.stringValue }.joined(separator: ".")) — \(ctx.debugDescription)")
-                } else if case DecodingError.valueNotFound(_, let ctx) = error {
-                    print("valueNotFound at path: \(ctx.codingPath.map { $0.stringValue }.joined(separator: ".")) — \(ctx.debugDescription)")
-                } else {
-                    let ns = error as NSError
-                    print("decode error: \(error) userInfo=\(ns.userInfo)")
-                }
-                self?.bundle = .empty
-            }
+        gate.lock()
+        if didLoad {
+            gate.unlock()
+            return
         }
+        if isLoading {
+            let sem = DispatchSemaphore(value: 0)
+            waiters.append(sem)
+            gate.unlock()
+            sem.wait()
+            return
+        }
+        isLoading = true
+        gate.unlock()
+
+        let loaded: LessonsBundle
+        do {
+            loaded = try LessonsLoader.load()
+        } catch {
+            Self.logLoadFailure(error)
+            loaded = .empty
+        }
+
+        gate.lock()
+        cached = loaded
+        didLoad = true
+        isLoading = false
+        let pending = waiters
+        waiters.removeAll()
+        gate.unlock()
+
+        // Signal first. Publish hops to main; waiters on main used to deadlock here.
+        pending.forEach { $0.signal() }
+        publish(loaded)
     }
 
     // Convenience accessors -------------------------------------------------
 
-    func allCourses() -> [CourseBundle] { ensureLoaded(); return bundle.courses }
+    func allCourses() -> [CourseBundle] { coursesSnapshot() }
 
     func course(id: String) -> CourseBundle? {
-        ensureLoaded();
-        return bundle.courses.first { $0.courseID == id }
+        coursesSnapshot().first { $0.courseID == id }
     }
 
     /// Навигация и разные JSON могут отличаться (`a_b` vs `a-b`). Возвращает курс из каталога или nil.
     func courseBundle(matchingAnyId raw: String) -> CourseBundle? {
-        ensureLoaded()
-        if let c = course(id: raw) { return c }
+        let courses = coursesSnapshot()
+        if let c = courses.first(where: { $0.courseID == raw }) { return c }
         let norm = Self.normalizeCourseIdKey(raw)
-        return bundle.courses.first { Self.normalizeCourseIdKey($0.courseID) == norm }
+        return courses.first { Self.normalizeCourseIdKey($0.courseID) == norm }
     }
 
     func lessons(for courseID: String) -> [LessonBundle] {
@@ -87,8 +99,7 @@ final class LessonsData: ObservableObject {
         if lessonID == PersonalPackManager.lessonId {
             return PersonalPackManager.lessonTitle
         }
-        ensureLoaded()
-        for course in bundle.courses {
+        for course in coursesSnapshot() {
             if let lesson = course.lessons.first(where: { $0.lessonID == lessonID }) {
                 return lesson.title
             }
@@ -103,10 +114,42 @@ final class LessonsData: ObservableObject {
     }
 
     // ----------------------------------------------------------------------
-    private func ensureLoaded() {
+
+    private func coursesSnapshot() -> [CourseBundle] {
         preload()
-        if bundle.courses.isEmpty {
-            print("[LessonsData] bundle is empty after preload() — navigation may render empty state")
+        gate.lock()
+        let courses = cached.courses
+        let loaded = didLoad
+        gate.unlock()
+        if loaded, courses.isEmpty, !didLogEmpty {
+            didLogEmpty = true
+            print("[LessonsData] lessons.json loaded empty — course navigation has no lessons")
+        }
+        return courses
+    }
+
+    private func publish(_ value: LessonsBundle) {
+        let apply = { self.bundle = value }
+        if Thread.isMainThread {
+            apply()
+        } else {
+            DispatchQueue.main.async(execute: apply)
+        }
+    }
+
+    private static func logLoadFailure(_ error: Error) {
+        print("Ошибка парсинга lessons.json")
+        if case DecodingError.dataCorrupted(let ctx) = error {
+            print("dataCorrupted at path: \(ctx.codingPath.map { $0.stringValue }.joined(separator: ".")) — \(ctx.debugDescription)")
+        } else if case DecodingError.keyNotFound(let key, let ctx) = error {
+            print("keyNotFound: \(key.stringValue) at path: \(ctx.codingPath.map { $0.stringValue }.joined(separator: ".")) — \(ctx.debugDescription)")
+        } else if case DecodingError.typeMismatch(_, let ctx) = error {
+            print("typeMismatch at path: \(ctx.codingPath.map { $0.stringValue }.joined(separator: ".")) — \(ctx.debugDescription)")
+        } else if case DecodingError.valueNotFound(_, let ctx) = error {
+            print("valueNotFound at path: \(ctx.codingPath.map { $0.stringValue }.joined(separator: ".")) — \(ctx.debugDescription)")
+        } else {
+            let ns = error as NSError
+            print("decode error: \(error) userInfo=\(ns.userInfo)")
         }
     }
 }
@@ -118,13 +161,17 @@ enum LessonsLoader {
         guard let url = bundle.url(forResource: fileName, withExtension: fileExtension) else {
             throw LessonsDataError.fileNotFound("\(fileName).\(fileExtension)")
         }
+        #if DEBUG
         print("[LessonsLoader] using: \(url.path)")
+        #endif
 
         var data = try Data(contentsOf: url)
         while data.last == 0 { data.removeLast() }
+        #if DEBUG
         if let head = String(data: data.prefix(200), encoding: .utf8) {
             print("[LessonsLoader] head: \(head)")
         }
+        #endif
 
         let decoder = JSONDecoder()
         do {
@@ -338,13 +385,3 @@ enum LessonContentKind: String, Codable {
 }
 
 // MARK: - Small helpers
-
-/// Executes a closure only once per instance lifecycle.
-final class Once {
-    private var didRun = false
-    func perform(_ block: () -> Void) {
-        guard !didRun else { return }
-        didRun = true
-        block()
-    }
-}

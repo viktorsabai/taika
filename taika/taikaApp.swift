@@ -8,31 +8,37 @@ struct taikaApp: App {
     @ObservedObject private var theme = ThemeManager.shared
 
     init() {
-        RevenueCatBootstrap.configureIfNeeded()
-        if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
-            FirebaseApp.configure()
+        // Keep App.init tiny for Canvas: preview host must become ready in <15s.
+        // SDKs configure after first frame (see `bootstrapRuntimeIfNeeded`).
+        guard !TaikaRuntime.isXcodePreview else { return }
+        applyNavigationBarAppearance()
+        if TaikaSplashCover.shouldShowOnLaunch() {
+            DispatchQueue.main.async {
+                TaikaSplashCover.showIfNeeded()
+            }
         }
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithTransparentBackground()
-        appearance.backgroundColor = UIColor.clear
-        appearance.titleTextAttributes = [.foregroundColor: UIColor.label]
-        appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.label]
-        appearance.shadowColor = .clear
-
-        UINavigationBar.appearance().standardAppearance = appearance
-        UINavigationBar.appearance().scrollEdgeAppearance = appearance
-        UINavigationBar.appearance().compactAppearance = appearance
-        UINavigationBar.appearance().tintColor = UIColor.systemPink
     }
 
     var body: some Scene {
         WindowGroup {
-            AppShell()
-                .environmentObject(nav)
-                .environmentObject(theme)
-                .preferredColorScheme(theme.preferredScheme)
+            // Canvas injects #Preview content separately. Mounting AppShell here
+            // (Firebase, splash, tabs, JSON) is what causes AppLaunchTimeoutError.
+            if TaikaRuntime.isXcodePreview {
+                Color.clear
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
+            } else {
+                AppShell()
+                    .environmentObject(nav)
+                    .environmentObject(theme)
+                    .preferredColorScheme(theme.preferredScheme)
+                    .task {
+                        bootstrapRuntimeIfNeeded()
+                    }
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
+            guard !TaikaRuntime.isXcodePreview else { return }
             switch newPhase {
             case .active:
                 if let uid = AuthService.shared.currentUserID {
@@ -44,5 +50,29 @@ struct taikaApp: App {
                 break
             }
         }
+    }
+
+    private func bootstrapRuntimeIfNeeded() {
+        guard !TaikaRuntime.isXcodePreview else { return }
+        RevenueCatBootstrap.configureIfNeeded()
+        if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil,
+           FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
+        AuthService.shared.configureIfNeeded()
+    }
+
+    private func applyNavigationBarAppearance() {
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = UIColor.clear
+        appearance.titleTextAttributes = [.foregroundColor: UIColor.label]
+        appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.label]
+        appearance.shadowColor = .clear
+
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
+        UINavigationBar.appearance().tintColor = UIColor.systemPink
     }
 }

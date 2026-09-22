@@ -20,6 +20,8 @@ protocol SpeakerRecording: AnyObject {
 
     var hasMicrophoneAccess: Bool { get }
     var hasSpeechAccess: Bool { get }
+    /// Loudest sample of the last take, dBFS. -160 means the file is silence.
+    var lastCapturePeakDB: Float { get }
 
     func requestPermission(completion: @escaping (Bool) -> Void)
     func requestMicrophoneAccess() async -> Bool
@@ -51,8 +53,10 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
 
     @Published var status: Status = .idle
     @Published var lastErrorMessage: String? = nil
+    private(set) var lastCapturePeakDB: Float = -160
 
     private var recorder: AVAudioRecorder?
+    private var captureGeneration = 0
     private var leveltimer: Timer?
     private let filename = "speaker_attempt.m4a"
     private var currentURL: URL {
@@ -65,10 +69,8 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
         status = .requestingPermission
         lastErrorMessage = nil
 
-        let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
-            try session.setActive(true)
+            try armCaptureSession()
         } catch {
             status = .permissionDenied
             lastErrorMessage = "mic session setup failed"
@@ -158,6 +160,29 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
         }
     }
 
+    /// Activate playAndRecord after the system sheets close, so the first real take is not a silent file.
+    func prepareRecordSession() {
+        try? armCaptureSession()
+    }
+
+    @discardableResult
+    private func armCaptureSession() throws -> Void {
+        let session = AVAudioSession.sharedInstance()
+        // Drop a leftover playback session so the mic route can take over.
+        try? session.setActive(false, options: .notifyOthersOnDeactivation)
+        // .measurement ducks playback to a whisper. Record on the normal route.
+        try session.setCategory(
+            .playAndRecord,
+            mode: .default,
+            options: [.defaultToSpeaker, .allowBluetooth]
+        )
+        try session.setPreferredSampleRate(48_000)
+        try session.setActive(true)
+        if let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
+            try? session.setPreferredInput(builtIn)
+        }
+    }
+
     /// Start capture only after mic permission is already granted.
     func startAuthorized(completion: @escaping (URL?) -> Void) {
         status = .starting
@@ -172,32 +197,37 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
 
         let settings: [String: Any] = [
             AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVSampleRateKey: 44100.0,
+            AVSampleRateKey: 48_000.0,
             AVNumberOfChannelsKey: 1,
             AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
         ]
 
         do { try FileManager.default.removeItem(at: currentURL) } catch {}
+        lastCapturePeakDB = -160
+        captureGeneration += 1
+        let generation = captureGeneration
 
         do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
-            try session.setActive(true)
-
+            try armCaptureSession()
             let r = try AVAudioRecorder(url: currentURL, settings: settings)
             r.isMeteringEnabled = true
             r.prepareToRecord()
-            r.record()
-
-            NotificationCenter.default.post(name: .speakerRecorderDidStart, object: nil)
-
             recorder = r
-            isRecording = true
-            status = .recording
-            startLevelMeter()
-            partialText = ""
-
-            completion(currentURL)
+            // The route needs a beat after TTS, otherwise the first take is a silent m4a.
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 280_000_000)
+                guard generation == self.captureGeneration, self.recorder === r else {
+                    completion(nil)
+                    return
+                }
+                r.record()
+                NotificationCenter.default.post(name: .speakerRecorderDidStart, object: nil)
+                self.isRecording = true
+                self.status = .recording
+                self.startLevelMeter()
+                self.partialText = ""
+                completion(self.currentURL)
+            }
         } catch {
             isRecording = false
             status = .startFailed
@@ -211,6 +241,7 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
     }
 
     func stopRecording() -> URL? {
+        captureGeneration += 1
         status = .stopping
         lastErrorMessage = nil
 
@@ -235,22 +266,22 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
         if url == nil {
             status = .idle
             NotificationCenter.default.post(name: .speakerRecorderDidStop, object: "recording stopped (no file)")
-            
-            do {
-                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-            } catch {}
+            restorePlaybackSession()
             return nil
         }
 
         // B1: success: valid URL returned, status -> idle
         status = .idle
         NotificationCenter.default.post(name: .speakerRecorderDidStop, object: lastAttemptSummary())
-
-        do {
-            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        } catch {}
-
+        restorePlaybackSession()
         return url
+    }
+
+    /// Measurement/record must not stay armed, or every later phrase plays as a whisper.
+    private func restorePlaybackSession() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+        try? session.setActive(true)
     }
 
     func currentAudioURL() -> URL? {
@@ -275,6 +306,10 @@ final class SpeakerRecorder: NSObject, ObservableObject, SpeakerRecording {
                 }
                 r.updateMeters()
                 let power = r.averagePower(forChannel: 0) // -160...0
+                let peak = r.peakPower(forChannel: 0)
+                if peak > self.lastCapturePeakDB {
+                    self.lastCapturePeakDB = peak
+                }
                 let normalized = max(0.0, min(1.0, Double((power + 160.0) / 160.0)))
                 self.recordingMeter = normalized
             }

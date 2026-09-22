@@ -1234,7 +1234,7 @@ struct FDMiniCourseCard: View {
     @ViewBuilder
     private func subtitleBlock(style: FDMiniCourseCardStyle) -> some View {
         if showsProSell {
-            Text(Self.trimmedSubtitle(item.subtitle, fallback: "Расширь практику с Taika+"))
+            Text(Self.trimmedSubtitle(item.subtitle, fallback: "Расширь практику с Taika Pro"))
                 .font(.footnote.weight(.medium))
                 .foregroundStyle(PD.ColorToken.textSecondary)
                 .lineLimit(3)

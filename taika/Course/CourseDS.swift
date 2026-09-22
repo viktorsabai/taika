@@ -59,11 +59,11 @@ public enum CD {
 // MARK: - Shared mini components (unified with Lessons DS)
 public struct CDProBadge: View {
     public enum Style {
-        /// Free user, locked course — явно «нужен Taika+».
+        /// Free user, locked course — явно «нужен Taika Pro».
         case locked
         /// Compact membership chip (hero / dictionary).
         case membership
-        /// Pro user на PRO-курсе — тихое «это Taika+», без ощущения замка.
+        /// Pro user на PRO-курсе — тихое «это Taika Pro», без ощущения замка.
         case quiet
     }
 
@@ -77,7 +77,7 @@ public struct CDProBadge: View {
         HStack(spacing: 5) {
             Image(systemName: style == .locked ? "lock.fill" : "crown.fill")
                 .font(.system(size: style == .quiet ? 10 : 11, weight: .semibold))
-            Text("Taika+")
+            Text("Taika Pro")
                 .font(CD.FontToken.caption(style == .quiet ? 10 : 11, weight: .semibold))
         }
         .foregroundStyle(foreground)
@@ -111,9 +111,9 @@ public struct CDProBadge: View {
 
     private var accessibility: String {
         switch style {
-        case .locked: return "Курс Taika+, сейчас закрыт"
-        case .membership: return "Taika+"
-        case .quiet: return "Курс Taika+"
+        case .locked: return "Курс Taika Pro, сейчас закрыт"
+        case .membership: return "Taika Pro"
+        case .quiet: return "Курс Taika Pro"
         }
     }
 }
@@ -796,7 +796,8 @@ public struct CDCourseTabBar: View {
         let resolved = tabs.isEmpty ? CourseScreenTab.mvpTabs : tabs
         AppInlineFilterPicker(
             titles: resolved.map(\.title),
-            selectedIndex: resolved.firstIndex(of: selection) ?? 0
+            selectedIndex: resolved.firstIndex(of: selection) ?? 0,
+            selectionAccent: AnyShapeStyle(Color.white.opacity(0.88))
         ) { index in
             guard resolved.indices.contains(index), selection != resolved[index] else { return }
             withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
@@ -1358,10 +1359,10 @@ public struct CDSubsectionRow: View {
                     Spacer()
                     HStack(spacing: 3) {
                         Text(title.uppercased())
-                            .taikaSubsectionStyle(accent: true)
+                            .taikaSubsectionStyle(accent: false)
                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                            .foregroundStyle(PD.ColorToken.textSecondary)
                     }
                 }
                 .contentShape(Rectangle())
@@ -1370,9 +1371,8 @@ public struct CDSubsectionRow: View {
 
             if showDivider {
                 Rectangle()
-                    .fill(ThemeManager.shared.currentAccentFill)
+                    .fill(PD.ColorToken.stroke.opacity(0.45))
                     .frame(height: 1)
-                    .opacity(0.6)
             }
         }
         .padding(.horizontal, CD.Spacing.screen)
@@ -1648,18 +1648,10 @@ public struct CDBaseSection: View {
                     Image(systemName: "arrow.right")
                         .font(.system(size: 11, weight: .bold))
                 }
-                .foregroundColor(.black.opacity(0.92))
+                .foregroundStyle(PD.ColorToken.text.opacity(0.92))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(ThemeManager.shared.currentAccentFill)
-                )
-                .shadow(
-                    color: ThemeManager.shared.currentAccentTintColor.opacity(0.28),
-                    radius: 8,
-                    y: 2
-                )
+                .background(TaikaNeutralPrimaryPillChrome())
             }
             .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
             .accessibilityLabel("Начать курс")
@@ -2408,7 +2400,7 @@ struct CourseDSPreviewHost: View {
                         }) {
                             Image(systemName: showFilters ? "chevron.up" : "chevron.down")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                .foregroundStyle(PD.ColorToken.textSecondary)
                         }
                         .buttonStyle(.plain)
                     }) {
@@ -2457,7 +2449,7 @@ struct CourseDSPreviewHost: View {
                         }) {
                             Image(systemName: showCategories ? "chevron.up" : "chevron.down")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                                .foregroundStyle(PD.ColorToken.textSecondary)
                         }
                         .buttonStyle(.plain)
                     }) {

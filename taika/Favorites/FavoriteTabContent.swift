@@ -448,6 +448,66 @@ enum FavCardsViewMode: String, CaseIterable, Identifiable {
 }
 
 /// Переключатель список/сетка — в шапке слева от табов «Карточки / Словарь…».
+/// Два состояния страницы: учебные карточки или словарь. Лайфхаки сюда не входят.
+struct FDCollectionSwitch: View {
+    @Binding var selection: FavoriteScreenTab
+    private let toggleHeight: CGFloat = 36
+    private let tabs: [FavoriteScreenTab] = FavoriteScreenTab.mvpTabs
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(tabs) { tab in
+                let isOn = tab == selection
+                Button {
+                    guard !isOn else { return }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                        selection = tab
+                    }
+                } label: {
+                    Text(tab == .cards ? "Избранное" : "Словарь")
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(
+                            isOn
+                            ? AnyShapeStyle(TaikaNeutralPickerChrome.selectedForeground)
+                            : AnyShapeStyle(PD.ColorToken.textSecondary)
+                        )
+                        .frame(maxWidth: .infinity)
+                        .frame(height: toggleHeight - 4)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(isOn ? AnyShapeStyle(TaikaNeutralPickerChrome.selectedFill) : AnyShapeStyle(Color.clear))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(
+                                    isOn ? TaikaNeutralPickerChrome.selectedStroke : Color.clear,
+                                    lineWidth: 1
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tab.title)
+                .accessibilityAddTraits(isOn ? .isSelected : [])
+            }
+        }
+        .padding(2)
+        .frame(height: toggleHeight)
+        .background(
+            Capsule(style: .continuous)
+                .fill(PD.ColorToken.chip)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Коллекция")
+    }
+}
+
 struct FDFavViewModeToggle: View {
     @Binding var viewMode: FavCardsViewMode
     private let toggleHeight: CGFloat = 36
@@ -467,13 +527,20 @@ struct FDFavViewModeToggle: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(
                             isOn
-                            ? AnyShapeStyle(Color.black.opacity(0.9))
+                            ? AnyShapeStyle(TaikaNeutralPickerChrome.selectedForeground)
                             : AnyShapeStyle(PD.ColorToken.textSecondary)
                         )
                         .frame(width: 40, height: toggleHeight - 4)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(isOn ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(Color.clear))
+                                .fill(isOn ? AnyShapeStyle(TaikaNeutralPickerChrome.selectedFill) : AnyShapeStyle(Color.clear))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(
+                                    isOn ? TaikaNeutralPickerChrome.selectedStroke : Color.clear,
+                                    lineWidth: 1
+                                )
                         )
                 }
                 .buttonStyle(.plain)
@@ -607,7 +674,7 @@ private struct FavCategoryChipsRow: View {
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(
                                 item.isSelected
-                                ? AnyShapeStyle(Color.black.opacity(0.92))
+                                ? AnyShapeStyle(TaikaNeutralPickerChrome.selectedForeground)
                                 : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.92))
                             )
                             .lineLimit(1)
@@ -618,7 +685,7 @@ private struct FavCategoryChipsRow: View {
                                 Capsule(style: .continuous)
                                     .fill(
                                         item.isSelected
-                                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                                        ? AnyShapeStyle(TaikaNeutralPickerChrome.selectedFill)
                                         : AnyShapeStyle(CD.ColorToken.card.opacity(0.78))
                                     )
                             )
@@ -626,7 +693,7 @@ private struct FavCategoryChipsRow: View {
                                 Capsule(style: .continuous)
                                     .stroke(
                                         item.isSelected
-                                        ? AnyShapeStyle(Color.clear)
+                                        ? AnyShapeStyle(TaikaNeutralPickerChrome.selectedStroke)
                                         : AnyShapeStyle(Theme.Strokes.strokeSubtle),
                                         lineWidth: Theme.Strokes.strokeLineWidth
                                     )
@@ -1064,6 +1131,8 @@ struct FDFavCardsTabList: View {
     var onUnfavorite: (FDCardDTO) -> Void
     var onOpenCourse: (String) -> Void = { _ in }
 
+    @EnvironmentObject private var nav: NavigationIntent
+
     @AppStorage(FavCardsViewMode.storageKey) private var viewModeRaw: String = FavCardsViewMode.list.rawValue
     @State private var collapsedCourseIds: Set<String> = []
     @State private var focusedCourseId: String? = nil
@@ -1114,8 +1183,16 @@ struct FDFavCardsTabList: View {
         if cards.isEmpty {
             favEmptyState(
                 systemImage: "rectangle.on.rectangle.slash",
-                title: "Пока нет карточек",
-                subtitle: "Лайкни фразу в уроке — она появится здесь."
+                lines: [
+                    "Лайкни фразу в уроке",
+                    "Она появится здесь"
+                ],
+                primaryCTA: TaikaAssistantHubPrimaryCTA(
+                    title: "К урокам",
+                    accent: Color(red: 0.28, green: 0.72, blue: 0.98),
+                    action: { nav.openCourseCatalog(tab: .base) }
+                ),
+                onSelectCourse: onOpenCourse
             )
         } else {
             cardsFilledContent
@@ -1625,10 +1702,18 @@ struct FDFavDictionaryTabList: View {
         if cards.isEmpty {
             favEmptyState(
                 systemImage: "bookmark",
-                title: "Словарь пока пуст",
-                subtitle: "Скажи фразу в «Скажи сам» и нажми «Добавить» — она появится здесь.",
-                actionTitle: onOpenSpeaker == nil ? nil : "скажи сам",
-                action: onOpenSpeaker
+                lines: [
+                    "Скажи фразу в «Скажи сам»",
+                    "Нажми «Добавить» — она будет здесь"
+                ],
+                primaryCTA: TaikaAssistantHubPrimaryCTA(
+                    title: "Скажи сам",
+                    icon: "mic.fill",
+                    isEnabled: onOpenSpeaker != nil,
+                    accent: Color(red: 0.28, green: 0.72, blue: 0.98),
+                    action: { onOpenSpeaker?() }
+                ),
+                onSelectCourse: openDictionaryCourse
             )
         } else {
             dictionaryFilledContent
@@ -1645,6 +1730,16 @@ struct FDFavDictionaryTabList: View {
                     .taikaDictionarySheetChrome()
                 }
         }
+    }
+
+    private func openDictionaryCourse(courseId: String) {
+        let id = courseId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !id.isEmpty, id != "other" else { return }
+        if let c = CourseData.shared.course(with: id), c.isPro, !ProManager.shared.isPro {
+            return
+        }
+        CourseAnimation.markLastOpened(id)
+        nav.go(.lessons(courseId: id))
     }
 
     private var dictionaryFilledContent: some View {
@@ -1845,6 +1940,8 @@ struct FDFavHacksTabGrid: View {
     var onUnfavorite: (FDHackDTO) -> Void
     var onOpen: ((FDHackDTO) -> Void)? = nil
 
+    @EnvironmentObject private var nav: NavigationIntent
+
     @State private var collapsedCourseIds: Set<String> = []
 
     private var courseGroups: [FDFavCourseGroup<FDHackDTO>] {
@@ -1855,8 +1952,21 @@ struct FDFavHacksTabGrid: View {
         if hacks.isEmpty {
             favEmptyState(
                 systemImage: "lightbulb.slash",
-                title: "Пока нет лайфхаков",
-                subtitle: "Сохраняй лайфхаки в уроках — они появятся здесь."
+                lines: [
+                    "Пока нет лайфхаков",
+                    "Сохраняй их в уроках — появятся здесь"
+                ],
+                primaryCTA: TaikaAssistantHubPrimaryCTA(
+                    title: "К урокам",
+                    accent: Color(red: 0.28, green: 0.72, blue: 0.98),
+                    action: { nav.openCourseCatalog(tab: .base) }
+                ),
+                onSelectCourse: { courseId in
+                    let id = courseId.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !id.isEmpty else { return }
+                    CourseAnimation.markLastOpened(id)
+                    nav.go(.lessons(courseId: id))
+                }
             )
         } else {
             LazyVStack(alignment: .leading, spacing: Theme.Layout.sectionGap) {
@@ -1918,12 +2028,29 @@ struct FDFavCoursesTabGrid: View {
     var onOpen: (FDCourseDTO) -> Void
     var onUnfavorite: (FDCourseDTO) -> Void
 
+    @EnvironmentObject private var nav: NavigationIntent
+
     var body: some View {
         if courses.isEmpty {
             favEmptyState(
                 systemImage: "graduationcap",
-                title: "Нет избранных курсов",
-                subtitle: "Добавь курс в избранное — он появится здесь."
+                lines: [
+                    "Нет избранных курсов",
+                    "Добавь курс в избранное — он появится здесь"
+                ],
+                primaryCTA: TaikaAssistantHubPrimaryCTA(
+                    title: "К курсам",
+                    accent: Color(red: 0.28, green: 0.72, blue: 0.98),
+                    action: { nav.openCourseCatalog(tab: .base) }
+                ),
+                onSelectCourse: { courseId in
+                    if let dto = courses.first(where: { $0.courseId == courseId }) {
+                        onOpen(dto)
+                    } else {
+                        CourseAnimation.markLastOpened(courseId)
+                        nav.go(.lessons(courseId: courseId))
+                    }
+                }
             )
         } else {
             let size = FavPortraitGridMetrics.cardSize(containerWidth: UIScreen.main.bounds.width)
@@ -1954,40 +2081,16 @@ struct FDFavCoursesTabGrid: View {
 @ViewBuilder
 func favEmptyState(
     systemImage: String,
-    title: String,
-    subtitle: String,
-    actionTitle: String? = nil,
-    action: (() -> Void)? = nil
+    lines: [String],
+    assembleGateKey: String? = nil,
+    primaryCTA: TaikaAssistantHubPrimaryCTA,
+    onSelectCourse: @escaping (String) -> Void
 ) -> some View {
-    VStack(spacing: 14) {
-        Spacer(minLength: 0)
-        TaikaEmptyStateIcon(systemName: systemImage)
-        Text(title)
-            .font(.system(size: 18, weight: .semibold))
-            .foregroundStyle(PD.ColorToken.text)
-            .multilineTextAlignment(.center)
-        Text(subtitle)
-            .font(.system(size: 14, weight: .medium))
-            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.85))
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 36)
-        if let actionTitle, let action {
-            Button(action: action) {
-                Text(actionTitle)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(ThemeManager.shared.currentAccentFill)
-                    )
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 48)
-            .padding(.top, 4)
-        }
-        Spacer(minLength: 0)
-    }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    TaikaAssistantEmptyHero(
+        systemImage: systemImage,
+        lines: lines,
+        assembleGateKey: assembleGateKey,
+        primaryCTA: primaryCTA,
+        onSelectCourse: onSelectCourse
+    )
 }

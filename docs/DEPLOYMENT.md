@@ -78,7 +78,14 @@ uvicorn api:app --host 0.0.0.0 --port 8000
    (или положись на `railway.json` в корне — там `"builder": "DOCKERFILE"`).
 5. **Variables:**
    - `OPENAI_API_KEY` — ключ OpenAI (для новых фраз)
-   - `TAIKA_SMART_MODEL` — `gpt-4o-mini` (опционально)
+   - `TAIKA_SMART_MODEL` — `gpt-4o-mini` (нарезка урока / фонетика)
+   - `TAIKA_TRANSLATE_MODEL` — `gpt-4o` (живой перевод фразы; опционально)
+   - `GIFT_DEMO` — `1` чтобы выдавать demo-коды без StoreKit (только TF/local). На DEBUG iOS demo-redeem включает локальный Pro override.
+   - `REVENUECAT_SECRET_API_KEY` — секретный ключ RC для grant при redeem подарка (обязателен для прод-активации)
+   - `TAIKA_RC_ENTITLEMENT` — `pro` (по умолчанию)
+   - `TAIKA_GIFT_CACHE_DB` — опциональный путь к SQLite с кодами (иначе рядом с API)
+
+**Gift flow (вариант B):** покупатель платит package `taika_gift_lifetime` (или DEBUG demo) → `POST /gift/issue` → код → получатель `POST /gift/redeem` → RC promotional grant `pro`. SKU в ASC должен **не** давать entitlement покупателю.
 6. **Deploy** → Redeploy (старый failed deploy 3 месяца назад не перезапустится сам — нужен новый деплой после push в GitHub).
 
 Если видишь **«Error creating build plan with Railpack»** — Railway игнорирует Dockerfile. Проверь п.2–4 и что в репо есть актуальный `railway.json` с `"builder": "DOCKERFILE"`.

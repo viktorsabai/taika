@@ -55,50 +55,39 @@ private struct StepGameMiniPaywall: View {
     let onOpenPro: () -> Void
 
     var body: some View {
-        GlassPaywall(
-            title: "Открой все игры",
-            subtitle: "Эта тренировка доступна в Taika+. Вернись к закреплению курса без ограничений.",
-            actionTitle: "Открыть Taika+",
-            action: onOpenPro
-        ) {
-            HStack(spacing: 12) {
-                Image(systemName: "gamecontroller.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                    .frame(width: 42, height: 42)
-                    .background(Circle().fill(CD.ColorToken.chip))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Закрепление курса")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(CD.ColorToken.text)
-                    Text("Память, слоги и тренировка на слух")
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
+        NavigationStack {
+            ProfileGlassBackdrop {
+                VStack(alignment: .leading, spacing: 14) {
+                    ProfileDestinationIntro(
+                        eyebrow: "TAIKA+",
+                        title: "Игры закрепления",
+                        subtitle: "Память, слоги и слух открываются в Taika Pro."
+                    )
+                    ProfileGlassRow(
+                        title: "Открыть Taika Pro",
+                        subtitle: "7 дней бесплатно — закрепление курса",
+                        systemImage: "crown.fill",
+                        trailing: "chevron.right"
+                    ) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        onOpenPro()
+                    }
+                    .environmentObject(ThemeManager.shared)
                 }
-                Spacer(minLength: 0)
+                .padding(.horizontal, PD.Spacing.screen)
+                .padding(.top, 18)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(CD.ColorToken.chip.opacity(0.72))
-            )
-        }
-        .overlay(alignment: .topTrailing) {
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(CD.ColorToken.textSecondary)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(CD.ColorToken.chip.opacity(0.94)))
+            .navigationTitle("Taika Pro")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Готово") { onClose() }
+                }
             }
-            .buttonStyle(.plain)
-            .padding(.top, 10)
-            .padding(.trailing, 12)
-            .accessibilityLabel("Закрыть")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 }
 
@@ -184,6 +173,7 @@ struct StepView: View {
     @State private var pendingIndexPersist: DispatchWorkItem? = nil
     @State private var pendingFavoriteHydrate: DispatchWorkItem? = nil
     @State private var pendingLearnAdvanceToken: UUID? = nil
+    @State private var pendingLessonSummaryAfterLearnSpeech = false
     @State private var isMounted: Bool = false
     @State private var suppressFavoriteHydrationUntil: Date = .distantPast
     // live favorites sync
@@ -882,18 +872,6 @@ struct StepView: View {
         .padding(.bottom, 2)
     }
 
-    /// Taika FM — тот же атом, что на Main/Profile (`showBubble: false`).
-    @ViewBuilder
-    private func stepTaikaFMBlock(messages: [String]) -> some View {
-        TaikaFMRow(
-            scope: .step,
-            overrideMessages: messages,
-            mode: .typing,
-            showBubble: false,
-            repeats: true
-        )
-    }
-
     @ViewBuilder
     private func stepCarouselOne(
         items segmentItems: [SDStepItem],
@@ -1348,30 +1326,7 @@ struct StepView: View {
 
     @ViewBuilder
     private func stepMainContent(_ proxy: GeometryProxy) -> some View {
-        let idx: Int = {
-            if hasTwoSegments {
-                if stepSegment == 0, activeIndexTips < tipIndices.count {
-                    return tipIndices[activeIndexTips]
-                }
-                if stepSegment == 1, activeIndexCards < cardIndices.count {
-                    return cardIndices[activeIndexCards]
-                }
-            }
-            return clampedActiveIndex
-        }()
-        let currentTipText: String? = itemTips[idx]
-        let currentItem: SDStepItem? = items.indices.contains(idx) ? items[idx] : nil
-        let stepCardCaption: String? = {
-            guard let currentItem, currentItem.kind != .tip else { return nil }
-            let ru = currentItem.titleRU.trimmingCharacters(in: .whitespacesAndNewlines)
-            return ru.isEmpty ? nil : ru
-        }()
-        let stepFMMessages = TaikaFMData.shared.messagesForStep(
-            tip: currentTipText,
-            hints: hints,
-            cardText: stepCardCaption
-        )
-        // Как разминка на Main: заголовок сверху, карусель по центру, прогресс/FM снизу.
+        // Заголовок сверху, карусель по центру, прогресс снизу.
         let stack = VStack(spacing: 0) {
             if !isOverlay {
                 stepTitleAndFiltersRow()
@@ -1393,13 +1348,6 @@ struct StepView: View {
             if !isOverlay && showBottomProgress {
                 bottomProgressView(proxy: proxy)
                     .padding(.top, 8)
-            }
-
-            Spacer(minLength: 8)
-
-            if !layoutCardsOnly && !isOverlay {
-                stepTaikaFMBlock(messages: stepFMMessages)
-                    .padding(.horizontal, PD.Spacing.inner)
                     .padding(.bottom, max(proxy.safeAreaInsets.bottom, 10))
             }
         }
@@ -1470,15 +1418,6 @@ struct StepView: View {
                 }
             }
         )
-        .presentationDetents([.fraction(0.42), .medium])
-        .presentationDragIndicator(.visible)
-        .presentationCornerRadius(28)
-        .presentationBackground {
-            ZStack {
-                Rectangle().fill(.ultraThinMaterial)
-                PD.ColorToken.background.opacity(0.94)
-            }
-        }
     }
 
     private func applyStepCoreLifecycle<Content: View>(to content: Content) -> some View {
@@ -1722,12 +1661,9 @@ struct StepView: View {
             // A direct-start lesson may hydrate as already complete, but only a real
             // user mutation is allowed to present the result overlay in that flow.
             guard !suppressInitialCompletionSummary || didMutateLearningProgress else { return }
-            if !didShowSummaryOnce {
-                didShowSummaryOnce = true
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
-                    showLessonSummary = true
-                }
-            }
+            // Последняя карточка: summary ждёт конца TTS (см. handleDoneItem).
+            guard !pendingLessonSummaryAfterLearnSpeech else { return }
+            presentLessonSummaryIfEligible()
         } else {
             // Progress is no longer full → allow the summary to appear again on the next completion
             didShowSummaryOnce = false
@@ -1810,6 +1746,37 @@ struct StepView: View {
             return String(raw[..<open]).trimmingCharacters(in: .whitespaces)
         }
         return raw
+    }
+
+    private func learnedLearnableCount() -> Int {
+        anim.learned.filter { idx in
+            guard idx >= 0 && idx < items.count else { return false }
+            switch items[idx].kind {
+            case .word, .phrase, .casual:
+                return true
+            default:
+                return false
+            }
+        }.count
+    }
+
+    private var isLessonFullyLearned: Bool {
+        let totalLearnable = learnableCount
+        return totalLearnable > 0 && learnedLearnableCount() >= totalLearnable
+    }
+
+    private func presentLessonSummaryIfEligible() {
+        guard isLessonFullyLearned, !didShowSummaryOnce else { return }
+        didShowSummaryOnce = true
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+            showLessonSummary = true
+        }
+    }
+
+    private func presentLessonSummaryIfPendingAfterSpeech() {
+        guard pendingLessonSummaryAfterLearnSpeech else { return }
+        pendingLessonSummaryAfterLearnSpeech = false
+        presentLessonSummaryIfEligible()
     }
 
     private func handleFavItem(_ item: SDStepItem) {
@@ -1896,6 +1863,7 @@ struct StepView: View {
             // If пользователь снял отметку хотя бы с одной карточки → разрешить повторный показ summary при следующем полном завершении
             if wasLearned && !nowLearned {
                 pendingLearnAdvanceToken = nil
+                pendingLessonSummaryAfterLearnSpeech = false
                 didShowSummaryOnce = false
                 if showLessonSummary {
                     withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
@@ -1905,6 +1873,7 @@ struct StepView: View {
             if !wasLearned && nowLearned {
                 let thai = thaiLineForSpeech(from: item)
                 let shouldAdvance = i < items.count - 1 || hasUnlearnedCards(excluding: i)
+                let lessonJustCompleted = isLessonFullyLearned
                 let advanceToken = UUID()
                 pendingLearnAdvanceToken = advanceToken
 
@@ -1916,33 +1885,31 @@ struct StepView: View {
                     self.advanceToNextUnlearned(afterUIIndex: i)
                 }
 
+                let finishLearnFlow = {
+                    advanceIfStillCurrent()
+                    self.presentLessonSummaryIfPendingAfterSpeech()
+                }
+
+                if lessonJustCompleted, !thai.isEmpty {
+                    pendingLessonSummaryAfterLearnSpeech = true
+                }
+
                 if thai.isEmpty {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: advanceIfStillCurrent)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                        if lessonJustCompleted {
+                            self.presentLessonSummaryIfEligible()
+                        }
+                        finishLearnFlow()
+                    }
                 } else {
                     StepAudio.shared.speakThai(thai, stepItemId: item.id) {
                         // Короткая пауза после фразы — карточка не прыгает поверх голоса.
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: advanceIfStillCurrent)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: finishLearnFlow)
                     }
                 }
-            }
-            // Show summary only when user completes ALL learnable cards (transition from not-all to all)
-            let totalLearnable = learnableCount
-            let learnedNowCount = anim.learned.filter { idx in
-                guard idx >= 0 && idx < items.count else { return false }
-                switch items[idx].kind { case .word, .phrase, .casual: return true; default: return false }
-            }.count
-            if !wasLearned && nowLearned && totalLearnable > 0 && learnedNowCount >= totalLearnable && !didShowSummaryOnce {
-                didShowSummaryOnce = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
-                        showLessonSummary = true
-                    }
-                }
-            } else {
+            } else if showLessonSummary {
                 // If пользователь снял галочку на последней — не показываем оверлей и закрываем, если он вдруг открыт
-                if showLessonSummary {
-                    withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
-                }
+                withAnimation(.easeInOut(duration: 0.2)) { showLessonSummary = false }
             }
             let cid: String = {
                 if !resolvedCourseId.isEmpty { return resolvedCourseId }

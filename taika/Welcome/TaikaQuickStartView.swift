@@ -11,6 +11,7 @@ enum TaikaQuickStartAction: Equatable {
     case baseCourse
     case speakerVoice
     case catalog
+    case home
 }
 
 struct TaikaQuickStartView: View {

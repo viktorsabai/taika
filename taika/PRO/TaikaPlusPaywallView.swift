@@ -9,23 +9,26 @@ enum TaikaPaywallPresentationStyle {
     case sheet
 }
 
-/// Paywall Taika+ — минимальный checkout: оффер + планы + CTA.
+/// Paywall Taika Pro — минимальный checkout: оффер + планы + CTA.
 /// Value-deck / aha живут до paywall; здесь не дублируем.
 struct TaikaPlusPaywallView: View {
 
     let courseId: String?
     let reason: ProGateReason
     let presentationStyle: TaikaPaywallPresentationStyle
+    let startInGiftIntent: Bool
     let onClose: () -> Void
 
     init(
         courseId: String?,
         reason: ProGateReason = .general,
         presentationStyle: TaikaPaywallPresentationStyle = .overlay,
+        startInGiftIntent: Bool = false,
         onClose: @escaping () -> Void
     ) {
         self.courseId = courseId
         self.presentationStyle = presentationStyle
+        self.startInGiftIntent = startInGiftIntent
         self.reason = {
             if reason == .general, let courseId, !courseId.isEmpty {
                 return .lockedCourse
@@ -33,6 +36,7 @@ struct TaikaPlusPaywallView: View {
             return reason
         }()
         self.onClose = onClose
+        _giftIntent = State(initialValue: startInGiftIntent)
     }
 
     @ObservedObject private var pro = ProManager.shared
@@ -54,6 +58,9 @@ struct TaikaPlusPaywallView: View {
     @State private var authInProgress = false
     @State private var continuePurchaseAfterAuth = false
     @State private var showProSuccess = false
+    /// Paywall: для себя vs подарок другу (код + share).
+    @State private var giftIntent = false
+    @State private var giftIssueInFlight = false
 
     private var accentFill: LinearGradient { theme.currentAccentFill }
     private var accentTint: Color { theme.currentAccentTintColor }
@@ -65,16 +72,21 @@ struct TaikaPlusPaywallView: View {
     }
 
     private var offersIntroTrial: Bool {
-        introEligible == true || (introEligible == nil && selectedPackage?.storeProduct.introductoryDiscount != nil)
+        guard !giftIntent else { return false }
+        return introEligible == true || (introEligible == nil && selectedPackage?.storeProduct.introductoryDiscount != nil)
     }
 
     private var primaryCTATitle: String {
-        if purchaseInFlight { return "Оформляем…" }
-        if isLoadingOfferings, selectedPackage == nil { return "Загружаем…" }
+        if purchaseInFlight || giftIssueInFlight { return giftIntent ? "Готовим подарок…" : "Оформляем…" }
+        if isLoadingOfferings, selectedPackage == nil, !giftIntent { return "Загружаем…" }
+        if giftIntent {
+            if !auth.isLoggedIn { return "Войти и купить подарок" }
+            return "Купить подарок"
+        }
         if !auth.isLoggedIn {
             return offersIntroTrial
                 ? TaikaProConfig.introTrialCTALogin
-                : "Войти и открыть Taika+"
+                : "Войти и открыть Taika Pro"
         }
         if offersIntroTrial {
             return TaikaProConfig.introTrialCTAFree
@@ -83,6 +95,9 @@ struct TaikaPlusPaywallView: View {
     }
 
     private var legalLine: String {
+        if giftIntent {
+            return "После оплаты получишь код для друга. Почта не нужна — просто отправь код."
+        }
         if offersIntroTrial {
             return TaikaProConfig.introTrialLegalLine
         }
@@ -100,6 +115,9 @@ struct TaikaPlusPaywallView: View {
     }
     private var lifetimePackage: Package? {
         offerings?.current?.package(identifier: TaikaProConfig.PackageIdentifier.lifetime)
+    }
+    private var giftPackage: Package? {
+        offerings?.current?.package(identifier: TaikaProConfig.PackageIdentifier.giftLifetime)
     }
 
     var body: some View {
@@ -277,32 +295,104 @@ struct TaikaPlusPaywallView: View {
     // MARK: - Plans
 
     private var planPicker: some View {
-        VStack(spacing: 8) {
-            planRow(
-                id: TaikaProConfig.PackageIdentifier.annual,
-                title: "Год",
-                priceLine: annualPriceLine,
-                subtitle: annualSubtitle,
-                badge: TaikaProConfig.annualHeroBadge,
-                isHero: true
-            )
-            planRow(
-                id: TaikaProConfig.PackageIdentifier.monthly,
-                title: "Месяц",
-                priceLine: monthlyPlanPriceLine,
-                subtitle: "Гибкая оплата",
-                badge: nil,
-                isHero: false
-            )
-            planRow(
-                id: TaikaProConfig.PackageIdentifier.lifetime,
-                title: "Навсегда",
-                priceLine: lifetimePriceLine,
-                subtitle: "Разовая оплата",
-                badge: nil,
-                isHero: false
-            )
+        VStack(spacing: 10) {
+            giftIntentPicker
+
+            if giftIntent {
+                planRow(
+                    id: giftPackage?.identifier ?? TaikaProConfig.PackageIdentifier.giftLifetime,
+                    title: "Подарок навсегда",
+                    priceLine: giftPriceLine,
+                    subtitle: giftPackage == nil
+                        ? "Код для друга · без почты"
+                        : "Код после оплаты · без почты",
+                    badge: nil,
+                    isHero: true
+                )
+                Button {
+                    OverlayPresenter.shared.presentGiftRedeem()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "gift")
+                        Text("У меня есть подарок")
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 2)
+                }
+                .buttonStyle(.plain)
+            } else {
+                planRow(
+                    id: TaikaProConfig.PackageIdentifier.annual,
+                    title: "Год",
+                    priceLine: annualPriceLine,
+                    subtitle: annualSubtitle,
+                    badge: TaikaProConfig.annualHeroBadge,
+                    isHero: true
+                )
+                planRow(
+                    id: TaikaProConfig.PackageIdentifier.monthly,
+                    title: "Месяц",
+                    priceLine: monthlyPlanPriceLine,
+                    subtitle: "Гибкая оплата",
+                    badge: nil,
+                    isHero: false
+                )
+                planRow(
+                    id: TaikaProConfig.PackageIdentifier.lifetime,
+                    title: "Навсегда",
+                    priceLine: lifetimePriceLine,
+                    subtitle: "Разовая оплата",
+                    badge: nil,
+                    isHero: false
+                )
+            }
         }
+    }
+
+    private var giftIntentPicker: some View {
+        HStack(spacing: 0) {
+            giftIntentChip(title: "Для себя", selected: !giftIntent) {
+                giftIntent = false
+                preselectPackageIfNeeded()
+                Task { await refreshIntroEligibility() }
+            }
+            giftIntentChip(title: "В подарок", selected: giftIntent) {
+                giftIntent = true
+                selectedPackageId = giftPackage?.identifier ?? TaikaProConfig.PackageIdentifier.giftLifetime
+                introEligible = false
+            }
+        }
+        .padding(3)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+        )
+    }
+
+    private func giftIntentChip(title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(selected ? Color.black.opacity(0.88) : CD.ColorToken.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background {
+                    if selected {
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            .fill(accentFill)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var giftPriceLine: String {
+        if let p = giftPackage ?? lifetimePackage {
+            return "\(p.storeProduct.localizedPriceString) разово"
+        }
+        return "\(TaikaProConfig.MarketingPrice.lifetimeTHB.formatted()) ฿ разово"
     }
 
     private var annualPriceLine: String {
@@ -312,14 +402,20 @@ struct TaikaPlusPaywallView: View {
         return "\(TaikaProConfig.MarketingPrice.annualTHB.formatted()) ฿/год"
     }
 
-    /// Trial только в CTA/legal — здесь цена и выгода года.
+    /// Trial только на годе (ASC) — в subtitle рядом с выгодой ฿/мес.
     private var annualSubtitle: String {
-        if let p = annualPackage {
-            let yearly = (p.storeProduct.price as NSDecimalNumber).doubleValue
-            let perMonth = Int((yearly / 12.0).rounded())
-            return "≈ \(perMonth) ฿/мес"
+        let perMonth: String = {
+            if let p = annualPackage {
+                let yearly = (p.storeProduct.price as NSDecimalNumber).doubleValue
+                let value = Int((yearly / 12.0).rounded())
+                return "≈ \(value) ฿/мес"
+            }
+            return "≈ \(TaikaProConfig.MarketingPrice.annualPerMonthTHB) ฿/мес"
+        }()
+        if TaikaProConfig.introTrialOnAnnualOnly {
+            return "\(TaikaProConfig.introTrialDaysPhrase) бесплатно · \(perMonth)"
         }
-        return "≈ \(TaikaProConfig.MarketingPrice.annualPerMonthTHB) ฿/мес"
+        return perMonth
     }
 
     private var monthlyPlanPriceLine: String {
@@ -453,6 +549,19 @@ struct TaikaPlusPaywallView: View {
             .buttonStyle(.plain)
             .disabled(restoreInFlight)
 
+            if !giftIntent {
+                Button {
+                    OverlayPresenter.shared.presentGiftRedeem()
+                } label: {
+                    Text("У меня есть подарок")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.9))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 2)
+                }
+                .buttonStyle(.plain)
+            }
+
             HStack(spacing: 14) {
                 Button("Privacy") {
                     UIApplication.shared.open(TaikaProConfig.Legal.privacyPolicy)
@@ -478,12 +587,16 @@ struct TaikaPlusPaywallView: View {
                 .font(.system(size: 36, weight: .semibold))
                 .foregroundStyle(accentFill)
 
-            Text("Войди, чтобы начать триал")
+            Text(offersIntroTrial ? "Войди, чтобы начать триал" : "Войди, чтобы оформить Taika Pro")
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(CD.ColorToken.text)
                 .multilineTextAlignment(.center)
 
-            Text("Триал на \(TaikaProConfig.introTrialDaysPhrase) привязывается к аккаунту — один раз на человека, а Pro не потеряется при смене телефона.")
+            Text(
+                offersIntroTrial
+                    ? "Триал на \(TaikaProConfig.introTrialDaysPhrase) привязывается к аккаунту — один раз на человека. Pro не потеряется при смене телефона."
+                    : "Вход через Sign in with Apple — подписка привяжется к аккаунту и не потеряется при смене телефона."
+            )
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(CD.ColorToken.textSecondary)
                 .multilineTextAlignment(.center)
@@ -556,6 +669,10 @@ struct TaikaPlusPaywallView: View {
 
     private func preselectPackage(from offerings: Offerings) {
         guard let current = offerings.current else { return }
+        if giftIntent {
+            selectedPackageId = giftPackage?.identifier ?? TaikaProConfig.PackageIdentifier.giftLifetime
+            return
+        }
         let order = [
             TaikaProConfig.PackageIdentifier.annual,
             TaikaProConfig.PackageIdentifier.monthly,
@@ -568,6 +685,11 @@ struct TaikaPlusPaywallView: View {
             }
         }
         selectedPackageId = current.availablePackages.first?.identifier
+    }
+
+    private func preselectPackageIfNeeded() {
+        guard let offerings else { return }
+        preselectPackage(from: offerings)
     }
 
     private func refreshIntroEligibility() async {
@@ -627,6 +749,10 @@ struct TaikaPlusPaywallView: View {
             showAuthSheet = true
             return
         }
+        if giftIntent {
+            await purchaseGift()
+            return
+        }
         guard RevenueCatBootstrap.isConfigured else {
             purchaseError = "Подписка временно недоступна. Попробуй позже или восстанови покупку."
             return
@@ -642,6 +768,62 @@ struct TaikaPlusPaywallView: View {
             return
         }
         await purchase(pkg)
+    }
+
+    private func purchaseGift() async {
+        purchaseError = nil
+        await ProManager.shared.syncRevenueCatIdentity(userId: auth.currentUserID)
+        let buyerId = RevenueCatBootstrap.isConfigured ? Purchases.shared.appUserID : auth.currentUserID
+
+        if let pkg = giftPackage ?? (RevenueCatBootstrap.isConfigured ? lifetimePackage : nil) {
+            purchaseInFlight = true
+            defer { purchaseInFlight = false }
+            do {
+                let result = try await Purchases.shared.purchase(package: pkg)
+                ProManager.shared.applyRevenueCatCustomerInfo(result.customerInfo)
+                let tx = result.transaction?.transactionIdentifier
+                try await issueAndPresentGift(
+                    buyerRCId: buyerId,
+                    transactionId: tx,
+                    demo: false
+                )
+            } catch {
+                if isPurchaseCancelledError(error) { return }
+                purchaseError = "Покупка подарка не прошла. Попробуй ещё раз."
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+            }
+            return
+        }
+
+        #if DEBUG
+        do {
+            try await issueAndPresentGift(buyerRCId: buyerId, transactionId: nil, demo: true)
+        } catch {
+            purchaseError = error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+        }
+        #else
+        purchaseError = "Подарок скоро появится в App Store. Пока можно активировать код: «У меня есть подарок»."
+        #endif
+    }
+
+    private func issueAndPresentGift(
+        buyerRCId: String?,
+        transactionId: String?,
+        demo: Bool
+    ) async throws {
+        giftIssueInFlight = true
+        defer { giftIssueInFlight = false }
+        let code = try await TaikaGiftService.issueCode(
+            buyerRCId: buyerRCId,
+            transactionId: transactionId,
+            demo: demo
+        )
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        onClose()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+            OverlayPresenter.shared.presentGiftIssued(code: code)
+        }
     }
 
     private func purchase(_ pkg: Package) async {

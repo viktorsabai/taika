@@ -43,12 +43,13 @@ public struct TaikaWordmarkLockup: View {
 
 /// Lockup в углу step-карточки; на экране урока отключается через `Environment.stepLessonSuppressCardWordmark`.
 fileprivate struct StepCardInlineWordmarkSlot: View {
+    var accentColor: Color? = nil
     @Environment(\.stepLessonSuppressCardWordmark) private var suppress
     var body: some View {
         if suppress {
             Color.clear.frame(width: 1, height: 1)
         } else {
-            TaikaWordmarkLockup(fontSize: 16)
+            TaikaWordmarkLockup(fontSize: 16, accentColor: accentColor)
         }
     }
 }
@@ -456,7 +457,7 @@ public struct StepLifehackCardLegacy: View {
 
             VStack(spacing: 0) {
                 HStack(alignment: .center, spacing: 10) {
-                    StepCardInlineWordmarkSlot()
+                    StepCardInlineWordmarkSlot(accentColor: lilac)
                     Spacer(minLength: 8)
                     if showsLabelChip {
                         AppMiniChip(
@@ -481,7 +482,7 @@ public struct StepLifehackCardLegacy: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    taikaFMStyledText(parts.main, baseColor: CD.ColorToken.text.opacity(0.94))
+                    taikaFMStyledText(parts.main, baseColor: CD.ColorToken.text.opacity(0.94), accent: lilac)
                         .font(.system(size: Theme.StepCardText.lifehackBodyFontSize, weight: .medium))
                         .multilineTextAlignment(.center)
                         .lineSpacing(Theme.StepCardText.lifehackLineSpacing)
@@ -520,7 +521,8 @@ public struct StepLifehackCardLegacy: View {
                     onExpand: favoriteOnly ? nil : {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         showExpand = true
-                    }
+                    },
+                    accentColor: lilac
                 )
                 .padding(.horizontal, 8)
                 .padding(.bottom, 10)
@@ -554,7 +556,7 @@ private struct StepLifehackExpandSheet: View {
     private var cardContent: some View {
         VStack(spacing: 0) {
             HStack {
-                TaikaWordmarkLockup(fontSize: 16)
+                TaikaWordmarkLockup(fontSize: 16, accentColor: TaikaLifehackCrayonPalette.primary)
                 Spacer(minLength: 0)
                 AppMiniChip(title: "лайфхак", style: .neutral) { }
             }
@@ -566,7 +568,7 @@ private struct StepLifehackExpandSheet: View {
             TaikaRootVerticalScroll {
                 VStack(spacing: 0) {
                     Spacer(minLength: 24)
-                    taikaFMStyledText(bodyText, baseColor: CD.ColorToken.textSecondary.opacity(0.92))
+                    taikaFMStyledText(bodyText, baseColor: CD.ColorToken.textSecondary.opacity(0.92), accent: TaikaLifehackCrayonPalette.primary)
                         .font(.system(size: Theme.StepCardText.lifehackBodyFontSize, weight: .medium))
                         .multilineTextAlignment(.center)
                         .lineSpacing(5)
@@ -1075,7 +1077,8 @@ public struct StepCardActionBar: View {
     public let onExpand: (() -> Void)?
     /// Мини-карточки (избранное): выучено → только залитая галочка, без чипа «запомнил» (иначе ломается нижний ряд).
     public let miniLearnedCheckmarkOnly: Bool
-
+    /// Лайфхак не берёт акцент вкладки: сердце и подписи остаются сиреневыми.
+    public let accentColor: Color?
 
     public init(
         isFavorite: Bool,
@@ -1091,7 +1094,8 @@ public struct StepCardActionBar: View {
         onLearn: @escaping () -> Void,
         onNext: (() -> Void)? = nil,
         onExpand: (() -> Void)? = nil,
-        miniLearnedCheckmarkOnly: Bool = false
+        miniLearnedCheckmarkOnly: Bool = false,
+        accentColor: Color? = nil
     ) {
         self.isFavorite = isFavorite
         self.isLearned = isLearned
@@ -1107,6 +1111,7 @@ public struct StepCardActionBar: View {
         self.onNext = onNext
         self.onExpand = onExpand
         self.miniLearnedCheckmarkOnly = miniLearnedCheckmarkOnly
+        self.accentColor = accentColor
     }
 
     public var body: some View {
@@ -1201,6 +1206,7 @@ public struct StepCardActionBar: View {
             isActive: isActive,
             isEnabled: isEnabled,
             playbackActive: playbackActive,
+            accent: accentColor,
             action: action
         )
     }
@@ -2034,19 +2040,25 @@ func taikaFMParseAccentChunks(_ raw: String) -> [TaikaFMInlineChunk] {
 
 /// builds styled Text from raw string with [[accent]] / **accent** highlighting (ThemeManager accent). Shared: CardDS, FavoriteDS.
 /// baseColor: для лайфхаков передать textSecondary/white, иначе используется text.
-func taikaFMStyledText(_ s: String, baseColor: Color? = nil) -> Text {
+func taikaFMStyledText(_ s: String, baseColor: Color? = nil, accent: Color? = nil) -> Text {
     let chunks = taikaFMParseAccentChunks(s)
     let mapped = chunks.map { TaikaFMChunk(text: $0.text, isAccent: $0.isAccent) }
     if mapped.isEmpty {
         let nonAccentColor = baseColor ?? CD.ColorToken.text
         return Text(s).foregroundStyle(nonAccentColor)
     }
-    return taikaFMStyledText(chunks: mapped, baseColor: baseColor)
+    return taikaFMStyledText(chunks: mapped, baseColor: baseColor, accent: accent)
 }
 
 /// Styled `Text` from pre-parsed FM chunks (same accent rules as string variant).
-func taikaFMStyledText(chunks: [TaikaFMChunk], baseColor: Color? = nil) -> Text {
+func taikaFMStyledText(chunks: [TaikaFMChunk], baseColor: Color? = nil, accent: Color? = nil) -> Text {
     let nonAccentColor = baseColor ?? CD.ColorToken.text
+    let accentStyle: AnyShapeStyle = {
+        if let accent {
+            return AnyShapeStyle(accent)
+        }
+        return AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+    }()
     guard !chunks.isEmpty else {
         return Text("")
     }
@@ -2054,10 +2066,9 @@ func taikaFMStyledText(chunks: [TaikaFMChunk], baseColor: Color? = nil) -> Text 
     for chunk in chunks {
         let base = Text(chunk.text)
         if chunk.isAccent {
-            // Teaching anchors: brand gradient + bold weight.
             result = result + base
                 .fontWeight(.bold)
-                .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                .foregroundStyle(accentStyle)
         } else {
             result = result + base.foregroundStyle(nonAccentColor)
         }
@@ -2478,7 +2489,7 @@ private enum CourseProCardWashDrawer {
     }
 }
 
-/// Вовлекающая корона Taika+ — лёгкий pulse + soft glow, без текста «Taika+».
+/// Вовлекающая корона Taika Pro — лёгкий pulse + soft glow, без текста «Taika Pro».
 private struct CourseProAnimatedCrown: View {
     var onTap: (() -> Void)? = nil
     var size: CGFloat = 28
@@ -2506,8 +2517,8 @@ private struct CourseProAnimatedCrown: View {
         .buttonStyle(.plain)
         .disabled(onTap == nil)
         .allowsHitTesting(onTap != nil)
-        .accessibilityLabel("Taika+")
-        .accessibilityHint(onTap == nil ? "" : "Открыть Taika+")
+        .accessibilityLabel("Taika Pro")
+        .accessibilityHint(onTap == nil ? "" : "Открыть Taika Pro")
         .onAppear {
             withAnimation(.easeInOut(duration: 1.35).repeatForever(autoreverses: true)) {
                 pulse = true
@@ -2933,7 +2944,7 @@ public struct CourseLessonCard: View {
         let resolvedSize: CGSize = stepCarouselCellSize ?? size
 
         let consoleIsEnabled = isConsoleEnabled || ((completionFraction ?? 0) >= 0.999)
-        // Pro-карточка: либо чип Taika+ (не открыт), либо статус (уже открыт) — никогда вместе.
+        // Pro-карточка: либо чип Taika Pro (не открыт), либо статус (уже открыт) — никогда вместе.
         let courseOpened =
             (completionFraction ?? 0) > 0.01
             || statusKind == .inProgress
@@ -3025,7 +3036,7 @@ public struct CourseLessonCard: View {
                             Button(action: onTapInfo) {
                                 Image(systemName: "info.circle")
                                     .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(0.9)))
+                                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
                                     .frame(width: 20, height: 20)
                             }
                             .buttonStyle(.plain)
@@ -3088,7 +3099,7 @@ public struct CourseLessonCard: View {
                     )
                     .contentShape(Rectangle())
                     .opacity(showProCrown ? 0.72 : 1)
-                    .accessibilityLabel(showProCrown ? "Открыть с Taika+" : "Открыть курс")
+                    .accessibilityLabel(showProCrown ? "Открыть с Taika Pro" : "Открыть курс")
                     if showFavorite {
                         if let count = favoriteCount {
                             AppFavCounterMinimal(
@@ -3371,13 +3382,13 @@ public struct CourseLessonCard: View {
             belowTitle: {
                 // Locked / teaser Pro — продающая подпись как Main-подборка, без «0% пройдено».
                 if showProCrown {
-                    Text("откроется с Taika+")
+                    Text("откроется с Taika Pro")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, 2)
                 } else if showProTeaserChip {
-                    Text(isProUser ? "ещё не начат" : "расширь практику с Taika+")
+                    Text(isProUser ? "ещё не начат" : "расширь практику с Taika Pro")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -4611,8 +4622,8 @@ public struct StepProTeaserCard: View {
 
     public init(
         title: String = "ещё 5 карточек",
-        subtitle: String = "расширь разминку с Taika+",
-        ctaTitle: String = "открыть Taika+",
+        subtitle: String = "расширь разминку с Taika Pro",
+        ctaTitle: String = "открыть Taika Pro",
         size: CGSize = CGSize(width: CardDS.Metrics.stepWordWidth, height: CardDS.Metrics.stepWordHeight),
         onOpen: @escaping () -> Void = {}
     ) {

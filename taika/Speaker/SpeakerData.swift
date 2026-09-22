@@ -223,10 +223,10 @@ public final class SpeakerDailyAttemptsStore: ObservableObject {
     }
 }
 
-// MARK: - Conversation mode: 10 attempts per day for free; Pro unlimited
+// MARK: - Conversation mode: 5 attempts per day for free; Pro unlimited
 private let conversationAttemptsDateKey = "SpeakerConversationAttempts.date"
 private let conversationAttemptsUsedKey = "SpeakerConversationAttempts.used"
-private let conversationAttemptsLimit = 10
+private let conversationAttemptsLimit = 5
 
 @MainActor
 public final class SpeakerConversationAttemptsStore: ObservableObject {

@@ -2071,7 +2071,7 @@ public struct LSCompletedTrainingHero: View {
                         .font(.system(size: 13, weight: .regular))
                         .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
                         .accessibilityLabel("Недоступно")
-                    Text("Taika+")
+                    Text("Taika Pro")
                         .font(.system(size: 13, weight: .regular))
                         .foregroundStyle(PD.ColorToken.textSecondary)
                 } else {
@@ -2108,7 +2108,7 @@ private struct LSLessonStatusBadges: View {
     let item: LS.Item
 
     private var statusTone: LSLessonBadgeTone {
-        if item.reinforcementSessionCount == 0 && item.speakerScore == nil {
+        if item.reinforcementSessionCount == 0 && item.speakerScore == nil && item.reinforcementScore == nil {
             return .neutral
         }
         if item.errorCardCount > 0 { return .danger }
@@ -2116,7 +2116,7 @@ private struct LSLessonStatusBadges: View {
     }
 
     private var statusTitle: String {
-        if item.reinforcementSessionCount == 0 && item.speakerScore == nil {
+        if item.reinforcementSessionCount == 0 && item.speakerScore == nil && item.reinforcementScore == nil {
             return "не закреплён"
         }
         if item.errorCardCount > 0 {
@@ -2127,12 +2127,41 @@ private struct LSLessonStatusBadges: View {
 
     var body: some View {
         HStack(spacing: 6) {
+            if let score = item.reinforcementScore {
+                LSLessonEfficiencyBadge(score: score)
+            }
             LSLessonStatusBadge(title: statusTitle, tone: statusTone)
             if let speakerScore = item.speakerScore {
                 LSLessonStatusBadge(title: "Speaker · \(speakerScore)", tone: .info)
             }
+            if item.reinforcementSessionCount > 0 {
+                LSLessonStatusBadge(
+                    title: "игр · \(item.reinforcementSessionCount)",
+                    tone: .neutral
+                )
+            }
         }
-        .lineLimit(1)
+        .lineLimit(2)
+    }
+}
+
+private struct LSLessonEfficiencyBadge: View {
+    let score: Int
+
+    private var tint: Color { TaikaMasteryTokens.efficiencyColor(score: score) }
+
+    var body: some View {
+        Text("\(score)%")
+            .font(.system(size: 10, weight: .semibold).monospacedDigit())
+            .foregroundStyle(tint.opacity(0.92))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Capsule(style: .continuous).fill(tint.opacity(0.10)))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(tint.opacity(0.22), lineWidth: 0.8)
+            )
+            .accessibilityLabel("Эффективность \(score) процентов")
     }
 }
 

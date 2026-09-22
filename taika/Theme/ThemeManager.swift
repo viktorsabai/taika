@@ -22,6 +22,15 @@ public final class ThemeManager: ObservableObject {
         public var id: String { rawValue }
     }
 
+    /// Временная атмосфера Главной (свайп сферы) — не пишется в UserDefaults.
+    public enum HubAtmosphere: Equatable {
+        case speaker
+        case learn
+        case favorites
+        /// Закрепление: то же золото, что у сферы консоли.
+        case console
+    }
+
     // Persist selected accent between launches (AppStorage keeps it in UserDefaults)
     @AppStorage("accentKey") private var storedAccentKey: String = Accent.pink.rawValue
 
@@ -32,6 +41,9 @@ public final class ThemeManager: ObservableObject {
             // @Published already triggers SwiftUI updates; avoid extra async re-emits.
         }
     }
+
+    /// Override accent while browsing Main hub modes. Cleared when leaving Main.
+    @Published public var hubAtmosphere: HubAtmosphere? = nil
     
     // Persist selected color scheme between launches
     @AppStorage("preferredSchemeKey") private var storedSchemeKey: String = "dark"
@@ -71,6 +83,14 @@ public final class ThemeManager: ObservableObject {
 extension ThemeManager {
     /// Gradient used for text/icon foregrounds (matches existing usage of Theme.Gradients.accentText)
     public var currentAccentGradient: LinearGradient {
+        if let hubAtmosphere {
+            switch hubAtmosphere {
+            case .speaker: return Theme.Gradients.accentText
+            case .learn: return Theme.Gradients.accentCourseGreen
+            case .favorites: return Theme.Gradients.accentHeart
+            case .console: return Theme.Gradients.consoleGold
+            }
+        }
         switch accent {
         case .pink:
             return Theme.Gradients.accentText
@@ -88,6 +108,14 @@ extension ThemeManager {
 
     /// Solid tint sampled from the active accent — for glass washes.
     public var currentAccentTintColor: Color {
+        if let hubAtmosphere {
+            switch hubAtmosphere {
+            case .speaker: return Color(red: 0.95, green: 0.36, blue: 0.65)
+            case .learn: return Color(red: 0.28, green: 0.78, blue: 0.52)
+            case .favorites: return Color(red: 0.28, green: 0.72, blue: 0.98)
+            case .console: return Color(red: 0.96, green: 0.68, blue: 0.18)
+            }
+        }
         switch accent {
         case .pink:  return Color(red: 0.95, green: 0.36, blue: 0.65)
         case .azure: return Color(red: 0.28, green: 0.72, blue: 0.98)

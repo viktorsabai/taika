@@ -154,14 +154,14 @@ final class ProManager: ObservableObject {
 
     /// Короткий статус для Профиля.
     var subscriptionStatusTitle: String {
-        if !isPro { return "Taika+ не активен" }
+        if !isPro { return "Taika Pro не активен" }
         if isInIntroTrial {
             if let days = subscriptionDaysRemaining {
                 return "Пробный период · \(days) \(TaikaProConfig.russianDaysWord(days))"
             }
             return "Пробный период"
         }
-        return "Taika+ активен"
+        return "Taika Pro активен"
     }
 
     var subscriptionStatusSubtitle: String {

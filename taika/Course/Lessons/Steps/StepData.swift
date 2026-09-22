@@ -24,11 +24,14 @@ final class StepData {
     private var loadedURL: URL?
     private var loadedVersion: Int?
     private var loadedHash: String?
+    private let loadLock = NSLock()
 
     private init() {}
 
     // Load once, or reload if the bundle file changed/version bumped. Safe to call from App or onAppear.
     func preload(force: Bool = false) {
+        loadLock.lock()
+        defer { loadLock.unlock() }
         // hot path: if already loaded, do nothing (avoid repeated file IO + hashing)
         if isLoaded && !force { return }
         var lastURL: URL?

@@ -4,7 +4,7 @@
 //
 //  Первый вход = мини-урок + демо разбора.
 //  Один stage: title / hero / footer — слоты не двигаются между шагами.
-//  Splash → дверь → фраза → разбор → курсы → закрепление → Taika+ → LessonsView.
+//  Splash → дверь → фраза → разбор → курсы → закрепление → Taika Pro → LessonsView.
 //
 
 import SwiftUI
@@ -219,7 +219,7 @@ struct TaikaLearnOnboardingView: View {
         case .reinforce:
             return "Тот же язык карточек — разные способы."
         case .plus:
-            return "Попробуй Taika+"
+            return "Попробуй Taika Pro"
         }
     }
 

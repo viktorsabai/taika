@@ -68,7 +68,7 @@ enum ProGateReason: String, Equatable, CaseIterable, Identifiable {
         case .personalPath:
             return "Словарь из спикера — практика без лимитов"
         case .dictionary:
-            return "Личный словарь уже есть — Taika+ открывает практику."
+            return "Личный словарь уже есть — Taika Pro открывает практику."
         }
     }
 
@@ -78,8 +78,8 @@ enum ProGateReason: String, Equatable, CaseIterable, Identifiable {
         case .dailyPicks: return "Расширить разминку"
         case .lockedCourse: return "Открыть курс"
         case .games: return "Открыть игры"
-        case .personalPath, .dictionary: return "Открыть Taika+"
-        case .general: return "Открыть Taika+"
+        case .personalPath, .dictionary: return "Открыть Taika Pro"
+        case .general: return "Открыть Taika Pro"
         }
     }
 }
@@ -147,7 +147,7 @@ enum TaikaValueDeck {
             id: TaikaValueSlideID.speaker,
             icon: "waveform.circle.fill",
             title: "Спикер и разборы",
-            subtitle: "Скажи вслух — услышишь себя. Голос закрепляет сильнее зубрёжки. Глубже — в Taika+.",
+            subtitle: "Скажи вслух — услышишь себя. Голос закрепляет сильнее зубрёжки. Глубже — в Taika Pro.",
             badge: "речь"
         ),
         .init(
@@ -187,7 +187,7 @@ enum TaikaValueDeck {
         )
     ]
 
-    /// Taika+ paywall — 4 плюшки по брифу.
+    /// Taika Pro paywall — 4 плюшки по брифу.
     static let plus: [TaikaValueSlide] = [
         .init(
             id: TaikaValueSlideID.reinforce,

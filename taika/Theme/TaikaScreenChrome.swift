@@ -67,30 +67,23 @@ struct TaikaCarouselScroll<Content: View>: View {
 // MARK: - Liquid glass chrome
 
 private enum TaikaGlassTokens {
-    static let headerTint: Double = 0.36
-    /// Toolbar stays neutral chrome — no accent wash.
-    static let toolbarTint: Double = 0.42
-    static let buttonTint: Double = 0.44
-    static let edgeStroke: Double = 0.15
-    static let innerSheenTop: Double = 0.08
+    /// Denser veil — hides material grain over busy dark canvases.
+    static let headerTint: Double = 0.28
+    static let toolbarTint: Double = 0.32
+    static let buttonTint: Double = 0.30
+    static let edgeStroke: Double = 0.12
 }
 
-/// Neutral frosted glass (toolbar + header strip + icon orbs). No theme recolor.
+/// Neutral frosted glass for header / toolbar / icon orbs.
+/// Chrome material (not ultraThin) — ultraThin looks sandy over particles/waves.
 private struct TaikaNeutralGlassFill: View {
     var tint: Double = TaikaGlassTokens.headerTint
 
     var body: some View {
         ZStack {
-            SystemBlur(style: .systemChromeMaterial)
+            // UIKit chrome blur is denser/smoother than SwiftUI ultraThin over busy dark UIs.
+            SystemBlur(style: .systemChromeMaterialDark)
             Color.black.opacity(tint)
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(TaikaGlassTokens.innerSheenTop),
-                    Color.clear
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
         }
     }
 }
@@ -98,18 +91,29 @@ private struct TaikaNeutralGlassFill: View {
 /// Instagram-style circular header control — visibly tappable glass button.
 struct TaikaHeaderGlassButton<Content: View>: View {
     var size: CGFloat = 38
+    /// Idle: colored ring so the control reads as a button. Active: solid fill.
+    var stroke: AnyShapeStyle = AnyShapeStyle(Color.white.opacity(TaikaGlassTokens.edgeStroke))
+    var showsRing: Bool = true
+    var filled: Bool = false
+    var fill: AnyShapeStyle = AnyShapeStyle(Color.clear)
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         content()
             .frame(width: size, height: size)
             .background {
-                TaikaNeutralGlassFill(tint: TaikaGlassTokens.buttonTint)
-                    .clipShape(Circle())
+                if filled {
+                    Circle().fill(fill)
+                } else {
+                    TaikaNeutralGlassFill(tint: TaikaGlassTokens.buttonTint)
+                        .clipShape(Circle())
+                }
             }
             .overlay {
-                Circle()
-                    .stroke(Color.white.opacity(TaikaGlassTokens.edgeStroke), lineWidth: 0.5)
+                if showsRing {
+                    Circle()
+                        .stroke(filled ? AnyShapeStyle(Color.white.opacity(0.28)) : stroke, lineWidth: filled ? 0.6 : 1.25)
+                }
             }
             .frame(width: size, height: size)
             .contentShape(Circle())
@@ -120,6 +124,10 @@ struct TaikaHeaderGlassButton<Content: View>: View {
 struct TaikaHeaderGlassPill<Content: View>: View {
     var height: CGFloat = 38
     var horizontalPadding: CGFloat = 11
+    var stroke: AnyShapeStyle = AnyShapeStyle(Color.white.opacity(TaikaGlassTokens.edgeStroke))
+    var showsRing: Bool = true
+    var filled: Bool = false
+    var fill: AnyShapeStyle = AnyShapeStyle(Color.clear)
     @ViewBuilder var content: () -> Content
 
     var body: some View {
@@ -127,12 +135,18 @@ struct TaikaHeaderGlassPill<Content: View>: View {
             .padding(.horizontal, horizontalPadding)
             .frame(height: height)
             .background {
-                TaikaNeutralGlassFill(tint: TaikaGlassTokens.buttonTint)
-                    .clipShape(Capsule(style: .continuous))
+                if filled {
+                    Capsule(style: .continuous).fill(fill)
+                } else {
+                    TaikaNeutralGlassFill(tint: TaikaGlassTokens.buttonTint)
+                        .clipShape(Capsule(style: .continuous))
+                }
             }
             .overlay {
-                Capsule(style: .continuous)
-                    .stroke(Color.white.opacity(TaikaGlassTokens.edgeStroke), lineWidth: 0.5)
+                if showsRing {
+                    Capsule(style: .continuous)
+                        .stroke(filled ? AnyShapeStyle(Color.white.opacity(0.28)) : stroke, lineWidth: filled ? 0.6 : 1.25)
+                }
             }
             .contentShape(Capsule(style: .continuous))
     }
@@ -171,7 +185,7 @@ struct TaikaLiquidGlassCapsule: View {
 struct TaikaContinuousCanvasBackground: View {
     var body: some View {
         ZStack {
-            Color.black.opacity(0.985)
+            PD.ColorToken.background
             LinearGradient(
                 colors: [
                     Color.white.opacity(0.010),
@@ -210,7 +224,7 @@ struct TaikaBrandWashBackdrop: View {
             ? Color(red: 0.90, green: 0.78, blue: 1.00)
             : tint.opacity(0.55)
         ZStack {
-            Color.black
+            PD.ColorToken.background
             RadialGradient(
                 colors: [
                     hot.opacity(0.26 * intensity),
@@ -236,100 +250,63 @@ struct TaikaBrandWashBackdrop: View {
     }
 }
 
-/// Спокойный techno-фон для фокус-сцен Спикера.
-/// Графит + мягкие радиальные wash + размытые волновые линии (как на карточках курсов, но шире и тише).
+/// Спокойный techno-фон: лёгкая волна, без цветного «сияния» поверх бренда.
 struct TaikaTechnoSpaceBackdrop: View {
     var intensity: CGFloat = 1
     /// Practice / recording — subtle live pulse (kept cheap).
     var isLive: Bool = false
     var audioLevel: CGFloat = 0
+    /// Where the voice planet sits — orbits lock to this, not screen-bottom.
+    var heroAnchor: UnitPoint = UnitPoint(x: 0.5, y: 0.40)
 
     @ObservedObject private var theme = ThemeManager.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var phase: CGFloat = 0
 
     var body: some View {
-        let accent = theme.currentAccentTintColor
+        let fill = theme.currentAccentFill
         let liveBoost = isLive ? (0.55 + min(max(audioLevel, 0), 1) * 0.35) : 0.35
         let pulse = isLive ? (0.9 + liveBoost * 0.15) : 1.0
+        let orbitPhase = reduceMotion ? CGFloat(0) : phase
 
         ZStack {
-            Color(red: 0.05, green: 0.05, blue: 0.06)
+            PD.ColorToken.background
 
             LinearGradient(
                 colors: [
-                    Color.white.opacity(0.03 * intensity),
+                    Color.white.opacity(0.028 * intensity),
                     Color.clear,
-                    Color.black.opacity(0.38)
+                    Color.black.opacity(0.22)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
-            // Radial washes, not solid ellipses — soft edges without blur cost.
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            accent.opacity(0.13 * intensity * pulse),
-                            accent.opacity(0.05 * intensity * pulse),
-                            .clear
-                        ],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 190
-                    )
-                )
-                .frame(width: 380, height: 300)
-                .offset(x: 28, y: -180)
-
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color.white.opacity(0.035 * intensity),
-                            .clear
-                        ],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 160
-                    )
-                )
-                .frame(width: 320, height: 240)
-                .offset(x: -60, y: 200)
-
-            // Ribbons live below the hero sphere — they must never cut across it.
-            ForEach(Array(Self.waveSeeds.prefix(2).enumerated()), id: \.offset) { index, seed in
-                TaikaSoftTechnoWaveShape(
-                    phase: reduceMotion ? 0 : phase,
-                    seed: seed
-                )
-                .stroke(
-                    accent.opacity((index == 1 ? 0.20 : 0.11) * intensity * Double(pulse)),
-                    style: StrokeStyle(lineWidth: index == 1 ? 1.4 : 0.9, lineCap: .round)
-                )
-                .offset(y: CGFloat(index) * 30)
-            }
+            TaikaSoftTechnoWaveShape(
+                phase: orbitPhase,
+                seed: 1.1
+            )
+            .stroke(
+                fill.opacity(Double(0.08 * intensity * pulse)),
+                style: StrokeStyle(lineWidth: 1.0, lineCap: .round)
+            )
 
             RadialGradient(
-                colors: [Color.clear, Color.black.opacity(0.48)],
-                center: .center,
-                startRadius: 140,
-                endRadius: 560
+                colors: [Color.clear, Color.black.opacity(0.50)],
+                center: heroAnchor,
+                startRadius: 120,
+                endRadius: 540
             )
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
         .onAppear {
             guard !reduceMotion else { return }
-            // One slow implicit animation — not a per-frame TimelineView
-            withAnimation(.linear(duration: isLive ? 10 : 18).repeatForever(autoreverses: false)) {
+            withAnimation(.linear(duration: isLive ? 14 : 28).repeatForever(autoreverses: false)) {
                 phase = 1
             }
         }
     }
-
-    private static let waveSeeds: [CGFloat] = [0.15, 1.1, 2.2, 3.35, 4.4]
 }
 
 /// Wide soft ribbon — cousin of course-card organic waves, stretched for full-screen atmosphere.
@@ -366,20 +343,27 @@ private struct TaikaSoftTechnoWaveShape: Shape {
     }
 }
 
-/// Full-width header blur — even frosted strip, no accent blobs.
+/// Full-width header blur — frosted strip that fades into the canvas (Mail-style).
 struct TaikaLiquidGlassHeaderBackdrop: View {
+    /// Total painted height including the soft fade below the controls row.
+    var height: CGFloat = 128
+
     var body: some View {
-            TaikaNeutralGlassFill(tint: TaikaGlassTokens.headerTint * 0.24)
-                .mask {
-                VStack(spacing: 0) {
-                    Rectangle().fill(Color.black)
-                    LinearGradient(
-                        colors: [Color.black, Color.black.opacity(0.35), Color.clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 72)
-                }
+        TaikaNeutralGlassFill(tint: TaikaGlassTokens.headerTint)
+            .frame(height: height)
+            .frame(maxWidth: .infinity, alignment: .top)
+            .mask {
+                LinearGradient(
+                    stops: [
+                        .init(color: .black, location: 0),
+                        .init(color: .black, location: 0.48),
+                        .init(color: .black.opacity(0.45), location: 0.72),
+                        .init(color: .black.opacity(0.12), location: 0.90),
+                        .init(color: .clear, location: 1)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
             }
             .compositingGroup()
             .ignoresSafeArea(edges: .top)

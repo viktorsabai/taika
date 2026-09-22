@@ -313,9 +313,10 @@ struct SpeakerView: View {
             // Не синкаем speakerFilterState.selectedFilterId здесь: он привязан к .onChange → applyFilter(id),
             // а applyFilter(.learned) перезаписал бы наш подвыбор курсов общей очередью «все выученные».
             onStartCourseTraining: { courses, lessons in
+                // Пустой set уроков = «ничего не выбрано», не «все уроки курса».
                 speaker.startTraining(
                     withCourseIds: courses,
-                    lessonIds: lessons.isEmpty ? nil : lessons
+                    lessonIds: lessons
                 )
             },
             trainingFavoritesCount: speaker.trainingFavoritesCount(),

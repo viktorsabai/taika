@@ -562,9 +562,9 @@ public struct SDStepCard: View {
                                 let th = item.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines)
                                 if !th.isEmpty { return th }
                                 let ph = item.phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
-                                return ph.isEmpty ? "расширь разминку с Taika+" : ph
+                                return ph.isEmpty ? "расширь разминку с Taika Pro" : ph
                             }(),
-                            ctaTitle: "открыть Taika+",
+                            ctaTitle: "открыть Taika Pro",
                             size: cardSize,
                             onOpen: onTap
                         )

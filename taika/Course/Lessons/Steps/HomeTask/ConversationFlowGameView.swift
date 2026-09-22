@@ -633,8 +633,8 @@ private struct ThaiDigitalRevealText: View {
     private let thaiGlyphs = Array("กขคงจฉชซญฎฏฐฑฒณดตถทธนบปผพภมยรลวศษสหอฮ")
 
     var body: some View {
-        Text(rendered.isEmpty ? text : rendered)
-            .font(CD.FontToken.body(17, weight: .semibold))
+        Text(verbatim: rendered.isEmpty ? text : rendered)
+            .font(.system(size: 17, weight: .semibold, design: .rounded))
             .foregroundStyle(CD.ColorToken.text)
             .multilineTextAlignment(.trailing)
             .blur(radius: (1 - revealProgress) * 2.2)
@@ -649,6 +649,7 @@ private struct ThaiDigitalRevealText: View {
                     endPoint: .trailing
                 )
                 .blendMode(.screen)
+                .allowsHitTesting(false)
             )
             .onAppear { startAnimation() }
             .onChange(of: trigger) { _, _ in startAnimation() }

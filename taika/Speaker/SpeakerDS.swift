@@ -173,6 +173,8 @@ public struct SpeakerDSRoot: View {
         /// Recovery actions when the free daily training attempts are exhausted.
         let onOpenInstantTranslation: (() -> Void)?
         let onOpenTaikaPlus: (() -> Void)?
+        /// Sheet host: render only the detailed breakdown, no Speaker chrome.
+        let breakdownContentOnly: Bool
     }
 
     private let external: External?
@@ -227,6 +229,7 @@ public struct SpeakerDSRoot: View {
 
     @ObservedObject private var favoriteManager = FavoriteManager.shared
     @ObservedObject private var conversationEngine = SpeakerManager.shared
+    @StateObject private var speakerAssembleCoordinator = TaikaAssembleCoordinator()
     /// Выбранные курсы на экране-лаунчере тренировки; nil = «ещё не трогали» (тогда берём дефолт — все курсы с фразами).
     /// Optional, а не пустой Set по умолчанию — иначе «снять всё» не отличить от «ещё не открывали экран».
     @State private var selectedTrainingCourseIds: Set<String>? = nil
@@ -252,6 +255,9 @@ public struct SpeakerDSRoot: View {
     /// «строка = 34pt» — она врала на переносах длинных значений и на межстрочных отступах.
     /// Высота видимой области результата — по ней центрируем короткий контент.
     @State private var conversationOutcomeViewportHeight: CGFloat = 0
+    /// Hold the planet overlay while it morphs into the breakdown.
+    @State private var conversationHoldingBurst = false
+    @State private var conversationBurstProgress: CGFloat = 0
     @FocusState private var conversationComposeFocused: Bool
     @FocusState private var conversationEditFocused: Bool
 
@@ -448,7 +454,7 @@ public struct SpeakerDSRoot: View {
         trainingRemainingToday: Int = 10,
         trainingCanRecord: Bool = true,
         hasFullToneBreakdownAccess: Bool = false,
-        conversationRemainingToday: Int = 10,
+        conversationRemainingToday: Int = 5,
         conversationRecordingElapsed: TimeInterval = 0,
         conversationRecordingMaxDuration: TimeInterval = 45,
         conversationCanRecord: Bool = true,
@@ -467,7 +473,8 @@ public struct SpeakerDSRoot: View {
         attemptPlaybackProgress: Double = 1.0,
         onBreakdownAppear: (() -> Void)? = nil,
         onOpenInstantTranslation: (() -> Void)? = nil,
-        onOpenTaikaPlus: (() -> Void)? = nil
+        onOpenTaikaPlus: (() -> Void)? = nil,
+        breakdownContentOnly: Bool = false
     ) {
         self.external = External(
             current: current,
@@ -568,11 +575,66 @@ public struct SpeakerDSRoot: View {
             attemptPlaybackProgress: attemptPlaybackProgress,
             onBreakdownAppear: onBreakdownAppear,
             onOpenInstantTranslation: onOpenInstantTranslation,
-            onOpenTaikaPlus: onOpenTaikaPlus
+            onOpenTaikaPlus: onOpenTaikaPlus,
+            breakdownContentOnly: breakdownContentOnly
         )
 #if DEBUG
         self.previewExternal = nil
 #endif
+    }
+
+    /// Detailed breakdown only — same overlay as Speaker, no chrome. Used from onboarding.
+    init(
+        liveBreakdownFrom speaker: SpeakerManager,
+        isProUser: Bool,
+        hasFullToneBreakdownAccess: Bool,
+        showBreakdownOverlay: Binding<Bool>
+    ) {
+        self.init(
+            current: speaker.current,
+            items: speaker.carouselItems,
+            selectedId: speaker.selectedId,
+            activeFilterId: speaker.activeFilterId,
+            phase: speaker.phase,
+            heardThai: speaker.heardThai,
+            heardRU: speaker.heardRU,
+            heardTranslit: speaker.heardTranslit,
+            heardPhraseParts: speaker.heardPhraseParts,
+            heardConfidence: speaker.heardConfidence,
+            displayScore: speaker.displayScore,
+            toneAverageScore: speaker.toneAverageScore,
+            taikaHints: speaker.taikaHints,
+            syllableFeedback: speaker.syllableFeedback,
+            breakdownRequestInFlight: speaker.breakdownRequestInFlight,
+            breakdownRequestFailed: speaker.breakdownRequestFailed,
+            breakdownHybridScore: speaker.breakdownHybridScore,
+            lastAttempt: speaker.lastAttempt,
+            attemptCount: speaker.attemptCount,
+            lastPlayed: speaker.lastPlayed,
+            onPlayReference: {
+                if speaker.playReferenceConversationExpectedIfNeeded() { return }
+                speaker.playReference()
+            },
+            onPlayAttempt: { speaker.playAttempt() },
+            onPlayReferenceSyllableAtIndex: { speaker.playReferenceSyllable(at: $0) },
+            onMicTap: {},
+            onNext: {},
+            onRepeat: {},
+            showBreakdownOverlay: showBreakdownOverlay,
+            speakerUIMode: .conversation,
+            isProUser: isProUser,
+            hasFullToneBreakdownAccess: hasFullToneBreakdownAccess,
+            conversationExpectedThai: speaker.conversationExpectedThai,
+            conversationExpectedTranslitForFeedback: speaker.conversationExpectedTranslitForFeedback,
+            conversationHeardThaiASR: speaker.conversationHeardThaiASR,
+            conversationHeardPhoneticFromASR: speaker.conversationHeardPhoneticFromASR,
+            conversationCoachHeadline: speaker.conversationCoachHeadline,
+            conversationCoachDetail: speaker.conversationCoachDetail,
+            conversationCoachInFlight: speaker.conversationCoachInFlight,
+            referencePlaybackProgress: speaker.referencePlaybackProgress,
+            attemptPlaybackProgress: speaker.attemptPlaybackProgress,
+            breakdownContentOnly: true
+        )
     }
 
 #if DEBUG
@@ -896,6 +958,7 @@ public struct SpeakerDSRoot: View {
     }
 
     private var conversationPlanetMode: TaikaVoicePlanetMode {
+        if conversationHoldingBurst { return .burst }
         if conversationIsPracticeFlow {
             if phase.isFeedback { return .result }
             if phase.isProcessing { return .cooking }
@@ -975,12 +1038,24 @@ public struct SpeakerDSRoot: View {
         .animation(.easeInOut(duration: 0.24), value: conversationIsTextScene)
         .animation(.easeInOut(duration: 0.2), value: conversationWidgetStateKey)
         .animation(.easeInOut(duration: 0.22), value: conversationPlanetScene)
-        .onChange(of: phase) { _, newPhase in
+        .onChange(of: phase) { oldPhase, newPhase in
             if case .recording = newPhase {
                 conversationPlanetScene = .voice
                 conversationPlanetDrag = 0
+                conversationHoldingBurst = false
+                conversationBurstProgress = 0
                 if conversationTextComposerExpanded {
                     collapseConversationTextComposer(clearText: false)
+                }
+            }
+            if oldPhase.isProcessing, !newPhase.isProcessing, newPhase != .hint {
+                conversationHoldingBurst = true
+                conversationBurstProgress = 0
+                withAnimation(.easeInOut(duration: 0.88)) {
+                    conversationBurstProgress = 1
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.92) {
+                    conversationHoldingBurst = false
                 }
             }
         }
@@ -1011,7 +1086,8 @@ public struct SpeakerDSRoot: View {
         TaikaTechnoSpaceBackdrop(
             intensity: intensity,
             isLive: recording,
-            audioLevel: voicePlanetAudioLevel
+            audioLevel: voicePlanetAudioLevel,
+            heroAnchor: UnitPoint(x: 0.5, y: 0.44)
         )
     }
 
@@ -1021,6 +1097,7 @@ public struct SpeakerDSRoot: View {
         GeometryReader { geo in
             VStack(spacing: 0) {
                 if outcome {
+                    ZStack {
                     // Ни результат, ни тренировка не показывают планету с галочкой и чип «готово»:
                     // о завершении уже говорит сам контент (оценка / переведённая фраза),
                     // а два лишних сигнала съедали верх экрана и отодвигали главное вниз.
@@ -1067,6 +1144,27 @@ public struct SpeakerDSRoot: View {
                         .padding(.horizontal, padH)
                         .padding(.top, 8)
                         .padding(.bottom, 8)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .opacity(conversationHoldingBurst ? Double(conversationBurstProgress) : 1)
+                    .scaleEffect(
+                        conversationHoldingBurst ? (0.92 + 0.08 * conversationBurstProgress) : 1,
+                        anchor: .center
+                    )
+                    .blur(radius: conversationHoldingBurst ? (1 - conversationBurstProgress) * 4 : 0)
+                    .allowsHitTesting(!conversationHoldingBurst)
+
+                    if conversationHoldingBurst {
+                        TaikaVoicePlanet(
+                            mode: .burst,
+                            kind: .voice,
+                            scale: 0.88,
+                            lite: true,
+                            burstProgress: conversationBurstProgress
+                        )
+                        .frame(width: 300, height: 300)
+                        .allowsHitTesting(false)
+                    }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -1315,9 +1413,17 @@ public struct SpeakerDSRoot: View {
                         .font(.system(size: 12, weight: .bold))
                 }
             }
-            .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-            .padding(.horizontal, 10)
+            .foregroundStyle(PD.ColorToken.text.opacity(0.9))
+            .padding(.horizontal, 12)
             .frame(height: 36)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.white.opacity(0.06))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: 1)
+            )
         }
         .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
         .accessibilityLabel(isToText ? "Перейти к вводу текстом" : "Перейти к голосу")
@@ -1327,14 +1433,14 @@ public struct SpeakerDSRoot: View {
     @ViewBuilder private var conversationVoicePlanetButton: some View {
         // DragGesture owns the hit: short tap → record; horizontal swipe → mode switch (no false record).
         ZStack {
-            TaikaVoicePlanet(
-                mode: conversationPlanetMode,
+            TaikaAssemblingPlanet(
+                gateKey: "tab.speaker",
                 kind: .voice,
                 scale: 0.88,
-                lite: true,
+                frameSize: 280,
+                settledMode: conversationPlanetMode,
                 audioLevel: voicePlanetAudioLevel
             )
-            .frame(width: 280, height: 280)
         }
         .frame(width: 300, height: 300)
         .contentShape(Circle())
@@ -2856,12 +2962,11 @@ public struct SpeakerDSRoot: View {
         let title: String = {
             if isRec { return "Стоп" }
             if isBusy { return "Секунду…" }
-            if !canRecord { return "Попытки закончились" }
+            if !canRecord { return "Попытки на сегодня кончились" }
             return "Мгновенный перевод"
         }()
         let subtitle: String? = {
-            if isRec || isBusy { return nil }
-            if !canRecord { return "открой Taika+ — безлимит" }
+            if isRec || isBusy || !canRecord { return nil }
             if isPro { return nil }
             return Self.attemptsLeftLabel(remaining)
         }()
@@ -2870,15 +2975,14 @@ public struct SpeakerDSRoot: View {
             if isBusy { return }
             collapseConversationTextComposer(clearText: false)
             if !canRecord && !isRec {
-                UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                external?.onMicTap()
+                OverlayPresenter.shared.present(.speakerAttempts)
                 return
             }
             UIImpactFeedbackGenerator(style: isRec ? .medium : .light).impactOccurred()
             external?.onMicTap()
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: isRec ? "stop.fill" : (canRecord ? "mic.fill" : "lock.fill"))
+                Image(systemName: isRec ? "stop.fill" : "mic.fill")
                     .font(.system(size: 15, weight: .bold))
                 VStack(spacing: 2) {
                     Text(title)
@@ -2921,10 +3025,10 @@ public struct SpeakerDSRoot: View {
         let accentColor = ThemeManager.shared.currentAccentTintColor
         return Button {
             if !recording && !canRecord {
-                UINotificationFeedbackGenerator().notificationOccurred(.warning)
-            } else {
-                UIImpactFeedbackGenerator(style: recording ? .medium : .light).impactOccurred()
+                OverlayPresenter.shared.present(.speakerAttempts)
+                return
             }
+            UIImpactFeedbackGenerator(style: recording ? .medium : .light).impactOccurred()
             external?.onMicTap()
         } label: {
             ZStack {
@@ -3018,6 +3122,9 @@ public struct SpeakerDSRoot: View {
     private var conversationExpectedThai: String? { external?.conversationExpectedThai }
 
     public var body: some View {
+        if external?.breakdownContentOnly == true {
+            speakerBreakdownSheet
+        } else {
         ZStack {
             PD.ColorToken.background
                 .ignoresSafeArea()
@@ -3054,6 +3161,7 @@ public struct SpeakerDSRoot: View {
                 )
             }
         }
+        .environmentObject(speakerAssembleCoordinator)
         .animation(.easeInOut(duration: 0.28), value: conversationIsTextScene)
         .sheet(isPresented: Binding(
             get: { effectiveShowBreakdown },
@@ -3105,6 +3213,7 @@ public struct SpeakerDSRoot: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        }
     }
 
     /// «Закрепление курсов» в покое: выбор курсов/уроков + typewriter-гайд с цифрами в сообщении.
@@ -3136,19 +3245,10 @@ public struct SpeakerDSRoot: View {
                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.85))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 36)
-            Button {
+            TaikaNeutralChip(title: "К урокам") {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 external?.onOpenCourses?()
-            } label: {
-                Text("к урокам")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 48)
             .padding(.top, 4)
             Spacer(minLength: 0)
         }
@@ -3164,10 +3264,16 @@ public struct SpeakerDSRoot: View {
         Set(SpeakerManager.shared.learnedTrainingLessonOptions(courseId: courseId).map(\.id))
     }
 
+    /// Уроки для UI/старта: у невыбранного курса — пусто; у выбранного без записи в map — все выученные.
+    private func effectiveLessonSelection(for courseId: String, courseSelected: Bool) -> Set<String> {
+        guard courseSelected else { return [] }
+        return selectedTrainingLessonIdsByCourse[courseId] ?? defaultLessonSelection(for: courseId)
+    }
+
     private func selectedLessonIds(for options: [SpeakerTrainingCourseOption], selectedCourses: Set<String>) -> Set<String> {
         var out = Set<String>()
         for cid in selectedCourses {
-            out.formUnion(selectedTrainingLessonIdsByCourse[cid] ?? defaultLessonSelection(for: cid))
+            out.formUnion(effectiveLessonSelection(for: cid, courseSelected: true))
         }
         _ = options
         return out
@@ -3181,10 +3287,28 @@ public struct SpeakerDSRoot: View {
         var total = 0
         for cid in selectedCourses {
             let lessons = SpeakerManager.shared.learnedTrainingLessonOptions(courseId: cid)
-            let picked = selectedTrainingLessonIdsByCourse[cid] ?? defaultLessonSelection(for: cid)
+            let picked = effectiveLessonSelection(for: cid, courseSelected: true)
             total += lessons.filter { picked.contains($0.id) }.reduce(0) { $0 + $1.count }
         }
         return total
+    }
+
+    /// none / partial / all — для галочки курса (indeterminate при частичном выборе уроков).
+    private enum TrainingCourseCheckState {
+        case none, partial, all
+    }
+
+    private func trainingCourseCheckState(
+        courseId: String,
+        isSelected: Bool
+    ) -> TrainingCourseCheckState {
+        guard isSelected else { return .none }
+        let all = defaultLessonSelection(for: courseId)
+        guard !all.isEmpty else { return .all }
+        let picked = effectiveLessonSelection(for: courseId, courseSelected: true)
+        if picked.isEmpty { return .none }
+        if picked.isSuperset(of: all) { return .all }
+        return .partial
     }
 
     private func trainingLauncherScreen(options: [SpeakerTrainingCourseOption]) -> some View {
@@ -3213,8 +3337,8 @@ public struct SpeakerDSRoot: View {
 
             HStack {
                 Text(options.isEmpty ? "Или выбери курсы позже" : "Выбери курсы и уроки")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.62))
                 Spacer(minLength: 8)
                 if !options.isEmpty {
                 Button {
@@ -3234,23 +3358,10 @@ public struct SpeakerDSRoot: View {
                     }
                 } label: {
                     Text(selected.count == options.count ? "снять всё" : "выбрать все")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                        .padding(.horizontal, 12)
-                        .frame(height: 30)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(CD.ColorToken.card.opacity(0.9))
-                        )
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(
-                                    ThemeManager.shared.currentAccentFill.opacity(0.55),
-                                    lineWidth: Theme.Strokes.strokeLineWidth
-                                )
-                        )
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.88))
                 }
-                .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.92))
                 .accessibilityLabel(selected.count == options.count ? "Снять всё" : "Выбрать все")
                 }
             }
@@ -3287,31 +3398,16 @@ public struct SpeakerDSRoot: View {
                 selectedTrainingLessonIdsByCourse = map
             }
 
-            Button {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                let lessons = selectedLessonIds(for: options, selectedCourses: selected)
-                external?.onStartCourseTraining?(selected, lessons)
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "person.wave.2.fill")
-                        .font(.system(size: 15, weight: .bold))
-                    Text(selectedTotal > 0
-                         ? "Начать тренировку · \(selectedTotal)"
-                         : "Начать тренировку")
-                        .font(.system(size: 16, weight: .bold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+            TaikaHubAgentSwitchCTA(
+                title: selectedTotal > 0 ? "Начать тренировку · \(selectedTotal)" : "Начать тренировку",
+                icon: "mic.fill",
+                isEnabled: selectedTotal > 0 && !options.isEmpty,
+                action: {
+                    let lessons = selectedLessonIds(for: options, selectedCourses: selected)
+                    external?.onStartCourseTraining?(selected, lessons)
                 }
-                .foregroundColor(.black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
-                .shadow(color: ThemeManager.shared.currentAccentTintColor.opacity(0.32), radius: 14, y: 4)
-            }
-            .buttonStyle(.plain)
-            .disabled(selectedTotal == 0 || options.isEmpty)
-            .opacity((selectedTotal == 0 || options.isEmpty) ? 0.5 : 1)
-            .padding(.top, 14)
+            )
+            .padding(.top, 8)
             .accessibilityLabel("Начать тренировку, \(selectedTotal) фраз")
         }
         .padding(.horizontal, 20)
@@ -3355,41 +3451,35 @@ public struct SpeakerDSRoot: View {
         enabled: Bool,
         action: @escaping () -> Void
     ) -> some View {
-        let accent = ThemeManager.shared.currentAccentFill
-        return Button {
+        Button {
             guard enabled else { return }
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             action()
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 7) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
                 Text("\(count)")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .contentTransition(.numericText())
+                    .foregroundStyle(PD.ColorToken.text.opacity(0.92))
                 Text(label)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
                     .minimumScaleFactor(0.82)
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.82))
             }
-            .foregroundStyle(accent)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 12)
-            .frame(height: 44)
-            .background(Capsule(style: .continuous).fill(Color.clear))
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(
-                        AnyShapeStyle(accent.opacity(enabled ? 0.95 : 0.35)),
-                        lineWidth: 1.5
-                    )
-            )
+            .frame(height: 42)
+            .background(TaikaNeutralPrimaryPillChrome())
             .contentShape(Capsule())
         }
         .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
         .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.45)
+        .opacity(enabled ? 1 : 0.42)
         .accessibilityLabel("\(label), \(count) \(lifehackCountUnitLabel(count, unit: "phrase"))")
         .accessibilityHint(enabled ? "Начать тренировку" : "Пока пусто")
     }
@@ -3426,12 +3516,13 @@ public struct SpeakerDSRoot: View {
         isExpanded: Bool
     ) -> some View {
         let lessons = SpeakerManager.shared.learnedTrainingLessonOptions(courseId: option.id)
-        let pickedLessons = selectedTrainingLessonIdsByCourse[option.id] ?? defaultLessonSelection(for: option.id)
+        let pickedLessons = effectiveLessonSelection(for: option.id, courseSelected: isSelected)
+        let checkState = trainingCourseCheckState(courseId: option.id, isSelected: isSelected)
 
         return VStack(alignment: .leading, spacing: 0) {
             trainingCourseRow(
                 option: option,
-                isSelected: isSelected,
+                checkState: checkState,
                 isExpanded: isExpanded,
                 onToggleCourse: { toggleTrainingCourseSelection(option.id, options: external?.trainingCourseOptions ?? [option]) },
                 onToggleExpand: {
@@ -3441,13 +3532,14 @@ public struct SpeakerDSRoot: View {
                             expandedTrainingCourseId = nil
                         } else {
                             expandedTrainingCourseId = option.id
-                            if selectedTrainingLessonIdsByCourse[option.id] == nil {
+                            // Раскрытие только смотрит уроки — не выбирает курс.
+                            // Если курс уже выбран и map ещё не сидели — покажем все выученные.
+                            let courses = selectedTrainingCourseIds
+                                ?? defaultTrainingSelection(external?.trainingCourseOptions ?? [option])
+                            if courses.contains(option.id),
+                               selectedTrainingLessonIdsByCourse[option.id] == nil {
                                 selectedTrainingLessonIdsByCourse[option.id] = defaultLessonSelection(for: option.id)
                             }
-                            // Раскрытие курса — сразу отмечаем курс выбранным.
-                            var courses = selectedTrainingCourseIds ?? defaultTrainingSelection(external?.trainingCourseOptions ?? [option])
-                            courses.insert(option.id)
-                            selectedTrainingCourseIds = courses
                         }
                     }
                 }
@@ -3477,9 +3569,7 @@ public struct SpeakerDSRoot: View {
         if updated.contains(courseId) {
             updated.remove(courseId)
             selectedTrainingLessonIdsByCourse[courseId] = []
-            if expandedTrainingCourseId == courseId {
-                expandedTrainingCourseId = nil
-            }
+            // Список уроков оставляем раскрытым — можно сразу отметить отдельные.
         } else {
             updated.insert(courseId)
             selectedTrainingLessonIdsByCourse[courseId] = defaultLessonSelection(for: courseId)
@@ -3489,7 +3579,20 @@ public struct SpeakerDSRoot: View {
 
     private func toggleTrainingLessonSelection(courseId: String, lessonId: String) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        var picked = selectedTrainingLessonIdsByCourse[courseId] ?? defaultLessonSelection(for: courseId)
+        let options = external?.trainingCourseOptions ?? []
+        var courses = selectedTrainingCourseIds ?? defaultTrainingSelection(options)
+        let courseWasSelected = courses.contains(courseId)
+
+        // Невыбранный курс / после «снять всё»: старт с пустого набора, а не с «все уроки».
+        var picked: Set<String>
+        if let existing = selectedTrainingLessonIdsByCourse[courseId] {
+            picked = existing
+        } else if courseWasSelected {
+            picked = defaultLessonSelection(for: courseId)
+        } else {
+            picked = []
+        }
+
         if picked.contains(lessonId) {
             picked.remove(lessonId)
         } else {
@@ -3497,7 +3600,6 @@ public struct SpeakerDSRoot: View {
         }
         selectedTrainingLessonIdsByCourse[courseId] = picked
 
-        var courses = selectedTrainingCourseIds ?? defaultTrainingSelection(external?.trainingCourseOptions ?? [])
         if picked.isEmpty {
             courses.remove(courseId)
         } else {
@@ -3508,20 +3610,36 @@ public struct SpeakerDSRoot: View {
 
     private func trainingCourseRow(
         option: SpeakerTrainingCourseOption,
-        isSelected: Bool,
+        checkState: TrainingCourseCheckState,
         isExpanded: Bool,
         onToggleCourse: @escaping () -> Void,
         onToggleExpand: @escaping () -> Void
     ) -> some View {
-        HStack(spacing: 10) {
+        let isSelected = checkState != .none
+        let checkIcon: String = {
+            switch checkState {
+            case .none: return "circle"
+            case .partial: return "minus.circle.fill"
+            case .all: return "checkmark.circle.fill"
+            }
+        }()
+        let checkA11y: String = {
+            switch checkState {
+            case .none: return "Выбрать курс"
+            case .partial: return "Частично выбран — снять курс"
+            case .all: return "Снять курс"
+            }
+        }()
+
+        return HStack(spacing: 10) {
             Button(action: onToggleCourse) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                Image(systemName: checkIcon)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(isSelected ? AnyShapeStyle(ThemeManager.shared.currentAccentFill) : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.4)))
                     .frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isSelected ? "Снять курс" : "Выбрать курс")
+            .accessibilityLabel(checkA11y)
 
             Button(action: onToggleExpand) {
                 HStack(spacing: 12) {
@@ -5637,7 +5755,7 @@ public struct SpeakerDSRoot: View {
                     .foregroundStyle(PD.ColorToken.textSecondary)
                 Spacer(minLength: 0)
                 if isProLocked {
-                    Text("Taika+")
+                    Text("Taika Pro")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(accent.opacity(0.88))
                 }
@@ -5648,7 +5766,7 @@ public struct SpeakerDSRoot: View {
             HStack(spacing: 8) {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 11, weight: .semibold))
-                Text(isProLocked ? "Контур голоса откроется в Taika+" : "Контур появится после разбора")
+                Text(isProLocked ? "Контур голоса откроется в Taika Pro" : "Контур появится после разбора")
                     .font(.system(size: 13, weight: .medium))
             }
             .foregroundStyle(accent.opacity(isProLocked ? 0.72 : 0.42))
@@ -5954,7 +6072,7 @@ public struct SpeakerDSRoot: View {
                     .font(.system(size: 13, weight: .bold))
                     .tracking(0.6)
                     .foregroundStyle(PD.ColorToken.textSecondary)
-                Text("Taika+")
+                Text("Taika Pro")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(accent.opacity(0.88))
                 Spacer(minLength: 0)
@@ -5979,7 +6097,7 @@ public struct SpeakerDSRoot: View {
                 }
             }
 
-            Text("С Taika+ видно, какой слог «поплыл» по тону.")
+            Text("С Taika Pro видно, какой слог «поплыл» по тону.")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.82))
                 .fixedSize(horizontal: false, vertical: true)
@@ -6128,7 +6246,8 @@ public struct SpeakerDSRoot: View {
                 } else {
                     AppInlineFilterPicker(
                         titles: trainingScopePickerTitles,
-                        selectedIndex: trainingScopeSelectedIndex
+                        selectedIndex: trainingScopeSelectedIndex,
+                        selectionAccent: AnyShapeStyle(Color.white.opacity(0.88))
                     ) { index in
                         let lastIndex = trainingScopePickerTitles.count - 1
                         if index == lastIndex {
@@ -6370,18 +6489,21 @@ public struct SpeakerDSRoot: View {
         }()
         let canPlayAttempt = hasAttempt
         let trainingMode: Bool = external?.speakerUIMode == .training
-        let trainingRemaining: Int = max(0, external?.trainingRemainingToday ?? 0)
         let trainingLimitExhausted: Bool = trainingMode && external?.isProUser != true && !(external?.trainingCanRecord ?? false)
-        let controlDisabled: Bool = isAnalyzing || trainingLimitExhausted
-        let micIcon: String = isRecording ? "stop.fill" : (isFeedback ? "arrow.clockwise" : "mic.fill")
-        let micTitle: String = isRecording ? "Стоп" : (isFeedback ? "Ещё раз" : "Записать")
-        let micAccessibilityLabel: String = isRecording ? "Остановить запись" : (isFeedback ? "Записать ещё раз" : "Записать фразу")
-        let micFill: AnyShapeStyle = controlDisabled
+        let controlDisabled: Bool = isAnalyzing
+        let micIcon: String = isRecording ? "stop.fill" : (trainingLimitExhausted ? "mic.fill" : (isFeedback ? "arrow.clockwise" : "mic.fill"))
+        let micTitle: String = {
+            if isRecording { return "Стоп" }
+            if trainingLimitExhausted { return "Попытки на сегодня кончились" }
+            return isFeedback ? "Ещё раз" : "Записать"
+        }()
+        let micAccessibilityLabel: String = trainingLimitExhausted ? "Попытки на сегодня кончились" : (isRecording ? "Остановить запись" : (isFeedback ? "Записать ещё раз" : "Записать фразу"))
+        let micFill: AnyShapeStyle = isAnalyzing
             ? AnyShapeStyle(Color.white.opacity(0.10))
             : (isRecording
                ? AnyShapeStyle(Color.white.opacity(0.16))
                : AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-        let micForeground: Color = controlDisabled
+        let micForeground: Color = isAnalyzing
             ? PD.ColorToken.textSecondary.opacity(0.40)
             : (isRecording ? .white : .black)
 
@@ -6397,6 +6519,10 @@ public struct SpeakerDSRoot: View {
                 }
 
                 Button {
+                    if trainingLimitExhausted && !isRecording {
+                        OverlayPresenter.shared.present(.speakerAttempts)
+                        return
+                    }
                     if isFeedback && !isRecording {
                         external?.onRepeat()
                     } else {
@@ -6407,13 +6533,14 @@ public struct SpeakerDSRoot: View {
                         Image(systemName: micIcon)
                             .font(.system(size: 17, weight: .bold))
                         Text(micTitle)
-                            .font(.system(size: 16, weight: .bold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.9)
+                            .font(.system(size: trainingLimitExhausted ? 13 : 16, weight: .bold))
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .minimumScaleFactor(0.8)
                     }
                     .foregroundStyle(micForeground)
-                    .padding(.horizontal, 26)
-                    .frame(minWidth: 148, maxWidth: 200)
+                    .padding(.horizontal, trainingLimitExhausted ? 14 : 26)
+                    .frame(minWidth: 148, maxWidth: trainingLimitExhausted ? .infinity : 200)
                     .frame(height: 52)
                     .background(
                         Capsule(style: .continuous)
@@ -6478,44 +6605,6 @@ public struct SpeakerDSRoot: View {
                 .accessibilityLabel("Следующая фраза")
             }
             .padding(.horizontal, 4)
-
-            if trainingLimitExhausted {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                        Text("На сегодня достаточно")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(PD.ColorToken.text)
-                        Spacer(minLength: 0)
-                        Text("\(trainingRemaining) / 10")
-                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                    }
-                    Text("Записи закончились, но ты можешь продолжить без паузы.")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .lineLimit(2)
-
-                    HStack(spacing: 8) {
-                        Button {
-                            external?.onOpenInstantTranslation?()
-                        } label: {
-                            speakerRecoveryButton(icon: "text.bubble.fill", title: "Мгновенный перевод")
-                        }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            external?.onOpenTaikaPlus?()
-                        } label: {
-                            speakerRecoveryButton(icon: "crown.fill", title: "Открыть Taika+")
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 4)
-                .padding(.vertical, 8)
-            }
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 6)
@@ -6577,25 +6666,6 @@ public struct SpeakerDSRoot: View {
             action: action
         )
     }
-
-    private func speakerRecoveryButton(icon: String, title: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
-            Text(title)
-                .font(.system(size: 11, weight: .semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-        }
-        .foregroundStyle(PD.ColorToken.text)
-        .frame(maxWidth: .infinity, minHeight: 38)
-        .background(PD.ColorToken.chip.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(PD.ColorToken.stroke.opacity(0.62), lineWidth: 1)
-        )
-    }
-
 
     // nav icons: prev/next/play (always visible, same size)
     private func speakerNavIcon(system: String, isDisabled: Bool) -> some View {
@@ -7038,7 +7108,7 @@ private enum TaikaSmartSpeakerPhonetic {
 }
 
 // MARK: - Транслит со стрелками тонов (цвет по accent, как в спикере и степе)
-private struct PhoneticWithColoredArrowsView: View {
+struct PhoneticWithColoredArrowsView: View {
     let phonetic: String
     var font: Font = .system(size: 22, weight: .semibold)
     var alignment: TextAlignment = .center
@@ -7857,7 +7927,7 @@ private struct AnimatedBreakdownSparkline: View {
 }
 
 /// Текст + тон + итог: один header для feedback-карточки и sheet-разбора.
-private struct SpeakerTripleScoreHeader: View {
+struct SpeakerTripleScoreHeader: View {
     enum Layout {
         case feedback
         case sheet

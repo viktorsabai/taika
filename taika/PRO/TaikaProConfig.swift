@@ -15,6 +15,10 @@ enum TaikaProConfig {
     /// Длительность intro trial (должна совпадать с App Store Connect + RevenueCat).
     static let introTrialDays = 7
 
+    /// В ASC free trial вешаем только на годовую; месяц/lifetime — без триала.
+    /// Paywall по умолчанию выбирает год; копирайт воронки это отражает.
+    static let introTrialOnAnnualOnly = true
+
     /// Package identifiers в текущем Offering (дефолтные префиксы RevenueCat).
     enum PackageIdentifier {
         static let annual = "$rc_annual"
@@ -28,13 +32,13 @@ enum TaikaProConfig {
     /// Маркетинговые fallback-цены (THB), пока offerings не загрузились / для бейджей.
     /// Живые цены всегда из StoreKit `localizedPriceString`.
     enum MarketingPrice {
-        static let annualTHB = 1_690
+        static let annualTHB = 1_990
         static let monthlyTHB = 349
         static let lifetimeTHB = 3_990
-        /// ~140 ฿/мес при оплате года (1690/12).
-        static let annualPerMonthTHB = 140
-        /// Плашка на annual: скидка относительно 12× monthly.
-        static let annualDiscountPercent = 60
+        /// ~166 ฿/мес при оплате года (1990/12).
+        static let annualPerMonthTHB = 166
+        /// Плашка на annual: скидка относительно 12× monthly (~52%).
+        static let annualDiscountPercent = 52
     }
 
     /// Русская форма «N день/дня/дней».
@@ -65,7 +69,10 @@ enum TaikaProConfig {
 
     /// Юридическая строка под CTA.
     static var introTrialLegalLine: String {
-        "\(introTrialDaysPhrase) бесплатно, отмена в любой момент в настройках Apple ID."
+        if introTrialOnAnnualOnly {
+            return "\(introTrialDaysPhrase) бесплатно на годовой подписке. Отмена в любой момент в настройках Apple ID."
+        }
+        return "\(introTrialDaysPhrase) бесплатно, отмена в любой момент в настройках Apple ID."
     }
 
     static var annualHeroBadge: String {
