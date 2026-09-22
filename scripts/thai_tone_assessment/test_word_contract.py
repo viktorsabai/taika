@@ -520,8 +520,8 @@ def test_canon_ships_rain_without_llm():
         api.OPENAI_API_KEY, api._cache_db_path, api._openai_chat_json = originals
 
 
-def test_endpoint_refuses_dropped_noun():
-    """Фраза не из канона: จะมี на «ливень» не учить и не кэшировать."""
+def test_endpoint_ships_live_thai_even_if_content_looks_thin():
+    """Живой перевод не прячем 404-ом: пользователь должен увидеть Thai."""
     import tempfile
 
     from fastapi.testclient import TestClient
@@ -546,15 +546,37 @@ def test_endpoint_refuses_dropped_noun():
         client = TestClient(api.app)
         payload = {"text_ru": "будет ливень на марсе", "politeness": "male"}
         resp = client.post("/smart_speaker", json=payload)
-        assert resp.status_code == 404, resp.text
-        cached = client.post("/smart_speaker", json=payload)
-        assert cached.status_code == 404
+        assert resp.status_code == 200, resp.text
+        assert "จะมี" in resp.json()["thai"]
     finally:
         (
             api.OPENAI_API_KEY,
             api._cache_db_path,
             api._smart_speaker_live,
         ) = originals
+
+
+def test_live_ships_thai_when_judge_keeps_rejecting():
+    """Судья не может спрятать уже полученный Thai (регресс «еду на море»)."""
+    ru = "еду на море"
+    words = {"words": [
+        {"th": "ฉัน", "ph": "чхан→", "m": "я"},
+        {"th": "ไป", "ph": "пай→", "m": "еду"},
+        {"th": "ทะเล", "ph": "тха-ле→", "m": "море"},
+    ]}
+    built = _live_run(
+        {"thai": "ฉันไปทะเล"},
+        {"ok": False, "missing": ["море"]},
+        {"thai": "ฉันไปทะเล"},
+        {"ok": False, "missing": ["море"]},
+        words,
+        ru=ru,
+    )
+    assert built is not None
+    thai, phonetic, parts = built
+    assert "ทะเล" in thai
+    assert phonetic
+    assert parts
 
 
 def test_phrase_parts_keeps_word_boundaries_from_client():

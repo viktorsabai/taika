@@ -1644,12 +1644,12 @@ def _smart_translate_words(ru: str, politeness: str) -> tuple[str, str, list[dic
 
 def _smart_speaker_live(ru: str, politeness: str) -> tuple[str, str, list[dict[str, str]]] | None:
     """
-    Живой ввод: сначала фраза как скажет таец, потом урок.
-    None — нечего показывать (смысл не сошёлся).
+    Живой ввод: перевод → опциональный ремонт смысла → урок.
+    Судья не имеет права спрятать уже полученный Thai: None только если модели нечего отдать.
     """
     started = time.monotonic()
     problems: list[str] | None = None
-    thai = None
+    best_thai = None
     for attempt in range(2):
         left = _LIVE_TIME_BUDGET_S - (time.monotonic() - started)
         if left < 5.0:
@@ -1658,15 +1658,17 @@ def _smart_speaker_live(ru: str, politeness: str) -> tuple[str, str, list[dict[s
         if not thai:
             problems = ["no spoken Thai"]
             continue
+        best_thai = thai
         problems = _llm_meaning_judge(ru, thai, timeout=min(4.0, max(2.0, left - 8.0)))
         if not problems:
             break
         print(
-            f"[smart_speaker.translate] rejected (attempt {attempt + 1}): {'; '.join(problems[:3])}",
+            f"[smart_speaker.translate] repair (attempt {attempt + 1}) thai={thai!r}: "
+            f"{'; '.join(problems[:3])}",
             file=sys.stderr,
             flush=True,
         )
-        thai = None
+    thai = best_thai
     if not thai:
         return None
     taught = _teach_from_thai(ru, thai, politeness, started=started)
@@ -2075,21 +2077,18 @@ async def smart_speaker(req: SmartSpeakerReq):
         print("[smart_speaker] OPENAI_API_KEY not set, cannot translate", file=sys.stderr, flush=True)
         raise HTTPException(status_code=404, detail="no match and OPENAI_API_KEY not set in Railway Variables")
 
-    # 4. Живой ввод: перевод (сильная модель) → судья → нарезка урока (mini).
+    # 4. Живой ввод: перевод → (ремонт смысла) → нарезка урока.
     built = _smart_speaker_live(ru, politeness)
     if not built:
         raise HTTPException(
             status_code=404,
-            detail="translation dropped Russian content; refusing to teach a false phrase",
+            detail="LLM translation failed. Check Railway logs for OpenAI errors. Model="
+            + OPENAI_TRANSLATE_MODEL,
         )
     thai, phonetic, parts = built
     dropped = _dropped_content_problems(ru, thai)
     if dropped:
-        print(f"[smart_speaker] live dropped content: {dropped[0]}", file=sys.stderr, flush=True)
-        raise HTTPException(
-            status_code=404,
-            detail="translation dropped Russian content; refusing to teach a false phrase",
-        )
+        print(f"[smart_speaker] live warning, shipping anyway: {dropped[0]}", file=sys.stderr, flush=True)
     thai, phonetic = _append_politeness(thai, phonetic, politeness)
     if parts:
         parts = parts + [_politeness_part(politeness)]
@@ -2098,7 +2097,8 @@ async def smart_speaker(req: SmartSpeakerReq):
             print(f"[smart_speaker] live ok: {len(parts)} parts", file=sys.stderr, flush=True)
             return {"thai": thai, "phonetic": phonetic, "parts": parts}
         parts = _aligned_parts_only(phonetic, parts, "live")
-    if phonetic:
+    if thai or phonetic:
+        print(f"[smart_speaker] live shipped without full gloss ru={ru_norm!r}", file=sys.stderr, flush=True)
         return {"thai": thai, "phonetic": phonetic, "parts": parts}
     raise HTTPException(
         status_code=404,

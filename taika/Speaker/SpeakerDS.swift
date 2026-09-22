@@ -1557,9 +1557,16 @@ public struct SpeakerDSRoot: View {
         conversationVoicePlanetButton
     }
 
+    private var conversationHintChipLabel: String {
+        let h = taikaHints.joined(separator: " ").lowercased()
+        if h.contains("перевест") || h.contains("перевод") { return "не перевела" }
+        if h.contains("короче") { return "скажи короче" }
+        return "не услышала"
+    }
+
     private var voicePlanetAccessibility: String {
         if phase.isFeedback { return "Результат анализа" }
-        if phase == .hint { return "Не услышала — скажи ещё раз" }
+        if phase == .hint { return conversationHintChipLabel }
         if phase == .translating { return "Перевожу" }
         if phase.isProcessing { return "Распознаю" }
         if conversationIsRecording { return "Стоп" }
@@ -1573,7 +1580,7 @@ public struct SpeakerDSRoot: View {
             ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
             : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.86))
         let label: String = {
-            if phase == .hint { return "не услышала" }
+            if phase == .hint { return conversationHintChipLabel }
             if conversationIsPracticeFlow {
                 if isRec { return "говори по-тайски" }
                 if phase.isFeedback { return "готово" }
@@ -2553,7 +2560,7 @@ public struct SpeakerDSRoot: View {
     }
 
     @ViewBuilder private var conversationWidgetErrorCenter: some View {
-        // One recovery line under the stable sphere — status chip already says «не услышала».
+        // One recovery line under the sphere; chip mirrors ASR vs translate.
         Text(taikaHints.joined(separator: " "))
             .font(.system(size: 16, weight: .semibold, design: .rounded))
             .foregroundStyle(PD.ColorToken.text)
