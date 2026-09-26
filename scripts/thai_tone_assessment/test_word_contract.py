@@ -432,16 +432,16 @@ def test_endpoint_alignment_survives_cache_roundtrip():
 # --- рассогласованный разбор не покидает сервер -------------------------------
 
 
-def test_unaligned_parts_are_dropped_not_shipped():
-    # Кривая пара «слово — чужое значение» учит неправильному, поэтому вместо неё
-    # клиент должен получить пустой разбор и дотянуть его отдельным запросом.
+def test_unaligned_parts_keep_matching_rows():
+    # Чужие подписи не показываем, но совпавшие строки не выкидываем вместе с ними.
     phonetic = "кхун→ са-баи→-ди→ май↑ кхрап↘"
     broken = [
         {"p": "кхун", "m": "вы"},
         {"p": "май", "m": "хорошо"},
         {"p": "кхрап", "m": "вежливость (м)"},
     ]
-    assert api._aligned_parts_only(phonetic, broken, "test") == []
+    kept = api._aligned_parts_only(phonetic, broken, "test")
+    assert [p["p"] for p in kept] == ["кхун", "май", "кхрап"], kept
 
 
 def test_aligned_parts_pass_through_untouched():
@@ -604,7 +604,7 @@ def test_phrase_parts_keeps_word_boundaries_from_client():
         api._llm_phrase_parts = original
 
 
-def test_phrase_parts_returns_nothing_when_unaligned():
+def test_phrase_parts_keeps_matching_rows_when_short():
     from fastapi.testclient import TestClient
 
     original = api._llm_phrase_parts
@@ -619,7 +619,9 @@ def test_phrase_parts_returns_nothing_when_unaligned():
                 "phonetic": "кхун→ са-баи→-ди→ май↑",
             },
         ).json()
-        assert out["parts"] == [], out["parts"]
+        assert out["parts"], out["parts"]
+        assert out["parts"][0]["p"] == "кхун"
+        assert out["parts"][0]["m"] == "вы"
     finally:
         api._llm_phrase_parts = original
 
@@ -966,6 +968,115 @@ def test_pronoun_gloss_ya_is_not_weak():
             {"th": "หิว", "ph": "хиу↗", "m": "голоден"},
         ],
     ) == []
+
+
+def test_apply_slots_locks_thai_from_dictionary():
+    slots = ["ฉัน", "ง่วง", "นอน"]
+    filled = [
+        {"ph": "чхан→", "m": "я"},
+        {"ph": "нгуа↘", "m": "хочу"},
+        {"ph": "нон↗", "m": "спать"},
+    ]
+    words = api._apply_slots(slots, filled)
+    assert [w["th"] for w in words] == slots
+    assert [w["m"] for w in words] == ["я", "хочу", "спать"]
+    thai, phonetic, parts = _words_to_outputs(words)
+    assert thai == "ฉันง่วงนอน"
+    assert _parts_match_phonetic(phonetic, parts)
+
+
+def test_slot_strings_reads_meanings_or_legacy_words():
+    n = 2
+    assert api._slot_strings({"meanings": ["я", "голоден"]}, n, "meanings", "m") == ["я", "голоден"]
+    assert api._slot_strings(
+        {"words": [{"ph": "чхан→", "m": "я"}, {"ph": "хиу↗", "m": "голоден"}]},
+        n,
+        "phonetics",
+        "ph",
+    ) == ["чхан→", "хиу↗"]
+
+
+def test_live_male_rewrites_first_person():
+    words = {"words": [
+        {"th": "ฉัน", "ph": "чхан→", "m": "я"},
+        {"th": "หิว", "ph": "хиу↗", "m": "голоден"},
+    ]}
+    built = _live_run(
+        {"thai": "ฉันหิว"},
+        {"ok": True, "missing": []},
+        words,
+        ru="я очень голоден сегодня вечером",
+        politeness="male",
+    )
+    assert built is not None
+    thai, phonetic, parts = built
+    assert "ผม" in thai and "ฉัน" not in thai
+    assert parts[0]["p"] == "пхом"
+    assert parts[0]["m"] == "я"
+    assert _parts_match_phonetic(phonetic, parts)
+
+
+def test_canon_hungry_follows_speaker_gender():
+    import tempfile
+    from pathlib import Path
+
+    from fastapi.testclient import TestClient
+
+    db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    db.close()
+    original_db, original_key = api._cache_db_path, api.OPENAI_API_KEY
+    api._cache_db_path = lambda: Path(db.name)
+    api.OPENAI_API_KEY = ""
+    try:
+        api._init_cache_db()
+        client = TestClient(api.app)
+        male = client.post(
+            "/smart_speaker", json={"text_ru": "я хочу есть", "politeness": "male"}
+        ).json()
+        female = client.post(
+            "/smart_speaker", json={"text_ru": "я хочу есть", "politeness": "female"}
+        ).json()
+        kathoey = client.post(
+            "/smart_speaker", json={"text_ru": "я хочу есть", "politeness": "kathoey"}
+        ).json()
+    finally:
+        api._cache_db_path, api.OPENAI_API_KEY = original_db, original_key
+
+    assert male["thai"].startswith("ผมหิว")
+    assert male["thai"].endswith("ครับ")
+    assert female["thai"].startswith("ฉันหิว")
+    assert female["thai"].endswith("ค่ะ")
+    assert kathoey["thai"].startswith("ฉันหิว")
+    assert male["parts"][0]["p"] == "пхом"
+    assert female["parts"][0]["p"] == "чхан"
+    assert _parts_match_phonetic(male["phonetic"], male["parts"])
+    assert _parts_match_phonetic(female["phonetic"], female["parts"])
+
+
+def test_cache_skips_empty_or_unaligned_parts():
+    import tempfile
+    from pathlib import Path
+
+    db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    db.close()
+    original = api._cache_db_path
+    api._cache_db_path = lambda: Path(db.name)
+    try:
+        api._init_cache_db()
+        api._cache_set("тест", "male", "สวัสดี", "са-ват-ди↘ кхрап↘", [])
+        assert api._cache_get("тест", "male") is None
+        api._cache_set(
+            "тест",
+            "male",
+            "สวัสดี ครับ",
+            "са-ват-ди↘ кхрап↘",
+            [{"p": "са-ват-ди", "m": "привет"}, {"p": "кхрап", "m": "вежливость (м)"}],
+        )
+        hit = api._cache_get("тест", "male")
+        assert hit is not None
+        assert hit[2]
+    finally:
+        api._cache_db_path = original
 
 
 if __name__ == "__main__":

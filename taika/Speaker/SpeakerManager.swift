@@ -522,6 +522,10 @@ public final class SpeakerManager: ObservableObject {
     @Published private(set) var conversationCoachInFlight: Bool = false
     /// true, пока разбор догружается отдельным запросом (сервер не отдал его вместе с фразой).
     @Published private(set) var phrasePartsInFlight: Bool = false
+    /// true, если догрузка разбора закончилась пустотой — показать «ещё раз», а не дыру.
+    @Published private(set) var phrasePartsFailed: Bool = false
+    /// Сколько раз подряд разбор не приехал по этой фразе (для мягкой эскалации тона Тайки).
+    @Published private(set) var phrasePartsFailCount: Int = 0
     /// Фраза, по которой уже ходили за разбором: не долбим сервер на каждый ре-рендер.
     private var phrasePartsRequestKey: String? = nil
     /// Invalidates an in-flight word-gloss fetch when the user starts a new phrase.
@@ -830,6 +834,14 @@ public final class SpeakerManager: ObservableObject {
 
     func loadIfNeeded(force: Bool = false) {
         if didLoad && !force { return }
+        // Keep Favorites/Dictionary handoff if SpeakerView remounts without pending.
+        if !force,
+           let ctx = speakerContextCourseId,
+           (ctx == "__favorites__" || ctx == "__dictionary__"),
+           !queue.isEmpty {
+            didLoad = true
+            return
+        }
         didLoad = true
         rebuildQueue()
         // Корень «Закрепление курсов» — лаунчер выбора курсов, не «последний урок».
@@ -850,10 +862,16 @@ public final class SpeakerManager: ObservableObject {
 
     /// Сбросить активную сессию и показать лаунчер выбора курсов.
     func returnToTrainingHome() {
+        let wasFavoritesPool =
+            speakerContextCourseId == "__favorites__"
+            || speakerContextCourseId == "__dictionary__"
         speakerContextCourseId = nil
         activeFilterId = nil
         learnedLessonIds = []
         learnedLessonFilter = nil
+        if wasFavoritesPool, ThemeManager.shared.hubAtmosphere == .favorites {
+            ThemeManager.shared.hubAtmosphere = nil
+        }
         if baseQueue.isEmpty {
             rebuildQueue()
         }
@@ -966,6 +984,7 @@ public final class SpeakerManager: ObservableObject {
     /// Быстрый старт: избранное уроков или словарь.
     public func startSpecialTraining(poolId: String) {
         guard poolId == "__favorites__" || poolId == "__dictionary__" else { return }
+        ThemeManager.shared.hubAtmosphere = .favorites
         if poolId == "__dictionary__" {
             startDictionaryTraining(selectedSourceIds: DictionarySessionSelection.shared.activeSourceIds)
             return
@@ -1298,12 +1317,26 @@ public final class SpeakerManager: ObservableObject {
             activeFilterId = SpeakerMode.favoritesMode.id
             learnedLessonIds = []
             learnedLessonFilter = nil
+            ThemeManager.shared.hubAtmosphere = .favorites
             if baseQueue.isEmpty { prepareTrainingPoolIfNeeded() }
             let fav: [StepData.SpeakerResolved] = {
                 if courseId == "__dictionary__" {
-                    return buildFavoritesQueue().filter {
+                    var dict = buildFavoritesQueue().filter {
                         $0.courseId == "user_dict" && $0.lessonId == "smart_speaker"
                     }
+                    if let ids = DictionarySessionSelection.shared.activeSourceIds, !ids.isEmpty {
+                        let selectedThai = Set(
+                            FavoriteManager.shared.items
+                                .filter { ids.contains($0.id) }
+                                .map { $0.th.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                        )
+                        dict = dict.filter {
+                            selectedThai.contains(
+                                $0.face.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                            )
+                        }
+                    }
+                    return dict
                 }
                 // Избранное уроков — без словаря «Скажи сам» (для него отдельный вход).
                 return buildFavoritesQueue().filter {
@@ -1941,7 +1974,7 @@ public final class SpeakerManager: ObservableObject {
             heardRU = ruTrimmed
             heardThai = nil
             heardTranslit = nil
-            heardPhraseParts = []
+            clearPhrasePartsState()
             taikaHints = ["скажи короче: одну фразу"]
             setPhase(.hint)
             return
@@ -1953,7 +1986,7 @@ public final class SpeakerManager: ObservableObject {
             // Edit in place: keep RU, drop old Thai until new translate lands.
             heardThai = nil
             heardTranslit = nil
-            heardPhraseParts = []
+            clearPhrasePartsState()
             conversationExpectedThai = nil
             conversationExpectedTranslitForFeedback = nil
             conversationHeardThaiASR = nil
@@ -1969,19 +2002,21 @@ public final class SpeakerManager: ObservableObject {
         Task { [weak self] in
             guard let self else { return }
             do {
-                let (thText, phonetic, parts) = try await self.withTimeout(seconds: 25) {
+                let (thText, phonetic, parts) = try await self.withTimeout(seconds: 40) {
                     try await self.smartSpeakerTranslate(ru: ruTrimmed)
                 }
                 await MainActor.run {
                     self.heardRU = ruTrimmed
                     let thai = thText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let ph = Self.teachingPhoneticOrNil(phonetic)
+                    let ph = Self.teachingPhoneticOrNil(phonetic) ?? ""
                     self.heardThai = thai.isEmpty ? nil : thai
-                    self.heardTranslit = ph
-                    self.conversationExpectedTranslitForFeedback = ph
-                    self.heardPhraseParts = parts
+                    self.heardTranslit = ph.isEmpty ? nil : ph
+                    self.conversationExpectedTranslitForFeedback = self.heardTranslit
+                    self.heardPhraseParts = Self.canonicalizeTrailingPolitenessGloss(
+                        Self.resolvedTeachingParts(api: parts, phonetic: ph, thai: thai, ru: ruTrimmed)
+                    )
                     self.heardConfidence = 0
-                    if thai.isEmpty && ph == nil {
+                    if thai.isEmpty && ph.isEmpty {
                         self.heardPhraseParts = []
                         self.taikaHints = ["не удалось перевести. попробуй другую формулировку"]
                         self.setPhase(.hint)
@@ -2130,7 +2165,7 @@ public final class SpeakerManager: ObservableObject {
                     return
                 }
 
-                let (thText, phonetic, parts) = try await self.withTimeout(seconds: 25) {
+                let (thText, phonetic, parts) = try await self.withTimeout(seconds: 40) {
                     try await self.smartSpeakerTranslate(ru: ruTrimmed)
                 }
 
@@ -2139,14 +2174,16 @@ public final class SpeakerManager: ObservableObject {
 
                     self.heardRU = ruTrimmed
                     let thai = thText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let ph = Self.teachingPhoneticOrNil(phonetic)
+                    let ph = Self.teachingPhoneticOrNil(phonetic) ?? ""
                     self.heardThai = thai.isEmpty ? nil : thai
-                    self.heardTranslit = ph
-                    self.conversationExpectedTranslitForFeedback = ph
-                    self.heardPhraseParts = parts
+                    self.heardTranslit = ph.isEmpty ? nil : ph
+                    self.conversationExpectedTranslitForFeedback = self.heardTranslit
+                    self.heardPhraseParts = Self.canonicalizeTrailingPolitenessGloss(
+                        Self.resolvedTeachingParts(api: parts, phonetic: ph, thai: thai, ru: ruTrimmed)
+                    )
                     self.heardConfidence = 0
 
-                    if thai.isEmpty && ph == nil {
+                    if thai.isEmpty && ph.isEmpty {
                         self.heardPhraseParts = []
                         self.taikaHints = ["не удалось перевести. попробуй другую формулировку"]
                         self.setPhase(.hint)
@@ -2269,7 +2306,7 @@ public final class SpeakerManager: ObservableObject {
         let url = URL(string: base.hasSuffix("/") ? base + "smart_speaker" : base + "/smart_speaker")!
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.timeoutInterval = 20
+        req.timeoutInterval = 40
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let politeness = smartSpeakerPolitenessValue
         let body: [String: Any] = [
@@ -2286,33 +2323,38 @@ public final class SpeakerManager: ObservableObject {
         let decoded = try JSONDecoder().decode(SmartSpeakerResponse.self, from: data)
         var th = decoded.thai.trimmingCharacters(in: .whitespacesAndNewlines)
         var ph = decoded.phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
-        if Self.phoneticLooksLikeRussianSpellout(ru: ru, phonetic: ph) {
-            #if DEBUG
-            print("[speaker] smart_speaker: dropping phonetic (looks like RU letter-by-letter, not Thai translit)")
-            #endif
-            ph = ""
-        }
-        ph = await Self.sanitizeThaiPhonetic(ph, thai: th, repair: { [weak self] thai in
-            guard let self else { return nil }
-            return try? await self.smartSpeakerPhoneticFromThai(thai: thai)
-        })
-        // Server owns the single gender particle; collapse LLM/cache duplicates locally too.
-        let canon = Self.applyCanonicalPoliteness(thai: th, phonetic: ph, politeness: politeness)
-        th = canon.thai
-        ph = canon.phonetic
         var parts = (decoded.parts ?? []).compactMap { part -> SmartSpeakerPart? in
             let p = part.p.trimmingCharacters(in: .whitespacesAndNewlines)
             let m = part.m.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !p.isEmpty, !m.isEmpty else { return nil }
             return SmartSpeakerPart(p: p, m: m)
         }
-        // Разбора может не быть: сервер не отдаёт его, если он не сошёлся с фонетикой.
-        // Не ждём здесь — фраза важнее, а разбор догрузит `refreshPhrasePartsIfNeeded()`.
-        parts = Self.resolvedTeachingParts(api: parts, phonetic: ph, thai: th, ru: ru)
-        parts = Self.canonicalizeTrailingPolitenessGloss(parts)
-        if !Self.partsMatchPhonetic(phonetic: ph, parts: parts) {
+        if Self.phoneticLooksLikeRussianSpellout(ru: ru, phonetic: ph) {
+            #if DEBUG
+            print("[speaker] smart_speaker: dropping phonetic (looks like RU letter-by-letter, not Thai translit)")
+            #endif
+            ph = ""
             parts = []
         }
+        // Если разбор уже 1:1 с фонетикой — не переписываем границы слов. Иначе чистка
+        // режет слоги и разбор пропадает.
+        let partsAlreadyFit = !parts.isEmpty && Self.partsMatchPhonetic(phonetic: ph, parts: parts)
+        if !partsAlreadyFit {
+            ph = await Self.sanitizeThaiPhonetic(ph, thai: th, repair: { [weak self] thai in
+                guard let self else { return nil }
+                return try? await self.smartSpeakerPhoneticFromThai(thai: thai)
+            })
+        } else {
+            ph = Self.canonicalTeachingPhonetic(ph)
+        }
+        // Server owns the single gender particle; collapse LLM/cache duplicates locally too.
+        let canon = Self.applyCanonicalPoliteness(thai: th, phonetic: ph, politeness: politeness)
+        th = canon.thai
+        ph = canon.phonetic
+        // Разбор мог приехать неполным. Показываем то, что село на чанки; хвост дотянет
+        // `refreshPhrasePartsIfNeeded()`. Пустую секцию не делаем нарочно.
+        parts = Self.resolvedTeachingParts(api: parts, phonetic: ph, thai: th, ru: ru)
+        parts = Self.canonicalizeTrailingPolitenessGloss(parts)
         return (thai: th, phonetic: ph, parts: parts)
     }
 
@@ -2651,7 +2693,7 @@ public final class SpeakerManager: ObservableObject {
         guard let url = URL(string: urlString) else { return [] }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.timeoutInterval = 12
+        req.timeoutInterval = 20
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: [
             "text_ru": ru,
@@ -2754,7 +2796,7 @@ public final class SpeakerManager: ObservableObject {
               !fetched.isEmpty else { return [] }
         var parts = Self.resolvedTeachingParts(api: fetched, phonetic: ph, thai: th, ru: ru)
         parts = Self.canonicalizeTrailingPolitenessGloss(parts)
-        return Self.partsMatchPhonetic(phonetic: ph, parts: parts) ? parts : []
+        return parts
     }
 
     /// Drop leftover word-gloss from the previous phrase so the next one can load its own.
@@ -2763,11 +2805,24 @@ public final class SpeakerManager: ObservableObject {
         heardPhraseParts = []
         phrasePartsRequestKey = nil
         phrasePartsInFlight = false
+        phrasePartsFailed = false
+        phrasePartsFailCount = 0
     }
 
-    /// Сервер отдаёт разбор только когда тот сошёлся с фонетикой — иначе его нет вовсе.
-    /// Дотягиваем тихо и отдельно: фраза уже на экране, разбор появляется следом.
-    /// Не сошлось и со второй попытки — секции просто не будет, без объяснений и плашек.
+    private func markPhrasePartsFailed() {
+        phrasePartsFailed = true
+        phrasePartsFailCount = min(phrasePartsFailCount + 1, 8)
+    }
+
+    /// Пользователь нажал «ещё раз» у разбора — не притворяемся, что всё ок.
+    func retryPhraseParts() {
+        phrasePartsFailed = false
+        phrasePartsRequestKey = nil
+        refreshPhrasePartsIfNeeded()
+    }
+
+    /// Сервер отдаёт разбор вместе с фразой. Если строк меньше, чем слов фонетики —
+    /// дотягиваем. Уже показанные строки не стираем.
     func refreshPhrasePartsIfNeeded() {
         let ru = (heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let thai = (heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2775,8 +2830,10 @@ public final class SpeakerManager: ObservableObject {
         guard !thai.isEmpty, !phonetic.isEmpty else { return }
 
         let key = "\(thai)|\(phonetic)"
-        if !heardPhraseParts.isEmpty {
+        if Self.partsMatchPhonetic(phonetic: phonetic, parts: heardPhraseParts) {
             phrasePartsRequestKey = key
+            phrasePartsFailed = false
+            phrasePartsFailCount = 0
             return
         }
         if phrasePartsInFlight, phrasePartsRequestKey == key {
@@ -2785,8 +2842,10 @@ public final class SpeakerManager: ObservableObject {
 
         phrasePartsRequestKey = key
         phrasePartsInFlight = true
+        phrasePartsFailed = false
         let generation = UUID()
         phrasePartsFetchGeneration = generation
+        let already = heardPhraseParts
 
         Task { [weak self] in
             guard let self else { return }
@@ -2804,21 +2863,32 @@ public final class SpeakerManager: ObservableObject {
             await MainActor.run {
                 guard self.phrasePartsFetchGeneration == generation else { return }
                 self.phrasePartsInFlight = false
-                // Пока ходили за разбором, фраза могла смениться — тогда он уже не к ней.
                 let curThai = (self.heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                 let curPhonetic = (self.heardTranslit ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-                guard curThai == thai, curPhonetic == phonetic, self.heardPhraseParts.isEmpty else { return }
-                guard !fetched.isEmpty else { return }
+                guard curThai == thai, curPhonetic == phonetic else { return }
 
-                var parts = Self.resolvedTeachingParts(api: fetched, phonetic: phonetic, thai: thai, ru: ru)
-                parts = Self.canonicalizeTrailingPolitenessGloss(parts)
-                guard Self.partsMatchPhonetic(phonetic: phonetic, parts: parts) else {
-                    #if DEBUG
-                    print("[speaker] phrase_parts: dropped, still not aligned with phonetic")
-                    #endif
+                if fetched.isEmpty {
+                    // Уже показанные строки оставляем; пустой экран — только если нечего держать.
+                    if already.isEmpty {
+                        self.markPhrasePartsFailed()
+                    }
                     return
                 }
-                self.heardPhraseParts = parts
+
+                var parts = Self.resolvedTeachingParts(
+                    api: already + fetched,
+                    phonetic: phonetic,
+                    thai: thai,
+                    ru: ru
+                )
+                parts = Self.canonicalizeTrailingPolitenessGloss(parts)
+                if !parts.isEmpty {
+                    self.heardPhraseParts = parts
+                    self.phrasePartsFailed = false
+                    self.phrasePartsFailCount = 0
+                } else if already.isEmpty {
+                    self.markPhrasePartsFailed()
+                }
             }
         }
     }
@@ -5254,6 +5324,27 @@ public final class SpeakerManager: ObservableObject {
 
         for ref in refIds {
             guard let key = parseStepRefId(ref) else { continue }
+
+            // Source of truth for Favorites training = saved snapshot (ru/th/phonetic),
+            // not a fresh lookup in steps.json by idx (breaks after curriculum edits).
+            if let fav = FavoriteManager.shared.favoriteItemMatchingSpeakerRef(ref) {
+                let ph = FavoriteManager.speakerPhonetic(fromStored: fav.phonetic)
+                let th = fav.th.trimmingCharacters(in: .whitespacesAndNewlines)
+                let ru = fav.ru.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !th.isEmpty, !ph.isEmpty, ru.lowercased() != "лайфхак" {
+                    let r = stepData.speakerResolvedFromCustom(
+                        courseId: key.courseId,
+                        lessonId: key.lessonId,
+                        index: key.index,
+                        ru: ru,
+                        thai: th,
+                        phonetic: ph
+                    )
+                    resolved.append(r)
+                    continue
+                }
+            }
+
             if key.courseId == "user_dict", key.lessonId == "smart_speaker" {
                 if let fav = FavoriteManager.shared.smartSpeakerItem(index: key.index) {
                     let r = stepData.speakerResolvedFromCustom(
@@ -5262,12 +5353,12 @@ public final class SpeakerManager: ObservableObject {
                         index: key.index,
                         ru: fav.ru,
                         thai: fav.th,
-                        phonetic: fav.phonetic
+                        phonetic: FavoriteManager.speakerPhonetic(fromStored: fav.phonetic)
                     )
                     resolved.append(r)
                 }
             } else {
-                // FavoriteManager stores normalized (lowercased) ids; StepData keys match JSON (may differ by case).
+                // Fallback only when snapshot missing/unspeakable.
                 let actualLessonId = stepData.lessonIdForCaseInsensitiveLookup(key.lessonId) ?? key.lessonId
                 if let r = stepData.speakerResolved(courseId: key.courseId, lessonId: actualLessonId, index: key.index) {
                     resolved.append(r)
@@ -5275,15 +5366,9 @@ public final class SpeakerManager: ObservableObject {
             }
         }
 
-        resolved = dedupResolved(resolved)
-        // stable order
-        resolved.sort { a, b in
-            if a.courseId != b.courseId { return a.courseId < b.courseId }
-            if a.lessonId != b.lessonId { return a.lessonId < b.lessonId }
-            return a.index < b.index
-        }
-
-        return resolved
+        // Keep newest-first from speakerStepIds — do not re-sort by lesson/index
+        // (that made the queue look like «first cards of the lesson»).
+        return dedupResolved(resolved)
     }
 
 

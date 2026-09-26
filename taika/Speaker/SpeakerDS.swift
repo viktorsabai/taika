@@ -158,6 +158,12 @@ public struct SpeakerDSRoot: View {
         let conversationCoachInFlight: Bool
         /// true, пока разбор догружается отдельным запросом (пришёл без него).
         let phrasePartsInFlight: Bool
+        /// true, если догрузка разбора не удалась — показать «ещё раз».
+        let phrasePartsFailed: Bool
+        /// Сколько раз подряд разбор не приехал (тон Тайки мягче после 2+).
+        let phrasePartsFailCount: Int
+        /// Повторная догрузка разбора по словам.
+        let onRetryPhraseParts: () -> Void
         /// Conversation mode: start pronunciation check (record Thai, then score).
         let onConversationRepeatAndCheck: () -> Void
         /// Smart Speaker: "male" | "female" | "kathoey".
@@ -466,6 +472,9 @@ public struct SpeakerDSRoot: View {
         conversationCoachDetail: String? = nil,
         conversationCoachInFlight: Bool = false,
         phrasePartsInFlight: Bool = false,
+        phrasePartsFailed: Bool = false,
+        phrasePartsFailCount: Int = 0,
+        onRetryPhraseParts: @escaping () -> Void = {},
         onConversationRepeatAndCheck: @escaping () -> Void = {},
         smartSpeakerPoliteness: String = "female",
         onSetSmartSpeakerPoliteness: @escaping (String) -> Void = { _ in },
@@ -568,6 +577,9 @@ public struct SpeakerDSRoot: View {
             conversationCoachDetail: conversationCoachDetail,
             conversationCoachInFlight: conversationCoachInFlight,
             phrasePartsInFlight: phrasePartsInFlight,
+            phrasePartsFailed: phrasePartsFailed,
+            phrasePartsFailCount: phrasePartsFailCount,
+            onRetryPhraseParts: onRetryPhraseParts,
             onConversationRepeatAndCheck: onConversationRepeatAndCheck,
             smartSpeakerPoliteness: smartSpeakerPoliteness,
             onSetSmartSpeakerPoliteness: onSetSmartSpeakerPoliteness,
@@ -1117,8 +1129,15 @@ public struct SpeakerDSRoot: View {
                                     if !glossParts.isEmpty {
                                         conversationPhraseGlossSection
                                             .padding(.top, 24)
+                                        if external?.phrasePartsInFlight == true {
+                                            conversationGlossLoadingSection
+                                                .padding(.top, 12)
+                                        }
                                     } else if external?.phrasePartsInFlight == true {
                                         conversationGlossLoadingSection
+                                            .padding(.top, 20)
+                                    } else if external?.phrasePartsFailed == true {
+                                        conversationGlossFailedSection
                                             .padding(.top, 20)
                                     }
                                 }
@@ -2273,20 +2292,46 @@ public struct SpeakerDSRoot: View {
 
     /// Разбор всегда прокручиваемый: `.basedOnSize` сам решает, скроллить или нет,
     /// поэтому раскладка не зависит от угадывания высоты строк.
-    /// Разбор ещё едет: говорим «работаю», а не «сломалось». Никаких предупреждений
-    /// о возможной неточности — они рождают сомнение в том, что как раз работает.
+    /// Разбор ещё едет: Тайка работает, не «ошибка системы».
     @ViewBuilder private var conversationGlossLoadingSection: some View {
         HStack(spacing: 8) {
             ProgressView()
                 .controlSize(.mini)
-            Text("собираю разбор…")
+            Text("раскладываю по словам…")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Собираю разбор")
+        .accessibilityLabel("Раскладываю по словам")
+    }
+
+    /// Разбор не приехал: голос Тайки, не системная ошибка.
+    /// После пары попыток — не долбим той же кнопкой, ведём к звучанию.
+    @ViewBuilder private var conversationGlossFailedSection: some View {
+        let tired = (external?.phrasePartsFailCount ?? 0) >= 2
+        VStack(alignment: .leading, spacing: 10) {
+            Text(tired
+                 ? "сейчас не выходит — учи по звучанию, разбор поймаю чуть позже"
+                 : "ой, слова не сложились")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                external?.onRetryPhraseParts()
+            } label: {
+                Text(tired ? "попробую ещё" : "давай ещё раз")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(PD.ColorToken.textPrimary.opacity(tired ? 0.55 : 0.88))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(tired ? "Попробовать собрать разбор ещё раз" : "Давай ещё раз")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
     }
 
     /// Word-level gloss. Высота — по содержимому: прокруткой заведует общий контейнер
