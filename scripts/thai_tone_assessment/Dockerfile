@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY steps.json ./
 COPY scripts/thai_tone_assessment/ ./
+COPY scripts/thai_taika_phonetic.py ./thai_taika_phonetic.py
 
 ENV TAIKA_STEPS_JSON=/app/steps.json
 ENV PYTHONUNBUFFERED=1

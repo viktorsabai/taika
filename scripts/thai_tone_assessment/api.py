@@ -117,6 +117,9 @@ async def post_assess(
         assess_path = wav_path
 
     loop = asyncio.get_event_loop()
+    phonetic_in = (phonetic or "").strip()
+    if phonetic_in:
+        phonetic_in = _arrows_per_syllable(text.strip(), phonetic_in)
     try:
         result = await asyncio.wait_for(
             loop.run_in_executor(
@@ -126,7 +129,7 @@ async def post_assess(
                     assess_path,
                     text.strip(),
                     expected_tones,
-                    (phonetic or "").strip() or None,
+                    phonetic_in or None,
                 ),
             ),
             timeout=ASSESS_TIMEOUT_S,
@@ -2147,14 +2150,16 @@ def _llm_phonetic_from_thai_script(thai: str) -> str | None:
         "The user message is ONE sentence in Thai script.\n"
         "You write how that Thai sentence is pronounced, using Russian Cyrillic letters and tone arrows (→ ↓ ↘ ↑ ↗ only; never ↕ or ↔).\n"
         "Rules:\n"
-        "- Follow Thai syllable boundaries (read the Thai left to right; each Thai syllable → one Cyrillic chunk + one arrow).\n"
-        "- Spaces between Thai words → spaces between corresponding Cyrillic word groups.\n"
-        "- Hyphens inside a chunk for multi-letter syllable parts. NO Thai characters in phonetic. NO Latin. NO IPA.\n"
+        "- Every syllable ends with exactly one tone arrow glued to that syllable.\n"
+        "- Several syllables of one word: hyphens between them, and an arrow on each. "
+        "ไม่ต้องทอน → май↘-тонг↘-тхон→.\n"
+        "- Spaces between Thai words → spaces between the Cyrillic groups.\n"
+        "- NO Thai characters in phonetic. NO Latin. NO IPA.\n"
         "- Vowel [i] = Cyrillic и/И only, never Latin I or i.\n"
         "- Do NOT transcribe any language other than what is written in Thai in the user message.\n"
         "- Omit final ครับ/ค่ะ from phonetic when present — server owns the single gender particle "
         "(do not write кхрап/кха unless the rest of the sentence requires another sense).\n"
-        "Example: Thai 'สวัสดี' → 'са-ват-ди↘' or similar (Thai sounds, not English/Russian words)."
+        "Example: Thai 'ไม่เผ็ด' → 'май↘-пхет↓'."
     )
     user = f"Thai sentence:\n{t}"
     try:
@@ -2363,6 +2368,59 @@ async def phrase_parts(req: PhrasePartsReq):
     return {"parts": _aligned_parts_only(phonetic, parts, "phrase_parts")}
 
 
+def _split_glued_arrow_syllables(phonetic: str) -> str:
+    """`май↘тонг` → `май↘-тонг`, so each syllable is its own chunk. A one-letter tail stays put."""
+    chars = list(phonetic or "")
+    out: list[str] = []
+    for i, ch in enumerate(chars):
+        out.append(ch)
+        if ch not in ARROWS:
+            continue
+        ahead: list[str] = []
+        for nxt in chars[i + 1 :]:
+            if nxt in ARROWS or nxt in "-· \t":
+                break
+            ahead.append(nxt)
+        letters = "".join(c for c in ahead if c.isalpha())
+        if len(letters) >= 2:
+            out.append("-")
+    return "".join(out)
+
+
+def _arrows_per_syllable(thai: str, phonetic: str) -> str:
+    """Put the spelling tone on every syllable, then separate those syllables with spaces."""
+    glued = _split_glued_arrow_syllables(phonetic)
+    toned = None
+    try:
+        here = Path(__file__).resolve().parent
+        for folder in (here, here.parent):
+            if str(folder) not in sys.path:
+                sys.path.insert(0, str(folder))
+        from thai_taika_phonetic import retone_phonetic
+
+        toned = retone_phonetic(thai, glued)
+    except Exception as e:
+        print(f"[thai_phonetic] retone failed: {e}", file=sys.stderr, flush=True)
+    return _normalize_phonetic_word_spaces(toned or glued)
+
+
+class RetoneReq(BaseModel):
+    text_th: str
+    phonetic: str
+
+
+@app.post("/retone")
+async def retone_phrase(req: RetoneReq):
+    """Tone arrows from Thai spelling, one per phonetic syllable. Letters stay as written."""
+    thai = (req.text_th or "").strip()
+    phonetic = (req.phonetic or "").strip()
+    if not thai or not phonetic:
+        raise HTTPException(status_code=400, detail="text_th and phonetic required")
+    if len(thai) > 200 or len(phonetic) > 400:
+        raise HTTPException(status_code=413, detail="too long")
+    return {"phonetic": _arrows_per_syllable(thai, phonetic)}
+
+
 @app.post("/thai_phonetic")
 async def thai_phonetic(req: ThaiPhoneticReq):
     """
@@ -2381,6 +2439,7 @@ async def thai_phonetic(req: ThaiPhoneticReq):
             detail="phonetic generation failed (OPENAI_API_KEY / network / model)",
         )
     phonetic = _normalize_phonetic(raw)
+    phonetic = _arrows_per_syllable(t, phonetic)
     if not phonetic.strip() or _has_thai_script(phonetic):
         raise HTTPException(status_code=503, detail="phonetic invalid after normalize")
     return {"phonetic": phonetic}

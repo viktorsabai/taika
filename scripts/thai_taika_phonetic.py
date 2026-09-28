@@ -12,7 +12,7 @@ MID_C = set("กจดตฎฏบปอ")
 HIGH_C = set("ขฃฉฐถผฝศษสห")
 # everything else with a consonant is low
 CONS = set("กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ")
-STOP_FINALS = set("กขคฆดตถทธปพภบจชซ")
+STOP_FINALS = set("กขคฆดตถทธปพภบจชซศษสฎฏฐฑฒฌ")
 SONORANT_FINALS = set("งนมยวญณรลฬ")
 TONE_EK, TONE_THO, TONE_TRI, TONE_CHAT = "่", "้", "๊", "๋"
 SHORT_VOWEL_CHARS = set("ะิึุ็")
@@ -98,6 +98,17 @@ def _is_dead(syl: str) -> bool:
     raw = re.sub(r".์", "", raw)
     for t in (TONE_EK, TONE_THO, TONE_TRI, TONE_CHAT):
         raw = raw.replace(t, "")
+    # Open short syllable (นะ, และ, กระ, ดุ): the consonant before the vowel is an initial.
+    if raw.endswith("ะ") or (raw and raw[-1] in "ิึุ"):
+        return True
+    # Silent final ร after a stop (บัตร, มิตร, จักร).
+    if (
+        len(raw) >= 3
+        and raw[-1] == "ร"
+        and raw[-2] in STOP_FINALS
+        and sum(c in CONS for c in raw) >= 3
+    ):
+        return True
     # trailing stop?
     tail = [c for c in raw if c in CONS or c in SHORT_VOWEL_CHARS or c in LONG_VOWEL_CHARS or c in "ะา"]
     # find last pronounced consonant
@@ -150,10 +161,101 @@ def tone_arrow(syl: str) -> str:
     # low
     if not dead:
         return MID
-    # dead low: short → high, long → falling. Approximate: if long vowel present → falling
-    raw = syl
-    has_long = any(c in LONG_VOWEL_CHARS or c == "า" for c in raw)
+    # dead low: short → high, long → falling
+    if "็" in syl or "ะ" in syl or "ั" in syl:
+        return HIGH
+    has_long = any(c in LONG_VOWEL_CHARS or c == "า" for c in syl)
+    # อ / ว after the initial are the long vowels «о» / «уа» (รอบ, ชอบ, บวก).
+    if "อ" in syl[1:] or "ว" in syl[1:]:
+        has_long = True
     return FALL if has_long else HIGH
+
+
+# Initial pairs that are one sound, not a hidden «а» syllable.
+_ONSET_PAIRS = {
+    "กร", "กล", "กว", "ขร", "ขล", "ขว", "คร", "คล", "คว", "ปร", "ปล", "พร", "พล",
+    "ผล", "ตร", "บร", "บล", "ดร", "ฟร", "ฟล", "ทร", "จร", "ศร", "สร", "ซร",
+}
+
+
+def _split_hidden_a(syl: str) -> list[str] | None:
+    """ขนม → ข + นม, สบาย → ส + บาย, อร่อย → อ + ร่อย. None when not applicable."""
+    if len(syl) < 3 or syl[0] not in CONS or syl[1] not in CONS:
+        return None
+    c1, c2, rest = syl[0], syl[1], syl[2:]
+    if c1 + c2 in _ONSET_PAIRS:
+        return None
+    if c1 == "ห" and c2 in LEAD_H_SONORANTS:
+        return None
+    if c1 == "อ" and c2 == "ย":
+        return None
+    # ว between consonants is the vowel «уа» (สวย, ขวด), not an initial.
+    if c2 == "ว" and rest.lstrip(TONE_EK + TONE_THO + TONE_TRI + TONE_CHAT)[:1] in CONS:
+        return None
+    # Leading high/mid consonant lends its class to a sonorant (ขนม, ตลาด, อร่อย).
+    if c2 in LEAD_H_SONORANTS and (c1 in HIGH_C or c1 in MID_C):
+        return [c1 + "ะ", c1 + c2 + rest]
+    return [c1 + "ะ", c2 + rest]
+
+
+def thai_syllables(
+    thai: str, split_hidden: bool = False, repeat: int = 1
+) -> list[str]:
+    """Thai syllables; ๆ repeats the last `repeat` syllables; punctuation and spaces dropped."""
+    out: list[str] = []
+    for syl in syllable_tokenize(thai or "", keep_whitespace=False, engine="han_solo"):
+        syl = syl.strip()
+        if not syl or not re.search(r"[\u0E00-\u0E7F]", syl):
+            continue
+        if syl == "ๆ":
+            out.extend(out[-repeat:])
+            continue
+        if split_hidden:
+            parts = _split_hidden_a(syl)
+            if parts:
+                out.extend(parts)
+                continue
+        out.append(syl)
+    return out
+
+
+def thai_syllable_variants(thai: str) -> list[list[str]]:
+    """Plausible syllabifications, most literal first — callers pick the one matching a known count."""
+    seen: list[list[str]] = []
+    for split in (False, True):
+        for rep in (1, 2, 3):
+            v = thai_syllables(thai, split_hidden=split, repeat=rep)
+            if v not in seen:
+                seen.append(v)
+            if "ๆ" not in thai:
+                break
+    return seen
+
+
+# Same chunking as iOS `translitChunksForSyllables` and /assess syllable_contract.
+_CHUNK_SPLIT = re.compile(r"(\s+|[-·])")
+
+
+def retone_phonetic(thai: str, phonetic: str) -> str | None:
+    """Rewrite only the tone arrows of an authored phonetic from Thai spelling.
+
+    Letters and separators stay as written. None when the Thai syllables can't be
+    aligned 1:1 with the phonetic chunks (hidden linking vowels, Latin, ครับ/ค่ะ).
+    """
+    if not thai or not phonetic or "/" in thai or re.search(r"[A-Za-z0-9]", thai):
+        return None
+    pieces = _CHUNK_SPLIT.split(phonetic)
+    slots = [
+        i for i, p in enumerate(pieces)
+        if p and not _CHUNK_SPLIT.fullmatch(p) and p.strip(ARROWS)
+    ]
+    syls = next((v for v in thai_syllable_variants(thai) if len(v) == len(slots)), None)
+    if syls is None:
+        return None
+    for i, syl in zip(slots, syls):
+        letters = "".join(ch for ch in pieces[i] if ch not in ARROWS)
+        pieces[i] = letters + tone_arrow(syl)
+    return "".join(pieces)
 
 
 def thai_to_taika(thai: str) -> str:

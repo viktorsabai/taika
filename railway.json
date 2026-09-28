@@ -5,6 +5,7 @@
     "dockerfilePath": "scripts/thai_tone_assessment/Dockerfile",
     "watchPatterns": [
       "scripts/thai_tone_assessment/**",
+      "scripts/thai_taika_phonetic.py",
       "steps.json",
       "railway.json"
     ]
