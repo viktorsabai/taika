@@ -1,0 +1,2144 @@
+{
+  "url": "https://taika-production.up.railway.app",
+  "summary": {
+    "phrases": 42,
+    "clean_phrases": 42,
+    "issues": {},
+    "tone_errors_syllables": "0/325",
+    "letter_diff_vs_engine_syllables": "0/325"
+  },
+  "rows": [
+    {
+      "category": "numbers",
+      "ru": "я живу тут 4 года",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ฉันอยู่ที่นี่สี่ปี ค่ะ",
+        "phonetic": "чхан↗ ю↓ ти↘-ни↘ си↓ пи→ кха↘",
+        "parts": [
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "ю",
+            "m": "жить"
+          },
+          {
+            "p": "ти-ни",
+            "m": "здесь"
+          },
+          {
+            "p": "си",
+            "m": "четыре"
+          },
+          {
+            "p": "пи",
+            "m": "год"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 28.2,
+      "check": {
+        "issues": [],
+        "syllables_total": 7,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "я живу тут четыре года",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ผมอยู่ที่นี่สี่ปี ครับ",
+        "phonetic": "пхом↗ ю↓ ти↘-ни↘ си↓ пи→ кхрап↑",
+        "parts": [
+          {
+            "p": "пхом",
+            "m": "я"
+          },
+          {
+            "p": "ю",
+            "m": "живу"
+          },
+          {
+            "p": "ти-ни",
+            "m": "тут"
+          },
+          {
+            "p": "си",
+            "m": "четыре"
+          },
+          {
+            "p": "пи",
+            "m": "лет"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 30.9,
+      "check": {
+        "issues": [],
+        "syllables_total": 7,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "сколько стоит 250 бат",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "สองร้อยห้าสิบบาทราคาเท่าไหร่ คะ",
+        "phonetic": "сонг↗ рой↑ ха↘ сип↓ бат↓ ра→-кха→ тау↘-рай↓ кха↑",
+        "parts": [
+          {
+            "p": "сонг",
+            "m": "два"
+          },
+          {
+            "p": "рой",
+            "m": "сто"
+          },
+          {
+            "p": "ха",
+            "m": "пять"
+          },
+          {
+            "p": "сип",
+            "m": "десять"
+          },
+          {
+            "p": "бат",
+            "m": "бат"
+          },
+          {
+            "p": "ра-кха",
+            "m": "цена"
+          },
+          {
+            "p": "тау-рай",
+            "m": "сколько стоит"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 19.8,
+      "check": {
+        "issues": [],
+        "syllables_total": 10,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "дайте 2 кофе и 1 воду",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ขอกาแฟสองแก้วกับน้ำหนึ่งขวด ครับ",
+        "phonetic": "кхо↗ ка→-фэ→ сонг↗ кэу↘ кап↓ нам↑ нынг↓ кхуат↓ кхрап↑",
+        "parts": [
+          {
+            "p": "кхо",
+            "m": "попросить"
+          },
+          {
+            "p": "ка-фэ",
+            "m": "кофе"
+          },
+          {
+            "p": "сонг",
+            "m": "два"
+          },
+          {
+            "p": "кэу",
+            "m": "стакан"
+          },
+          {
+            "p": "кап",
+            "m": "и"
+          },
+          {
+            "p": "нам",
+            "m": "вода"
+          },
+          {
+            "p": "нынг",
+            "m": "один"
+          },
+          {
+            "p": "кхуат",
+            "m": "бутылка"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 6.8,
+      "check": {
+        "issues": [],
+        "syllables_total": 10,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "мне 35 лет",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ฉันอายุสามสิบห้าปี ค่ะ",
+        "phonetic": "чхан↗ а→-ю↑ сам↗ сип↓ ха↘ пи→ кха↘",
+        "parts": [
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "а-ю",
+            "m": "возраст"
+          },
+          {
+            "p": "сам",
+            "m": "три"
+          },
+          {
+            "p": "сип",
+            "m": "десять"
+          },
+          {
+            "p": "ха",
+            "m": "пять"
+          },
+          {
+            "p": "пи",
+            "m": "год"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 24.3,
+      "check": {
+        "issues": [],
+        "syllables_total": 8,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "у меня 3 детей",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ผมมีลูกสามคน ครับ",
+        "phonetic": "пхом↗ ми→ лук↘ сам↗ кхон→ кхрап↑",
+        "parts": [
+          {
+            "p": "пхом",
+            "m": "я"
+          },
+          {
+            "p": "ми",
+            "m": "иметь"
+          },
+          {
+            "p": "лук",
+            "m": "дети"
+          },
+          {
+            "p": "сам",
+            "m": "три"
+          },
+          {
+            "p": "кхон",
+            "m": "люди"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 11.4,
+      "check": {
+        "issues": [],
+        "syllables_total": 6,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "нас будет 12 человек",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "พวกเราจะมีสิบสองคน ค่ะ",
+        "phonetic": "пхуак↘-рау→ джа↓ ми→ сип↓ сонг↗ кхон→ кха↘",
+        "parts": [
+          {
+            "p": "пхуак-рау",
+            "m": "мы"
+          },
+          {
+            "p": "джа",
+            "m": "будет"
+          },
+          {
+            "p": "ми",
+            "m": "есть"
+          },
+          {
+            "p": "сип",
+            "m": "десять"
+          },
+          {
+            "p": "сонг",
+            "m": "два"
+          },
+          {
+            "p": "кхон",
+            "m": "человек"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 27.9,
+      "check": {
+        "issues": [],
+        "syllables_total": 8,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "это стоит 1500 бат",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "นี่ราคาหนึ่งพันห้าร้อยบาท ครับ",
+        "phonetic": "ни↘ ра→-кха→ нынг↓ пхан→ ха↘ рой↑ бат↓ кхрап↑",
+        "parts": [
+          {
+            "p": "ни",
+            "m": "это не ' ', это 'это'"
+          },
+          {
+            "p": "ра-кха",
+            "m": "это не ' ', это 'стоимость'"
+          },
+          {
+            "p": "нынг",
+            "m": "это не ' ', это 'один'"
+          },
+          {
+            "p": "пхан",
+            "m": "это не ' ', это 'тысяча'"
+          },
+          {
+            "p": "ха",
+            "m": "это не ' ', это 'пять'"
+          },
+          {
+            "p": "рой",
+            "m": "это не ' ', это 'сто'"
+          },
+          {
+            "p": "бат",
+            "m": "это не ' ', это 'бат'"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 28.1,
+      "check": {
+        "issues": [],
+        "syllables_total": 9,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "позвони мне 0812345678",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "โทรหาฉันที่ศูนย์แปดหนึ่งสองสามสี่ห้าหกเจ็ดแปด ค่ะ",
+        "phonetic": "то→ ха↗ чхан↗ ти↘ сун↗ пэт↓ нынг↓ сонг↗ сам↗ си↓ ха↘ хок↓ джет↓ пэт↓ кха↘",
+        "parts": [
+          {
+            "p": "то",
+            "m": "звонить"
+          },
+          {
+            "p": "ха",
+            "m": "искать"
+          },
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "ти",
+            "m": "который"
+          },
+          {
+            "p": "сун",
+            "m": "ноль"
+          },
+          {
+            "p": "пэт",
+            "m": "восемь"
+          },
+          {
+            "p": "нынг",
+            "m": "один"
+          },
+          {
+            "p": "сонг",
+            "m": "два"
+          },
+          {
+            "p": "сам",
+            "m": "три"
+          },
+          {
+            "p": "си",
+            "m": "четыре"
+          },
+          {
+            "p": "ха",
+            "m": "пять"
+          },
+          {
+            "p": "хок",
+            "m": "шесть"
+          },
+          {
+            "p": "джет",
+            "m": "семь"
+          },
+          {
+            "p": "пэт",
+            "m": "восемь"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 24.7,
+      "check": {
+        "issues": [],
+        "syllables_total": 15,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "комната 305",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ห้องสามร้อยห้า ครับ",
+        "phonetic": "хонг↘ сам↗ рой↑ ха↘ кхрап↑",
+        "parts": [
+          {
+            "p": "хонг",
+            "m": "комната"
+          },
+          {
+            "p": "сам",
+            "m": "три"
+          },
+          {
+            "p": "рой",
+            "m": "сто"
+          },
+          {
+            "p": "ха",
+            "m": "пять"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 23.6,
+      "check": {
+        "issues": [],
+        "syllables_total": 5,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "я ждал 20 минут",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ผมรอยี่สิบนาที ครับ",
+        "phonetic": "пхом↗ ро→ йи↘ сип↓ на→-ти→ кхрап↑",
+        "parts": [
+          {
+            "p": "пхом",
+            "m": "я"
+          },
+          {
+            "p": "ро",
+            "m": "ждать"
+          },
+          {
+            "p": "йи",
+            "m": "двадцать"
+          },
+          {
+            "p": "сип",
+            "m": "десять"
+          },
+          {
+            "p": "на-ти",
+            "m": "минут"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 25.2,
+      "check": {
+        "issues": [],
+        "syllables_total": 7,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "скидка 10 процентов",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ลดสิบเปอร์เซ็นต์ ค่ะ",
+        "phonetic": "лот↑ сип↓ пё→-сент→ кха↘",
+        "parts": [
+          {
+            "p": "лот",
+            "m": "скидка"
+          },
+          {
+            "p": "сип",
+            "m": "десять"
+          },
+          {
+            "p": "пё-сент",
+            "m": "процент"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 25.1,
+      "check": {
+        "issues": [],
+        "syllables_total": 5,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "мы тут на 7 дней",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "พวกเราอยู่ที่นี่เจ็ดวัน ค่ะ",
+        "phonetic": "пхуак↘-рау→ ю↓ ти↘-ни↘ джет↓ ван→ кха↘",
+        "parts": [
+          {
+            "p": "пхуак-рау",
+            "m": "мы"
+          },
+          {
+            "p": "ю",
+            "m": "быть"
+          },
+          {
+            "p": "ти-ни",
+            "m": "здесь"
+          },
+          {
+            "p": "джет",
+            "m": "семь"
+          },
+          {
+            "p": "ван",
+            "m": "дней"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 24.6,
+      "check": {
+        "issues": [],
+        "syllables_total": 8,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "numbers",
+      "ru": "встретимся в 8 вечера",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "เจอกันสองทุ่ม ค่ะ",
+        "phonetic": "джё→-кан→ сонг↗ тум↘ кха↘",
+        "parts": [
+          {
+            "p": "джё-кан",
+            "m": "встретимся"
+          },
+          {
+            "p": "сонг",
+            "m": "два"
+          },
+          {
+            "p": "тум",
+            "m": "время"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 31.2,
+      "check": {
+        "issues": [],
+        "syllables_total": 5,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "question_f",
+      "ru": "где туалет?",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ห้องน้ำอยู่ที่ไหน คะ",
+        "phonetic": "хонг↘-нам↑ ю↓ ти↘-най↗ кха↑",
+        "parts": [
+          {
+            "p": "хонг-нам",
+            "m": "туалет"
+          },
+          {
+            "p": "ю",
+            "m": "находится"
+          },
+          {
+            "p": "ти-най",
+            "m": "где"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 29.1,
+      "check": {
+        "issues": [],
+        "syllables_total": 6,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "question_f",
+      "ru": "сколько это стоит?",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "นี่ราคาเท่าไหร่ คะ",
+        "phonetic": "ни↘ ра→-кха→ тау↘-рай↓ кха↑",
+        "parts": [
+          {
+            "p": "ни",
+            "m": "это"
+          },
+          {
+            "p": "ра-кха",
+            "m": "цена"
+          },
+          {
+            "p": "тау-рай",
+            "m": "сколько"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 28.7,
+      "check": {
+        "issues": [],
+        "syllables_total": 6,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "question_f",
+      "ru": "ты говоришь по-английски?",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "คุณพูดภาษาอังกฤษได้ไหม คะ",
+        "phonetic": "кхун→ пхут↘ пха→-са↗-анг→-крит↓ дай↘ май↗ кха↑",
+        "parts": [
+          {
+            "p": "кхун",
+            "m": "вы"
+          },
+          {
+            "p": "пхут",
+            "m": "говорить"
+          },
+          {
+            "p": "пха-са-анг-крит",
+            "m": "английский язык"
+          },
+          {
+            "p": "дай",
+            "m": "можешь"
+          },
+          {
+            "p": "май",
+            "m": "ли"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 33.0,
+      "check": {
+        "issues": [],
+        "syllables_total": 9,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "question_f",
+      "ru": "можно счёт?",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ขอบิลได้ไหม คะ",
+        "phonetic": "кхо↗ бин→ дай↘ май↗ кха↑",
+        "parts": [
+          {
+            "p": "кхо",
+            "m": "попросить"
+          },
+          {
+            "p": "бин",
+            "m": "счёт"
+          },
+          {
+            "p": "дай",
+            "m": "можно"
+          },
+          {
+            "p": "май",
+            "m": "ли"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 6.9,
+      "check": {
+        "issues": [],
+        "syllables_total": 5,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "question_f",
+      "ru": "это острое?",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "นี่เผ็ดไหม คะ",
+        "phonetic": "ни↘ пхет↓ май↗ кха↑",
+        "parts": [
+          {
+            "p": "ни",
+            "m": "это"
+          },
+          {
+            "p": "пхет",
+            "m": "острое"
+          },
+          {
+            "p": "май",
+            "m": "ли"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 14.5,
+      "check": {
+        "issues": [],
+        "syllables_total": 4,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "question_f",
+      "ru": "как тебя зовут",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "คุณชื่ออะไร คะ",
+        "phonetic": "кхун→ чыу↘ а↓-рай→ кха↑",
+        "parts": [
+          {
+            "p": "кхун",
+            "m": "ты"
+          },
+          {
+            "p": "чыу",
+            "m": "зовут"
+          },
+          {
+            "p": "а-рай",
+            "m": "что"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 24.8,
+      "check": {
+        "issues": [],
+        "syllables_total": 5,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "question_m",
+      "ru": "где ближайшая аптека?",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ร้านขายยาที่ใกล้ที่สุดอยู่ที่ไหน ครับ",
+        "phonetic": "ран↑-кхай↗-я→ ти↘ клай↘ ти↘-сут↓ ю↓ ти↘-най↗ кхрап↑",
+        "parts": [
+          {
+            "p": "ран-кхай-я",
+            "m": "аптека"
+          },
+          {
+            "p": "ти",
+            "m": "где"
+          },
+          {
+            "p": "клай",
+            "m": "близкий"
+          },
+          {
+            "p": "ти-сут",
+            "m": "самый"
+          },
+          {
+            "p": "ю",
+            "m": "находиться"
+          },
+          {
+            "p": "ти-най",
+            "m": "где"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 22.4,
+      "check": {
+        "issues": [],
+        "syllables_total": 11,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "question_m",
+      "ru": "у вас есть свободный номер?",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "คุณมีห้องว่างไหม ครับ",
+        "phonetic": "кхун→ ми→ хонг↘ ванг↘ май↗ кхрап↑",
+        "parts": [
+          {
+            "p": "кхун",
+            "m": "вы"
+          },
+          {
+            "p": "ми",
+            "m": "есть"
+          },
+          {
+            "p": "хонг",
+            "m": "номер"
+          },
+          {
+            "p": "ванг",
+            "m": "свободный"
+          },
+          {
+            "p": "май",
+            "m": "ли"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 22.4,
+      "check": {
+        "issues": [],
+        "syllables_total": 6,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "negation",
+      "ru": "я не ем мясо",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ฉันไม่กินเนื้อสัตว์ ค่ะ",
+        "phonetic": "чхан↗ май↘ кин→ ныа↑-сат↓ кха↘",
+        "parts": [
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "май",
+            "m": "не"
+          },
+          {
+            "p": "кин",
+            "m": "ем"
+          },
+          {
+            "p": "ныа-сат",
+            "m": "мясо"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 7.1,
+      "check": {
+        "issues": [],
+        "syllables_total": 6,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "negation",
+      "ru": "не надо сахар",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ไม่เอาน้ำตาล ครับ",
+        "phonetic": "май↘ ау→ нам↑ тан→ кхрап↑",
+        "parts": [
+          {
+            "p": "май",
+            "m": "не"
+          },
+          {
+            "p": "ау",
+            "m": "брать"
+          },
+          {
+            "p": "нам",
+            "m": "вода"
+          },
+          {
+            "p": "тан",
+            "m": "сахар"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 23.3,
+      "check": {
+        "issues": [],
+        "syllables_total": 5,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "negation",
+      "ru": "я не понимаю по-тайски",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ฉันไม่เข้าใจภาษาไทย ค่ะ",
+        "phonetic": "чхан↗ май↘ кхау↘-джай→ пха→-са↗-тай→ кха↘",
+        "parts": [
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "май",
+            "m": "не"
+          },
+          {
+            "p": "кхау-джай",
+            "m": "понимать"
+          },
+          {
+            "p": "пха-са-тай",
+            "m": "тайский"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 22.5,
+      "check": {
+        "issues": [],
+        "syllables_total": 8,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "everyday",
+      "ru": "мне очень нравится тайская еда",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ฉันชอบอาหารไทยมาก ค่ะ",
+        "phonetic": "чхан↗ чоп↘ а→-хан↗ тай→ мак↘ кха↘",
+        "parts": [
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "чоп",
+            "m": "нравится"
+          },
+          {
+            "p": "а-хан",
+            "m": "еда"
+          },
+          {
+            "p": "тай",
+            "m": "тайский"
+          },
+          {
+            "p": "мак",
+            "m": "очень"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 20.8,
+      "check": {
+        "issues": [],
+        "syllables_total": 7,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "everyday",
+      "ru": "я хочу пить",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ผมหิวน้ำ ครับ",
+        "phonetic": "пхом↗ хиу↗ нам↑ кхрап↑",
+        "parts": [
+          {
+            "p": "пхом",
+            "m": "я"
+          },
+          {
+            "p": "хиу",
+            "m": "голоден"
+          },
+          {
+            "p": "нам",
+            "m": "вода"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 22.6,
+      "check": {
+        "issues": [],
+        "syllables_total": 4,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "everyday",
+      "ru": "отвезите меня в аэропорт",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "พาฉันไปสนามบิน ค่ะ",
+        "phonetic": "пха→ чхан↗ пай→ са↓-нам↗-бин→ кха↘",
+        "parts": [
+          {
+            "p": "пха",
+            "m": "везти"
+          },
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "пай",
+            "m": "идти"
+          },
+          {
+            "p": "са-нам-бин",
+            "m": "аэропорт"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 21.6,
+      "check": {
+        "issues": [],
+        "syllables_total": 7,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "everyday",
+      "ru": "я ищу свой отель",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ผมกำลังหาโรงแรมของผม ครับ",
+        "phonetic": "пхом↗ кам→-ланг→ ха↗ ронг→-рэм→ кхонг↗ пхом↗ кхрап↑",
+        "parts": [
+          {
+            "p": "пхом",
+            "m": "я"
+          },
+          {
+            "p": "кам-ланг",
+            "m": "буду"
+          },
+          {
+            "p": "ха",
+            "m": "искать"
+          },
+          {
+            "p": "ронг-рэм",
+            "m": "отель"
+          },
+          {
+            "p": "кхонг",
+            "m": "мой"
+          },
+          {
+            "p": "пхом",
+            "m": "я"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 23.8,
+      "check": {
+        "issues": [],
+        "syllables_total": 9,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "everyday",
+      "ru": "завтра будет дождь",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "พรุ่งนี้ฝนจะตก ค่ะ",
+        "phonetic": "пхрунг↘-ни↑ фон↗ джа↓ ток↓ кха↘",
+        "parts": [
+          {
+            "p": "пхрунг-ни",
+            "m": "завтра"
+          },
+          {
+            "p": "фон",
+            "m": "дождь"
+          },
+          {
+            "p": "джа",
+            "m": "будет"
+          },
+          {
+            "p": "ток",
+            "m": "падать"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 24.9,
+      "check": {
+        "issues": [],
+        "syllables_total": 6,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "everyday",
+      "ru": "у меня болит голова",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ฉันปวดหัว ค่ะ",
+        "phonetic": "чхан↗ пуат↓-хуа↗ кха↘",
+        "parts": [
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "пуат-хуа",
+            "m": "болит"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 25.0,
+      "check": {
+        "issues": [],
+        "syllables_total": 4,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "everyday",
+      "ru": "я вегетарианец",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ผมเป็นมังสวิรัติ ครับ",
+        "phonetic": "пхом↗ пен→ манг→-са↓-ви↑-рат↑ кхрап↑",
+        "parts": [
+          {
+            "p": "пхом",
+            "m": "я"
+          },
+          {
+            "p": "пен",
+            "m": "являться"
+          },
+          {
+            "p": "манг-са-ви-рат",
+            "m": "вегетарианцем"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 25.5,
+      "check": {
+        "issues": [],
+        "syllables_total": 7,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "everyday",
+      "ru": "сделайте не очень остро",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ทำไม่เผ็ดมาก ค่ะ",
+        "phonetic": "там→ май↘ пхет↓ мак↘ кха↘",
+        "parts": [
+          {
+            "p": "там",
+            "m": "делать"
+          },
+          {
+            "p": "май",
+            "m": "не"
+          },
+          {
+            "p": "пхет",
+            "m": "острый"
+          },
+          {
+            "p": "мак",
+            "m": "очень"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 29.2,
+      "check": {
+        "issues": [],
+        "syllables_total": 5,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "names",
+      "ru": "меня зовут Анна",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ฉันชื่ออันนา ค่ะ",
+        "phonetic": "чхан↗ чыу↘ ан→-на→ кха↘",
+        "parts": [
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "чыу",
+            "m": "зовут"
+          },
+          {
+            "p": "ан-на",
+            "m": "Анна"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 26.3,
+      "check": {
+        "issues": [],
+        "syllables_total": 5,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "names",
+      "ru": "я из России",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ผมมาจากรัสเซีย ครับ",
+        "phonetic": "пхом↗ ма→ джак↓ рас↑-сиа→ кхрап↑",
+        "parts": [
+          {
+            "p": "пхом",
+            "m": "я"
+          },
+          {
+            "p": "ма",
+            "m": "прийти"
+          },
+          {
+            "p": "джак",
+            "m": "из"
+          },
+          {
+            "p": "рас-сиа",
+            "m": "Россия"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 22.9,
+      "check": {
+        "issues": [],
+        "syllables_total": 6,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "names",
+      "ru": "мы живём на Пхукете",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "พวกเราอาศัยอยู่ที่ภูเก็ต ค่ะ",
+        "phonetic": "пхуак↘-рау→ а→-сай↗ ю↓ ти↘ пху→-кет↓ кха↘",
+        "parts": [
+          {
+            "p": "пхуак-рау",
+            "m": "мы"
+          },
+          {
+            "p": "а-сай",
+            "m": "жить"
+          },
+          {
+            "p": "ю",
+            "m": "на"
+          },
+          {
+            "p": "ти",
+            "m": "место"
+          },
+          {
+            "p": "пху-кет",
+            "m": "Пхукет"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 23.2,
+      "check": {
+        "issues": [],
+        "syllables_total": 9,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "names",
+      "ru": "где ближайший 7-Eleven",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "เซเว่นอีเลฟเว่นที่ใกล้ที่สุดอยู่ที่ไหน ครับ",
+        "phonetic": "се→-вен↘-и→-леф→-вен↘ ти↘ клай↘ ти↘-сут↓ ю↓ ти↘-най↗ кхрап↑",
+        "parts": [
+          {
+            "p": "се-вен-и-леф-вен",
+            "m": "7-Eleven"
+          },
+          {
+            "p": "ти",
+            "m": "будет/есть/не"
+          },
+          {
+            "p": "клай",
+            "m": "близко"
+          },
+          {
+            "p": "ти-сут",
+            "m": "самый"
+          },
+          {
+            "p": "ю",
+            "m": "находиться"
+          },
+          {
+            "p": "ти-най",
+            "m": "где"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 8.1,
+      "check": {
+        "issues": [],
+        "syllables_total": 13,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "long",
+      "ru": "я приехал в Таиланд в отпуск со своей семьёй на две недели",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ผมมาประเทศไทยกับครอบครัวในวันหยุดสองสัปดาห์ ครับ",
+        "phonetic": "пхом↗ ма→ пра↓-тет↘ тай→ кап↓ кхроп↘-кхруа→ най→ ван→-ют↓ сонг↗ сап↓-да→ кхрап↑",
+        "parts": [
+          {
+            "p": "пхом",
+            "m": "я"
+          },
+          {
+            "p": "ма",
+            "m": "пришел"
+          },
+          {
+            "p": "пра-тет",
+            "m": "страна"
+          },
+          {
+            "p": "тай",
+            "m": "Таиланд"
+          },
+          {
+            "p": "кап",
+            "m": "с"
+          },
+          {
+            "p": "кхроп-кхруа",
+            "m": "семья"
+          },
+          {
+            "p": "най",
+            "m": "в"
+          },
+          {
+            "p": "ван-ют",
+            "m": "отпуск"
+          },
+          {
+            "p": "сонг",
+            "m": "два"
+          },
+          {
+            "p": "сап-да",
+            "m": "недели"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 26.9,
+      "check": {
+        "issues": [],
+        "syllables_total": 15,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "long",
+      "ru": "извините, вы не подскажете, как дойти до рынка",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ขอโทษนะคุณช่วยบอกทางไปตลาดได้ไหม คะ",
+        "phonetic": "кхо↗-тот↘ на↑ кхун→ чуай↘ бок↓ танг→ пай→ та↓-лат↓ дай↘ май↗ кха↑",
+        "parts": [
+          {
+            "p": "кхо-тот",
+            "m": "извините"
+          },
+          {
+            "p": "на",
+            "m": "будет"
+          },
+          {
+            "p": "кхун",
+            "m": "вы"
+          },
+          {
+            "p": "чуай",
+            "m": "помочь"
+          },
+          {
+            "p": "бок",
+            "m": "сказать"
+          },
+          {
+            "p": "танг",
+            "m": "путь"
+          },
+          {
+            "p": "пай",
+            "m": "идти"
+          },
+          {
+            "p": "та-лат",
+            "m": "рынок"
+          },
+          {
+            "p": "дай",
+            "m": "можно"
+          },
+          {
+            "p": "май",
+            "m": "ли"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 30.2,
+      "check": {
+        "issues": [],
+        "syllables_total": 13,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "long",
+      "ru": "мне нужно поменять деньги, где здесь обменник",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ฉันต้องการแลกเงินที่นี่มีที่แลกเงินไหม คะ",
+        "phonetic": "чхан↗ тонг↘ кан→ лэк↘-нген→ ти↘-ни↘ ми→ ти↘ лэк↘-нген→ май↗ кха↑",
+        "parts": [
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "тонг",
+            "m": "должен"
+          },
+          {
+            "p": "кан",
+            "m": "процесс"
+          },
+          {
+            "p": "лэк-нген",
+            "m": "обмен денег"
+          },
+          {
+            "p": "ти-ни",
+            "m": "здесь"
+          },
+          {
+            "p": "ми",
+            "m": "есть"
+          },
+          {
+            "p": "ти",
+            "m": "где"
+          },
+          {
+            "p": "лэк-нген",
+            "m": "обмен денег"
+          },
+          {
+            "p": "май",
+            "m": "ли"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 35.5,
+      "check": {
+        "issues": [],
+        "syllables_total": 13,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "names",
+      "ru": "меня зовут Анна, я из России",
+      "politeness": "female",
+      "status": 200,
+      "resp": {
+        "thai": "ฉันชื่อแอนนาฉันมาจากรัสเซีย ค่ะ",
+        "phonetic": "чхан↗ чыу↘ эн→ на→ чхан↗ ма→ джак↓ рас↑-сиа→ кха↘",
+        "parts": [
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "чыу",
+            "m": "имя"
+          },
+          {
+            "p": "эн",
+            "m": "Анна"
+          },
+          {
+            "p": "на",
+            "m": "страна"
+          },
+          {
+            "p": "чхан",
+            "m": "я"
+          },
+          {
+            "p": "ма",
+            "m": "приходить"
+          },
+          {
+            "p": "джак",
+            "m": "из"
+          },
+          {
+            "p": "рас-сиа",
+            "m": "Россия"
+          },
+          {
+            "p": "кха",
+            "m": "вежливость (ж)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 37.1,
+      "check": {
+        "issues": [],
+        "syllables_total": 10,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    },
+    {
+      "category": "names",
+      "ru": "скидка 10 процентов в 7-Eleven",
+      "politeness": "male",
+      "status": 200,
+      "resp": {
+        "thai": "ลดสิบเปอร์เซ็นต์ที่เซเว่นอีเลฟเว่น ครับ",
+        "phonetic": "лот↑ сип↓ пё→-сент→ ти↘ се→-вен↘-и→-леф→-вен↘ кхрап↑",
+        "parts": [
+          {
+            "p": "лот",
+            "m": "скидка"
+          },
+          {
+            "p": "сип",
+            "m": "десять"
+          },
+          {
+            "p": "пё-сент",
+            "m": "процент"
+          },
+          {
+            "p": "ти",
+            "m": "в"
+          },
+          {
+            "p": "се-вен-и-леф-вен",
+            "m": "7-Eleven"
+          },
+          {
+            "p": "кхрап",
+            "m": "вежливость (м)"
+          }
+        ],
+        "checks": {
+          "numbers": true,
+          "meaning": true,
+          "tones": true,
+          "letters": true,
+          "gloss": true
+        }
+      },
+      "seconds": 8.3,
+      "check": {
+        "issues": [],
+        "syllables_total": 11,
+        "letter_errors": 0,
+        "tone_errors": 0
+      }
+    }
+  ]
+}
