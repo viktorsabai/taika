@@ -32,7 +32,8 @@ def test_strip_double_khrap():
     assert th == "สวัสดี"
     assert ph == "са-ват-ди↘"
     _, ph2 = _apply_politeness(th, ph, "male")
-    assert ph2.endswith("кхрап↘")
+    # ครับ: низкий класс + мёртвый короткий слог → высокий тон, как в карточках курса.
+    assert ph2.endswith("кхрап↑")
     assert ph2.count("кхрап") == 1
 
 
@@ -40,6 +41,21 @@ def test_female_particle():
     th, ph = _apply_politeness("สวัสดี", "са-ват-ди↘", "female")
     assert th.endswith("ค่ะ")
     assert ph.endswith("кха↘")
+
+
+def test_female_question_gets_high_kha():
+    for ru, thai in (
+        ("где туалет?", "ห้องน้ำอยู่ที่ไหน"),
+        ("это острое", "เผ็ดไหม"),
+        ("ты говоришь по-английски", "คุณพูดภาษาอังกฤษได้ไหม"),
+    ):
+        th, ph = _apply_politeness(thai, "x→", "female", ru)
+        assert th.endswith(" คะ") and not th.endswith("ค่ะ"), (ru, th)
+        assert ph.endswith("кха↑"), (ru, ph)
+    th, ph = _apply_politeness("ฉันอยู่ที่นี่สี่ปี", "x→", "female", "я живу тут 4 года")
+    assert th.endswith("ค่ะ") and ph.endswith("кха↘")
+    th, ph = _apply_politeness("ห้องน้ำอยู่ที่ไหน", "x→", "male", "где туалет?")
+    assert th.endswith("ครับ") and ph.endswith("кхрап↑")
 
 
 def test_speaker_pronoun_male_swaps_chan():

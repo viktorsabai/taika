@@ -407,7 +407,7 @@ def _endpoint_case(politeness: str):
         ).json()
         n_first = calls["n"]
         cached = client.post(
-            "/smart_speaker", json={"text_ru": "Как ваше настроение", "politeness": politeness}
+            "/smart_speaker", json={"text_ru": "Как ваше настроение?", "politeness": politeness}
         ).json()
         return fresh, cached, n_first, calls["n"]
     finally:
@@ -415,8 +415,10 @@ def _endpoint_case(politeness: str):
 
 
 def test_endpoint_alignment_survives_cache_roundtrip():
-    for politeness, particle, gloss in (("male", "ครับ", "вежливость (м)"), ("female", "ค่ะ", "вежливость (ж)")):
+    # Вопрос: у женщины คะ (высокий тон), не ค่ะ.
+    for politeness, particle, gloss in (("male", "ครับ", "вежливость (м)"), ("female", "คะ", "вежливость (ж)")):
         fresh, cached, n_first, n_total = _endpoint_case(politeness)
+        assert fresh["checks"] == {"numbers": True, "meaning": True, "tones": True, "gloss": True}, fresh
         assert fresh == cached, f"{politeness}: кэш изменил ответ\n{fresh}\n{cached}"
         assert n_first >= 1, f"{politeness}: живой путь не вызывал модель"
         assert n_total == n_first, f"{politeness}: второй запрос не попал в кэш"
@@ -899,7 +901,7 @@ def test_hungry_words_path_keeps_alignment_after_politeness():
     thai, phonetic, parts = _words_to_outputs(words)
     thai, phonetic = api._append_politeness(thai, phonetic, "male")
     parts = parts + [_politeness_part("male")]
-    assert phonetic == "чан→ хиу↘ кхрап↘", phonetic
+    assert phonetic == "чан→ хиу↘ кхрап↑", phonetic
     assert _parts_match_phonetic(phonetic, parts)
     assert [p["m"] for p in parts] == ["я", "голоден", "вежливость (м)"]
 
@@ -913,11 +915,15 @@ def test_digits_become_spoken_cyrillic():
     assert "сип" in _normalize_phonetic_token("90→")
 
     no_digit(_normalize_phonetic("позвони 1669→"))
+    # Количество — разрядами, тоны по написанию: หนึ่งพันหกร้อยหกสิบเก้า.
     spoken = _normalize_phonetic_token("1669")
-    assert spoken == "нынг→-хок→-хок→-кау→", spoken
+    assert spoken == "нынг↓-пхан→-хок↓-рой↑-хок↓-сип↓-кау↘", spoken
 
-    no_digit(_normalize_phonetic_token("555"))
-    assert _normalize_phonetic_token("555") == "ха→-ха→-ха→"
+    no_digit(_normalize_phonetic_token("250"))
+    assert _normalize_phonetic_token("250") == "сонг↗-рой↑-ха↘-сип↓"
+    assert _normalize_phonetic_token("21") == "йи↘-сип↓-эт↓"
+    # Телефон диктуют по цифрам.
+    assert _normalize_phonetic_token("0812") == "сун↗-пэт↓-нынг↓-сонг↗"
 
     for raw in ("4x6", "4×6", "4кс6"):
         got = _normalize_phonetic_token(raw)
