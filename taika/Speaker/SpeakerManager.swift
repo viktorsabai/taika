@@ -2359,6 +2359,8 @@ public final class SpeakerManager: ObservableObject {
     }
 
     /// Mirrors server `_strip_trailing_politeness` + `_apply_politeness`: exactly one particle.
+    /// Тоны частиц — по написанию, как в курсе: ครับ кхрап↑, ค่ะ кха↘, а в женском
+    /// вопросе сервер ставит คะ кха↑ — её сохраняем, а не перетираем на ค่ะ.
     static func applyCanonicalPoliteness(
         thai: String,
         phonetic: String,
@@ -2366,6 +2368,7 @@ public final class SpeakerManager: ObservableObject {
     ) -> (thai: String, phonetic: String) {
         var th = thai.trimmingCharacters(in: .whitespacesAndNewlines)
         var ph = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+        let serverAskedQuestion = th.hasSuffix("คะ") && !th.hasSuffix("ค่ะ")
         let thaiTrail = try? NSRegularExpression(pattern: #"\s*(ครับ|ค่ะ|คะ)\s*$"#)
         let phTrail = try? NSRegularExpression(
             pattern: #"(?i)\s*(?:кхрап|крап|кха)\s*[→↓↘↑↗↕↔⇕⇅]?\s*$"#
@@ -2387,13 +2390,16 @@ public final class SpeakerManager: ObservableObject {
             if !changed { break }
         }
         let p = SmartSpeakerPoliteness(rawValue: politeness.lowercased()) ?? .female
+        let particle: (thai: String, phonetic: String)
         if p == .male {
-            th = (th + " ครับ").trimmingCharacters(in: .whitespacesAndNewlines)
-            if !ph.isEmpty { ph = (ph + " кхрап↘").trimmingCharacters(in: .whitespacesAndNewlines) }
+            particle = ("ครับ", "кхрап↑")
+        } else if serverAskedQuestion {
+            particle = ("คะ", "кха↑")
         } else {
-            th = (th + " ค่ะ").trimmingCharacters(in: .whitespacesAndNewlines)
-            if !ph.isEmpty { ph = (ph + " кха↘").trimmingCharacters(in: .whitespacesAndNewlines) }
+            particle = ("ค่ะ", "кха↘")
         }
+        th = (th + " " + particle.thai).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !ph.isEmpty { ph = (ph + " " + particle.phonetic).trimmingCharacters(in: .whitespacesAndNewlines) }
         return (th, ph)
     }
 
