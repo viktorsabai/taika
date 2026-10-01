@@ -260,6 +260,24 @@ def test_russia_keeps_come_from_gloss_and_splits_makjak():
     assert [p["m"] for p in parts] == ["я", "прийти", "из", "Россия", "вежливость (м)"]
 
 
+def test_canon_toilet_keeps_where_gloss_after_engine_letters():
+    """Канон писал тхи-най, движок ти-най — подпись «где» должна остаться на слоте."""
+    ph, parts, _, letters_ok = api._final_reading(
+        "ห้องน้ำอยู่ที่ไหน คะ",
+        "хонг↘-нам↗ ю↘ тхи↘-най↗ кха↑",
+        [
+            {"p": "хонг-нам", "m": "туалет"},
+            {"p": "ю", "m": "находится"},
+            {"p": "тхи-най", "m": "где"},
+            {"p": "кха", "m": "вежливость (ж)"},
+        ],
+    )
+    assert letters_ok
+    assert ph == "хонг↘-нам↑ ю↓ ти↘-най↗ кха↑", ph
+    assert [p["p"] for p in parts] == ["хонг-нам", "ю", "ти-най", "кха"]
+    assert [p["m"] for p in parts] == ["туалет", "находится", "где", "вежливость (ж)"]
+
+
 def test_water_one_is_two_lesson_words():
     ph, parts, _, letters_ok = api._final_reading(
         "ขอกาแฟสองแก้วกับน้ำหนึ่งขวด ครับ",

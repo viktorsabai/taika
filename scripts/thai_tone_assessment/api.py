@@ -1523,6 +1523,7 @@ _TEACH_GLOSS = {
     "ปี": "год", "วัน": "день", "จะ": "будет", "ไม่": "не", "ได้": "мочь",
     "ไหม": "вопрос", "ของ": "у", "อยู่": "находиться", "กิน": "есть",
     "แล้ว": "уже", "นะ": "частица", "ไป": "идти", "ให้": "дать", "เป็น": "являться",
+    "ที่ไหน": "где", "ที่นี่": "здесь", "อันนี้": "это", "ห้องน้ำ": "туалет",
     "ทำ": "делать", "พูด": "говорить", "อยาก": "хотеть", "ต้อง": "нужно",
     "และ": "и", "แต่": "но", "หรือ": "или", "ใน": "в", "บน": "на", "ดู": "смотреть",
     "สอง": "два", "สาม": "три", "สี่": "четыре", "ห้า": "пять", "หก": "шесть",
@@ -1680,6 +1681,16 @@ def _parts_for_slots(
     с движком: «я из России» звучало ма-джак, а подпись к มาจาก пропадала.
     """
     unused = [dict(p) for p in parts if p.get("p") and (p.get("m") or "").strip()]
+    if len(unused) == len(slots) == len(phonetics):
+        out: list[dict[str, str]] = []
+        for th, ph, p in zip(slots, phonetics, unused):
+            m = str(p.get("m") or "").strip()
+            if not m or _is_weak_gloss(m):
+                m = _TEACH_GLOSS.get(th, m)
+            if m:
+                out.append({"p": _strip_arrows(ph), "m": m})
+        if len(out) == len(slots):
+            return out
     out: list[dict[str, str]] = []
     for th, ph in zip(slots, phonetics):
         key = _part_key(ph)
