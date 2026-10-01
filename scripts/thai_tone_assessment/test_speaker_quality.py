@@ -59,9 +59,35 @@ def _prod_like_four_years(**kwargs):
 def test_four_years_keeps_number_and_rule_tones():
     body, _ = _endpoint(_prod_like_four_years, "я живу тут 4 года")
     assert body["thai"] == "ฉันอยู่ที่นี่สี่ปีแล้ว ค่ะ", body
-    assert body["phonetic"] == "чан↗ йу↓ ти↘-ни↘ си↓ пи→ лэу↑ кха↘", body
+    assert body["phonetic"] == "чхан↗ ю↓ ти↘-ни↘ си↓ пи→ лэу↑ кха↘", body
     assert [p["m"] for p in body["parts"]] == ["я", "жить", "здесь", "четыре", "год", "уже", "вежливость (ж)"]
-    assert body["checks"] == {"numbers": True, "meaning": True, "tones": True, "gloss": True}
+    assert [p["p"] for p in body["parts"]] == ["чхан", "ю", "ти-ни", "си", "пи", "лэу", "кха"]
+    assert body["checks"] == {"numbers": True, "meaning": True, "tones": True, "letters": True, "gloss": True}
+
+
+def test_model_letters_are_never_shipped():
+    """Буквы прода с живого корпуса: «сорон» за สอง, «хай» за ห้า. Слова читает движок."""
+    seen = []
+
+    def garbage_letters(**kwargs):
+        tag = str(kwargs.get("tag") or "")
+        seen.append(tag)
+        if tag.endswith("translate"):
+            return {"thai": "ขอกาแฟสองแก้ว"}
+        if tag.endswith("judge"):
+            return {"ok": True, "missing": []}
+        if tag.endswith("meanings"):
+            return {"meanings": ["просить", "кофе", "два", "стакан"]}
+        if tag.endswith("phonetic"):
+            return {"phonetics": ["кхо↗", "ка-фэ", "сорон↗", "кэу↘"]}
+        if tag.endswith("gloss"):
+            return {"fixes": []}
+        return None
+
+    body, _ = _endpoint(garbage_letters, "два кофе пожалуйста", politeness="male")
+    assert body["phonetic"] == "кхо↗ ка→-фэ→ сонг↗ кэу↘ кхрап↑", body
+    assert body["checks"]["letters"] is True
+    assert not any(t.endswith("phonetic") for t in seen), "движок прочитал все слова — запрос букв лишний"
 
 
 def test_verified_answer_is_cached_and_reused():
@@ -123,7 +149,7 @@ def test_female_question_gets_kha_high():
     assert n == 0 and canon["thai"].endswith(" คะ") and canon["phonetic"].endswith("кха↑"), canon
 
 
-def test_unmatched_syllables_get_repaired_by_exact_syllables():
+def test_glued_model_syllables_do_not_matter():
     def glued(**kwargs):
         tag = str(kwargs.get("tag") or "")
         if tag.endswith("translate"):
@@ -141,7 +167,7 @@ def test_unmatched_syllables_get_repaired_by_exact_syllables():
         return None
 
     body, _ = _endpoint(glued, "я живу тут")
-    assert body["phonetic"] == "чан↗ ю↓ ти↘-ни↘ кха↘", body
+    assert body["phonetic"] == "чхан↗ ю↓ ти↘-ни↘ кха↘", body
     assert body["checks"]["tones"] is True
 
 
@@ -202,3 +228,20 @@ def test_retone_word_tolerates_arrow_inside_syllable():
     assert q.retone_word("อย่างไร", "я↘нг-рай→") == "янг↓-рай→"
     assert q.retone_word("ที่นี่", "ти↗ни↗") == "ти↘-ни↘"
     assert q.retone_word("ที่นี่", "тини↗") is None
+
+
+def test_final_reading_rewrites_model_spaces_from_slots():
+    """Прод резал อะไร пробелом — слотов меньше, чем чанков. Движок всё равно читает слово."""
+    ph, parts, tones_ok, letters_ok = api._final_reading(
+        "คุณชื่ออะไร คะ",
+        "кхун→ чыу↘ а↓ рай→ кха↑",
+        [{"p": "кхун", "m": "ты"}, {"p": "чыу", "m": "имя"}, {"p": "а", "m": "что"},
+         {"p": "рай", "m": "что"}, {"p": "кха", "m": "вежливость (ж)"}],
+    )
+    assert letters_ok and tones_ok
+    assert ph == "кхун→ чыу↘ а↓-рай→ кха↑", ph
+    assert [p["p"] for p in parts] == ["кхун", "чыу", "а-рай", "кха"]
+    assert q.engine_phonetic("รัสเซีย") == "рас↑-сиа→"
+    assert q.engine_phonetic("เงิน") == "нген→"
+    assert q.engine_phonetic("อยาก") == "яак↓"
+    assert q.engine_phonetic("เซเว่นอีเลฟเว่น") == "се→-вен↘-и→-леф→-вен↘"

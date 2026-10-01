@@ -10,6 +10,13 @@ WORKDIR /app
 COPY scripts/thai_tone_assessment/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Модель произношения w2p для букв Smart Speaker (thai_translit). Скачиваем при сборке:
+# в рантайме без неё буквы деградируют до чтения по написанию без скрытых гласных.
+RUN SSL_CERT_FILE="$(python -c 'import certifi; print(certifi.where())')" python -c "\
+from pythainlp.corpus import download; download('thai_w2p_npz'); \
+from pythainlp.transliterate import pronunciate; \
+assert pronunciate('โทรศัพท์', engine='w2p'), 'w2p failed'"
+
 COPY steps.json ./
 COPY scripts/thai_tone_assessment/ ./
 COPY scripts/thai_taika_phonetic.py ./thai_taika_phonetic.py

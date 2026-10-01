@@ -91,6 +91,34 @@ def retone_word(th: str, ph: str) -> str | None:
     return None
 
 
+def engine_phonetic(th: str) -> str | None:
+    """
+    Звучание слова целиком без модели: буквы — thai_translit (w2p + правила письма),
+    стрелка — по переписанному слогу (โทรศัพท์ → โท-ระ-สับ → то→-ра↗-сап↓).
+    None — движок слово не прочитал, решать будет вызывающий.
+    """
+    eng = tone_engine()
+    if not eng or not th:
+        return None
+    try:
+        import thai_translit  # noqa: PLC0415
+
+        reading = thai_translit.word_reading(th.strip())
+    except Exception as e:  # noqa: BLE001
+        print(f"[speaker_quality] translit failed for {th!r}: {e}", file=sys.stderr, flush=True)
+        return None
+    if not reading:
+        return None
+    letters, sources = reading
+    try:
+        arrows = [eng.tone_arrow(s.replace("\u0e3a", "")) for s in sources]
+    except Exception:  # noqa: BLE001
+        return None
+    if len(arrows) != len(letters) or not all(arrows):
+        return None
+    return "-".join(lt + a for lt, a in zip(letters, arrows))
+
+
 def retone_line(thai: str, phonetic: str) -> str | None:
     """Целая строка (канон, курс, кэш): стрелки по написанию, если слоги сходятся 1:1."""
     eng = tone_engine()

@@ -314,14 +314,17 @@ def test_gives_up_instead_of_returning_broken():
     assert _run(None, None, None) is None
 
 
-def test_rejects_russian_spellout():
+def test_russian_spellout_never_reaches_user():
     # Модель иногда «транскрибирует» сам русский ввод вместо тайского произношения.
+    # Буквы теперь читает движок по тайскому слову — русская транскрипция до выдачи не доходит.
     ru = "твоя персона"
     bad = {"words": [
         {"th": "คุณ", "ph": "тво↗-я→", "m": "твоя"},
         {"th": "คน", "ph": "пер↘-со-на→", "m": "персона"},
     ]}
-    assert _run(None, bad, bad, ru=ru) is None
+    built = _run(None, bad, bad, ru=ru)
+    assert built is not None
+    assert built[1] == "кхун→ кхон→", built
 
 
 def test_dropped_rain_noun_is_not_shipped():
@@ -418,7 +421,9 @@ def test_endpoint_alignment_survives_cache_roundtrip():
     # Вопрос: у женщины คะ (высокий тон), не ค่ะ.
     for politeness, particle, gloss in (("male", "ครับ", "вежливость (м)"), ("female", "คะ", "вежливость (ж)")):
         fresh, cached, n_first, n_total = _endpoint_case(politeness)
-        assert fresh["checks"] == {"numbers": True, "meaning": True, "tones": True, "gloss": True}, fresh
+        assert fresh["checks"] == {
+            "numbers": True, "meaning": True, "tones": True, "letters": True, "gloss": True,
+        }, fresh
         assert fresh == cached, f"{politeness}: кэш изменил ответ\n{fresh}\n{cached}"
         assert n_first >= 1, f"{politeness}: живой путь не вызывал модель"
         assert n_total == n_first, f"{politeness}: второй запрос не попал в кэш"
@@ -888,7 +893,7 @@ def test_hungry_words_path_glues_broken_hiv():
     thai, phonetic, parts = built
     assert "ฉัน" in thai and "หิว" in thai
     groups = api._phonetic_word_groups(phonetic)
-    assert groups == ["чан", "хиу"], (phonetic, groups)
+    assert groups == ["чхан", "хиу"], (phonetic, groups)
     assert [p["m"] for p in parts] == ["я", "голоден"]
     assert _parts_match_phonetic(phonetic, parts)
 

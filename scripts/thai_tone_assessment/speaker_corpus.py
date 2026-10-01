@@ -70,6 +70,8 @@ CORPUS: list[tuple[str, str, str]] = [
     ("long", "я приехал в Таиланд в отпуск со своей семьёй на две недели", "male"),
     ("long", "извините, вы не подскажете, как дойти до рынка", "female"),
     ("long", "мне нужно поменять деньги, где здесь обменник", "female"),
+    ("names", "меня зовут Анна, я из России", "female"),
+    ("names", "скидка 10 процентов в 7-Eleven", "male"),
 ]
 
 
@@ -91,9 +93,18 @@ def check(ru: str, politeness: str, resp: dict) -> dict:
         out["numbers"] = nums
     import api  # noqa: PLC0415 — пословная сверка та же, что на сервере
 
-    expected, verifiable = api._final_tones(thai, ph)
+    expected, _, verifiable, engine_read = api._final_reading(thai, ph)
     got = _arrows(ph)
     out["syllables_total"] = len(got)
+    got_letters = [api._strip_arrows(s) for s in q.syllable_chunks(ph)]
+    want_letters = [api._strip_arrows(s) for s in q.syllable_chunks(expected)]
+    letter_bad = sum(1 for a, b in zip(got_letters, want_letters) if a != b) + abs(
+        len(got_letters) - len(want_letters)
+    )
+    out["letter_errors"] = letter_bad
+    if letter_bad or not engine_read:
+        out["issues"].append("letters")
+        out["letters_expected"] = expected
     if not verifiable:
         out["issues"].append("syllables")
         out["tone_unverifiable"] = True
@@ -135,11 +146,12 @@ def _call(url: str, ru: str, politeness: str) -> dict:
 def summarize(rows: list[dict]) -> dict:
     n = len(rows)
     by_issue: dict[str, int] = {}
-    tone_err = syl_total = 0
+    tone_err = syl_total = letter_err = 0
     for r in rows:
         for i in r["check"]["issues"]:
             by_issue[i] = by_issue.get(i, 0) + 1
         tone_err += r["check"].get("tone_errors", 0)
+        letter_err += r["check"].get("letter_errors", 0)
         syl_total += r["check"].get("syllables_total", 0)
     clean = sum(1 for r in rows if not r["check"]["issues"])
     return {
@@ -147,6 +159,7 @@ def summarize(rows: list[dict]) -> dict:
         "clean_phrases": clean,
         "issues": dict(sorted(by_issue.items())),
         "tone_errors_syllables": f"{tone_err}/{syl_total}",
+        "letter_diff_vs_engine_syllables": f"{letter_err}/{syl_total}",
     }
 
 
@@ -175,6 +188,8 @@ def main() -> int:
         print(f"[{issues:>22}] {r['ru']!r} → {resp.get('thai')!r} | {resp.get('phonetic')!r}")
         if r["check"].get("tone_expected"):
             print(f"{'':>25}rule: {r['check']['tone_expected']!r}")
+        if r["check"].get("letters_expected"):
+            print(f"{'':>25}engine: {r['check']['letters_expected']!r}")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     if not args.report:
         out = Path(args.out or f"speaker_corpus_{time.strftime('%Y%m%d-%H%M%S')}.json")

@@ -773,7 +773,7 @@ class SemanticCoachResp(BaseModel):
 # из-за рассинхрона чанков. Старые v12 с пустым parts или «чужим» gloss не годятся.
 # v14: модель отдаёт одно поле за вызов (тайский / смысл / звучание).
 # Местоимение я = ผม/ฉัน по politeness, как частица ครับ/ค่ะ. Старые v13 с чужим ฉัน у male не годятся.
-_SMART_CACHE_PROMPT_VERSION = "v15"
+_SMART_CACHE_PROMPT_VERSION = "v16"
 
 
 def _cache_db_path() -> Path:
@@ -1586,39 +1586,79 @@ def _append_politeness(thai: str, phonetic: str, politeness: str, ru_raw: str = 
     return (thai + " " + th_p).strip(), (phonetic + " " + ph_p).strip()
 
 
-def _final_tones(thai: str, phonetic: str) -> tuple[str, bool]:
-    """
-    Последний рубеж для любого источника (живой ввод, канон, курс, кэш): стрелка каждого
-    слога — по написанию. Сначала пословно (границы слов те же, что у нарезки урока),
-    иначе по всей строке. Второе значение — удалось ли проверить каждый слог.
-    """
-    groups = (phonetic or "").split()
-    if not thai or not groups:
-        return phonetic, False
+def _final_slots(thai: str) -> list[str]:
     trail = _THAI_POLITENESS_TRAIL_RE.search(thai)
     bare = thai[: trail.start()] if trail else thai
     slots = _thai_lesson_slots(bare) if _tokenizer_is_live() else []
     if trail:
         slots.append(trail.group(1))
-    slots = _repeat_mark_sources(slots)
-    if slots and len(slots) == len(groups):
-        toned = [speaker_quality.retone_word(th, ph) for th, ph in zip(slots, groups)]
-        if all(toned):
-            return " ".join(toned), True  # type: ignore[arg-type]
-        # Слова совпали, а слоги внутри какого-то нет — построчная сверка здесь
-        # сдвинула бы стрелки на соседние слова, поэтому честно отдаём «не проверено».
-        return " ".join(t or g for t, g in zip(toned, groups)), False
+    return _repeat_mark_sources(slots)
+
+
+def _final_reading(
+    thai: str,
+    phonetic: str,
+    parts: list[dict[str, str]] | None = None,
+) -> tuple[str, list[dict[str, str]], bool, bool]:
+    """
+    Последний рубеж для любого источника (живой ввод, канон, курс, кэш).
+    Буквы и стрелки каждого слова — из тайского написания (speaker_quality.engine_phonetic),
+    а не от модели: на живом корпусе модель писала «сорон» вместо «сонг» и «будетестьне».
+    Слово, которое движок не прочитал, оставляем со своими буквами и стрелками по написанию.
+    Разбор `parts` пересобирается под новые буквы, если он шёл слово в слово.
+    Возвращает (фонетика, parts, тоны проверены, буквы все от движка).
+    """
+    parts = list(parts or [])
+    groups = (phonetic or "").split()
+    if not thai or not groups:
+        return phonetic, parts, False, False
+    slots = _final_slots(thai)
+    if slots:
+        # Слоты словаря — источник истины. Модель могла разрезать อะไร пробелом
+        # (а↓ рай→), и тогда сравнение «слотов == чанков» молча оставляло её буквы.
+        leftover = list(groups)
+        out: list[str] = []
+        tones_ok = letters_ok = True
+        for th in slots:
+            eng = speaker_quality.engine_phonetic(th)
+            if eng:
+                out.append(eng)
+                continue
+            letters_ok = False
+            ph = leftover.pop(0) if leftover else ""
+            toned = speaker_quality.retone_word(th, ph) if ph else None
+            tones_ok = tones_ok and bool(toned)
+            out.append(toned or ph)
+        phonetic = " ".join(t for t in out if t)
+        if len(parts) == len(out):
+            parts = [dict(p, p=_strip_arrows(g)) for p, g in zip(parts, out)]
+        elif parts:
+            parts = _align_parts_to_phonetic(parts, phonetic)
+        return phonetic, parts, tones_ok, letters_ok
     line = speaker_quality.retone_line(thai, phonetic)
     if line:
-        return line, True
-    return phonetic, False
+        return line, parts, True, False
+    return phonetic, parts, False, False
 
 
-def _quality_checks(ru: str, thai: str, phonetic: str, parts: list[dict[str, str]], tones_ok: bool) -> dict[str, bool]:
+def _final_tones(thai: str, phonetic: str) -> tuple[str, bool]:
+    ph, _, tones_ok, _ = _final_reading(thai, phonetic)
+    return ph, tones_ok
+
+
+def _quality_checks(
+    ru: str,
+    thai: str,
+    phonetic: str,
+    parts: list[dict[str, str]],
+    tones_ok: bool,
+    letters_ok: bool = True,
+) -> dict[str, bool]:
     return {
         "numbers": not speaker_quality.number_problems(ru, thai),
         "meaning": not _dropped_content_problems(ru, thai),
         "tones": tones_ok,
+        "letters": letters_ok,
         "gloss": bool(parts)
         and _parts_match_phonetic(phonetic, parts)
         and all((p.get("m") or "").strip() for p in parts),
@@ -1639,8 +1679,8 @@ def _finish(
     раньше один неудачный ответ модели навсегда закреплялся за фразой.
     `checks` — честный статус для клиента: что гарантировано, а что нет.
     """
-    phonetic, tones_ok = _final_tones(thai, phonetic)
-    checks = _quality_checks(ru, thai, phonetic, parts, tones_ok)
+    phonetic, parts, tones_ok, letters_ok = _final_reading(thai, phonetic, parts)
+    checks = _quality_checks(ru, thai, phonetic, parts, tones_ok, letters_ok)
     if all(checks.values()):
         _cache_set(cache_ru, politeness, thai, phonetic, parts)
     else:
@@ -1833,8 +1873,12 @@ def _llm_fill_slots(
         tag="smart_speaker.slots.meanings",
     )
     meanings = _slot_strings(data, n, "meanings", "m") or []
+    engine = [speaker_quality.engine_phonetic(th) for th in _repeat_mark_sources(slots)]
     phonetics = _slot_strings(data, n, "phonetics", "ph") or []
-    if len(phonetics) < n or not all(p.strip() for p in phonetics):
+    if all(engine):
+        # Буквы модели больше не нужны: каждое слово прочитал движок, лишний запрос — лишние секунды.
+        phonetics = list(engine)  # type: ignore[arg-type]
+    elif len(phonetics) < n or not all(p.strip() for p in phonetics):
         t_ph = max(2.5, min(5.0, timeout - t_meanings if timeout > t_meanings else timeout * 0.5))
         syllabled = "\n".join(
             f"{i + 1}. {th} (syllables: {' | '.join(_slot_syllables(th))})"
@@ -1853,10 +1897,11 @@ def _llm_fill_slots(
             tag="smart_speaker.slots.phonetic",
         )
         phonetics = _slot_strings(data_ph, n, "phonetics", "ph") or []
-    while len(meanings) < n:
-        meanings.append("")
     while len(phonetics) < n:
         phonetics.append("")
+    phonetics = [eng or ph for eng, ph in zip(engine, phonetics)]
+    while len(meanings) < n:
+        meanings.append("")
     return [{"ph": phonetics[i], "m": meanings[i]} for i in range(n)]
 
 
@@ -1925,9 +1970,10 @@ def _repeat_mark_sources(slots: list[str]) -> list[str]:
 
 def _retone_words(words: list[dict[str, str]]) -> tuple[list[dict[str, str]], list[int]]:
     """
-    Стрелки модели не принимаем на веру: на живом корпусе они расходились с тайским
-    написанием в 64% слогов. Тон каждого слога ставит правило (класс согласной,
-    живой/мёртвый слог, тоновая метка) — тем же движком выверены карточки курса.
+    Ни буквам, ни стрелкам модели не верим: стрелки расходились с тайским написанием
+    в 64% слогов, буквы бывали чужими словами. Слово читает движок (буквы + тон по
+    переписанному слогу); буквы модели остаются только там, где движок не справился,
+    и тогда тон ставит правило по написанию.
     Возвращает слова и индексы тех, чьи слоги не сопоставились 1:1.
     """
     out: list[dict[str, str]] = []
@@ -1936,7 +1982,9 @@ def _retone_words(words: list[dict[str, str]]) -> tuple[list[dict[str, str]], li
     for i, w in enumerate(words):
         item = dict(w)
         th, ph = sources[i], item.get("ph") or ""
-        toned = speaker_quality.retone_word(th, ph) if th and ph else None
+        toned = speaker_quality.engine_phonetic(th) if th else None
+        if not toned and th and ph:
+            toned = speaker_quality.retone_word(th, ph)
         if toned:
             item["ph"] = toned
             item["tone_ok"] = "1"
@@ -2477,8 +2525,8 @@ async def smart_speaker(req: SmartSpeakerReq):
         thai, phonetic, parts = cached
         canonical = _normalize_phonetic_line(phonetic)
         if _parts_match_phonetic(canonical, parts):
-            canonical, tones_ok = _final_tones(thai, canonical)
-            checks = _quality_checks(ru, thai, canonical, parts, tones_ok)
+            canonical, parts, tones_ok, letters_ok = _final_reading(thai, canonical, parts)
+            checks = _quality_checks(ru, thai, canonical, parts, tones_ok, letters_ok)
             return {"thai": thai, "phonetic": canonical, "parts": parts, "checks": checks}
         phonetic = _normalize_phonetic(phonetic)
         phonetic = _sanitize_phonetic_not_russian_spellout(ru, thai, phonetic)
@@ -2847,9 +2895,17 @@ async def health():
         gift = gift_health()
     except Exception as e:  # noqa: BLE001
         gift = {"error": str(e)}
+    try:
+        import thai_translit
+
+        translit_w2p = thai_translit._w2p() is not None
+    except Exception:  # noqa: BLE001
+        translit_w2p = False
     return {
         "status": "ok",
         "steps_json": steps_ok,
+        "translit_w2p": translit_w2p,
+        "smart_cache": _SMART_CACHE_PROMPT_VERSION,
         "openai_configured": bool(OPENAI_API_KEY),
         "model": OPENAI_MODEL,
         "translate_model": OPENAI_TRANSLATE_MODEL,
