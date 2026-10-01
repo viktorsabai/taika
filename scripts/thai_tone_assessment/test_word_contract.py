@@ -308,10 +308,10 @@ def test_repair_pass_recovers_bad_first_answer():
 
 
 def test_gives_up_instead_of_returning_broken():
-    # Дважды брак → None, вызывающий уходит на legacy-путь. Обрезанный разбор не отдаём.
-    bad = {"words": [{"th": "คุณ", "ph": "", "m": ""}]}
-    assert _run(None, bad, bad) is None
+    # Пустой тайский — урок собирать не из чего. Слово из словаря (คุณ) больше не
+    # считается браком: буквы и подпись «вы» ставит сервер, даже если модель молчит.
     assert _run(None, None, None) is None
+    assert api._teach_from_thai("привет", "", "male") is None
 
 
 def test_russian_spellout_never_reaches_user():
@@ -490,7 +490,10 @@ def test_endpoint_ships_phrase_without_broken_gloss():
         ).json()
         assert out["thai"], "перевод обязан доехать даже без разбора"
         assert out["phonetic"], "фонетика обязана доехать даже без разбора"
-        assert out["parts"] == [], out["parts"]
+        # Служебные слова подписывает лексикон (คุณ/ไหม/ครับ). Существительное без
+        # модели может остаться без строки — это не повод обнулять весь разбор.
+        assert all((p.get("m") or "").strip() for p in out["parts"])
+        assert not any(p.get("m") == "как у вас дела" for p in out["parts"])
     finally:
         (
             api.OPENAI_API_KEY,
@@ -796,6 +799,28 @@ def test_free_combinations_are_split():
         raise ImportError("PyThaiNLP dictionary unavailable")
     for th in ["ผู้หญิงสวย", "ร้อนมาก", "อาหารอร่อย"]:
         assert _segmentation_problems([{"th": th, "ph": "х→", "m": "значение"}]) != [], th
+
+
+def test_teaching_slots_split_glued_dictionary_tokens():
+    """newmm склеивает น้ำหนึ่ง/มาจาก — урок обязан показать оба слова."""
+    if not _tokenizer_ready():
+        raise ImportError("PyThaiNLP dictionary unavailable")
+    assert api._thai_lesson_slots("ผมมาจากรัสเซีย") == ["ผม", "มา", "จาก", "รัสเซีย"]
+    assert api._thai_lesson_slots("ขอกาแฟสองแก้วกับน้ำหนึ่งขวด") == [
+        "ขอ", "กาแฟ", "สอง", "แก้ว", "กับ", "น้ำ", "หนึ่ง", "ขวด",
+    ]
+    assert api._thai_lesson_slots("ผมมีลูกสามคน") == ["ผม", "มี", "ลูก", "สาม", "คน"]
+    assert "บอก" in api._thai_lesson_slots("ช่วยบอกทางไปตลาด") and "ทาง" in api._thai_lesson_slots(
+        "ช่วยบอกทางไปตลาด"
+    )
+
+
+def test_teaching_slots_keep_real_compounds():
+    if not _tokenizer_ready():
+        raise ImportError("PyThaiNLP dictionary unavailable")
+    assert api._thai_lesson_slots("ห้องน้ำอยู่ที่ไหน") == ["ห้องน้ำ", "อยู่", "ที่ไหน"]
+    for th in ("น้ำแข็ง", "สบายดี", "ขอบคุณ", "สนามบิน", "ปวดหัว", "เข้าใจ"):
+        assert api._teaching_split(th) == (th,)
 
 
 def test_missing_tokenizer_does_not_block_translation():

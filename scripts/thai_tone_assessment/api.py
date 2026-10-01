@@ -773,7 +773,8 @@ class SemanticCoachResp(BaseModel):
 # из-за рассинхрона чанков. Старые v12 с пустым parts или «чужим» gloss не годятся.
 # v14: модель отдаёт одно поле за вызов (тайский / смысл / звучание).
 # Местоимение я = ผม/ฉัน по politeness, как частица ครับ/ค่ะ. Старые v13 с чужим ฉัน у male не годятся.
-_SMART_CACHE_PROMPT_VERSION = "v16"
+# v17: разбор по слотам урока, не по склейкам newmm (น้ำหนึ่ง, มาจาก) и не теряем подпись.
+_SMART_CACHE_PROMPT_VERSION = "v17"
 
 
 def _cache_db_path() -> Path:
@@ -1488,10 +1489,82 @@ def _thai_lesson_slots(thai: str) -> list[str]:
         piece = "".join(_THAI_SCRIPT_RE.findall(t))
         if not piece or _THAI_POLITENESS_TRAIL_RE.fullmatch(piece):
             continue
-        out.append(piece)
-        if len(out) >= MAX_WORDS:
-            break
+        for part in _teaching_split(piece):
+            if not part or _THAI_POLITENESS_TRAIL_RE.fullmatch(part):
+                continue
+            out.append(part)
+            if len(out) >= MAX_WORDS:
+                return out
     return out
+
+
+# Сращения, которые ученик учит одним словом. newmm их и так держит целиком —
+# список нужен, чтобы второй проход не разрезал น้ำแข็ง из‑за головы «น้ำ».
+_KEEP_COMPOUNDS = frozenset({
+    "ห้องน้ำ", "น้ำแข็ง", "น้ำเปล่า", "น้ำชา", "น้ำร้อน", "น้ำผลไม้", "น้ำอัดลม",
+    "น้ำส้ม", "น้ำปลา", "สบายดี", "ขอบคุณ", "ที่นี่", "ที่ไหน", "อันนี้",
+    "สนามบิน", "ครอบครัว", "โรงพยาบาล", "โรงแรม", "รู้สึก", "เท่าไหร่", "เท่าไร",
+    "กาแฟ", "อย่างไร", "ยังไง", "ทำไม", "เมื่อไหร่", "เปอร์เซ็นต์", "เซเว่น",
+    "อีเลฟเว่น", "เซเว่นอีเลฟเว่น", "รัสเซีย", "ส่วนลด", "ปวดหัว", "เข้าใจ",
+    "วันเกิด", "โทรศัพท์", "สวัสดี", "ขอโทษ", "พวกเรา", "ที่สุด", "ใกล้",
+    "ภาษาไทย", "ภาษาอังกฤษ",
+})
+# Короткое слово, к которому newmm часто приклеивает следующее: มาจาก, มีลูก, น้ำหนึ่ง.
+_GLUE_HEADS = frozenset({
+    "มา", "มี", "ไป", "ให้", "ได้", "ไม่", "ที่", "เป็น", "น้ำ", "บอก", "ขอ", "ของ",
+    "จะ", "อยู่", "กิน", "ดู", "ทำ", "พูด", "อยาก", "ต้อง", "นะ", "และ", "แต่",
+    "หรือ", "ใน", "บน", "กับ", "คน", "แล้ว", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า",
+    "หก", "เจ็ด", "แปด", "เก้า", "สิบ", "ยี่", "ร้อย", "พัน", "ผม", "ฉัน",
+})
+# Подпись, если модель промолчала. Только служебные и счёт — существительные пишет модель.
+_TEACH_GLOSS = {
+    "มา": "прийти", "จาก": "из", "มี": "есть", "น้ำ": "вода", "หนึ่ง": "один",
+    "ที่": "в", "บอก": "сказать", "ทาง": "путь", "กับ": "с", "คน": "человек",
+    "ปี": "год", "วัน": "день", "จะ": "будет", "ไม่": "не", "ได้": "мочь",
+    "ไหม": "вопрос", "ของ": "у", "อยู่": "находиться", "กิน": "есть",
+    "แล้ว": "уже", "นะ": "частица", "ไป": "идти", "ให้": "дать", "เป็น": "являться",
+    "ทำ": "делать", "พูด": "говорить", "อยาก": "хотеть", "ต้อง": "нужно",
+    "และ": "и", "แต่": "но", "หรือ": "или", "ใน": "в", "บน": "на", "ดู": "смотреть",
+    "สอง": "два", "สาม": "три", "สี่": "четыре", "ห้า": "пять", "หก": "шесть",
+    "เจ็ด": "семь", "แปด": "восемь", "เก้า": "девять", "สิบ": "десять", "ยี่": "двадцать",
+    "ร้อย": "сто", "พัน": "тысяча", "ผม": "я", "ฉัน": "я", "คุณ": "вы", "ค่ะ": "вежливость (ж)",
+    "คะ": "вежливость (ж)", "ครับ": "вежливость (м)",
+}
+
+
+@functools.lru_cache(maxsize=1)
+def _dict_words() -> frozenset[str]:
+    try:
+        from pythainlp.corpus import thai_words  # noqa: PLC0415
+
+        return frozenset(thai_words())
+    except Exception:  # noqa: BLE001
+        return frozenset()
+
+
+def _is_teaching_word(s: str) -> bool:
+    return bool(s) and (s in _KEEP_COMPOUNDS or s in _GLUE_HEADS or s in _dict_words())
+
+
+def _teaching_split(token: str) -> tuple[str, ...]:
+    """
+    newmm держит «น้ำหนึ่ง» и «มาจาก» одним токеном — для словаря это ок, для урока нет:
+    ученик не увидит «вода» и «один» по отдельности. Режем только если голова из
+    коротких склеек, а хвост сам слово. น้ำแข็ง / ห้องน้ำ не трогаем.
+    """
+    t = (token or "").strip()
+    if not t or t in _KEEP_COMPOUNDS or len(t) < 4:
+        return (t,) if t else ()
+    n = len(t)
+    for i in range(2, n - 1):
+        a, b = t[:i], t[i:]
+        if a not in _GLUE_HEADS:
+            continue
+        rest = _teaching_split(b)
+        if rest == (b,) and not _is_teaching_word(b):
+            continue
+        return (a,) + rest
+    return (t,)
 
 
 def _apply_slots(slots: list[str], filled: list[Any]) -> list[dict[str, str]]:
@@ -1502,6 +1575,8 @@ def _apply_slots(slots: list[str], filled: list[Any]) -> list[dict[str, str]]:
         ph = _normalize_phonetic_token(str(item.get("ph") or ""))
         m = _strip_thai_from_explanation(str(item.get("m") or ""))
         m = re.sub(r"\s+", " ", m).strip()
+        if not m:
+            m = _TEACH_GLOSS.get(th, "")
         out.append({"th": th, "ph": ph, "m": m})
     return out
 
@@ -1595,6 +1670,53 @@ def _final_slots(thai: str) -> list[str]:
     return _repeat_mark_sources(slots)
 
 
+def _parts_for_slots(
+    slots: list[str],
+    phonetics: list[str],
+    parts: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    """
+    Один gloss на каждый слот. Не выкидываем слово, если буквы модели не совпали
+    с движком: «я из России» звучало ма-джак, а подпись к มาจาก пропадала.
+    """
+    unused = [dict(p) for p in parts if p.get("p") and (p.get("m") or "").strip()]
+    out: list[dict[str, str]] = []
+    for th, ph in zip(slots, phonetics):
+        key = _part_key(ph)
+        m = ""
+        idx = next((i for i, it in enumerate(unused) if _part_key(it.get("p", "")) == key), None)
+        if idx is None:
+            # ма + джак → ма-джак после склейки слогов внутри слова.
+            acc = ""
+            take: list[int] = []
+            for i, it in enumerate(unused):
+                k = _part_key(it.get("p", ""))
+                if not k:
+                    continue
+                nxt = acc + k
+                if key.startswith(nxt):
+                    acc = nxt
+                    take.append(i)
+                    if acc == key:
+                        break
+                elif acc:
+                    break
+            if acc == key and take:
+                m = next(
+                    (str(unused[i].get("m") or "").strip() for i in take if str(unused[i].get("m") or "").strip()),
+                    "",
+                )
+                for i in reversed(take):
+                    unused.pop(i)
+        else:
+            m = str(unused.pop(idx).get("m") or "").strip()
+        if not m or _is_weak_gloss(m):
+            m = _TEACH_GLOSS.get(th, m)
+        if m:
+            out.append({"p": _strip_arrows(ph), "m": m})
+    return out
+
+
 def _final_reading(
     thai: str,
     phonetic: str,
@@ -1605,7 +1727,8 @@ def _final_reading(
     Буквы и стрелки каждого слова — из тайского написания (speaker_quality.engine_phonetic),
     а не от модели: на живом корпусе модель писала «сорон» вместо «сонг» и «будетестьне».
     Слово, которое движок не прочитал, оставляем со своими буквами и стрелками по написанию.
-    Разбор `parts` пересобирается под новые буквы, если он шёл слово в слово.
+    Разбор `parts` пересобирается под слоты: одно слово — одна подпись, даже если
+    буквы модели не совпали с движком.
     Возвращает (фонетика, parts, тоны проверены, буквы все от движка).
     """
     parts = list(parts or [])
@@ -1614,8 +1737,6 @@ def _final_reading(
         return phonetic, parts, False, False
     slots = _final_slots(thai)
     if slots:
-        # Слоты словаря — источник истины. Модель могла разрезать อะไร пробелом
-        # (а↓ рай→), и тогда сравнение «слотов == чанков» молча оставляло её буквы.
         leftover = list(groups)
         out: list[str] = []
         tones_ok = letters_ok = True
@@ -1630,10 +1751,7 @@ def _final_reading(
             tones_ok = tones_ok and bool(toned)
             out.append(toned or ph)
         phonetic = " ".join(t for t in out if t)
-        if len(parts) == len(out):
-            parts = [dict(p, p=_strip_arrows(g)) for p, g in zip(parts, out)]
-        elif parts:
-            parts = _align_parts_to_phonetic(parts, phonetic)
+        parts = _parts_for_slots(slots, out, parts)
         return phonetic, parts, tones_ok, letters_ok
     line = speaker_quality.retone_line(thai, phonetic)
     if line:

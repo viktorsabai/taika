@@ -245,3 +245,30 @@ def test_final_reading_rewrites_model_spaces_from_slots():
     assert q.engine_phonetic("เงิน") == "нген→"
     assert q.engine_phonetic("อยาก") == "яак↓"
     assert q.engine_phonetic("เซเว่นอีเลฟเว่น") == "се→-вен↘-и→-леф→-вен↘"
+
+
+def test_russia_keeps_come_from_gloss_and_splits_makjak():
+    """Прод: มาจาก звучало, в разборе не было. Словарь урока режет มา + จาก."""
+    ph, parts, tones_ok, letters_ok = api._final_reading(
+        "ผมมาจากรัสเซีย ครับ",
+        "пхом↗ маа→ джак↓ рас↑ сиа→ кхрап↑",
+        [{"p": "пхом", "m": "я"}, {"p": "рас-сиа", "m": "Россия"}, {"p": "кхрап", "m": "вежливость (м)"}],
+    )
+    assert tones_ok and letters_ok
+    assert ph == "пхом↗ ма→ джак↓ рас↑-сиа→ кхрап↑", ph
+    assert [p["p"] for p in parts] == ["пхом", "ма", "джак", "рас-сиа", "кхрап"]
+    assert [p["m"] for p in parts] == ["я", "прийти", "из", "Россия", "вежливость (м)"]
+
+
+def test_water_one_is_two_lesson_words():
+    ph, parts, _, letters_ok = api._final_reading(
+        "ขอกาแฟสองแก้วกับน้ำหนึ่งขวด ครับ",
+        "кхо↗ ка→-фэ→ сонг↗ кэу↘ кап↓ нам↑-нынг↓ кхуат↓ кхрап↑",
+        [],
+    )
+    assert letters_ok
+    assert "нам↑ нынг↓" in ph
+    assert [p["p"] for p in parts].count("нам") == 1
+    assert "нынг" in [p["p"] for p in parts]
+    assert {p["p"]: p["m"] for p in parts}["нам"] == "вода"
+    assert {p["p"]: p["m"] for p in parts}["нынг"] == "один"
