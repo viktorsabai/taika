@@ -2309,26 +2309,43 @@ public struct SpeakerDSRoot: View {
 
     /// Разбор не приехал: голос Тайки, не системная ошибка.
     /// После пары попыток — не долбим той же кнопкой, ведём к звучанию.
-    @ViewBuilder private var conversationGlossFailedSection: some View {
-        let tired = (external?.phrasePartsFailCount ?? 0) >= 2
-        VStack(alignment: .leading, spacing: 10) {
-            Text(tired
-                 ? "сейчас не выходит — учи по звучанию, разбор поймаю чуть позже"
-                 : "ой, слова не сложились")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
-                .fixedSize(horizontal: false, vertical: true)
+    private var conversationGlossRetryTired: Bool {
+        (external?.phrasePartsFailCount ?? 0) >= 2
+    }
 
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                external?.onRetryPhraseParts()
-            } label: {
-                Text(tired ? "попробую ещё" : "давай ещё раз")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(PD.ColorToken.textPrimary.opacity(tired ? 0.55 : 0.88))
+    @ViewBuilder private var conversationGlossFailedSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if conversationGlossRetryTired {
+                Text("сейчас не выходит — учи по звучанию, разбор поймаю чуть позже")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
+                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    external?.onRetryPhraseParts()
+                } label: {
+                    Text("попробую ещё")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(PD.ColorToken.textPrimary.opacity(0.55))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Попробовать собрать разбор ещё раз")
+            } else {
+                Text("ой, слова не сложились")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
+                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    external?.onRetryPhraseParts()
+                } label: {
+                    Text("давай ещё раз")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(PD.ColorToken.textPrimary.opacity(0.88))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Давай ещё раз")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(tired ? "Попробовать собрать разбор ещё раз" : "Давай ещё раз")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)

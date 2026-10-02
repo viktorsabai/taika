@@ -731,7 +731,6 @@ private struct ShellHeaderHost: View {
                     nav.popToRoot()
                     selectedTab = 2
                 }
-                syncTabAtmosphere(2)
             },
             onTapFavoritesGamePark: {
                 GameParkHubState.shared.preselect("__favorites__")
