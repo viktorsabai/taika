@@ -1804,9 +1804,9 @@ struct FDFavDictionaryTabList: View {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 #endif
         SpeakerManager.shared.setSpeakerUIMode(.training)
+        ThemeManager.shared.hubAtmosphere = .favorites
         SpeakerRequestedCourseId.shared.set("__dictionary__")
         DictionarySessionSelection.shared.activate(nil)
-        SpeakerManager.shared.startSpecialTraining(poolId: "__dictionary__")
         if nav.path.isEmpty {
             SpeakerReturnContext.shared.saveFromRootTab(3)
         } else {

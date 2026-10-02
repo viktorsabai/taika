@@ -2031,8 +2031,8 @@ public struct TaikaAssistantHub<ChipZone: View>: View {
         self.hero = { AnyView(hero()) }
         self.chipZone = chipZone
         self.ghostSlot = { AnyView(ghostSlot()) }
-        // Без gate — сразу UI; с gate — ждём сборку сферы, кроме холодного старта после сплэша.
-        _showDock = State(initialValue: assembleGateKey == nil || TaikaCatalogBoot.isReady)
+        // Gate: chrome waits for sphere assemble — never flash typewriter first.
+        _showDock = State(initialValue: assembleGateKey == nil)
     }
 
     private var screenLayout: TaikaAssistantLayout { .embedded }
@@ -2121,10 +2121,11 @@ public struct TaikaAssistantHub<ChipZone: View>: View {
             .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
         }
         .onAppear {
-            if assembleGateKey == nil || TaikaCatalogBoot.isReady {
+            if assembleGateKey == nil {
                 assembleCoordinator.skipToComplete()
                 showDock = true
-            } else if !assembleCoordinator.isComplete {
+            } else {
+                // Sphere owns begin/complete; don't pre-skip or dock flashes then hides.
                 showDock = false
             }
         }
@@ -2544,7 +2545,8 @@ public struct TaikaAssistantScreen<Footer: View>: View {
         self.assembleGateKey = assembleGateKey
         self.hero = { AnyView(hero()) }
         self.footer = footer
-        let instant = assembleGateKey == nil || TaikaCatalogBoot.isReady
+        // With a gate, never show typewriter before sphere finishes — avoids text→vanish→assemble flash.
+        let instant = assembleGateKey == nil
         _showTypewriter = State(initialValue: instant)
         _showFooter = State(initialValue: instant)
     }
@@ -2552,6 +2554,9 @@ public struct TaikaAssistantScreen<Footer: View>: View {
     public var body: some View {
         VStack(spacing: 18) {
             if layout == .fullscreen { Spacer(minLength: 0) }
+
+            // Sphere first, then typewriter (matches assemble ritual).
+            hero()
 
             if !lines.isEmpty {
                 ZStack {
@@ -2572,8 +2577,6 @@ public struct TaikaAssistantScreen<Footer: View>: View {
                 .animation(.easeOut(duration: 0.32), value: showTypewriter)
             }
 
-            hero()
-
             footer()
                 .opacity(showFooter ? 1 : 0)
                 .offset(y: showFooter ? 0 : 8)
@@ -2585,11 +2588,11 @@ public struct TaikaAssistantScreen<Footer: View>: View {
         .padding(.horizontal, Theme.Layout.pageHorizontal)
         .frame(maxWidth: .infinity, maxHeight: layout == .fullscreen ? .infinity : nil)
         .onAppear {
-            if assembleGateKey == nil || TaikaCatalogBoot.isReady {
+            if assembleGateKey == nil {
                 assembleCoordinator.skipToComplete()
                 showTypewriter = true
                 showFooter = true
-            } else if !assembleCoordinator.isComplete {
+            } else {
                 showTypewriter = false
                 showFooter = false
             }

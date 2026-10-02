@@ -2,7 +2,7 @@
   {
     "id": "course_b_0",
     "title": "Тайский без паники",
-    "description": "Теория без паники: логика языка, тоны и как думают тайцы.",
+    "description": "Карта тайского без паники: логика языка, частицы и короткий мост к тонам.",
     "category": "База от Тайки",
     "is_pro": false,
     "lesson_count": 3,
@@ -12,18 +12,18 @@
     "learning_outcomes": [
       {
         "type": "Логика языка",
-        "count": 7
+        "count": 10
       },
       {
-        "type": "Тоны без страха",
-        "count": 9
+        "type": "Тоны — ориентир",
+        "count": 3
       },
       {
         "type": "Живое общение",
-        "count": 8
+        "count": 9
       }
     ],
-    "short_description": "Теория без страха"
+    "short_description": "Карта языка без страха"
   },
   {
     "id": "course_b_1",
@@ -54,11 +54,11 @@
   {
     "id": "course_b_2",
     "title": "Магия интонации",
-    "description": "Тон, скорость и вежливые хвостики на знакомых фразах.",
+    "description": "Похожий слог, другой тон — другое слово. Учимся слышать тоны на парах.",
     "category": "База от Тайки",
     "is_pro": false,
     "lesson_count": 6,
-    "duration_minutes": 22,
+    "duration_minutes": 23,
     "icon_name": "tone_magic",
     "is_new": false,
     "learning_outcomes": [
@@ -67,20 +67,20 @@
         "count": 5
       },
       {
-        "type": "Интонация",
-        "count": 20
+        "type": "Минимальные пары",
+        "count": 6
       },
       {
-        "type": "Фразы",
-        "count": 5
+        "type": "Лайфхаки",
+        "count": 11
       }
     ],
-    "short_description": "Слушай тон, не зубри заново"
+    "short_description": "Слышать тон, не зубрить фразы"
   },
   {
     "id": "course_b_3",
     "title": "Я, ты, он, семья",
-    "description": "Я/ты/он, семья, профессия и мини-диалог знакомства.",
+    "description": "Люди рядом: я/ты/он, семья, чья вещь, кто/что и вопрос про человека.",
     "category": "База от Тайки",
     "is_pro": false,
     "lesson_count": 7,
@@ -90,27 +90,27 @@
     "learning_outcomes": [
       {
         "type": "Местоимения",
+        "count": 10
+      },
+      {
+        "type": "Семья и люди",
         "count": 12
       },
       {
-        "type": "Обращения",
+        "type": "Вопросы",
         "count": 8
-      },
-      {
-        "type": "Фразы",
-        "count": 18
       }
     ],
-    "short_description": "Я, ты, он — без повтора старта"
+    "short_description": "Кто рядом — без дубля старта"
   },
   {
     "id": "course_b_4",
     "title": "Время, место, цифры",
-    "description": "Числа, время, дни недели и навигация.",
+    "description": "Числа, время, дни, навигация и предлоги места.",
     "category": "База от Тайки",
     "is_pro": false,
-    "lesson_count": 6,
-    "duration_minutes": 22,
+    "lesson_count": 7,
+    "duration_minutes": 26,
     "icon_name": "time_numbers",
     "is_new": false,
     "learning_outcomes": [
@@ -119,20 +119,20 @@
         "count": 25
       },
       {
-        "type": "Время",
-        "count": 18
+        "type": "Время и дни",
+        "count": 15
       },
       {
-        "type": "Навигация",
-        "count": 12
+        "type": "Место и предлоги",
+        "count": 18
       }
     ],
-    "short_description": "Считать и ориентироваться"
+    "short_description": "Числа, место, предлоги"
   },
   {
     "id": "course_b_5",
     "title": "Главные глаголы",
-    "description": "Главные глаголы для быта и разговора.",
+    "description": "Главные глаголы плюс не / буду / уже вокруг них.",
     "category": "База от Тайки",
     "is_pro": false,
     "lesson_count": 7,
@@ -142,58 +142,70 @@
     "learning_outcomes": [
       {
         "type": "Глаголы",
-        "count": 45
+        "count": 20
+      },
+      {
+        "type": "Частицы",
+        "count": 15
       },
       {
         "type": "Фразы",
-        "count": 25
+        "count": 40
       }
     ],
-    "short_description": "Глагольный каркас"
+    "short_description": "Глаголы и частицы"
   },
   {
     "id": "course_b_6",
     "title": "Вкусно, красиво, горячо",
-    "description": "Оценки и описания: еда, цена, погода, размер.",
+    "description": "Описания еды, вещей и своего состояния.",
     "category": "База от Тайки",
     "is_pro": false,
-    "lesson_count": 6,
-    "duration_minutes": 22,
+    "lesson_count": 7,
+    "duration_minutes": 26,
     "icon_name": "colors",
     "is_new": false,
     "learning_outcomes": [
       {
-        "type": "Прилагательные",
-        "count": 35
+        "type": "Описания",
+        "count": 30
+      },
+      {
+        "type": "Состояния",
+        "count": 10
       },
       {
         "type": "Фразы",
-        "count": 18
+        "count": 20
       }
     ],
-    "short_description": "Описывать, не торговаться снова"
+    "short_description": "Описания и состояния"
   },
   {
     "id": "course_b_7",
     "title": "Смолток как у местных",
-    "description": "Финал базы: как болтают тайцы — уже ел, куда идёшь, жара, Таиланд, свободен, пора идти. Не касса и не отказ.",
+    "description": "Смолток как у местных и склейка фраз союзами.",
     "category": "База от Тайки",
     "is_pro": false,
-    "lesson_count": 6,
-    "duration_minutes": 24,
+    "lesson_count": 7,
+    "duration_minutes": 28,
     "icon_name": "questions_answers",
     "is_new": false,
     "learning_outcomes": [
       {
         "type": "Смолток",
-        "count": 6
+        "count": 40
       },
       {
-        "type": "Живые реплики",
-        "count": 36
+        "type": "Союзы",
+        "count": 10
+      },
+      {
+        "type": "Фразы",
+        "count": 12
       }
     ],
-    "short_description": "Поболтать, не заказывать"
+    "short_description": "Смолток и склейка"
   },
   {
     "id": "course_l_1",

@@ -519,7 +519,8 @@ final class FavoriteManager: ObservableObject {
         return l.replacingOccurrences(of: "_", with: " ")
     }
 
-    /// Try to find step index in a lesson by matching the trailing step token in composed id
+    /// Try to find canonical step `order` in a lesson by matching the trailing step token in composed id.
+    /// Returns steps.json `order`, never a 0-based array index (Speaker resolves by order).
     private func stepIndex(courseId: String, lessonId: String, composedId: String) -> Int? {
 #if DEBUG
         if let hook = FavoriteManager.stepIndexTestOverride {
@@ -536,13 +537,29 @@ final class FavoriteManager: ObservableObject {
 #if DEBUG
         print("[FM.stepIndex] course=\(courseId) lesson=\(normLesson) slug=\(slug) items=\(items.count)")
 #endif
-        for (i, it) in items.enumerated() {
+        for it in items {
             let rid = String(describing: it.id)
             if rid.hasSuffix("." + slug) || rid == slug {
+                if it.canonicalOrder >= 0 {
 #if DEBUG
-                print("[FM.stepIndex] matched idx=\(i) by rid=\(rid)")
+                    print("[FM.stepIndex] matched order=\(it.canonicalOrder) by rid=\(rid)")
 #endif
-                return i
+                    return it.canonicalOrder
+                }
+            }
+        }
+        // Content fallback against StepData orders (DS cache may lack canonicalOrder on older paths).
+        let actualLessonId = StepData.shared.lessonIdForCaseInsensitiveLookup(normLesson) ?? normLesson
+        let raw = StepData.shared.items(for: actualLessonId)
+        let slugLower = slug.lowercased()
+        for it in raw {
+            let ru = (it.ru ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let th = (it.thai ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if ru == slugLower || th == slugLower || ru.hasSuffix(slugLower) || th.hasSuffix(slugLower) {
+#if DEBUG
+                print("[FM.stepIndex] matched order=\(it.order) by content slug=\(slug)")
+#endif
+                return it.order
             }
         }
 #if DEBUG
@@ -633,15 +650,20 @@ final class FavoriteManager: ObservableObject {
         let course = normalized(courseId ?? compsDot.first ?? "")
         let lesson = normalized(lessonId ?? (compsDot.count >= 2 ? compsDot[1] : ""))
 
-        var idxVal = 0
+        var idxVal: Int? = nil
         if hasIdx, let last = s.split(separator: ":").last, last.hasPrefix("idx"), let n = Int(last.dropFirst(3)) {
             idxVal = n
         } else {
             let composed = compsDot.joined(separator: ".")
-            idxVal = stepIndex(courseId: course, lessonId: lesson, composedId: composed) ?? 0
+            idxVal = stepIndex(courseId: course, lessonId: lesson, composedId: composed)
         }
 
-        let core = "step:\(course):\(lesson):idx\(idxVal)"
+        // Never invent idx0 — that made Speaker open the first cards of a lesson.
+        guard let idx = idxVal, idx >= 0 else {
+            return (hack ? "hack:" : "card:") + "step:\(course):\(lesson):idxmissing"
+        }
+
+        let core = "step:\(course):\(lesson):idx\(idx)"
         return (hack ? "hack:" : "card:") + core
     }
 
@@ -771,7 +793,7 @@ final class FavoriteManager: ObservableObject {
                 if course.isEmpty { course = normalized(parts[0]) }
                 if lesson.isEmpty { lesson = normalized(parts[1]) }
                 guard !course.isEmpty, !lesson.isEmpty else { return nil }
-                let idx = stepIndex(courseId: course, lessonId: lesson, composedId: dotted) ?? 0
+                guard let idx = stepIndex(courseId: course, lessonId: lesson, composedId: dotted) else { return nil }
                 return canonicalStepFavoriteId(courseId: course, lessonId: lesson, index: idx)
             }
             return nil
@@ -786,7 +808,7 @@ final class FavoriteManager: ObservableObject {
                 if course.isEmpty { course = normalized(parts[0]) }
                 if lesson.isEmpty { lesson = normalized(parts[1]) }
                 guard !course.isEmpty, !lesson.isEmpty else { return nil }
-                let idx = stepIndex(courseId: course, lessonId: lesson, composedId: base) ?? 0
+                guard let idx = stepIndex(courseId: course, lessonId: lesson, composedId: base) else { return nil }
                 return canonicalStepFavoriteId(courseId: course, lessonId: lesson, index: idx)
             }
         }
@@ -969,6 +991,28 @@ final class FavoriteManager: ObservableObject {
         let lessonId = "smart_speaker"
         let fid = canonicalStepFavoriteId(courseId: courseId, lessonId: lessonId, index: index)
         return items.first { normalized($0.id) == normalized(fid) }
+    }
+
+    /// Favorite card matching a Speaker step ref (`step:course:lesson:idxN`), for snapshot-based training queues.
+    public func favoriteItemMatchingSpeakerRef(_ ref: String) -> FavoriteItem? {
+        let needle = normalized(ref)
+        guard needle.hasPrefix("step:"), needle.contains(":idx") else { return nil }
+        for it in items {
+            guard let key = canonicalSpeakerStepRef(from: it) else { continue }
+            if normalized(key) == needle { return it }
+        }
+        return nil
+    }
+
+    /// Strip storage prefixes (`card:`, `hack:`) from phonetic before Speaker/TTS.
+    public static func speakerPhonetic(fromStored phonetic: String) -> String {
+        var s = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = s.lowercased()
+        if lower.hasPrefix("hack:") { return "" }
+        if lower.hasPrefix("card:") {
+            s = String(s.dropFirst(5))
+        }
+        return s.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // returns canonical hack step ids only, in the form: hack:step:courseId:lessonId:idxN

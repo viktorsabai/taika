@@ -487,6 +487,26 @@ struct TaikaCoreLoopOnboardingView: View {
             )
             .frame(width: phase == .feedback ? 168 : 260, height: phase == .feedback ? 168 : 260)
 
+            if showsReplayNearOrb {
+                Button {
+                    replayReferenceAudio()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Послушать ещё раз")
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundStyle(.white.opacity(0.78))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.white.opacity(0.08)))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 14)
+                .transition(.opacity.combined(with: .offset(y: 6)))
+            }
+
             Spacer(minLength: 8)
 
             if phase == .feedback {
@@ -658,9 +678,6 @@ struct TaikaCoreLoopOnboardingView: View {
                     advanceToSpeakFromListen()
                 }
                 .opacity(listenReadyToSpeak ? 1 : 0.7)
-                secondaryCTA("Послушать ещё раз") {
-                    replayReferenceAudio()
-                }
             case .speak:
                 primaryCTA(speakCTATitle) {
                     guard !isPreparingRecording, !isCookingResult else { return }
@@ -669,11 +686,6 @@ struct TaikaCoreLoopOnboardingView: View {
                 }
                 .opacity(isCookingResult || speaker.phase == .analyzing ? 0.55 : 1)
                 .disabled(isCookingResult || speaker.phase == .analyzing)
-                if canReplayReference {
-                    secondaryCTA("Послушать ещё раз") {
-                        replayReferenceAudio()
-                    }
-                }
             case .feedback:
                 primaryCTA("Что улучшить") { openBreakdownSheet() }
                 Button("Далее") { advance(.reinforce) }
@@ -816,6 +828,12 @@ struct TaikaCoreLoopOnboardingView: View {
         if isPreparingRecording || isCookingResult { return false }
         if speaker.phase == .recording || speaker.phase == .analyzing { return false }
         return true
+    }
+
+    /// Replay lives by the orb/card so bottom CTAs stay stable (Skip doesn't jump).
+    private var showsReplayNearOrb: Bool {
+        if phase == .listen { return true }
+        return canReplayReference
     }
 
     private func secondaryCTA(_ title: String, action: @escaping () -> Void) -> some View {

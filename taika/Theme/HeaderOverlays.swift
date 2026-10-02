@@ -1235,8 +1235,8 @@ struct GameParkOverlayView: View {
             return {
                 onDismiss()
                 SpeakerManager.shared.setSpeakerUIMode(.training)
+                ThemeManager.shared.hubAtmosphere = .favorites
                 SpeakerRequestedCourseId.shared.set("__favorites__")
-                SpeakerManager.shared.startSpecialTraining(poolId: "__favorites__")
                 SpeakerReturnContext.shared.saveFromRootTab(3)
                 nav.requestTab(2)
             }
@@ -1244,9 +1244,9 @@ struct GameParkOverlayView: View {
             return {
                 onDismiss()
                 SpeakerManager.shared.setSpeakerUIMode(.training)
+                ThemeManager.shared.hubAtmosphere = .favorites
                 SpeakerRequestedCourseId.shared.set("__dictionary__")
                 DictionarySessionSelection.shared.activate(nil)
-                SpeakerManager.shared.startSpecialTraining(poolId: "__dictionary__")
                 SpeakerReturnContext.shared.saveFromRootTab(3)
                 nav.requestTab(2)
             }

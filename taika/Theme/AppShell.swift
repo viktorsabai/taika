@@ -68,13 +68,27 @@ struct AppShell: View {
     }
 
     /// Избранное красит хедер в небесный, закрепление — в золото консоли. Главная сама ставит атмосферу режима.
+    /// Спикер (tab 2), открытый из избранного/словаря, сохраняет небесный акцент — иначе сообщение «не того цвета».
     private func syncTabAtmosphere(_ tab: Int) {
         guard tab != 0 else { return }
         withAnimation(.easeInOut(duration: 0.34)) {
             switch tab {
-            case 3: ThemeManager.shared.hubAtmosphere = .favorites
-            case 4: ThemeManager.shared.hubAtmosphere = .console
-            default: ThemeManager.shared.hubAtmosphere = nil
+            case 3:
+                ThemeManager.shared.hubAtmosphere = .favorites
+            case 4:
+                ThemeManager.shared.hubAtmosphere = .console
+            case 2:
+                let ctx = SpeakerManager.shared.speakerContextCourseId
+                let pending = speakerPendingCourseId
+                    ?? SpeakerRequestedCourseId.shared.courseId
+                let pool = ctx ?? pending
+                if pool == "__favorites__" || pool == "__dictionary__" {
+                    ThemeManager.shared.hubAtmosphere = .favorites
+                } else {
+                    ThemeManager.shared.hubAtmosphere = nil
+                }
+            default:
+                ThemeManager.shared.hubAtmosphere = nil
             }
         }
     }
@@ -707,6 +721,7 @@ private struct ShellHeaderHost: View {
             onTapFavoritesSpeaker: {
                 speakerPendingCourseId = "__favorites__"
                 speakerPendingLessonId = nil
+                ThemeManager.shared.hubAtmosphere = .favorites
                 if nav.path.isEmpty {
                     SpeakerReturnContext.shared.clear()
                 } else {
@@ -716,6 +731,7 @@ private struct ShellHeaderHost: View {
                     nav.popToRoot()
                     selectedTab = 2
                 }
+                syncTabAtmosphere(2)
             },
             onTapFavoritesGamePark: {
                 GameParkHubState.shared.preselect("__favorites__")

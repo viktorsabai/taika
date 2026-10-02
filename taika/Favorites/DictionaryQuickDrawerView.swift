@@ -909,8 +909,9 @@ struct DictionaryFullView: View {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 #endif
         SpeakerManager.shared.setSpeakerUIMode(.training)
+        ThemeManager.shared.hubAtmosphere = .favorites
+        // Single handoff via pending — avoid double load wiping selection timing.
         SpeakerRequestedCourseId.shared.set("__dictionary__")
-        SpeakerManager.shared.startSpecialTraining(poolId: "__dictionary__")
         if nav.path.contains(where: { if case .dictionary = $0 { return true }; return false }) {
             SpeakerReturnContext.shared.save(tab: 0, path: nav.path)
         } else {

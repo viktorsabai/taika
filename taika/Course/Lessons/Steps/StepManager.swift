@@ -414,7 +414,8 @@ final class StepManager: ObservableObject {
                 kind: kind,
                 titleRU: s.ru ?? "",
                 subtitleTH: s.thai ?? "",
-                phonetic: s.phonetic ?? ""
+                phonetic: s.phonetic ?? "",
+                canonicalOrder: s.order
             )
         }
         dsCache[key] = built

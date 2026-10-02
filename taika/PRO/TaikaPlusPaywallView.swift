@@ -298,57 +298,112 @@ struct TaikaPlusPaywallView: View {
         VStack(spacing: 10) {
             giftIntentPicker
 
-            if giftIntent {
-                planRow(
-                    id: giftPackage?.identifier ?? TaikaProConfig.PackageIdentifier.giftLifetime,
-                    title: "Подарок навсегда",
-                    priceLine: giftPriceLine,
-                    subtitle: giftPackage == nil
-                        ? "Код для друга · без почты"
-                        : "Код после оплаты · без почты",
-                    badge: nil,
-                    isHero: true
-                )
-                Button {
-                    OverlayPresenter.shared.presentGiftRedeem()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "gift")
-                        Text("У меня есть подарок")
-                    }
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(CD.ColorToken.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 2)
-                }
-                .buttonStyle(.plain)
-            } else {
-                planRow(
-                    id: TaikaProConfig.PackageIdentifier.annual,
-                    title: "Год",
-                    priceLine: annualPriceLine,
-                    subtitle: annualSubtitle,
-                    badge: TaikaProConfig.annualHeroBadge,
-                    isHero: true
-                )
-                planRow(
-                    id: TaikaProConfig.PackageIdentifier.monthly,
-                    title: "Месяц",
-                    priceLine: monthlyPlanPriceLine,
-                    subtitle: "Гибкая оплата",
-                    badge: nil,
-                    isHero: false
-                )
-                planRow(
-                    id: TaikaProConfig.PackageIdentifier.lifetime,
-                    title: "Навсегда",
-                    priceLine: lifetimePriceLine,
-                    subtitle: "Разовая оплата",
-                    badge: nil,
-                    isHero: false
-                )
+            ZStack(alignment: .top) {
+                selfPlanStack
+                    .opacity(giftIntent ? 0 : 1)
+                    .allowsHitTesting(!giftIntent)
+                giftPlanStack
+                    .opacity(giftIntent ? 1 : 0)
+                    .allowsHitTesting(giftIntent)
             }
+            .animation(.easeInOut(duration: 0.2), value: giftIntent)
         }
+    }
+
+    private var selfPlanStack: some View {
+        VStack(spacing: 10) {
+            planRow(
+                id: TaikaProConfig.PackageIdentifier.annual,
+                title: "Год",
+                priceLine: annualPriceLine,
+                subtitle: annualSubtitle,
+                badge: TaikaProConfig.annualHeroBadge,
+                isHero: true
+            )
+            planRow(
+                id: TaikaProConfig.PackageIdentifier.monthly,
+                title: "Месяц",
+                priceLine: monthlyPlanPriceLine,
+                subtitle: "Гибкая оплата",
+                badge: nil,
+                isHero: false
+            )
+            planRow(
+                id: TaikaProConfig.PackageIdentifier.lifetime,
+                title: "Навсегда",
+                priceLine: lifetimePriceLine,
+                subtitle: "Разовая оплата",
+                badge: nil,
+                isHero: false
+            )
+        }
+    }
+
+    private var giftPlanStack: some View {
+        VStack(spacing: 10) {
+            planRow(
+                id: giftPackage?.identifier ?? TaikaProConfig.PackageIdentifier.giftLifetime,
+                title: "Подарок навсегда",
+                priceLine: giftPriceLine,
+                subtitle: giftPackage == nil
+                    ? "Код для друга · без почты"
+                    : "Код после оплаты · без почты",
+                badge: "GIFT",
+                isHero: true
+            )
+            giftInfoRow(
+                icon: "envelope.open.fill",
+                title: "Без почты и форм",
+                subtitle: "После оплаты сразу получишь код"
+            )
+            giftInfoRow(
+                icon: "person.2.fill",
+                title: "Друг открывает Taika Pro",
+                subtitle: "Вставляет код в приложении · «У меня есть подарок»"
+            )
+            Button {
+                OverlayPresenter.shared.presentGiftRedeem()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "gift.fill")
+                    Text("У меня уже есть подарок")
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(CD.ColorToken.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 2)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func giftInfoRow(icon: String, title: String, subtitle: String) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return HStack(alignment: .center, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(accentFill)
+                .frame(width: 28, height: 28)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(CD.ColorToken.text)
+                Text(subtitle)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(CD.ColorToken.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
+        .background(
+            shape
+                .fill(CD.ColorToken.chip.opacity(0.55))
+                .overlay(shape.strokeBorder(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+        )
+        .accessibilityElement(children: .combine)
     }
 
     private var giftIntentPicker: some View {
@@ -577,30 +632,32 @@ struct TaikaPlusPaywallView: View {
     }
 
     private var paywallAuthSheet: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 14) {
             Capsule()
                 .fill(CD.ColorToken.textSecondary.opacity(0.35))
                 .frame(width: 36, height: 5)
-                .padding(.top, 10)
+                .padding(.top, 8)
 
             Image(systemName: "person.crop.circle.badge.checkmark")
-                .font(.system(size: 36, weight: .semibold))
+                .font(.system(size: 30, weight: .semibold))
                 .foregroundStyle(accentFill)
+                .padding(.top, 4)
 
             Text(offersIntroTrial ? "Войди, чтобы начать триал" : "Войди, чтобы оформить Taika Pro")
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(CD.ColorToken.text)
                 .multilineTextAlignment(.center)
 
             Text(
                 offersIntroTrial
-                    ? "Триал на \(TaikaProConfig.introTrialDaysPhrase) привязывается к аккаунту — один раз на человека. Pro не потеряется при смене телефона."
-                    : "Вход через Sign in with Apple — подписка привяжется к аккаунту и не потеряется при смене телефона."
+                    ? "Триал привяжется к аккаунту — один раз на человека. Pro не потеряется при смене телефона."
+                    : "Sign in with Apple — подписка привяжется к аккаунту и не потеряется при смене телефона."
             )
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(CD.ColorToken.textSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 8)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 4)
 
             if let purchaseError {
                 Text(purchaseError)
@@ -628,6 +685,7 @@ struct TaikaPlusPaywallView: View {
             }
             .buttonStyle(.plain)
             .disabled(authInProgress)
+            .padding(.top, 4)
 
             Button("Позже") {
                 continuePurchaseAfterAuth = false
@@ -636,13 +694,13 @@ struct TaikaPlusPaywallView: View {
             .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(CD.ColorToken.textSecondary)
             .disabled(authInProgress)
-
-            Spacer(minLength: 8)
+            .padding(.bottom, 6)
         }
         .padding(.horizontal, 22)
-        .padding(.bottom, 18)
-        .presentationDetents([.fraction(0.48), .medium])
-        .presentationDragIndicator(.visible)
+        .padding(.bottom, 10)
+        .presentationDetents([.height(340)])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(24)
         .onAppear {
             if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
                let window = scene.windows.first(where: { $0.isKeyWindow }) {

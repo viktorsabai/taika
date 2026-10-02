@@ -290,10 +290,12 @@ struct FavoriteView: View {
 
     private func trainCurrentTabInSpeaker() {
         SpeakerManager.shared.setSpeakerUIMode(.training)
+        // Небесный акцент до смены таба — syncTabAtmosphere(2) подхватит __favorites__/__dictionary__.
+        ThemeManager.shared.hubAtmosphere = .favorites
         if selectedTab == .dictionary {
-            SpeakerRequestedCourseId.shared.set("__dictionary__")
+            // Один handoff: pending → SpeakerView.loadQueueForCourse. Не грузим очередь дважды заранее.
             DictionarySessionSelection.shared.activate(nil)
-            SpeakerManager.shared.startSpecialTraining(poolId: "__dictionary__")
+            SpeakerRequestedCourseId.shared.set("__dictionary__")
             if nav.path.isEmpty {
                 SpeakerReturnContext.shared.saveFromRootTab(3)
             } else {
@@ -301,7 +303,6 @@ struct FavoriteView: View {
             }
         } else {
             SpeakerRequestedCourseId.shared.set("__favorites__")
-            SpeakerManager.shared.startSpecialTraining(poolId: "__favorites__")
             if nav.path.isEmpty {
                 SpeakerReturnContext.shared.saveFromRootTab(3)
             } else {
