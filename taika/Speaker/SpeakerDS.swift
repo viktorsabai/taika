@@ -7153,7 +7153,7 @@ private struct ConversationGlossFailedSection: View {
             } label: {
                 Text(buttonTitle)
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(PD.ColorToken.textPrimary.opacity(tired ? 0.55 : 0.88))
+                    .foregroundStyle(PD.ColorToken.text.opacity(tired ? 0.55 : 0.88))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(buttonA11y)
