@@ -1130,15 +1130,18 @@ public struct SpeakerDSRoot: View {
                                         conversationPhraseGlossSection
                                             .padding(.top, 24)
                                         if external?.phrasePartsInFlight == true {
-                                            conversationGlossLoadingSection
+                                            ConversationGlossLoadingSection()
                                                 .padding(.top, 12)
                                         }
                                     } else if external?.phrasePartsInFlight == true {
-                                        conversationGlossLoadingSection
+                                        ConversationGlossLoadingSection()
                                             .padding(.top, 20)
                                     } else if external?.phrasePartsFailed == true {
-                                        conversationGlossFailedSection
-                                            .padding(.top, 20)
+                                        ConversationGlossFailedSection(
+                                            tired: (external?.phrasePartsFailCount ?? 0) >= 2,
+                                            onRetry: { external?.onRetryPhraseParts() }
+                                        )
+                                        .padding(.top, 20)
                                     }
                                 }
                             }
@@ -2288,67 +2291,6 @@ public struct SpeakerDSRoot: View {
                 conversationEditRU = newVal
             }
         }
-    }
-
-    /// Разбор всегда прокручиваемый: `.basedOnSize` сам решает, скроллить или нет,
-    /// поэтому раскладка не зависит от угадывания высоты строк.
-    /// Разбор ещё едет: Тайка работает, не «ошибка системы».
-    @ViewBuilder private var conversationGlossLoadingSection: some View {
-        HStack(spacing: 8) {
-            ProgressView()
-                .controlSize(.mini)
-            Text("раскладываю по словам…")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Раскладываю по словам")
-    }
-
-    /// Разбор не приехал: голос Тайки, не системная ошибка.
-    /// После пары попыток — не долбим той же кнопкой, ведём к звучанию.
-    private var conversationGlossRetryTired: Bool {
-        (external?.phrasePartsFailCount ?? 0) >= 2
-    }
-
-    @ViewBuilder private var conversationGlossFailedSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if conversationGlossRetryTired {
-                Text("сейчас не выходит — учи по звучанию, разбор поймаю чуть позже")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
-                    .fixedSize(horizontal: false, vertical: true)
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    external?.onRetryPhraseParts()
-                } label: {
-                    Text("попробую ещё")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(PD.ColorToken.textPrimary.opacity(0.55))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Попробовать собрать разбор ещё раз")
-            } else {
-                Text("ой, слова не сложились")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
-                    .fixedSize(horizontal: false, vertical: true)
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    external?.onRetryPhraseParts()
-                } label: {
-                    Text("давай ещё раз")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(PD.ColorToken.textPrimary.opacity(0.88))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Давай ещё раз")
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .contain)
     }
 
     /// Word-level gloss. Высота — по содержимому: прокруткой заведует общий контейнер
@@ -7173,6 +7115,65 @@ private enum TaikaSmartSpeakerPhonetic {
             out.append((tail, "→"))
         }
         return out
+    }
+}
+
+/// Разбор ещё едет: Тайка работает, не «ошибка системы».
+/// Вынесен из SpeakerDSRoot — иначе Swift не выводит some View на 8k-строчном типе.
+private struct ConversationGlossLoadingSection: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.mini)
+            Text("раскладываю по словам…")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Раскладываю по словам")
+    }
+}
+
+/// Разбор не приехал: голос Тайки, не системная ошибка.
+private struct ConversationGlossFailedSection: View {
+    let tired: Bool
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(message)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.78))
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                onRetry()
+            } label: {
+                Text(buttonTitle)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(PD.ColorToken.textPrimary.opacity(tired ? 0.55 : 0.88))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(buttonA11y)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var message: String {
+        tired
+            ? "сейчас не выходит — учи по звучанию, разбор поймаю чуть позже"
+            : "ой, слова не сложились"
+    }
+
+    private var buttonTitle: String {
+        tired ? "попробую ещё" : "давай ещё раз"
+    }
+
+    private var buttonA11y: String {
+        tired ? "Попробовать собрать разбор ещё раз" : "Давай ещё раз"
     }
 }
 
