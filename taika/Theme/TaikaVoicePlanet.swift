@@ -838,14 +838,13 @@ struct TaikaEmptyPlanet: View {
     private var resolved: (symbol: String, palette: TaikaVoicePlanetPalette) {
         switch systemImage {
         case "heart", "heart.fill":
-            return ("heart.fill", .heart)
+            return ("heart.fill", .theme)
         case "bookmark", "bookmark.fill":
-            // Словарь живёт во вкладке Избранного: та же небесная сфера, не отдельный фиолетовый lexicon.
-            return ("bookmark.fill", .heart)
+            return ("bookmark.fill", .theme)
         case "graduationcap", "graduationcap.fill":
-            return ("graduationcap.fill", .course)
+            return ("graduationcap.fill", .theme)
         case "lightbulb", "lightbulb.fill", "lightbulb.slash":
-            return ("lightbulb.fill", .spark)
+            return ("lightbulb.fill", .theme)
         case "mic", "mic.fill":
             return ("mic.fill", .theme)
         default:
@@ -857,14 +856,15 @@ struct TaikaEmptyPlanet: View {
         let spec = resolved
         TaikaAssemblingPlanet(
             gateKey: gateKey ?? "empty.\(systemImage)",
-            scale: 0.72,
+            scale: TaikaHeroColumn.planetScale,
             centerSymbol: spec.symbol,
             inviteTap: true,
             palette: spec.palette,
             idleAccent: 0.58,
-            frameSize: 220,
+            frameSize: TaikaHeroColumn.planetFrame,
             allowsHitTesting: false
         )
+        .frame(height: TaikaHeroColumn.sphereBand)
         .accessibilityHidden(true)
     }
 }

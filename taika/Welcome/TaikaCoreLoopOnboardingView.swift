@@ -114,9 +114,9 @@ struct TaikaCoreLoopOnboardingView: View {
         OnboardingPracticePhrase.seed(level: selectedLevel ?? 0, politeness: selectedGender ?? "female")
     }
 
-    /// Итог тот же, что в спикере: hybrid с сервера, иначе min(текст, тон). Пока тона нет — это текст.
+    /// На экране — слова. Тон не подмешиваем в пятёрку.
     private var overallScore: Int {
-        max(0, speaker.displayScore)
+        max(0, speaker.heardConfidence)
     }
 
     private var practiceEyebrow: String {
@@ -165,7 +165,9 @@ struct TaikaCoreLoopOnboardingView: View {
 
     private var feedbackFocusLine: String {
         let words = speaker.heardConfidence
-        let tone = speaker.toneAverageScore ?? speaker.displayScore
+        guard let tone = speaker.toneAverageScore else {
+            return "Слова есть. Можно сказать ещё раз или открыть разбор."
+        }
         if tone + 12 < words { return "Слова ок. Смотри тоны — там главный рычаг." }
         if words + 12 < tone { return "Тоны уже есть. Сделай слова чуть чётче." }
         return "Дальше — разбор по слогам: куда смотреть."
@@ -583,14 +585,7 @@ struct TaikaCoreLoopOnboardingView: View {
 
     private var reinforceHero: some View {
         VStack(alignment: .center, spacing: 0) {
-            HStack(spacing: 6) {
-                Text("tai")
-                    .font(.custom("Onmark Trial", size: 40))
-                    .foregroundStyle(PD.ColorToken.text)
-                Text("kAAA")
-                    .font(.custom("Onmark Trial", size: 40))
-                    .foregroundStyle(AnyShapeStyle(theme.currentAccentFill))
-            }
+            TaikaWordmarkLockup(fontSize: 40)
             .padding(.top, 12)
 
             Text("твоя персональная кун кру")
@@ -638,7 +633,7 @@ struct TaikaCoreLoopOnboardingView: View {
             case .hook:
                 switch introFrame {
                 case .brand:
-                    primaryCTA("Дальше") { introFrame = .level }
+                    primaryCTA("Расскажу, как знаю тайский") { introFrame = .level }
                         .opacity(brandVisible ? 1 : 0)
                         .offset(y: brandVisible ? 0 : 12)
                         .animation(
@@ -673,7 +668,7 @@ struct TaikaCoreLoopOnboardingView: View {
                 }
                 .opacity(phraseRevealed ? 1 : 0)
             case .listen:
-                primaryCTA(listenReadyToSpeak ? "Дальше" : "Taika говорит…") {
+                primaryCTA(listenReadyToSpeak ? "Теперь скажу сам" : "Taika говорит…") {
                     guard listenReadyToSpeak else { return }
                     advanceToSpeakFromListen()
                 }
@@ -848,14 +843,13 @@ struct TaikaCoreLoopOnboardingView: View {
     }
 
     private var skipLink: some View {
-        Button("Пропустить") { skipToOffer() }
+        Button("Сразу к 7 дням бесплатно") { skipToOffer() }
             .font(.system(size: 15, weight: .semibold))
             .foregroundStyle(.white.opacity(0.72))
             .frame(maxWidth: .infinity)
             .frame(height: 44)
             .buttonStyle(.plain)
-            .accessibilityLabel("Пропустить онбординг")
-            .accessibilityHint("Перейти к семи дням бесплатно")
+            .accessibilityLabel("Сразу к семи дням бесплатно")
     }
 
     private func skipToOffer() {

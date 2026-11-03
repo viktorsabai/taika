@@ -236,7 +236,7 @@ struct TaikaPlusPaywallView: View {
 
     @ViewBuilder
     private var quotaBlock: some View {
-        if reason == .speakerBreakdown {
+        if !giftIntent, reason == .speakerBreakdown {
             GlassQuota(
                 title: "Попытки Спикера",
                 detail: pro.isPro ? "без лимита" : "\(trainingAttempts.remainingToday) осталось сегодня",
@@ -267,19 +267,22 @@ struct TaikaPlusPaywallView: View {
 
     private var heroBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(reason.heroTitle)
+            Text(giftIntent ? "Подари Taika Pro" : reason.heroTitle)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(CD.ColorToken.text)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text(reason.heroSubtitle)
+            Text(giftIntent
+                 ? "Купил — получил код — друг вставил. Почта не нужна."
+                 : reason.heroSubtitle)
                 .font(.system(size: 14, weight: .regular))
                 .foregroundStyle(CD.ColorToken.textSecondary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if let courseId, !courseId.isEmpty,
+            if !giftIntent,
+               let courseId, !courseId.isEmpty,
                let title = CourseData.shared.title(for: courseId)?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !title.isEmpty {
@@ -290,6 +293,7 @@ struct TaikaPlusPaywallView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(nil, value: giftIntent)
     }
 
     // MARK: - Plans
@@ -298,15 +302,13 @@ struct TaikaPlusPaywallView: View {
         VStack(spacing: 10) {
             giftIntentPicker
 
-            ZStack(alignment: .top) {
-                selfPlanStack
-                    .opacity(giftIntent ? 0 : 1)
-                    .allowsHitTesting(!giftIntent)
-                giftPlanStack
-                    .opacity(giftIntent ? 1 : 0)
-                    .allowsHitTesting(giftIntent)
+            Group {
+                if giftIntent {
+                    giftPlanStack
+                } else {
+                    selfPlanStack
+                }
             }
-            .animation(.easeInOut(duration: 0.2), value: giftIntent)
         }
     }
 
@@ -340,70 +342,14 @@ struct TaikaPlusPaywallView: View {
     }
 
     private var giftPlanStack: some View {
-        VStack(spacing: 10) {
-            planRow(
-                id: giftPackage?.identifier ?? TaikaProConfig.PackageIdentifier.giftLifetime,
-                title: "Подарок навсегда",
-                priceLine: giftPriceLine,
-                subtitle: giftPackage == nil
-                    ? "Код для друга · без почты"
-                    : "Код после оплаты · без почты",
-                badge: "GIFT",
-                isHero: true
-            )
-            giftInfoRow(
-                icon: "envelope.open.fill",
-                title: "Без почты и форм",
-                subtitle: "После оплаты сразу получишь код"
-            )
-            giftInfoRow(
-                icon: "person.2.fill",
-                title: "Друг открывает Taika Pro",
-                subtitle: "Вставляет код в приложении · «У меня есть подарок»"
-            )
-            Button {
-                OverlayPresenter.shared.presentGiftRedeem()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "gift.fill")
-                    Text("У меня уже есть подарок")
-                }
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(CD.ColorToken.textSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 2)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private func giftInfoRow(icon: String, title: String, subtitle: String) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-        return HStack(alignment: .center, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(accentFill)
-                .frame(width: 28, height: 28)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(CD.ColorToken.text)
-                Text(subtitle)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(CD.ColorToken.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 13)
-        .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
-        .background(
-            shape
-                .fill(CD.ColorToken.chip.opacity(0.55))
-                .overlay(shape.strokeBorder(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth))
+        planRow(
+            id: giftPackage?.identifier ?? TaikaProConfig.PackageIdentifier.giftLifetime,
+            title: "Taika Pro",
+            priceLine: giftPriceLine,
+            subtitle: "Навсегда · код после оплаты",
+            badge: nil,
+            isHero: true
         )
-        .accessibilityElement(children: .combine)
     }
 
     private var giftIntentPicker: some View {
@@ -457,13 +403,11 @@ struct TaikaPlusPaywallView: View {
         return "\(TaikaProConfig.MarketingPrice.annualTHB.formatted()) ฿/год"
     }
 
-    /// Trial только на годе (ASC) — в subtitle рядом с выгодой ฿/мес.
+    /// Trial только на годе (ASC) — в subtitle рядом с выгодой /мес в валюте стора.
     private var annualSubtitle: String {
         let perMonth: String = {
             if let p = annualPackage {
-                let yearly = (p.storeProduct.price as NSDecimalNumber).doubleValue
-                let value = Int((yearly / 12.0).rounded())
-                return "≈ \(value) ฿/мес"
+                return monthlyEquivalentLine(for: p.storeProduct)
             }
             return "≈ \(TaikaProConfig.MarketingPrice.annualPerMonthTHB) ฿/мес"
         }()
@@ -471,6 +415,26 @@ struct TaikaPlusPaywallView: View {
             return "\(TaikaProConfig.introTrialDaysPhrase) бесплатно · \(perMonth)"
         }
         return perMonth
+    }
+
+    /// Месячный эквивалент в той же валюте, что `localizedPriceString`.
+    private func monthlyEquivalentLine(for product: StoreProduct) -> String {
+        let monthly = NSDecimalNumber(decimal: product.price)
+            .dividing(by: NSDecimalNumber(value: 12))
+        let formatter: NumberFormatter
+        if let existing = product.priceFormatter?.copy() as? NumberFormatter {
+            formatter = existing
+        } else {
+            formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.currencyCode = product.currencyCode
+        }
+        formatter.maximumFractionDigits = 0
+        formatter.minimumFractionDigits = 0
+        if let s = formatter.string(from: monthly) {
+            return "≈ \(s)/мес"
+        }
+        return "≈ \(product.localizedPriceString)/год"
     }
 
     private var monthlyPlanPriceLine: String {
@@ -592,19 +556,34 @@ struct TaikaPlusPaywallView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity, alignment: .center)
 
-            Button {
-                Task { await restoreTapped() }
-            } label: {
-                Text(restoreInFlight ? "Восстановление…" : "У меня уже есть подписка")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(CD.ColorToken.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
-            }
-            .buttonStyle(.plain)
-            .disabled(restoreInFlight)
+            if giftIntent {
+                Button {
+                    OverlayPresenter.shared.presentGiftRedeem()
+                } label: {
+                    Text("У меня есть код")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.text)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule(style: .continuous)
+                                .stroke(Color.white.opacity(0.28), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    Task { await restoreTapped() }
+                } label: {
+                    Text(restoreInFlight ? "Восстановление…" : "У меня уже есть подписка")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+                .disabled(restoreInFlight)
 
-            if !giftIntent {
                 Button {
                     OverlayPresenter.shared.presentGiftRedeem()
                 } label: {
@@ -617,17 +596,17 @@ struct TaikaPlusPaywallView: View {
                 .buttonStyle(.plain)
             }
 
-            HStack(spacing: 14) {
+            HStack(spacing: 16) {
                 Button("Privacy") {
                     UIApplication.shared.open(TaikaProConfig.Legal.privacyPolicy)
                 }
                 Button("Terms") {
                     UIApplication.shared.open(TaikaProConfig.Legal.termsOfUse)
                 }
-                Spacer(minLength: 0)
             }
             .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
+            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.7))
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -890,7 +869,11 @@ struct TaikaPlusPaywallView: View {
         do {
             let result = try await Purchases.shared.purchase(package: pkg)
             ProManager.shared.applyRevenueCatCustomerInfo(result.customerInfo)
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            if !pro.isPro {
+                await ProManager.shared.syncCustomerInfoFromRevenueCat()
+            }
+            let unlocked = pro.isPro
+            UINotificationFeedbackGenerator().notificationOccurred(unlocked ? .success : .warning)
             withAnimation(.spring(response: 0.42, dampingFraction: 0.88)) {
                 showProSuccess = true
             }

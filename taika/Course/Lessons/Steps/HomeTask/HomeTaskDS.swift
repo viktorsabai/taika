@@ -437,6 +437,7 @@ public struct TaikaGameStatusStrip: View {
     public var hints: [TaikaGameHintAction]
 
     @ObservedObject private var stars = TaikaStarsStore.shared
+    @State private var hintConfirmOpen = false
 
     public init(
         timeText: String,
@@ -505,6 +506,24 @@ public struct TaikaGameStatusStrip: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .confirmationDialog(
+            "Подсказка",
+            isPresented: $hintConfirmOpen,
+            titleVisibility: .visible
+        ) {
+            ForEach(availableHints) { hint in
+                Button("\(hint.title) · \(hint.cost) ★") {
+                    hint.action()
+                }
+            }
+            Button("Не сейчас", role: .cancel) {}
+        } message: {
+            if availableHints.count == 1, let only = availableHints.first {
+                Text(only.detail ?? "Спишется \(only.cost) ★. Это подсказка, не трата с иконки звёзд.")
+            } else {
+                Text("Выбери подсказку. Звёзды спишутся только после подтверждения.")
+            }
+        }
     }
 
     @ViewBuilder
@@ -515,33 +534,22 @@ public struct TaikaGameStatusStrip: View {
             style: .gold,
             accessibilityLabel: availableHints.isEmpty
                 ? "Звёзды: \(stars.balance)"
-                : "Звёзды: \(stars.balance). Тап — подсказка"
+                : "Звёзды: \(stars.balance). Тап откроет подсказку"
         )
 
         if availableHints.isEmpty {
             chip
-        } else if availableHints.count == 1, let only = availableHints.first {
+                .taikaCoachAnchor(.gameStar)
+        } else {
             Button {
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                only.action()
+                hintConfirmOpen = true
             } label: {
                 chip
             }
             .buttonStyle(.plain)
-            .accessibilityHint("Активировать подсказку: \(only.title)")
-        } else {
-            Menu {
-                ForEach(availableHints) { hint in
-                    Button {
-                        hint.action()
-                    } label: {
-                        Label("\(hint.title) · \(hint.cost)★", systemImage: "star.fill")
-                    }
-                }
-            } label: {
-                chip
-            }
-            .accessibilityHint("Открыть подсказки за звёзды")
+            .accessibilityHint("Открыть подсказку. Звёзды не спишутся, пока не подтвердишь")
+            .taikaCoachAnchor(.gameStar)
         }
     }
 
@@ -701,13 +709,15 @@ public struct TaikaGameHintAction: Identifiable {
     public let id: String
     public let title: String
     public let cost: Int
+    public let detail: String?
     public let isEnabled: Bool
     public let action: () -> Void
 
-    public init(id: String, title: String, cost: Int, isEnabled: Bool, action: @escaping () -> Void) {
+    public init(id: String, title: String, cost: Int, detail: String? = nil, isEnabled: Bool, action: @escaping () -> Void) {
         self.id = id
         self.title = title
         self.cost = cost
+        self.detail = detail
         self.isEnabled = isEnabled
         self.action = action
     }
@@ -787,10 +797,7 @@ struct TaikaGameSpeakerStyleCard: View {
 
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center, spacing: 8) {
-                Text("taikA")
-                    .font(.custom("ONMARK Trial", size: 14))
-                    .tracking(0.6)
-                    .foregroundStyle(CD.ColorToken.text)
+                TaikaWordmarkLockup(fontSize: 14)
                 Spacer(minLength: 0)
                 if let lessonTitle, !lessonTitle.isEmpty {
                     TaikaGameLessonPill(title: lessonTitle)

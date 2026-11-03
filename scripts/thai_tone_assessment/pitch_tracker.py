@@ -242,10 +242,77 @@ def extract_f0_segment(
     return times, np.asarray(f0, dtype=np.float64)
 
 
+def parse_heard_segments(raw) -> list[tuple[float, float, str]]:
+    """ASR word/syllable times from the client: [{text, start, end}]."""
+    if not raw:
+        return []
+    data = raw
+    if isinstance(raw, str):
+        import json
+
+        try:
+            data = json.loads(raw)
+        except Exception:
+            return []
+    if not isinstance(data, list):
+        return []
+    out: list[tuple[float, float, str]] = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        try:
+            start = float(item.get("start", item.get("start_s", 0)))
+            end = float(item.get("end", item.get("end_s", 0)))
+        except (TypeError, ValueError):
+            continue
+        if end <= start:
+            dur = item.get("duration")
+            try:
+                if dur is not None:
+                    end = start + float(dur)
+            except (TypeError, ValueError):
+                continue
+        if end - start < 0.04:
+            continue
+        text = str(item.get("text") or item.get("syllable") or "").strip()
+        out.append((max(0.0, start), end, text))
+    return out
+
+
+def map_heard_segments_to_labels(
+    heard: list[tuple[float, float, str]],
+    labels: list[str],
+    duration_s: float,
+) -> list[tuple[float, float]] | None:
+    """
+    Cut audio on what Apple heard, then stretch onto teaching syllable count.
+    Never slice the whole file into N etalon chunks.
+    """
+    if not heard or not labels:
+        return None
+    clipped: list[tuple[float, float]] = []
+    for start, end, _ in heard:
+        a = max(0.0, min(duration_s, start))
+        b = max(a + 0.04, min(duration_s, end))
+        if b > a:
+            clipped.append((a, b))
+    if not clipped:
+        return None
+    n_l = len(labels)
+    if len(clipped) == n_l:
+        return clipped
+    span0, span1 = clipped[0][0], clipped[-1][1]
+    if span1 - span0 < 0.08:
+        return None
+    step = (span1 - span0) / n_l
+    return [(span0 + i * step, span0 + (i + 1) * step) for i in range(n_l)]
+
+
 def extract_pitch_contours(
     audio_path: str,
     thai_text: str,
     syllable_labels: list[str] | None = None,
+    heard_segments=None,
 ) -> list[dict]:
     """
     Load WAV and Thai text; return one dict per syllable with keys:
@@ -254,11 +321,12 @@ def extract_pitch_contours(
     - times: 1D array (time in segment)
     - f0_hz: 1D array (F0 per frame; NaN where unvoiced)
 
-    `syllable_labels` (phonetic chunks) is the teaching contract. When present,
-    audio is split into exactly that many segments — not PyThaiNLP tokens.
+    `heard_segments` (ASR times) win over energy/equal split of the etalon.
+    `syllable_labels` remain the teaching row labels / expected tone count.
     """
     _log("extract_pitch_contours: load_and_trim...")
     y, sr = load_and_trim(audio_path, SR)
+    duration_s = len(y) / float(sr) if sr else 0.0
     if syllable_labels:
         syllables = [s for s in syllable_labels if str(s).strip()]
         _log(f"extract_pitch_contours: phonetic chunks ({len(syllables)})")
@@ -268,8 +336,14 @@ def extract_pitch_contours(
     if not syllables:
         return []
 
-    _log("extract_pitch_contours: segment_audio_by_syllables...")
-    segments = segment_audio_by_syllables(y, sr, syllables)
+    heard = parse_heard_segments(heard_segments)
+    mapped = map_heard_segments_to_labels(heard, syllables, duration_s) if heard else None
+    if mapped:
+        segments = mapped
+        _log("extract_pitch_contours: using ASR heard_segments")
+    else:
+        _log("extract_pitch_contours: segment_audio_by_syllables...")
+        segments = segment_audio_by_syllables(y, sr, syllables)
     _log(f"слогов: {len(syllables)} {syllables}, сегменты: {[(round(a, 2), round(b, 2)) for a, b in segments]}")
     out = []
     for i, (start_s, end_s) in enumerate(segments):

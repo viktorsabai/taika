@@ -37,8 +37,7 @@ public enum CD {
     }
     public enum BrandFont {
         public static func appTitle(_ size: CGFloat) -> Font {
-            if UIFont(name: "OnmarkTRIAL", size: size) != nil { return .custom("OnmarkTRIAL", size: size) }
-            return .system(size: size, weight: .bold, design: .rounded)
+            .system(size: size, weight: .bold, design: .rounded)
         }
     }
 
@@ -1009,11 +1008,6 @@ public enum CDLessonCarouselCanonical {
 fileprivate let CDCardWidth: CGFloat = CDLessonCarouselCanonical.cardWidth   // match canonical Course/Lesson card width
 fileprivate let CDCardHeight: CGFloat = CDLessonCarouselCanonical.courseLessonCardHeight
 
-/// Completed course cards use a deep jungle-green learned surface; pink stays reserved for actions.
-fileprivate enum CDLearnedCardTokens {
-    static let fill = AnyShapeStyle(TaikaMasteryTokens.greenGradient)
-    static let glow = TaikaMasteryTokens.greenGlow
-}
 // depth & peek tokens to match CardDS calendar
 fileprivate let CDCarouselPeekMin: CGFloat = 14           // visible neighbors per side
 fileprivate let CDDepthNormWidthFactor: CGFloat = 0.60    // wider influence → сильнее эффект
@@ -1242,22 +1236,7 @@ public struct CDReelCourseCard: View {
             isPro: isPro,
             tags: [],
             sectionChrome: .none,
-            accentTreatment: {
-                switch status {
-                case .done:
-                    return .taikaValues(
-                        fill: CDLearnedCardTokens.fill,
-                        glow: CDLearnedCardTokens.glow
-                    )
-                case .inProgress:
-                    return .taikaValues(
-                        fill: AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient),
-                        glow: TaikaMasteryTokens.continueSkyGlow
-                    )
-                default:
-                    return .none
-                }
-            }(),
+            accentTreatment: status == .inProgress ? .brandLive : .none,
             primaryCTA: {
                 let raw = (cta ?? "").lowercased()
                 if raw.contains("нач") { return .start }
@@ -1683,22 +1662,7 @@ public struct CDBaseSection: View {
                     showProCrown: item.showProCrown,
                     tags: [],
                     sectionChrome: .none,
-                    accentTreatment: {
-                        switch item.status {
-                        case .done:
-                            return .taikaValues(
-                                fill: CDLearnedCardTokens.fill,
-                                glow: CDLearnedCardTokens.glow
-                            )
-                        case .inProgress:
-                            return .taikaValues(
-                                fill: AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient),
-                                glow: TaikaMasteryTokens.continueSkyGlow
-                            )
-                        default:
-                            return .none
-                        }
-                    }(),
+                    accentTreatment: item.status == .inProgress ? .brandLive : .none,
                     primaryCTA: {
                         let t = item.cta.lowercased()
                         if t.contains("нач") { return .start }
@@ -1803,22 +1767,7 @@ public struct CDAllCoursesSection<Trailing: View>: View {
                     showProCrown: item.showProCrown,
                     tags: [],
                     sectionChrome: .none,
-                    accentTreatment: {
-                        switch item.status {
-                        case .done:
-                            return .taikaValues(
-                                fill: CDLearnedCardTokens.fill,
-                                glow: CDLearnedCardTokens.glow
-                            )
-                        case .inProgress:
-                            return .taikaValues(
-                                fill: AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient),
-                                glow: TaikaMasteryTokens.continueSkyGlow
-                            )
-                        default:
-                            return .none
-                        }
-                    }(),
+                    accentTreatment: item.status == .inProgress ? .brandLive : .none,
                     primaryCTA: {
                         let t = item.cta.lowercased()
                         if t.contains("нач") { return .start }

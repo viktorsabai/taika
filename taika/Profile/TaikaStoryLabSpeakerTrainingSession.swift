@@ -472,10 +472,7 @@ struct StoryLabEditorSpeakerTrainingSession: View {
 
     private var brandHeader: some View {
         HStack {
-            HStack(spacing: 2) {
-                Text("tai").font(.custom("Onmark Trial", size: 22)).foregroundStyle(.white)
-                Text("kAAA").font(.custom("Onmark Trial", size: 22)).foregroundStyle(theme.currentAccentFill)
-            }
+            TaikaWordmarkLockup(fontSize: 22)
             Spacer()
             HStack(spacing: 8) {
                 if let score = scene.score, scene.training > 0.5 {

@@ -39,7 +39,14 @@ struct AppShell: View {
         switch overlay.overlay {
         case .dictionaryQuickDrawer,
              .profileID,
-             .gameParkForCourse:
+             .giftRedeem,
+             .gameParkForCourse,
+             .speakerPaywall,
+             .proGiftPaywall:
+            return false
+        case .giftIssued:
+            return false
+        case .proCoursePaywall:
             return false
         default:
             return true
@@ -57,40 +64,12 @@ struct AppShell: View {
                     if !nav.path.isEmpty {
                         nav.popToRoot()
                     }
-                    // Never leak Main hub tint into other tabs / header.
                     ThemeManager.shared.hubAtmosphere = nil
                     TaikaAssembleGate.shared.postTabActivated(newValue)
                 }
                 selectedTab = newValue
-                syncTabAtmosphere(newValue)
             }
         )
-    }
-
-    /// Избранное красит хедер в небесный, закрепление — в золото консоли. Главная сама ставит атмосферу режима.
-    /// Спикер (tab 2), открытый из избранного/словаря, сохраняет небесный акцент — иначе сообщение «не того цвета».
-    private func syncTabAtmosphere(_ tab: Int) {
-        guard tab != 0 else { return }
-        withAnimation(.easeInOut(duration: 0.34)) {
-            switch tab {
-            case 3:
-                ThemeManager.shared.hubAtmosphere = .favorites
-            case 4:
-                ThemeManager.shared.hubAtmosphere = .console
-            case 2:
-                let ctx = SpeakerManager.shared.speakerContextCourseId
-                let pending = speakerPendingCourseId
-                    ?? SpeakerRequestedCourseId.shared.courseId
-                let pool = ctx ?? pending
-                if pool == "__favorites__" || pool == "__dictionary__" {
-                    ThemeManager.shared.hubAtmosphere = .favorites
-                } else {
-                    ThemeManager.shared.hubAtmosphere = nil
-                }
-            default:
-                ThemeManager.shared.hubAtmosphere = nil
-            }
-        }
     }
 
     /// Тап по иконке Спикер в тулбаре → умный спикер, если нет контекста тренировки курса/избранного.
@@ -113,6 +92,8 @@ struct AppShell: View {
     }
 
     @ObservedObject private var overlay = OverlayPresenter.shared
+    @ObservedObject private var voicePreference = TaikaVoicePreference.shared
+    @ObservedObject private var coachMarks = TaikaCoachCenter.shared
     @ObservedObject private var gameHeaderStore = GameHeaderStore.shared
     @EnvironmentObject private var nav: NavigationIntent
     /// When switching to Speaker tab from course card, pass consumed courseId so Speaker shows full course queue (onAppear may not run in time).
@@ -133,9 +114,7 @@ struct AppShell: View {
         ZStack {
             Color.black.ignoresSafeArea()
             VStack(spacing: 10) {
-                Text("taikAAA")
-                    .font(.custom("Onmark Trial", size: 28))
-                    .foregroundStyle(.white)
+                TaikaWordmarkLockup(fontSize: 28)
                 Text("AppShell preview stub")
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.45))
@@ -379,6 +358,35 @@ struct AppShell: View {
                 .frame(maxWidth: .infinity)
             }
         }
+        .overlay(alignment: .bottom) {
+            if let note = voicePreference.systemVoiceCaption {
+                Text(note)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(PD.ColorToken.card.opacity(0.94), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 108)
+                    .allowsHitTesting(false)
+            }
+        }
+        .overlay {
+            if let pack = coachMarks.activePack(onboardingDone: onboardingDone, overlayVisible: overlay.overlay != nil) {
+                let hits = coachMarks.targets(for: pack)
+                if !hits.isEmpty {
+                    TaikaCoachScrim(
+                        targets: hits.map { ($0.mark.title, $0.hole) }
+                    ) {
+                        coachMarks.dismiss(pack)
+                    }
+                }
+            }
+        }
+        .onPreferenceChange(TaikaCoachFrameKey.self) { frames in
+            coachMarks.update(frames)
+        }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .environmentObject(ThemeManager.shared)
         .environmentObject(FavoriteManager.shared)
@@ -577,12 +585,13 @@ struct AppShell: View {
                     nav.popToRoot()
                 }
                 selectedTab = applyTab
-                syncTabAtmosphere(applyTab)
+                ThemeManager.shared.hubAtmosphere = nil
                 TaikaAssembleGate.shared.postTabActivated(applyTab)
             }
         }
         .onChange(of: nav.path) { _, newPath in
             let onGame = newPath.last.map { if case .game = $0 { return true }; return false } ?? false
+            AuthSoftWallState.setGameCoversScreen(onGame)
             if !onGame, gameHeaderStore.config != nil {
                 gameHeaderStore.config = nil
             }
@@ -661,7 +670,8 @@ private struct ShellHeaderHost: View {
                 onSpeaker: lessonsHeaderStore.onSpeaker,
                 onReinforce: lessonsHeaderStore.onReinforce,
                 onReset: { lessonsHeaderStore.requestReset() },
-                gameParkActive: LearnedGameSource.hasPlayableCards
+                gameParkActive: LearnedGameSource.hasPlayableCards,
+                reinforceReady: lessonsHeaderStore.reinforceReady
             )
         }
         return .back(
@@ -681,7 +691,7 @@ private struct ShellHeaderHost: View {
 
         AppHeader(
             onTapPro: { overlay.present(.profileID) },
-            onTapVoice: { overlay.present(.voiceSettings) },
+            onTapVoice: {},
             onTapGamePark: { overlay.present(.gamePark) },
             onTapCourseSearch: { overlay.presentSearch() },
             onTapCourseFilters: { overlay.present(.courseFilters) },
@@ -721,7 +731,6 @@ private struct ShellHeaderHost: View {
             onTapFavoritesSpeaker: {
                 speakerPendingCourseId = "__favorites__"
                 speakerPendingLessonId = nil
-                ThemeManager.shared.hubAtmosphere = .favorites
                 if nav.path.isEmpty {
                     SpeakerReturnContext.shared.clear()
                 } else {

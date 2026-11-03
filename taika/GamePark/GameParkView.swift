@@ -144,13 +144,14 @@ struct GameParkView: View {
             ) {
                 TaikaAssemblingPlanet(
                     gateKey: "tab.gamepark",
-                    scale: 0.72,
+                    scale: TaikaHeroColumn.planetScale,
                     centerSymbol: "gamecontroller.fill",
                     inviteTap: canStart,
-                    palette: .console,
+                    palette: .theme,
                     idleAccent: canStart ? 0.58 : 0.42,
-                    frameSize: 220
+                    frameSize: TaikaHeroColumn.planetFrame
                 )
+                .frame(height: TaikaHeroColumn.sphereBand)
                 .accessibilityLabel(canStart ? "Закрепление" : "Закрепление недоступно")
                 .accessibilityHint(guideLines.first ?? "")
             } chipZone: {
@@ -195,14 +196,12 @@ struct GameParkView: View {
         if !hasAnyPlayable {
             return TaikaAssistantHubPrimaryCTA(
                 title: "К курсам",
-                accent: Color(red: 0.96, green: 0.68, blue: 0.18),
                 action: { nav.openCourseCatalog(tab: .base) }
             )
         }
         return TaikaAssistantHubPrimaryCTA(
             title: "Начать закрепление",
             isEnabled: canStart,
-            accent: Color(red: 0.96, green: 0.68, blue: 0.18),
             action: startIfPossible
         )
     }

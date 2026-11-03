@@ -38,7 +38,6 @@
 		158B02052E59B31600EBEA0E /* taika.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = taika.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		158B02192E59B31900EBEA0E /* taikaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = taikaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		158B02232E59B31900EBEA0E /* taikaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = taikaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		158B02402E59B67000EBEA0E /* Onmark TRIAL Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Onmark TRIAL Regular.otf"; path = "taika/Theme/Onmark TRIAL Regular.otf"; sourceTree = "<group>"; };
 		158B025C2E5AEC0C00EBEA0E /* taika_basa_course.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = taika_basa_course.json; path = taika/Resourses/taika_basa_course.json; sourceTree = "<group>"; };
 		158E96742EDDD24F00C4E831 /* taikafm.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taikafm.json; sourceTree = "<group>"; };
 		15A4AA122FD70708003C8344 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -98,7 +97,6 @@
 				158E96742EDDD24F00C4E831 /* taikafm.json */,
 				15194D322E6C6B5B00F57D9B /* lessons.json */,
 				158B025C2E5AEC0C00EBEA0E /* taika_basa_course.json */,
-				158B02402E59B67000EBEA0E /* Onmark TRIAL Regular.otf */,
 				158B02072E59B31600EBEA0E /* taika */,
 				158B021C2E59B31900EBEA0E /* taikaTests */,
 				158B02262E59B31900EBEA0E /* taikaUITests */,
@@ -312,13 +310,14 @@
 				CODE_SIGN_ENTITLEMENTS = taika/taika.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "speaker practice needs microphone access";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "speaker practice needs speech recognition access";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Микрофон нужен, чтобы разобрать, как ты говоришь по-тайски.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Распознавание речи нужно, чтобы перевести сказанное и оценить произношение.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -359,13 +358,14 @@
 				CODE_SIGN_ENTITLEMENTS = taika/taika.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "speaker practice needs microphone access";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "speaker practice needs speech recognition access";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Микрофон нужен, чтобы разобрать, как ты говоришь по-тайски.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Распознавание речи нужно, чтобы перевести сказанное и оценить произношение.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

@@ -38,7 +38,7 @@ public struct SpeakerDSRoot: View {
         let trainingHeardThaiASR: String?
         let trainingHeardPhoneticFromASR: String?
         let heardConfidence: Int
-        /// Итог для истории/сессии: min(текст, тон) или hybrid с API. В UI — через SpeakerTripleScoreHeader.
+        /// Оценка по словам (ASR vs эталон). Тон — отдельно, не смешиваем.
         let displayScore: Int
         /// Средний тон по слогам (для подписи «Тон X%» в разборе); nil, если разбора ещё нет.
         let toneAverageScore: Int?
@@ -47,7 +47,7 @@ public struct SpeakerDSRoot: View {
         let breakdownRequestInFlight: Bool
         /// true, если запрос разбора по тонам завершился ошибкой (показать подсказку в карточке).
         let breakdownRequestFailed: Bool
-        /// Гибридная оценка (0.4×текст + 0.3×фонема + 0.3×тон), если API вернул hybrid_score.
+        /// Устарело: hybrid больше не показываем. Поле оставлено, чтобы не ломать init.
         let breakdownHybridScore: Int?
         let recordingMeter: Double
         let recordingPartialThai: String?
@@ -59,6 +59,9 @@ public struct SpeakerDSRoot: View {
         let onPlayReference: () -> Void
         let onPlayAttempt: () -> Void
         let onPlayReferenceSyllableAtIndex: ((Int) -> Void)?
+        let onPlayAttemptSyllableAtIndex: ((Int) -> Void)?
+        let teachingFocusLine: String?
+        let weakestSyllableIndex: Int?
         let onPlayReferenceForId: ((UUID) -> Void)?
         let onMicTap: () -> Void
         let onNext: () -> Void
@@ -172,6 +175,10 @@ public struct SpeakerDSRoot: View {
         let onSetSmartSpeakerPoliteness: (String) -> Void
         /// 0…1 во время воспроизведения эталона (TTS); для прорисовки графика тона 1:1 с аудио.
         let referencePlaybackProgress: Double
+        /// Слог, который сейчас озвучивается. nil — вся фраза или тишина.
+        let referencePlaybackSyllableIndex: Int?
+        /// true — отдельный слог не нарезался, звучит вся фраза.
+        let referenceSyllablePlaysFullPhrase: Bool
         /// 0…1 во время воспроизведения записи пользователя.
         let attemptPlaybackProgress: Double
         /// Вызывается при появлении оверлея «разбор» — сбросить прогресс эталона, чтобы график «Эталон» был виден целиком.
@@ -223,6 +230,7 @@ public struct SpeakerDSRoot: View {
     @State private var isBreakdownExpanded: Bool = false
     /// Expanded weak syllable for lifehack; nil until user taps.
     @State private var selectedBreakdownSyllableIndex: Int? = nil
+    @State private var syllableRowsReveal: Bool = false
 
     @State private var showAnalysis: Bool = false
     @State private var showBreakdownOverlayLocal: Bool = false
@@ -245,9 +253,9 @@ public struct SpeakerDSRoot: View {
     @State private var expandedTrainingCourseId: String? = nil
     @Environment(\.taikaRootHeaderClearance) private var rootHeaderClearance
     @State private var conversationThaiCopiedFlash = false
-    /// По умолчанию true — иначе при сбое onAppear старт спикера остаётся невидимым.
-    @State private var speakerInviteAppeared = true
     @State private var idleMicPulse = false
+    /// Куда въезжает сцена: закрепление справа, спикер слева.
+    @State private var speakerSlideEdge: Edge = .trailing
     @State private var conversationStageAppeared = true
     @State private var trainingTeaserIndex = 0
     @State private var conversationTeaserIndex = 0
@@ -256,6 +264,7 @@ public struct SpeakerDSRoot: View {
     @State private var conversationTextComposerExpanded = false
     /// Voice / Text scenes — horizontal planet swipe (no chip rail).
     @State private var conversationPlanetScene: ConversationPlanetScene = .voice
+    @State private var conversationKeyboardHeight: CGFloat = 0
     @State private var conversationPlanetDrag: CGFloat = 0
     /// Измеренные высоты разбора: скролл и шеврон решаются по факту, а не по прикидке
     /// «строка = 34pt» — она врала на переносах длинных значений и на межстрочных отступах.
@@ -408,6 +417,9 @@ public struct SpeakerDSRoot: View {
         onPlayReference: @escaping () -> Void,
         onPlayAttempt: @escaping () -> Void,
         onPlayReferenceSyllableAtIndex: ((Int) -> Void)? = nil,
+        onPlayAttemptSyllableAtIndex: ((Int) -> Void)? = nil,
+        teachingFocusLine: String? = nil,
+        weakestSyllableIndex: Int? = nil,
         onPlayReferenceForId: ((UUID) -> Void)? = nil,
         onMicTap: @escaping () -> Void,
         onNext: @escaping () -> Void,
@@ -479,6 +491,8 @@ public struct SpeakerDSRoot: View {
         smartSpeakerPoliteness: String = "female",
         onSetSmartSpeakerPoliteness: @escaping (String) -> Void = { _ in },
         referencePlaybackProgress: Double = 1.0,
+        referencePlaybackSyllableIndex: Int? = nil,
+        referenceSyllablePlaysFullPhrase: Bool = false,
         attemptPlaybackProgress: Double = 1.0,
         onBreakdownAppear: (() -> Void)? = nil,
         onOpenInstantTranslation: (() -> Void)? = nil,
@@ -515,6 +529,9 @@ public struct SpeakerDSRoot: View {
             onPlayReference: onPlayReference,
             onPlayAttempt: onPlayAttempt,
             onPlayReferenceSyllableAtIndex: onPlayReferenceSyllableAtIndex,
+            onPlayAttemptSyllableAtIndex: onPlayAttemptSyllableAtIndex,
+            teachingFocusLine: teachingFocusLine,
+            weakestSyllableIndex: weakestSyllableIndex,
             onPlayReferenceForId: onPlayReferenceForId,
             onMicTap: onMicTap,
             onNext: onNext,
@@ -584,6 +601,8 @@ public struct SpeakerDSRoot: View {
             smartSpeakerPoliteness: smartSpeakerPoliteness,
             onSetSmartSpeakerPoliteness: onSetSmartSpeakerPoliteness,
             referencePlaybackProgress: referencePlaybackProgress,
+            referencePlaybackSyllableIndex: referencePlaybackSyllableIndex,
+            referenceSyllablePlaysFullPhrase: referenceSyllablePlaysFullPhrase,
             attemptPlaybackProgress: attemptPlaybackProgress,
             onBreakdownAppear: onBreakdownAppear,
             onOpenInstantTranslation: onOpenInstantTranslation,
@@ -629,6 +648,9 @@ public struct SpeakerDSRoot: View {
             },
             onPlayAttempt: { speaker.playAttempt() },
             onPlayReferenceSyllableAtIndex: { speaker.playReferenceSyllable(at: $0) },
+            onPlayAttemptSyllableAtIndex: { speaker.playAttemptSyllable(at: $0) },
+            teachingFocusLine: speaker.teachingFocusLine,
+            weakestSyllableIndex: speaker.weakestSyllableIndex,
             onMicTap: {},
             onNext: {},
             onRepeat: {},
@@ -644,6 +666,8 @@ public struct SpeakerDSRoot: View {
             conversationCoachDetail: speaker.conversationCoachDetail,
             conversationCoachInFlight: speaker.conversationCoachInFlight,
             referencePlaybackProgress: speaker.referencePlaybackProgress,
+            referencePlaybackSyllableIndex: speaker.referencePlaybackSyllableIndex,
+            referenceSyllablePlaysFullPhrase: speaker.referenceSyllablePlaysFullPhrase,
             attemptPlaybackProgress: speaker.attemptPlaybackProgress,
             breakdownContentOnly: true
         )
@@ -1020,11 +1044,8 @@ public struct SpeakerDSRoot: View {
         let focused = conversationNeedsFocusOverlay
 
         ZStack {
-            if !conversationIsTextScene {
-                conversationSharedAtmosphere
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-            }
+            conversationSharedAtmosphere
+                .ignoresSafeArea()
 
             if !focused, !conversationShowsOutcomeHero, conversationHasResult, !history.isEmpty {
                 conversationHistoryFeed(history)
@@ -1036,20 +1057,14 @@ public struct SpeakerDSRoot: View {
             if conversationShowsPracticeHero {
                 conversationPracticeCanvas(padH: padH)
                     .transition(.opacity)
-            } else if conversationIsTextScene {
-                conversationTextSceneCanvas(padH: padH)
-                    .transition(.opacity)
             } else {
                 conversationUnifiedShell(padH: padH)
-                    .transition(.opacity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.easeInOut(duration: 0.28), value: conversationShowsOutcomeHero)
         .animation(.easeInOut(duration: 0.24), value: conversationShowsPracticeHero)
-        .animation(.easeInOut(duration: 0.24), value: conversationIsTextScene)
         .animation(.easeInOut(duration: 0.2), value: conversationWidgetStateKey)
-        .animation(.easeInOut(duration: 0.22), value: conversationPlanetScene)
         .onChange(of: phase) { oldPhase, newPhase in
             if case .recording = newPhase {
                 conversationPlanetScene = .voice
@@ -1074,11 +1089,12 @@ public struct SpeakerDSRoot: View {
         .onChange(of: conversationPlanetScene) { _, scene in
             if scene == .text {
                 conversationTextComposerExpanded = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                DispatchQueue.main.async {
                     conversationComposeFocused = true
                 }
             } else {
                 conversationComposeFocused = false
+                conversationKeyboardHeight = 0
             }
         }
     }
@@ -1099,7 +1115,7 @@ public struct SpeakerDSRoot: View {
             intensity: intensity,
             isLive: recording,
             audioLevel: voicePlanetAudioLevel,
-            heroAnchor: UnitPoint(x: 0.5, y: 0.44)
+            heroAnchor: TaikaHeroColumn.backdropAnchor
         )
     }
 
@@ -1190,58 +1206,102 @@ public struct SpeakerDSRoot: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    Spacer(minLength: 0)
-
-                    VStack(spacing: 14) {
-                        conversationUnifiedHero
-
-                        if conversationIsRecording
-                            || phase.isProcessing
-                            || (phase == .hint && !taikaHints.isEmpty) {
-                            conversationLiveHeroText
-                                .frame(maxHeight: 72)
+                    let tabLift = Theme.Layout.bottomToolbarHeight + 12
+                    let keyboardLift = max(0, conversationKeyboardHeight - tabLift)
+                    let textKeyboardOpen = conversationIsTextScene && keyboardLift > 0
+                    ZStack(alignment: .bottom) {
+                        VStack(spacing: TaikaHeroColumn.spacing) {
+                            if conversationIsTextScene {
+                                conversationTextComposerPanel
+                                    .frame(
+                                        maxWidth: .infinity,
+                                        maxHeight: textKeyboardOpen ? nil : TaikaHeroColumn.sphereBand,
+                                        alignment: .center
+                                    )
+                            } else {
+                                conversationUnifiedHero
+                            }
+                            if !textKeyboardOpen {
+                                conversationHeroLineSlot
+                            }
                         }
+                        .padding(.horizontal, padH)
+                        .padding(.bottom, textKeyboardOpen ? 52 : TaikaHeroColumn.columnLift)
+                        .frame(
+                            maxWidth: .infinity,
+                            maxHeight: .infinity,
+                            alignment: textKeyboardOpen ? .bottom : .center
+                        )
 
-                        if conversationShowsTextModeSwitch {
-                            conversationModeSwitchControl(to: .text)
+                        VStack(spacing: 10) {
+                            if phase == .hint, !taikaHints.isEmpty {
+                                conversationErrorActionBar
+                                    .padding(.horizontal, padH)
+                            }
+                            if conversationShowsTextModeSwitch {
+                                conversationModeSwitchControl(to: conversationIsTextScene ? .voice : .text)
+                            }
                         }
+                        .padding(.bottom, tabLift + keyboardLift)
                     }
-                    .padding(.horizontal, padH)
-                    .frame(maxWidth: .infinity)
-
-                    Spacer(minLength: 0)
-
-                    Group {
-                        if phase == .hint, !taikaHints.isEmpty {
-                            conversationErrorActionBar
-                                .padding(.horizontal, padH)
-                        } else {
-                            Color.clear.frame(height: 1)
-                        }
-                    }
-                    .frame(height: (phase == .hint && !taikaHints.isEmpty) ? 64 : 0)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .simultaneousGesture(conversationPlanetEdgeSwipeGesture)
                 }
             }
-            .padding(.bottom, ToolBar.recommendedBottomInset + (outcome ? 4 : 8))
+            .padding(.bottom, outcome ? ToolBar.recommendedBottomInset + 4 : 0)
             .frame(width: geo.size.width, height: geo.size.height)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+            guard conversationPlanetScene == .text else { return }
+            guard let endFrame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+            let height = max(0, UIScreen.main.bounds.height - endFrame.minY)
+            let duration = (note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.25
+            withAnimation(.easeOut(duration: duration)) {
+                conversationKeyboardHeight = height
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { note in
+            let duration = (note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.2
+            withAnimation(.easeOut(duration: duration)) {
+                conversationKeyboardHeight = 0
+            }
+        }
     }
 
     @ViewBuilder private var conversationUnifiedHero: some View {
-        VStack(spacing: 14) {
-            // Над сферой: «СЛУШАЮ» / «РАСПОЗНАЮ». Под сферой — переключение на текст.
-            if conversationIsRecording
-                || phase.isProcessing
-                || phase == .hint
-                || (conversationIsPracticeFlow && !conversationIsRecording) {
-                conversationLiveStatusChip
-                    .frame(height: 28)
-            }
+        conversationVoicePlanetButton
+            .frame(maxWidth: .infinity)
+    }
 
-            conversationVoicePlanetButton
+    private var speakerIdleTypewriterLines: [String] {
+        ["Скажи по-русски", "Тап по сфере — я слушаю"]
+    }
+
+    /// Same slot as the hub typewriter. «Текст» / «Голос» stay pinned below it.
+    @ViewBuilder private var conversationHeroLineSlot: some View {
+        ZStack {
+            Color.clear.frame(minHeight: TaikaHeroColumn.lineMinHeight)
+            if conversationIsTextScene {
+                EmptyView()
+            } else if conversationIsRecording || phase.isProcessing || (phase == .hint && !taikaHints.isEmpty) {
+                VStack(spacing: 8) {
+                    if conversationIsRecording || phase.isProcessing || phase == .hint {
+                        conversationLiveStatusChip
+                    }
+                    conversationLiveHeroText
+                }
+            } else {
+                MDCyclingTypewriter(
+                    lines: speakerIdleTypewriterLines,
+                    font: TaikaHeroColumn.lineFont,
+                    holdSeconds: TaikaHeroColumn.lineHoldSeconds,
+                    minHeight: TaikaHeroColumn.lineMinHeight,
+                    isCentered: true
+                )
+            }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, minHeight: TaikaHeroColumn.lineMinHeight)
     }
 
     /// Practice: phrase floats on liquid glass — no frame/card.
@@ -1317,7 +1377,7 @@ public struct SpeakerDSRoot: View {
                                 external?.onPlayConversationTTS()
                             }
                         } label: {
-                            Image(systemName: "speaker.wave.2.fill")
+                            Image(systemName: "person.wave.2.fill")
                                 .font(.system(size: 18, weight: .semibold))
                                 .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
                                 .frame(width: 52, height: 52)
@@ -1380,38 +1440,6 @@ public struct SpeakerDSRoot: View {
         .allowsHitTesting(false)
     }
 
-    /// Text mode: techno-space + composer; return to voice via chip/swipe.
-    @ViewBuilder private func conversationTextSceneCanvas(padH: CGFloat) -> some View {
-        ZStack {
-            TaikaTechnoSpaceBackdrop(intensity: 0.72)
-                .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-
-                conversationTextComposerPanel
-                    .padding(.horizontal, padH)
-                    .frame(maxWidth: 440)
-                    .frame(maxWidth: .infinity)
-
-                conversationModeSwitchControl(to: .voice)
-                    .padding(.top, 18)
-
-                Spacer(minLength: 0)
-            }
-            .padding(.bottom, ToolBar.recommendedBottomInset + 8)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .contentShape(Rectangle())
-        .gesture(conversationPlanetEdgeSwipeGesture)
-        .onAppear {
-            conversationTextComposerExpanded = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                conversationComposeFocused = true
-            }
-        }
-    }
-
     /// Obvious tappable mode switch (swipe still works on the page, not on the mic).
     @ViewBuilder private func conversationModeSwitchControl(to scene: ConversationPlanetScene) -> some View {
         let isToText = scene == .text
@@ -1458,13 +1486,13 @@ public struct SpeakerDSRoot: View {
             TaikaAssemblingPlanet(
                 gateKey: "tab.speaker",
                 kind: .voice,
-                scale: 0.88,
-                frameSize: 280,
+                scale: TaikaHeroColumn.planetScale,
+                frameSize: TaikaHeroColumn.planetFrame,
                 settledMode: conversationPlanetMode,
                 audioLevel: voicePlanetAudioLevel
             )
         }
-        .frame(width: 300, height: 300)
+        .frame(width: TaikaHeroColumn.sphereBand, height: TaikaHeroColumn.sphereBand)
         .contentShape(Circle())
         .gesture(
             DragGesture(minimumDistance: 0, coordinateSpace: .local)
@@ -1546,17 +1574,19 @@ public struct SpeakerDSRoot: View {
         if scene == .text {
             conversationEngine.abandonConversationListeningForText()
         }
-        withAnimation(.easeInOut(duration: 0.28)) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
             conversationPlanetScene = scene
         }
         conversationPlanetDrag = 0
         if scene == .voice {
-            collapseConversationTextComposer(clearText: true)
+            conversationComposeFocused = false
+            conversationComposeText = ""
+            conversationTextComposerExpanded = false
+            conversationKeyboardHeight = 0
         } else {
             conversationTextComposerExpanded = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-                conversationComposeFocused = true
-            }
         }
     }
 
@@ -1632,31 +1662,68 @@ public struct SpeakerDSRoot: View {
         .accessibilityLabel(isRec ? "Идёт запись, \(label)" : label)
     }
 
-    private var conversationErrorActionBar: some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            if conversationIsPracticeFlow {
-                external?.onConversationRepeatAndCheck()
-            } else {
-                external?.onConversationRepeat(true)
+    @ViewBuilder private var conversationErrorActionBar: some View {
+        if external?.lastAttempt != nil, conversationIsPracticeFlow {
+            HStack(spacing: 28) {
+                Spacer(minLength: 0)
+                conversationChromeIconButton(
+                    systemName: "person.wave.2.fill",
+                    enabled: true,
+                    accessibility: "Эталон",
+                    caption: "Эталон"
+                ) {
+                    external?.onPlayReference()
+                }
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    external?.onConversationRepeatAndCheck()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 20, weight: .bold))
+                        .frame(width: 56, height: 56)
+                        .background(Circle().fill(ThemeManager.shared.currentAccentFill))
+                        .foregroundColor(.black)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Ещё раз")
+                conversationChromeIconButton(
+                    systemName: "person.wave.2.fill",
+                    enabled: true,
+                    accessibility: "Моя запись",
+                    caption: "Моя"
+                ) {
+                    external?.onPlayAttempt()
+                }
+                Spacer(minLength: 0)
             }
-        } label: {
-            Label("Сказать ещё раз", systemImage: "arrow.clockwise")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(PD.ColorToken.text)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(PD.ColorToken.chip.opacity(0.92))
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(ThemeManager.shared.currentAccentFill.opacity(0.58), lineWidth: 1)
-                        )
-                )
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 2)
+        } else {
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                if conversationIsPracticeFlow {
+                    external?.onConversationRepeatAndCheck()
+                } else {
+                    external?.onConversationRepeat(true)
+                }
+            } label: {
+                Label("Сказать ещё раз", systemImage: "arrow.clockwise")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(PD.ColorToken.chip.opacity(0.92))
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .stroke(ThemeManager.shared.currentAccentFill.opacity(0.58), lineWidth: 1)
+                            )
+                    )
+            }
+            .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
+            .accessibilityLabel("Сказать ещё раз")
         }
-        .buttonStyle(PressDownStyle(scale: 0.98, fade: 0.97))
-        .accessibilityLabel("Сказать ещё раз")
     }
 
     @ViewBuilder private var conversationLiveHeroText: some View {
@@ -1729,8 +1796,6 @@ public struct SpeakerDSRoot: View {
     }
 
     private var conversationWidgetStateKey: String {
-        if conversationTextComposerExpanded { return "text-compose" }
-        if conversationPlanetScene == .text { return "text-planet" }
         if phase.isFeedback { return "feedback" }
         if conversationIsPracticeFlow {
             if case .recording = phase { return "practice-rec" }
@@ -1952,12 +2017,15 @@ public struct SpeakerDSRoot: View {
         }
     }
 
-    /// Тайский оригинал фразы для разбора: в тренировке это эталон, иначе — то, что перевели.
+    /// Тайский оригинал фразы для разбора. `heardThai` в тренировке — фонетика, не скрипт.
     private var breakdownThaiOriginal: String {
-        let expected = (external?.conversationExpectedThai ?? "")
+        let conv = (external?.conversationExpectedThai ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        if !expected.isEmpty { return expected }
-        return (external?.heardThai ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if Self.containsThaiScript(conv) { return conv }
+        let card = (currentItem?.phrase ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if Self.containsThaiScript(card) { return card }
+        return ""
     }
 
     /// Тайский оригинал с копированием. Сам текст пользователь не читает, но он ему нужен
@@ -2350,18 +2418,30 @@ public struct SpeakerDSRoot: View {
         let chunks = glossDisplayChunks(parts: parts)
         Grid(alignment: .topLeading, horizontalSpacing: 10, verticalSpacing: 14) {
             ForEach(Array(parts.enumerated()), id: \.offset) { index, part in
+                let token = chunks.indices.contains(index) ? chunks[index] : part.p
+                let isParticle = Self.isTrailingPolitenessIndex(index, total: parts.count, token: token)
+                if isParticle {
+                    GridRow {
+                        Rectangle()
+                            .fill(Color.white.opacity(0.14))
+                            .frame(height: 1)
+                            .gridCellColumns(3)
+                            .padding(.vertical, 2)
+                    }
+                }
                 GridRow {
                     TaikaSmartSpeakerPhonetic.styledText(
-                        chunks.indices.contains(index) ? chunks[index] : part.p,
-                        font: .system(size: 18, weight: .semibold)
+                        token,
+                        font: .system(size: isParticle ? 16 : 18, weight: .semibold)
                     )
                     .fixedSize(horizontal: true, vertical: false)
+                    .opacity(isParticle ? 0.78 : 1)
                     Text("—")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.42))
                     Text(SpeakerManager.withoutThaiScript(part.m))
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.text.opacity(0.82))
+                        .font(.system(size: isParticle ? 16 : 18, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.text.opacity(isParticle ? 0.62 : 0.82))
                         .fixedSize(horizontal: false, vertical: true)
                         .gridColumnAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -2440,7 +2520,17 @@ public struct SpeakerDSRoot: View {
                     }
                 }
 
-                if !userText.isEmpty, userText != "—" {
+                if userText == Self.conversationPhoneticLoadingToken {
+                    VStack(spacing: 6) {
+                        Text("ТЫ СКАЗАЛА")
+                            .font(.system(size: 11, weight: .bold))
+                            .tracking(0.8)
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.55))
+                        Text("Загружаем кириллическую фонетику…")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
+                } else if !userText.isEmpty, userText != "—" {
                     VStack(spacing: 6) {
                         Text("ТЫ СКАЗАЛА")
                             .font(.system(size: 11, weight: .bold))
@@ -2454,13 +2544,13 @@ public struct SpeakerDSRoot: View {
                     }
                 }
 
-                if external?.onRequestBreakdown != nil {
+                if (external?.heardConfidence ?? score) >= 40, external?.onRequestBreakdown != nil {
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         external?.onRequestBreakdown?()
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: "waveform.path.ecg")
+                            Image(systemName: "text.magnifyingglass")
                                 .font(.system(size: 13, weight: .semibold))
                             Text("Разбор тонов")
                                 .font(.system(size: 14, weight: .semibold))
@@ -2488,20 +2578,20 @@ public struct SpeakerDSRoot: View {
         let ph = SpeakerManager.withoutThaiScript(external?.trainingHeardPhoneticFromASR ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         if !ph.isEmpty { return ph }
-        let fallback = SpeakerManager.withoutThaiScript(heardTranslitText)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return fallback.isEmpty ? "—" : fallback
+        let asr = (external?.trainingHeardThaiASR ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return asr.isEmpty ? "—" : Self.conversationPhoneticLoadingToken
     }
 
     /// Одна конкретная правка вместо галочки «готово»: что именно исправить в следующей попытке.
     /// Пока грузится — держим ту же высоту, чтобы блок под оценкой не подпрыгивал.
     @ViewBuilder private var conversationCoachLine: some View {
+        let focus = (external?.teachingFocusLine ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let coach = SpeakerManager.usableCoach(
             headline: external?.conversationCoachHeadline,
             detail: external?.conversationCoachDetail
         )
-        let headline = coach?.headline ?? ""
-        let loading = external?.conversationCoachInFlight ?? false
+        let headline = focus.isEmpty ? (coach?.headline ?? "") : focus
+        let loading = focus.isEmpty && (external?.conversationCoachInFlight ?? false)
 
         if !headline.isEmpty || loading {
             Text(headline.isEmpty ? "смотрю, что поправить…" : headline)
@@ -2512,7 +2602,7 @@ public struct SpeakerDSRoot: View {
                     : PD.ColorToken.text.opacity(0.92)
                 )
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
+                .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 8)
@@ -2523,9 +2613,19 @@ public struct SpeakerDSRoot: View {
 
     /// Развёрнутое пояснение коуча в разборе тонов: что именно перепутано — слово, тон или слог.
     @ViewBuilder private var conversationCoachDetailBlock: some View {
-        // Блок появляется только с заголовком: «ЧТО ПОПРАВИТЬ» с одним пояснением
-        // без сути выглядит обрубленным.
-        if let coach = SpeakerManager.usableCoach(
+        if let focus = external?.teachingFocusLine?.trimmingCharacters(in: .whitespacesAndNewlines), !focus.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("ЧТО ПОПРАВИТЬ")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(0.8)
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.65))
+                Text(focus)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text.opacity(0.94))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else if let coach = SpeakerManager.usableCoach(
             headline: external?.conversationCoachHeadline,
             detail: external?.conversationCoachDetail
         ) {
@@ -2557,10 +2657,8 @@ public struct SpeakerDSRoot: View {
             SpeakerManager.withoutThaiScript(external?.conversationHeardPhoneticFromASR ?? "")
         )
         if !ph.isEmpty { return ph }
-        let fallback = SpeakerManager.canonicalTeachingPhonetic(
-            SpeakerManager.withoutThaiScript(heardTranslitText)
-        )
-        return fallback.isEmpty ? "—" : fallback
+        let asr = (external?.conversationHeardThaiASR ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return asr.isEmpty ? "—" : Self.conversationPhoneticLoadingToken
     }
 
     @ViewBuilder private var conversationWidgetErrorCenter: some View {
@@ -2646,6 +2744,7 @@ public struct SpeakerDSRoot: View {
         systemName: String,
         enabled: Bool,
         accessibility: String,
+        caption: String? = nil,
         action: @escaping () -> Void
     ) -> some View {
         Button {
@@ -2653,15 +2752,28 @@ public struct SpeakerDSRoot: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             action()
         } label: {
-            Image(systemName: systemName)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(
-                    enabled
-                    ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-                    : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35))
-                )
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
+            VStack(spacing: 6) {
+                Image(systemName: systemName)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(
+                        enabled
+                        ? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+                        : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.35))
+                    )
+                    .frame(width: 44, height: 36)
+                if let caption, !caption.isEmpty {
+                    Text(caption)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(
+                            enabled
+                            ? PD.ColorToken.text.opacity(0.78)
+                            : PD.ColorToken.textSecondary.opacity(0.35)
+                        )
+                        .lineLimit(1)
+                }
+            }
+            .frame(minWidth: 64)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
@@ -2677,9 +2789,9 @@ public struct SpeakerDSRoot: View {
             HStack(spacing: 28) {
                 Spacer(minLength: 0)
                 conversationChromeIconButton(
-                    systemName: "speaker.wave.2.fill",
+                    systemName: "person.wave.2.fill",
                     enabled: true,
-                    accessibility: "Послушать"
+                    accessibility: "Послушать эталон"
                 ) {
                     external?.onPlayConversationTTS()
                 }
@@ -2759,9 +2871,10 @@ public struct SpeakerDSRoot: View {
                 Spacer(minLength: 0)
 
                 conversationChromeIconButton(
-                    systemName: "speaker.wave.2.fill",
+                    systemName: "person.wave.2.fill",
                     enabled: true,
-                    accessibility: "Эталон"
+                    accessibility: "Эталон",
+                    caption: "Эталон"
                 ) {
                     if conversationIsPracticeFlow {
                         external?.onPlayReference()
@@ -2784,12 +2897,12 @@ public struct SpeakerDSRoot: View {
                 .accessibilityLabel("Ещё раз")
 
                 conversationChromeIconButton(
-                    systemName: "xmark",
-                    enabled: true,
-                    accessibility: "Закрыть"
+                    systemName: "person.wave.2.fill",
+                    enabled: (external?.lastAttempt != nil),
+                    accessibility: "Моя запись",
+                    caption: "Моя"
                 ) {
-                    setEffectiveShowBreakdown(false)
-                    external?.onConversationRepeat(false)
+                    external?.onPlayAttempt()
                 }
 
                 Spacer(minLength: 0)
@@ -2892,22 +3005,25 @@ public struct SpeakerDSRoot: View {
             && !phase.isProcessing
             && !conversationIsRecording
 
-        VStack(alignment: .center, spacing: 18) {
-            Text("Любая фраза…")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .center)
+        let keyboardOpen = conversationKeyboardHeight > 0
+        VStack(alignment: .center, spacing: keyboardOpen ? 12 : 18) {
+            if !keyboardOpen {
+                Text("Любая фраза…")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
 
             TextField("Напиши по-русски", text: $conversationComposeText, axis: .vertical)
-                .font(.system(size: 24, weight: .medium, design: .rounded))
+                .font(.system(size: keyboardOpen ? 22 : 24, weight: .medium, design: .rounded))
                 .foregroundStyle(PD.ColorToken.text)
                 .multilineTextAlignment(.center)
-                .lineLimit(3...6)
+                .lineLimit(keyboardOpen ? 2...4 : 3...6)
                 .focused($conversationComposeFocused)
                 .textInputAutocapitalization(.sentences)
                 .submitLabel(.go)
                 .onSubmit { submitConversationCompose() }
-                .frame(minHeight: 88, alignment: .center)
+                .frame(minHeight: keyboardOpen ? 56 : 88, alignment: .center)
                 .frame(maxWidth: .infinity)
                 .tint(ThemeManager.shared.currentAccentTintColor)
 
@@ -3149,6 +3265,7 @@ public struct SpeakerDSRoot: View {
 
             VStack(spacing: 0) {
                 topChrome
+                    .animation(nil, value: speakerUIMode)
                     .background {
                         if speakerUIMode == .conversation, conversationIsTextScene {
                             conversationTextHeaderAccent
@@ -3156,24 +3273,30 @@ public struct SpeakerDSRoot: View {
                         }
                     }
 
-                Group {
-                    if speakerUIMode == .conversation {
-                        conversationLiveWidget
-                    } else if allSpeakerItems.isEmpty {
-                        trainingEmptyScreen
-                    } else {
-                        unifiedSpeakerBody
+                ZStack(alignment: .top) {
+                    Group {
+                        if speakerUIMode == .conversation {
+                            conversationLiveWidget
+                        } else if allSpeakerItems.isEmpty {
+                            trainingEmptyScreen
+                        } else {
+                            unifiedSpeakerBody
+                        }
                     }
+                    .frame(
+                        maxWidth: .infinity,
+                        maxHeight: .infinity,
+                        alignment: speakerUIMode == .conversation ? .center : .top
+                    )
+                    .id(speakerUIMode == .conversation)
+                    .transition(speakerModeTransition)
                 }
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: .infinity,
-                    alignment: speakerUIMode == .conversation ? .center : .top
-                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .clipped()
+                .animation(.easeInOut(duration: 0.18), value: phase.isFeedback)
             }
         }
         .environmentObject(speakerAssembleCoordinator)
-        .animation(.easeInOut(duration: 0.28), value: conversationIsTextScene)
         .sheet(isPresented: Binding(
             get: { effectiveShowBreakdown },
             set: { newValue in
@@ -3190,7 +3313,6 @@ public struct SpeakerDSRoot: View {
                 .presentationCornerRadius(28)
                 .presentationBackground(Theme.Colors.backgroundPrimary)
         }
-        .animation(.easeInOut(duration: 0.18), value: phase.isFeedback)
         .onChange(of: extSelectedId) { _, newValue in
             if let v = newValue { localSelectedId = v }
         }
@@ -3330,20 +3452,20 @@ public struct SpeakerDSRoot: View {
         let guideLines = trainingGuideLines()
 
         return VStack(spacing: 0) {
-            MDCyclingTypewriter(
-                lines: guideLines,
-                font: .system(size: 19, weight: .bold),
-                holdSeconds: 2.4,
-                charInterval: 0.032,
-                minHeight: 48,
-                accentDigits: false
-            )
-            .padding(.top, 6)
-            .padding(.bottom, 4)
-            .accessibilityLabel("Подсказки по тренировке")
+            if sortedOptions.isEmpty {
+                MDCyclingTypewriter(
+                    lines: guideLines,
+                    font: TaikaHeroColumn.lineFont,
+                    holdSeconds: TaikaHeroColumn.lineHoldSeconds,
+                    minHeight: TaikaHeroColumn.lineMinHeight,
+                    isCentered: true
+                )
+                .padding(.horizontal, 8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .accessibilityLabel("Подсказки по тренировке")
+            }
 
             trainingPoolsQuickStartRow()
-                .padding(.top, 12)
                 .padding(.bottom, 4)
 
             HStack {
@@ -3352,42 +3474,36 @@ public struct SpeakerDSRoot: View {
                     .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.62))
                 Spacer(minLength: 8)
                 if !options.isEmpty {
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    if selected.count == options.count {
-                        selectedTrainingCourseIds = []
-                        selectedTrainingLessonIdsByCourse = [:]
-                        expandedTrainingCourseId = nil
-                    } else {
-                        let all = defaultTrainingSelection(options)
-                        selectedTrainingCourseIds = all
-                        var lessons: [String: Set<String>] = [:]
-                        for cid in all {
-                            lessons[cid] = defaultLessonSelection(for: cid)
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        if selected.count == options.count {
+                            selectedTrainingCourseIds = []
+                            selectedTrainingLessonIdsByCourse = [:]
+                            expandedTrainingCourseId = nil
+                        } else {
+                            let all = defaultTrainingSelection(options)
+                            selectedTrainingCourseIds = all
+                            var lessons: [String: Set<String>] = [:]
+                            for cid in all {
+                                lessons[cid] = defaultLessonSelection(for: cid)
+                            }
+                            selectedTrainingLessonIdsByCourse = lessons
                         }
-                        selectedTrainingLessonIdsByCourse = lessons
+                    } label: {
+                        Text(selected.count == options.count ? "снять всё" : "выбрать все")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.88))
                     }
-                } label: {
-                    Text(selected.count == options.count ? "снять всё" : "выбрать все")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.88))
-                }
-                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.92))
-                .accessibilityLabel(selected.count == options.count ? "Снять всё" : "Выбрать все")
+                    .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.92))
+                    .accessibilityLabel(selected.count == options.count ? "Снять всё" : "Выбрать все")
                 }
             }
-            .padding(.top, 12)
+            .padding(.top, sortedOptions.isEmpty ? 0 : 4)
             .padding(.bottom, 8)
 
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(spacing: 8) {
-                    if sortedOptions.isEmpty {
-                        Text("Пока нет выученных фраз в курсах — можно тренировать избранное или словарь выше.")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.8))
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 8)
-                    } else {
+            if !sortedOptions.isEmpty {
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(spacing: 8) {
                         ForEach(sortedOptions) { option in
                             trainingCourseBlock(
                                 option: option,
@@ -3396,17 +3512,17 @@ public struct SpeakerDSRoot: View {
                             )
                         }
                     }
+                    .padding(.bottom, 4)
                 }
-                .padding(.bottom, 4)
-            }
-            .onAppear {
-                // Сидим выбор уроков один раз при открытии списка.
-                let courses = selectedTrainingCourseIds ?? defaultTrainingSelection(options)
-                var map = selectedTrainingLessonIdsByCourse
-                for cid in courses where map[cid] == nil {
-                    map[cid] = defaultLessonSelection(for: cid)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .onAppear {
+                    let courses = selectedTrainingCourseIds ?? defaultTrainingSelection(options)
+                    var map = selectedTrainingLessonIdsByCourse
+                    for cid in courses where map[cid] == nil {
+                        map[cid] = defaultLessonSelection(for: cid)
+                    }
+                    selectedTrainingLessonIdsByCourse = map
                 }
-                selectedTrainingLessonIdsByCourse = map
             }
 
             TaikaHubAgentSwitchCTA(
@@ -3422,12 +3538,9 @@ public struct SpeakerDSRoot: View {
             .accessibilityLabel("Начать тренировку, \(selectedTotal) фраз")
         }
         .padding(.horizontal, 20)
+        .padding(.top, sortedOptions.isEmpty ? 0 : 8)
         .padding(.bottom, ToolBar.recommendedBottomInset + 8)
-        .offset(y: speakerInviteAppeared ? 0 : 12)
-        .opacity(speakerInviteAppeared ? 1 : 0.01)
-        .animation(.spring(response: 0.46, dampingFraction: 0.86), value: speakerInviteAppeared)
-        .onAppear { triggerSpeakerInviteAppear() }
-        .onChange(of: speakerUIMode) { _, _ in triggerSpeakerInviteAppear() }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     /// Избранное / словарь: один ряд, контурные чипы (иконка · число · подпись).
@@ -3780,12 +3893,7 @@ public struct SpeakerDSRoot: View {
             Spacer(minLength: 0)
         }
         .padding(.bottom, ToolBar.recommendedBottomInset + 8)
-        .offset(y: speakerInviteAppeared ? 0 : 12)
-        .opacity(speakerInviteAppeared ? 1 : 0.01)
-        .animation(.spring(response: 0.46, dampingFraction: 0.86), value: speakerInviteAppeared)
-        .onAppear { triggerSpeakerInviteAppear() }
         .onChange(of: speakerUIMode) { _, _ in
-            triggerSpeakerInviteAppear()
             trainingTeaserIndex = 0
             conversationTeaserIndex = 0
         }
@@ -3912,10 +4020,7 @@ public struct SpeakerDSRoot: View {
         let shape = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
         return VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Text("taikA")
-                    .font(.custom("ONMARK Trial", size: 14))
-                    .tracking(0.6)
-                    .foregroundStyle(PD.ColorToken.text)
+                TaikaWordmarkLockup(fontSize: 14)
                 Spacer(minLength: 0)
                 Text(speakerModeChipTitle)
                     .font(.caption2.weight(.semibold))
@@ -4001,15 +4106,6 @@ public struct SpeakerDSRoot: View {
         .accessibilityLabel(accessibilityLabel)
     }
 
-    private func triggerSpeakerInviteAppear() {
-        speakerInviteAppeared = false
-        DispatchQueue.main.async {
-            withAnimation(.spring(response: 0.46, dampingFraction: 0.86)) {
-                speakerInviteAppeared = true
-            }
-        }
-    }
-
     /// Legacy blank (карусель empty) — тот же face, без декоративных иконок.
     @ViewBuilder
     private func speakerBlankBrainInvite(
@@ -4071,9 +4167,12 @@ public struct SpeakerDSRoot: View {
                 layout: .feedback,
                 centered: true
             )
-            .padding(.bottom, 16)
+            .padding(.bottom, 10)
 
-            HStack(alignment: .top, spacing: 16) {
+            conversationCoachLine
+                .padding(.bottom, 8)
+
+            HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("нужно было")
                         .font(.system(size: 11, weight: .semibold))
@@ -4091,22 +4190,27 @@ public struct SpeakerDSRoot: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.bottom, 24)
+            .padding(.bottom, 14)
 
             VStack(spacing: 10) {
-                Button(action: onBreakdown) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "waveform.path.ecg")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("что улучшить")
+                if textScore >= 40 {
+                    Button(action: onBreakdown) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "text.magnifyingglass")
+                                .font(.system(size: 15, weight: .semibold))
+                            Text("что улучшить")
+                        }
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .foregroundStyle(PD.ColorToken.text)
+                        .background(
+                            Capsule(style: .continuous)
+                                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                        )
                     }
-                    .font(.system(size: 16, weight: .bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Capsule(style: .continuous).fill(ThemeManager.shared.currentAccentFill))
-                    .foregroundColor(.black)
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
 
                 if let label = secondaryLabel, let action = onSecondary {
                     Button(action: action) {
@@ -4212,7 +4316,7 @@ public struct SpeakerDSRoot: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
         } else if !isBreakdownExpanded {
-            PhoneticWithColoredArrowsView(phonetic: userText, font: .system(size: 22, weight: .semibold), alignment: .leading)
+            PhoneticWithColoredArrowsView(phonetic: userText, font: .system(size: 16, weight: .semibold), alignment: .leading)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
@@ -4290,7 +4394,7 @@ public struct SpeakerDSRoot: View {
                 Text("—")
                     .foregroundStyle(PD.ColorToken.textSecondary)
             } else {
-                PhoneticWithColoredArrowsView(phonetic: expected, font: .system(size: 22, weight: .semibold), alignment: .leading)
+                PhoneticWithColoredArrowsView(phonetic: expected, font: .system(size: 16, weight: .semibold), alignment: .leading)
             }
         }
         .multilineTextAlignment(.leading)
@@ -4650,7 +4754,7 @@ public struct SpeakerDSRoot: View {
         }
     }
 
-    /// Слоговый разбор: компактный список, семантика good/fair/weak, native disclosure.
+    /// Слоговый разбор: легенда к ритму фразы. Слушать слог нельзя — эталон сверху.
     @ViewBuilder
     private func breakdownSyllableRowsHumanSection(
         expected: String,
@@ -4658,58 +4762,98 @@ public struct SpeakerDSRoot: View {
     ) -> some View {
         let chunks = Self.translitChunksForSyllables(expected)
 
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("По слогам")
-                .font(.system(size: 12, weight: .semibold))
-                .tracking(0.5)
-                .foregroundStyle(PD.ColorToken.textSecondary)
+                .font(.system(size: 12, weight: .bold))
+                .tracking(0.8)
+                .foregroundStyle(Theme.Gradients.accentText)
 
-            VStack(spacing: 0) {
+            VStack(spacing: 10) {
                 if chunks.isEmpty {
                     ForEach(Array(syllableFeedback.enumerated()), id: \.offset) { index, item in
+                        let isParticle = Self.isTrailingPolitenessIndex(index, total: syllableFeedback.count, token: item.syllable)
+                        if isParticle {
+                            breakdownSyllableDivider()
+                                .padding(.vertical, 2)
+                        }
                         breakdownHumanSyllableRow(
                             index: index,
                             label: Self.syllableDisplayLabel(item.syllable, index: index),
-                            score: item.score,
+                            score: item.toneActual == nil ? nil : item.score,
                             toneExpected: item.toneExpected,
                             toneActual: item.toneActual,
-                            f0Contour: item.f0Contour,
-                            isPlaceholder: false
+                            isPlaceholder: false,
+                            isFocus: external?.weakestSyllableIndex == index
                         )
-                        if index < syllableFeedback.count - 1 {
-                            breakdownSyllableDivider()
-                        }
+                        .opacity(isParticle ? 0.78 : (external?.weakestSyllableIndex == nil || external?.weakestSyllableIndex == index ? 1 : 0.48))
                     }
                 } else {
                     ForEach(Array(chunks.enumerated()), id: \.offset) { index, rawChunk in
                         let item = index < syllableFeedback.count ? syllableFeedback[index] : nil
+                        let isParticle = Self.isTrailingPolitenessIndex(index, total: chunks.count, token: rawChunk)
+                        if isParticle {
+                            breakdownSyllableDivider()
+                                .padding(.vertical, 2)
+                        }
                         breakdownHumanSyllableRow(
                             index: index,
                             label: Self.syllableLabelWithoutArrows(rawChunk),
-                            score: item?.score,
+                            score: item?.toneActual == nil ? nil : item?.score,
                             toneExpected: item?.toneExpected ?? Self.toneNameFromTranslitChunk(rawChunk),
                             toneActual: item?.toneActual,
-                            f0Contour: item?.f0Contour,
-                            isPlaceholder: item == nil
+                            isPlaceholder: item == nil,
+                            isFocus: external?.weakestSyllableIndex == index
                         )
-                        if index < chunks.count - 1 {
-                            breakdownSyllableDivider()
-                        }
+                        .opacity(isParticle ? 0.78 : (external?.weakestSyllableIndex == nil || external?.weakestSyllableIndex == index ? 1 : 0.48))
                     }
                 }
             }
         }
-        .onAppear { selectedBreakdownSyllableIndex = nil }
+        .onAppear {
+            syllableRowsReveal = false
+            withAnimation(.spring(response: 0.58, dampingFraction: 0.86).delay(0.08)) {
+                syllableRowsReveal = true
+            }
+        }
         .onChange(of: syllableFeedback.map(\.score)) { _, _ in
-            selectedBreakdownSyllableIndex = nil
+            syllableRowsReveal = false
+            withAnimation(.spring(response: 0.52, dampingFraction: 0.88).delay(0.04)) {
+                syllableRowsReveal = true
+            }
         }
     }
 
     private func breakdownSyllableDivider() -> some View {
         Rectangle()
-            .fill(Color.white.opacity(0.11))
+            .fill(Color.white.opacity(0.14))
             .frame(height: 1)
-            .padding(.leading, 17)
+            .padding(.leading, 4)
+    }
+
+    private static func isTrailingPolitenessIndex(_ index: Int, total: Int, token: String) -> Bool {
+        index == total - 1 && total > 1 && SpeakerManager.isPolitenessToken(token)
+    }
+
+    private static var toneMatchGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 0.30, green: 0.85, blue: 0.45),
+                Color(red: 0.55, green: 0.96, blue: 0.72)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private static var toneMissGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 0.98, green: 0.35, blue: 0.37),
+                Color(red: 1.00, green: 0.55, blue: 0.62)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 
     @ViewBuilder
@@ -4719,98 +4863,122 @@ public struct SpeakerDSRoot: View {
         score: Int?,
         toneExpected: String?,
         toneActual: String?,
-        f0Contour: [Double]?,
-        isPlaceholder: Bool = false
+        isPlaceholder: Bool = false,
+        isFocus: Bool = false
     ) -> some View {
         let scoreValue = (!isPlaceholder ? score : nil)
         let toneMatch = (toneExpected != nil && toneActual != nil) ? (toneExpected == toneActual) : nil
-        let band = Self.BreakdownSyllableBand.from(score: scoreValue, toneMatch: toneMatch)
         let expectedArrow = Self.toneToArrow(toneExpected)
         let actualArrow = Self.toneToArrow(toneActual)
-        let isSelected = selectedBreakdownSyllableIndex == index
-        let coaching = Self.syllableCoachingMessage(
-            label: label,
-            expected: toneExpected,
-            actual: toneActual,
-            score: scoreValue,
-            toneMatch: toneMatch
-        )
-        let canPlayReference = external?.onPlayReferenceSyllableAtIndex != nil && !isPlaceholder
-        let showReferenceContour = toneExpected != nil
-        let showUserContour = (f0Contour?.count ?? 0) >= 2
+        let phonetic = {
+            let name = label.isEmpty ? "слог \(index + 1)" : label
+            if expectedArrow.isEmpty || expectedArrow == "—" { return name }
+            return "\(name) \(expectedArrow)"
+        }()
+        let missHint: String? = {
+            guard !isPlaceholder else { return nil }
+            if toneActual == nil {
+                return "тона не слышно — скажи этот слог ближе"
+            }
+            guard toneMatch == false else { return nil }
+            return Self.syllableCoachingMessage(
+                label: label,
+                expected: toneExpected,
+                actual: toneActual,
+                score: scoreValue,
+                toneMatch: toneMatch
+            )?.body
+        }()
+        let barGradient: LinearGradient = {
+            if toneMatch == true { return Self.toneMatchGradient }
+            if toneMatch == false { return Self.toneMissGradient }
+            return LinearGradient(
+                colors: [Color.white.opacity(0.28), Color.white.opacity(0.08)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }()
 
-        VStack(alignment: .leading, spacing: 0) {
-            if !isPlaceholder {
-                Button {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-                        selectedBreakdownSyllableIndex = isSelected ? nil : index
-                    }
-                } label: {
-                    breakdownSyllableRowHeader(
-                        label: label,
-                        index: index,
-                        band: band,
-                        expectedArrow: expectedArrow,
-                        actualArrow: actualArrow,
-                        toneMatch: toneMatch,
-                        scoreValue: scoreValue,
-                        showsChevron: true,
-                        chevronExpanded: isSelected
+        VStack(alignment: .leading, spacing: 8) {
+            if isFocus {
+                Text("ВОТ ЭТО")
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(0.8)
+                    .foregroundStyle(Theme.Gradients.accentText)
+            }
+            HStack(alignment: .center, spacing: 12) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(barGradient)
+                    .frame(width: 3, height: 28)
+                    .shadow(
+                        color: toneMatch == true
+                            ? Color(red: 0.30, green: 0.85, blue: 0.45).opacity(0.55)
+                            : (toneMatch == false ? Color(red: 0.98, green: 0.35, blue: 0.37).opacity(0.50) : .clear),
+                        radius: 8,
+                        y: 0
                     )
+
+                TaikaSmartSpeakerPhonetic.styledText(
+                    phonetic,
+                    font: .system(size: 20, weight: .semibold)
+                )
+
+                Spacer(minLength: 8)
+
+                if isPlaceholder {
+                    Text("—")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.55))
+                } else if toneMatch == true {
+                    Text("совпало")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Self.toneMatchGradient)
+                } else if toneMatch == false, !actualArrow.isEmpty, actualArrow != "—" {
+                    Text("было \(actualArrow)")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Self.toneMissGradient)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(isSelected ? "Скрыть подсказку" : "Показать подсказку")
-            } else {
-                breakdownSyllableRowHeader(
-                    label: label,
-                    index: index,
-                    band: band,
-                    expectedArrow: expectedArrow,
-                    actualArrow: actualArrow,
-                    toneMatch: toneMatch,
-                    scoreValue: scoreValue,
-                    showsChevron: false,
-                    chevronExpanded: false
-                )
             }
 
-            if !isPlaceholder, showReferenceContour || showUserContour {
-                Self.breakdownSyllableDualContour(
-                    userValues: f0Contour,
-                    toneExpected: toneExpected,
-                    band: band
-                )
-                .padding(.leading, 17)
-                .padding(.top, 8)
-            }
-
-            // Эталон по слогу — да. Нарезку «как ты» не показываем: сегменты API
-            // часто режут слово не по слогам, и слушать это бессмысленно.
-            if !isPlaceholder, canPlayReference {
-                breakdownSyllableListenBar(
-                    index: index,
-                    label: label,
-                    canPlayReference: canPlayReference
-                )
-                .padding(.top, 10)
-                .padding(.leading, 17)
-            }
-
-            if isSelected, !isPlaceholder, let coaching, !coaching.body.isEmpty {
-                Text(coaching.body)
+            if let missHint, !missHint.isEmpty {
+                Text(missHint)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.text.opacity(0.88))
+                    .foregroundStyle(PD.ColorToken.text.opacity(0.78))
                     .multilineTextAlignment(.leading)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 12)
-                    .padding(.leading, 17)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                    .id("bd-coaching-\(index)-\(coaching.body.hashValue)")
+                    .padding(.leading, 15)
+            }
+
+            if isFocus {
+                breakdownSyllableListenBar(index: index, label: label, canPlayReference: true)
+                    .padding(.leading, 15)
             }
         }
-        .padding(.vertical, 11)
-        .animation(.easeInOut(duration: 0.22), value: isSelected)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(toneMatch == false ? 0.07 : 0.045),
+                            Color.white.opacity(0.02)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        }
+        .opacity(syllableRowsReveal ? 1 : 0)
+        .offset(y: syllableRowsReveal ? 0 : 12)
+        .scaleEffect(syllableRowsReveal ? 1 : 0.97, anchor: .leading)
+        .animation(
+            .spring(response: 0.52, dampingFraction: 0.84).delay(Double(index) * 0.07),
+            value: syllableRowsReveal
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(phonetic + (toneMatch == true ? ", совпало" : (toneMatch == false ? ", не совпало" : "")))
     }
 
     @ViewBuilder
@@ -4883,130 +5051,81 @@ public struct SpeakerDSRoot: View {
         label: String,
         canPlayReference: Bool
     ) -> some View {
-        let last = external?.lastPlayed ?? .none
-        let referencePlaying = last == .reference && (external?.referencePlaybackProgress ?? 1) < 0.98
+        let last = external?.referencePlaybackSyllableIndex
+        let playingThis = last == index && (external?.referencePlaybackProgress ?? 1) < 0.98
+        let fullPhrase = playingThis && (external?.referenceSyllablePlaysFullPhrase == true)
+        let title = fullPhrase ? "вся фраза" : "эталон"
+        let canPlayMine = external?.lastAttempt != nil && external?.onPlayAttemptSyllableAtIndex != nil
 
-        HStack(spacing: 0) {
+        HStack(spacing: 16) {
             if canPlayReference {
                 TaikaListenActionSlot(
-                    systemName: "speaker.wave.2.fill",
-                    title: "как надо",
-                    playbackActive: referencePlaying,
+                    systemName: "person.wave.2.fill",
+                    title: title,
+                    playbackActive: playingThis,
                     action: { external?.onPlayReferenceSyllableAtIndex?(index) }
                 )
-                .accessibilityLabel("Послушать слог \(label) — эталон")
+                .accessibilityLabel(fullPhrase ? "Послушать всю фразу — эталон" : "Послушать слог \(label) — эталон")
+            }
+            if canPlayMine {
+                TaikaListenActionSlot(
+                    systemName: "person.wave.2.fill",
+                    title: "как ты",
+                    playbackActive: false,
+                    action: { external?.onPlayAttemptSyllableAtIndex?(index) }
+                )
+                .accessibilityLabel("Послушать слог \(label) — как ты")
             }
         }
         .frame(maxWidth: .infinity)
     }
 
-    /// Герой разбора: русская фраза + фонетика по центру, как на карточке,
-    /// и тайский оригинал под ними — его копируют в переводчик и показывают с экрана.
+    /// Герой разбора: что это за фраза. Транслит живёт в таблице слогов, не здесь.
     @ViewBuilder
-    private func breakdownSheetHeroSection(phraseLabel: String, expected: String) -> some View {
+    private func breakdownSheetHeroSection(phraseLabel: String) -> some View {
         let thai = breakdownThaiOriginal
-        VStack(spacing: 14) {
-            if !phraseLabel.isEmpty {
+        VStack(spacing: 8) {
+            if !thai.isEmpty {
+                HStack(alignment: .center, spacing: 8) {
+                    Text(thai)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(PD.ColorToken.text)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.78)
+                        .frame(maxWidth: .infinity)
+                    Button {
+                        copyConversationThaiToClipboard(thai)
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
+                            .frame(width: 34, height: 34)
+                            .background(Circle().fill(Color.white.opacity(0.08)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Скопировать тайский")
+                }
+            } else if !phraseLabel.isEmpty {
                 Text(phraseLabel)
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(PD.ColorToken.text)
                     .multilineTextAlignment(.center)
-                    .lineLimit(4)
+                    .lineLimit(3)
                     .minimumScaleFactor(0.82)
                     .frame(maxWidth: .infinity)
             }
-            if !expected.isEmpty, expected != "—" {
-                PhoneticWithColoredArrowsView(
-                    phonetic: Self.phoneticDisplayWithoutHyphens(expected),
-                    font: .system(size: 22, weight: .semibold),
-                    alignment: .center
-                )
-                .frame(maxWidth: .infinity)
-            }
-            if !thai.isEmpty {
-                conversationThaiWithCopy(thai, fontSize: 17, centered: true)
+
+            if !thai.isEmpty, !phraseLabel.isEmpty {
+                Text(phraseLabel)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .frame(maxWidth: .infinity)
             }
         }
-        .padding(.bottom, 4)
-    }
-
-    /// Мини-шапка разбора: эталон | ты сказала — продолжение экрана результата.
-    @ViewBuilder
-    private func breakdownSheetContextHeader(
-        expected: String,
-        userText: String,
-        onPlayReference: (() -> Void)?,
-        onPlayAttempt: (() -> Void)?
-    ) -> some View {
-        let trimmedUser = userText.trimmingCharacters(in: .whitespacesAndNewlines)
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 0) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("ЭТАЛОН")
-                        .font(.system(size: 10, weight: .bold))
-                        .tracking(0.7)
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.62))
-                    if !expected.isEmpty {
-                        PhoneticWithColoredArrowsView(
-                            phonetic: Self.phoneticDisplayWithoutHyphens(expected),
-                            font: .system(size: 15, weight: .semibold),
-                            alignment: .leading
-                        )
-                    }
-                    if let onPlayReference {
-                        Button(action: onPlayReference) {
-                            Image(systemName: "speaker.wave.2.fill")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.top, 2)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.trailing, 12)
-
-                Rectangle()
-                    .fill(Color.white.opacity(0.12))
-                    .frame(width: 1)
-                    .padding(.vertical, 2)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("ТЫ СКАЗАЛА")
-                        .font(.system(size: 10, weight: .bold))
-                        .tracking(0.7)
-                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.62))
-                    if !trimmedUser.isEmpty {
-                        PhoneticWithColoredArrowsView(
-                            phonetic: trimmedUser,
-                            font: .system(size: 15, weight: .medium),
-                            alignment: .leading
-                        )
-                        .opacity(0.9)
-                    } else {
-                        Text("—")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.5))
-                    }
-                    if let onPlayAttempt, !trimmedUser.isEmpty {
-                        Button(action: onPlayAttempt) {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.top, 2)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 12)
-            }
-            .padding(.vertical, 12)
-
-            Rectangle()
-                .fill(Color.white.opacity(0.10))
-                .frame(height: 1)
-        }
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -5220,11 +5339,14 @@ public struct SpeakerDSRoot: View {
         let userText: String = {
             let convPh = external?.conversationHeardPhoneticFromASR?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if !convPh.isEmpty { return convPh }
-            let asr = external?.conversationHeardThaiASR?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            // Пока нет кириллицы — показываем тайский ASR сразу (не вечный «Загружаем…»).
-            if !asr.isEmpty { return asr }
-            let t = heardTranslitText.trimmingCharacters(in: .whitespacesAndNewlines)
-            return t.isEmpty ? "—" : t
+            let trainPh = SpeakerManager.withoutThaiScript(external?.trainingHeardPhoneticFromASR ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trainPh.isEmpty { return trainPh }
+            let convASR = (external?.conversationHeardThaiASR ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !convASR.isEmpty { return Self.conversationPhoneticLoadingToken }
+            let trainASR = (external?.trainingHeardThaiASR ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trainASR.isEmpty { return Self.conversationPhoneticLoadingToken }
+            return "—"
         }()
         let (liveTranslit, livePhrase): (String, String) = {
             if let convTranslit = external?.conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines), !convTranslit.isEmpty {
@@ -5305,10 +5427,14 @@ public struct SpeakerDSRoot: View {
         let userText: String = {
             let convPh = external?.conversationHeardPhoneticFromASR?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if !convPh.isEmpty { return convPh }
-            let asr = external?.conversationHeardThaiASR?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !asr.isEmpty { return asr }
-            let t = heardTranslitText.trimmingCharacters(in: .whitespacesAndNewlines)
-            return t.isEmpty ? "—" : t
+            let trainPh = SpeakerManager.withoutThaiScript(external?.trainingHeardPhoneticFromASR ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trainPh.isEmpty { return trainPh }
+            let convASR = (external?.conversationHeardThaiASR ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !convASR.isEmpty { return Self.conversationPhoneticLoadingToken }
+            let trainASR = (external?.trainingHeardThaiASR ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trainASR.isEmpty { return Self.conversationPhoneticLoadingToken }
+            return "—"
         }()
         let (liveTranslit, livePhrase): (String, String) = {
             if let convTranslit = external?.conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines), !convTranslit.isEmpty {
@@ -5466,17 +5592,10 @@ public struct SpeakerDSRoot: View {
         let scrollView: AnyView = AnyView(
             Group {
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: presentsAsSheet ? 36 : 10) {
+                    VStack(alignment: .leading, spacing: presentsAsSheet ? 22 : 10) {
                         if presentsAsSheet {
-                            VStack(alignment: .leading, spacing: 20) {
-                                breakdownSheetHeroSection(phraseLabel: phraseLabel, expected: expected)
-
-                                breakdownSheetContextHeader(
-                                    expected: expected,
-                                    userText: userText,
-                                    onPlayReference: onPlayReference,
-                                    onPlayAttempt: onPlayAttempt
-                                )
+                            VStack(alignment: .leading, spacing: 16) {
+                                breakdownSheetHeroSection(phraseLabel: phraseLabel)
 
                                 conversationCoachDetailBlock
 
@@ -5554,11 +5673,12 @@ public struct SpeakerDSRoot: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     if let playRef = onPlayReference {
                                         Button { playRef() } label: {
-                                            Image(systemName: "speaker.wave.2.fill")
+                                            Image(systemName: "person.wave.2.fill")
                                                 .font(.system(size: 14))
                                                 .foregroundStyle(ThemeManager.shared.currentAccentFill)
                                         }
                                         .buttonStyle(.plain)
+                                        .accessibilityLabel("Эталон")
                                     }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -5570,11 +5690,12 @@ public struct SpeakerDSRoot: View {
                                     Self.breakdownUserSaidLine(userText: userText)
                                     if let playAttempt = onPlayAttempt {
                                         Button(action: playAttempt) {
-                                            Image(systemName: "speaker.wave.2.fill")
+                                            Image(systemName: "person.wave.2.fill")
                                                 .font(.system(size: 14))
                                                 .foregroundStyle(ThemeManager.shared.currentAccentFill)
                                         }
                                         .buttonStyle(.plain)
+                                        .accessibilityLabel("Моя запись")
                                     }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -5783,10 +5904,11 @@ public struct SpeakerDSRoot: View {
             .foregroundStyle(accent.opacity(isProLocked ? 0.72 : 0.42))
             if !syllableLabels.isEmpty {
                 HStack(spacing: 0) {
-                    ForEach(Array(syllableLabels.enumerated()), id: \.offset) { _, label in
+                    ForEach(Array(syllableLabels.enumerated()), id: \.offset) { index, label in
+                        let isParticle = Self.isTrailingPolitenessIndex(index, total: syllableLabels.count, token: label)
                         Text(label)
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
+                            .foregroundStyle(PD.ColorToken.textSecondary.opacity(isParticle ? 0.42 : 0.72))
                             .lineLimit(1)
                             .frame(maxWidth: .infinity)
                     }
@@ -5835,7 +5957,7 @@ public struct SpeakerDSRoot: View {
                         HStack(spacing: 0) {
                             if let playRef = onPlayReference {
                                 TaikaListenActionSlot(
-                                    systemName: "speaker.wave.2.fill",
+                                    systemName: "person.wave.2.fill",
                                     title: "эталон",
                                     playbackActive: lastPlayed == .reference && referenceRevealProgress < 0.98,
                                     action: playRef
@@ -5843,7 +5965,7 @@ public struct SpeakerDSRoot: View {
                             }
                             if let playAttempt = onPlayAttempt {
                                 TaikaListenActionSlot(
-                                    systemName: "waveform",
+                                    systemName: "person.wave.2.fill",
                                     title: "как ты",
                                     playbackActive: lastPlayed == .attempt && attemptRevealProgress < 0.98,
                                     action: playAttempt
@@ -5905,10 +6027,11 @@ public struct SpeakerDSRoot: View {
 
                 if !syllableLabels.isEmpty {
                     HStack(spacing: 0) {
-                        ForEach(Array(syllableLabels.enumerated()), id: \.offset) { _, label in
+                        ForEach(Array(syllableLabels.enumerated()), id: \.offset) { index, label in
+                            let isParticle = Self.isTrailingPolitenessIndex(index, total: syllableLabels.count, token: label)
                             Text(label)
                                 .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
+                                .foregroundStyle(PD.ColorToken.textSecondary.opacity(isParticle ? 0.42 : 0.72))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
                                 .frame(maxWidth: .infinity)
@@ -6064,8 +6187,14 @@ public struct SpeakerDSRoot: View {
             Text("по слогам")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(PD.ColorToken.textSecondary)
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                let isParticle = Self.isTrailingPolitenessIndex(index, total: rows.count, token: row.label)
+                if isParticle {
+                    breakdownSyllableDivider()
+                        .padding(.vertical, 2)
+                }
                 BreakdownSyllableRowView(row: row)
+                    .opacity(isParticle ? 0.78 : 1)
             }
         }
         .padding(.top, 2)
@@ -6157,131 +6286,84 @@ public struct SpeakerDSRoot: View {
         external?.learnedLessonIds ?? []
     }
 
-    private var trainingScopePickerTitles: [String] {
-        // В «Скажи сам» — только переключение режима, без выбора курсов/уроков.
-        if speakerUIMode == .conversation {
-            return ["Закрепление курсов", "Скажи сам"]
-        }
-        let lessonTitles = trainingScopeLessonIds.map { id in
-            external?.lessonTitleForLessonId?(id) ?? id
-        }
-        if lessonTitles.isEmpty {
-            return ["Закрепление курсов", "Скажи сам"]
-        }
-        return ["Все уроки"] + lessonTitles + ["Скажи сам"]
+    private var speakerModeTransition: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: speakerSlideEdge),
+            removal: .move(edge: speakerSlideEdge == .trailing ? .leading : .trailing)
+        )
     }
 
-    private var trainingScopeSelectedIndex: Int {
-        if speakerUIMode == .conversation {
-            return max(0, trainingScopePickerTitles.count - 1)
+    /// Смена режима: шапка стоит, сцена перелистывается.
+    private func setSpeakerMode(_ mode: SpeakerManager.SpeakerUIMode) {
+        guard speakerUIMode != mode else { return }
+        speakerSlideEdge = mode == .training ? .trailing : .leading
+        withAnimation(.easeInOut(duration: 0.32)) {
+            external?.onSpeakerUIModeChange(mode)
         }
-        guard let selected = external?.learnedLessonFilter,
-              let lessonIndex = trainingScopeLessonIds.firstIndex(of: selected) else {
-            return 0
-        }
-        return lessonIndex + 1
     }
 
-    private var dictionaryContextBadge: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "bookmark.fill")
-                .font(.system(size: 12, weight: .semibold))
-            Text("Мой словарь")
-                .font(.system(size: 13, weight: .bold))
+    private var speakerContextCaption: String? {
+        guard speakerUIMode == .training else { return nil }
+        switch external?.courseContextCourseId {
+        case "__dictionary__": return "Мой словарь"
+        case "__favorites__": return "Избранное"
+        default: return nil
         }
-        .foregroundStyle(.black)
-        .padding(.horizontal, 14)
-        .frame(height: 32)
-        .background(Capsule().fill(ThemeManager.shared.currentAccentFill))
-        .accessibilityLabel("Режим: мой словарь")
-    }
-
-    private var favoritesContextBadge: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "heart.fill")
-                .font(.system(size: 12, weight: .semibold))
-            Text("Избранное")
-                .font(.system(size: 13, weight: .bold))
-        }
-        .foregroundStyle(.black)
-        .padding(.horizontal, 14)
-        .frame(height: 32)
-        .background(Capsule().fill(ThemeManager.shared.currentAccentFill))
-        .accessibilityLabel("Режим: избранное")
     }
 
     private var topChrome: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .center, spacing: 8) {
-                Text("Спикер")
-                    .font(CD.FontToken.title(28, weight: .bold))
-                    .foregroundStyle(CD.ColorToken.text)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-
-                Spacer(minLength: 6)
-
-                if speakerUIMode == .conversation, let ext = external {
-                    SmartSpeakerPolitenessMenuButton(
-                        value: ext.smartSpeakerPoliteness,
-                        onSelect: ext.onSetSmartSpeakerPoliteness
-                    )
+            HStack(alignment: .center, spacing: 12) {
+                HStack(alignment: .center, spacing: 14) {
+                    TaikaPeerTitleButton(title: "Спикер", isOn: speakerUIMode == .conversation) {
+                        setSpeakerMode(.conversation)
+                    }
+                    TaikaPeerTitleButton(title: "Закрепление", isOn: speakerUIMode == .training) {
+                        setSpeakerMode(.training)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                if speakerUIMode == .training, external?.courseContextCourseId == "__dictionary__" {
-                    dictionaryContextBadge
-                    Button {
-                        external?.onSpeakerUIModeChange(.conversation)
-                    } label: {
-                        Text("Скажи сам")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(CD.ColorToken.textSecondary)
-                            .padding(.horizontal, 12)
-                            .frame(height: 32)
-                            .background(Capsule().fill(CD.ColorToken.chip))
-                    }
-                    .buttonStyle(.plain)
-                } else if speakerUIMode == .training, external?.courseContextCourseId == "__favorites__" {
-                    favoritesContextBadge
-                    Button {
-                        external?.onSpeakerUIModeChange(.conversation)
-                    } label: {
-                        Text("Скажи сам")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(CD.ColorToken.textSecondary)
-                            .padding(.horizontal, 12)
-                            .frame(height: 32)
-                            .background(Capsule().fill(CD.ColorToken.chip))
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    AppInlineFilterPicker(
-                        titles: trainingScopePickerTitles,
-                        selectedIndex: trainingScopeSelectedIndex,
-                        selectionAccent: AnyShapeStyle(Color.white.opacity(0.88))
-                    ) { index in
-                        let lastIndex = trainingScopePickerTitles.count - 1
-                        if index == lastIndex {
-                            external?.onSpeakerUIModeChange(.conversation)
-                            return
+                if let ext = external {
+                    TaikaHeaderSettingsMenu(accessibilityLabel: "Как говорить") {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            ext.onSetSmartSpeakerPoliteness("male")
+                        } label: {
+                            if ext.smartSpeakerPoliteness == "male" {
+                                Label("Мужской", systemImage: "checkmark")
+                            } else {
+                                Text("Мужской")
+                            }
                         }
-                        external?.onSpeakerUIModeChange(.training)
-                        guard trainingScopePickerTitles.count > 2 else { return }
-                        if index == 0 {
-                            external?.onSelectLearnedLessonFilter?(nil)
-                        } else {
-                            let lessonIndex = index - 1
-                            guard trainingScopeLessonIds.indices.contains(lessonIndex) else { return }
-                            external?.onSelectLearnedLessonFilter?(trainingScopeLessonIds[lessonIndex])
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            ext.onSetSmartSpeakerPoliteness("female")
+                        } label: {
+                            if ext.smartSpeakerPoliteness == "female" {
+                                Label("Женский", systemImage: "checkmark")
+                            } else {
+                                Text("Женский")
+                            }
                         }
                     }
+                    .taikaCoachAnchor(.speakerPoliteness)
                 }
             }
             .padding(.horizontal, CD.Spacing.screen)
 
+            if let speakerContextCaption {
+                Text(speakerContextCaption)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .padding(.horizontal, CD.Spacing.screen)
+            } else if speakerUIMode == .training, trainingScopeLessonIds.count > 1 {
+                learnedLessonChipsRow(lessonIds: trainingScopeLessonIds)
+            }
         }
         .padding(.top, rootHeaderClearance > 0 ? rootHeaderClearance : Theme.Layout.sectionTop)
         .padding(.bottom, 4)
+        .animation(nil, value: speakerUIMode)
     }
 
     private func learnedLessonChipsRow(lessonIds: [String]) -> some View {
@@ -6498,17 +6580,18 @@ public struct SpeakerDSRoot: View {
 #endif
             return external?.lastAttempt != nil
         }()
+        let afterTake = isFeedback || (phase == .hint && hasAttempt)
         let canPlayAttempt = hasAttempt
         let trainingMode: Bool = external?.speakerUIMode == .training
         let trainingLimitExhausted: Bool = trainingMode && external?.isProUser != true && !(external?.trainingCanRecord ?? false)
         let controlDisabled: Bool = isAnalyzing
-        let micIcon: String = isRecording ? "stop.fill" : (trainingLimitExhausted ? "mic.fill" : (isFeedback ? "arrow.clockwise" : "mic.fill"))
+        let micIcon: String = isRecording ? "stop.fill" : (trainingLimitExhausted ? "mic.fill" : (afterTake ? "arrow.clockwise" : "mic.fill"))
         let micTitle: String = {
             if isRecording { return "Стоп" }
             if trainingLimitExhausted { return "Попытки на сегодня кончились" }
-            return isFeedback ? "Ещё раз" : "Записать"
+            return afterTake ? "Ещё раз" : "Записать"
         }()
-        let micAccessibilityLabel: String = trainingLimitExhausted ? "Попытки на сегодня кончились" : (isRecording ? "Остановить запись" : (isFeedback ? "Записать ещё раз" : "Записать фразу"))
+        let micAccessibilityLabel: String = trainingLimitExhausted ? "Попытки на сегодня кончились" : (isRecording ? "Остановить запись" : (afterTake ? "Записать ещё раз" : "Записать фразу"))
         let micFill: AnyShapeStyle = isAnalyzing
             ? AnyShapeStyle(Color.white.opacity(0.10))
             : (isRecording
@@ -6521,7 +6604,7 @@ public struct SpeakerDSRoot: View {
         VStack(spacing: 14) {
             HStack(alignment: .center, spacing: 16) {
                 speakerDockSideButton(
-                    icon: "speaker.wave.2.fill",
+                    icon: "person.wave.2.fill",
                     title: "Эталон",
                     isEnabled: !controlDisabled,
                     style: .plain
@@ -6573,7 +6656,7 @@ public struct SpeakerDSRoot: View {
                 }
 
                 speakerDockSideButton(
-                    icon: "speaker.wave.2.fill",
+                    icon: "person.wave.2.fill",
                     title: "Моя",
                     isEnabled: canPlayAttempt && !controlDisabled,
                     style: .gradient
@@ -7225,56 +7308,6 @@ private struct ConversationPhoneticFillKaraokeView: View {
     }
 }
 
-/// Нативное меню вежливости — компактный чип в строке заголовка.
-private struct SmartSpeakerPolitenessMenuButton: View {
-    let value: String
-    let onSelect: (String) -> Void
-
-    private var isMale: Bool { value == "male" }
-    private var shortLabel: String { isMale ? "М" : "Ж" }
-
-    var body: some View {
-        Menu {
-            Button {
-#if canImport(UIKit)
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-#endif
-                onSelect("male")
-            } label: {
-                Label("Мужской", systemImage: isMale ? "checkmark" : "")
-            }
-            Button {
-#if canImport(UIKit)
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-#endif
-                onSelect("female")
-            } label: {
-                Label("Женский", systemImage: isMale ? "" : "checkmark")
-            }
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "person.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                Text(shortLabel)
-                    .font(.system(size: 13, weight: .semibold))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .bold))
-            }
-            .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.92))
-            .padding(.horizontal, 10)
-            .frame(height: 32)
-            .background(
-                ZStack {
-                    let shape = Capsule(style: .continuous)
-                    shape.fill(CD.ColorToken.card.opacity(0.78))
-                    shape.stroke(Theme.Strokes.strokeSubtle, lineWidth: Theme.Strokes.strokeLineWidth)
-                }
-            )
-        }
-        .accessibilityLabel("Вежливость речи, \(shortLabel)")
-    }
-}
-
 // MARK: - Tone animation (при воспроизведении эталона — направление тона по слогам)
 
 private struct PhoneticToneAnimationView: View {
@@ -7292,57 +7325,21 @@ private struct PhoneticToneAnimationView: View {
             ? min(Int(playbackProgress * Double(n)), n - 1)
             : -1
 
-        // Короткий эталон — послоговая анимация; длинный — полный текст без обрезки.
-        if n <= 5 {
-            HStack(spacing: 4) {
-                ForEach(Array(segs.enumerated()), id: \.offset) { index, seg in
-                    HStack(spacing: 2) {
-                        Text(seg.syllable)
-                            .foregroundStyle(PD.ColorToken.text)
-                        Text(seg.arrow)
-                            .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
-                            .modifier(ToneArrowAnimationModifier(arrow: seg.arrow, isActive: index == activeIndex))
-                    }
-                }
+        let letters = segs.reduce(0) { $0 + $1.syllable.filter(\.isLetter).count }
+        let preferred: CGFloat = {
+            switch (n, letters) {
+            case (0...3, 0...10): return 22
+            case (0...4, 0...14): return 19
+            default: return 16
             }
-            .font(.title3.weight(.semibold))
-            .lineLimit(nil)
-            .minimumScaleFactor(0.78)
-            .fixedSize(horizontal: false, vertical: true)
-        } else {
-            PhoneticWithColoredArrowsView(
-                phonetic: phonetic,
-                font: .title3.weight(.semibold),
-                alignment: .leading
-            )
-        }
-    }
-}
-
-/// Направление тона при воспроизведении: стрелка слегка двигается в сторону тона (↗ вверх, ↘ вниз, → пульс).
-private struct ToneArrowAnimationModifier: ViewModifier {
-    let arrow: String
-    let isActive: Bool
-
-    private var toneOffset: CGFloat {
-        guard isActive else { return 0 }
-        switch arrow {
-        case "↗", "↑": return -5
-        case "↘", "↓": return 5
-        default: return 0
-        }
-    }
-
-    private var toneScale: CGFloat {
-        guard isActive else { return 1.0 }
-        return arrow == "→" ? 1.18 : 1.08
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .offset(y: toneOffset)
-            .scaleEffect(toneScale)
-            .animation(.easeOut(duration: 0.2), value: isActive)
+        }()
+        TaikaPhoneticLine(
+            raw: phonetic,
+            preferredSize: preferred,
+            minimumSize: 13,
+            alignment: .leading,
+            activeIndex: activeIndex
+        )
     }
 }
 
@@ -7740,72 +7737,65 @@ private struct SpeakerTopCard: View {
     var body: some View {
         let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
         let normalizedTranslit = TaikaSmartSpeakerPhonetic.normalize(translitAccent)
-        let toneSegmentsCount = TaikaSmartSpeakerPhonetic.syllableArrowSegments(translitAccent).count
-        let isLongTranslit = normalizedTranslit.count > 22
-        let canAnimateToneLine = toneSegmentsCount > 0 && toneSegmentsCount <= 5 && !isLongTranslit
-        let translitFont: Font = isLongTranslit
-            ? .system(size: 17, weight: .semibold)
-            : .system(size: 20, weight: .semibold)
+        let toneSegs = TaikaSmartSpeakerPhonetic.syllableArrowSegments(translitAccent)
+        let letterCount = toneSegs.reduce(0) { $0 + $1.syllable.filter(\.isLetter).count }
+        let phoneticPreferred: CGFloat = {
+            switch (toneSegs.count, letterCount) {
+            case (0...3, 0...10): return 22
+            case (0...4, 0...14): return 19
+            case (0...5, 0...18): return 16
+            default: return 14
+            }
+        }()
+        let phoneticActiveIndex: Int = {
+            let n = toneSegs.count
+            guard n > 0, referencePlaybackProgress > 0, referencePlaybackProgress < 1 else { return -1 }
+            return min(Int(referencePlaybackProgress * Double(n)), n - 1)
+        }()
 
         VStack(alignment: .leading, spacing: 10) {
-            // top row: brand + lesson chip
             HStack(alignment: .center, spacing: 8) {
-                Text("taikA")
-                    .font(.custom("ONMARK Trial", size: 14))
-                    .tracking(0.6)
-                    .foregroundStyle(PD.ColorToken.text)
+                TaikaWordmarkLockup(fontSize: 14)
 
                 Spacer(minLength: 0)
 
                 lessonTitlePill
             }
+            .layoutPriority(1)
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
 
-            // center block (FavoriteDS-like typography rhythm)
-            Group {
-                VStack(alignment: .leading, spacing: 8) {
-                    // line 1 (accent): translit (always static; state lives below)
-                    Group {
-                        if translitAccent.isEmpty {
-                            Text("—")
-                                .foregroundStyle(PD.ColorToken.textSecondary)
-                                .opacity(0.45)
-                        } else if canAnimateToneLine && (translitAccent.contains("→") || translitAccent.contains("↗") || translitAccent.contains("↘") || translitAccent.contains("↑") || translitAccent.contains("↓")) {
-                            PhoneticToneAnimationView(phonetic: translitAccent, playbackProgress: referencePlaybackProgress)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            TaikaSmartSpeakerPhonetic.styledText(translitAccent, font: translitFont)
-                                .multilineTextAlignment(.leading)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
+            VStack(alignment: .leading, spacing: 8) {
+                Group {
+                    if translitAccent.isEmpty {
+                        Text("—")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                            .opacity(0.45)
+                    } else {
+                        TaikaPhoneticLine(
+                            raw: normalizedTranslit,
+                            preferredSize: phoneticPreferred,
+                            minimumSize: 12,
+                            alignment: .leading,
+                            activeIndex: phoneticActiveIndex
+                        )
                     }
-                    .font(translitFont)
-                    .lineLimit(nil)
-                    .minimumScaleFactor(0.78)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .opacity(translitAccent.isEmpty ? 0.45 : 1.0)
-                    .padding(.bottom, 2)
-
-                    // line 2 (title): RU meaning
-                    Text(ruTitle.isEmpty ? "—" : ruTitle)
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(T.Colors.textPrimary)
-                        .lineLimit(3)
-                        .minimumScaleFactor(0.80)
-                        .opacity(ruTitle.isEmpty ? 0.45 : 1.0)
-                        .padding(.top, 4)
-
-                    // line 3 (secondary): thai script
-                    Text(thaiSecondary)
-                        .font(.footnote)
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .opacity(0.86)
-                        .lineLimit(3)
-                        .minimumScaleFactor(0.82)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .opacity(thaiSecondary.isEmpty ? 0.0 : 1.0)
                 }
+                .padding(.bottom, 2)
+
+                Text(ruTitle.isEmpty ? "—" : ruTitle)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(T.Colors.textPrimary)
+                    .lineLimit(2)
+                    .opacity(ruTitle.isEmpty ? 0.45 : 1.0)
+                    .padding(.top, 4)
+
+                Text(thaiSecondary)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .opacity(thaiSecondary.isEmpty ? 0.0 : 0.86)
+                    .lineLimit(2)
             }
 
             HStack(spacing: 8) {
@@ -7821,6 +7811,7 @@ private struct SpeakerTopCard: View {
             round.fill(Color.white.opacity(0.045))
         )
         .contentShape(round)
+        .dynamicTypeSize(.medium ... .xLarge)
     }
 
     /// Чип урока — тихий, без розовой обводки.
@@ -7838,9 +7829,9 @@ private struct SpeakerTopCard: View {
                     .font(.system(size: 10, weight: .semibold))
             }
             Text(label)
-                .font(.caption2.weight(.semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .lineLimit(1)
-                .minimumScaleFactor(Theme.TextBlock.bodyMinimumScale)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .foregroundStyle(PD.ColorToken.textSecondary)
         .padding(.horizontal, 9)
@@ -7996,7 +7987,7 @@ private struct AnimatedBreakdownSparkline: View {
     }
 }
 
-/// Текст + тон + итог: один header для feedback-карточки и sheet-разбора.
+    /// Слова + тон. Большая цифра — слова, не смесь.
 struct SpeakerTripleScoreHeader: View {
     enum Layout {
         case feedback
@@ -8014,15 +8005,15 @@ struct SpeakerTripleScoreHeader: View {
     var centered: Bool = true
 
     private var heroValue: Int {
-        toneScore != nil ? overallScore : textScore
+        textScore
     }
 
     private var heroFont: Font {
-        Theme.Fonts.score(54)
+        Theme.Fonts.score(layout == .sheet ? 40 : 44)
     }
 
     private var columnValueFont: Font {
-        Theme.Fonts.score(20)
+        Theme.Fonts.score(16)
     }
 
     private var heroStyle: AnyShapeStyle {
@@ -8030,7 +8021,7 @@ struct SpeakerTripleScoreHeader: View {
     }
 
     var body: some View {
-        VStack(alignment: centered ? .center : .leading, spacing: 10) {
+        VStack(alignment: centered ? .center : .leading, spacing: 6) {
             SpeakerCountingScore(
                 value: heroValue,
                 font: heroFont,
@@ -8038,10 +8029,10 @@ struct SpeakerTripleScoreHeader: View {
                 suffix: "%"
             )
             .frame(maxWidth: .infinity, alignment: centered ? .center : .leading)
-            .accessibilityLabel("\(heroValue) процентов")
+            .accessibilityLabel("слова \(heroValue) процентов")
 
-            HStack(spacing: 36) {
-                metricColumn(title: "текст", value: textScore, state: .ready)
+            HStack(spacing: 28) {
+                metricColumn(title: "слова", value: textScore, state: .ready)
                 metricColumn(title: "тоны", value: toneScore, state: toneColumnState)
             }
             .frame(maxWidth: .infinity, alignment: centered ? .center : .leading)
@@ -8120,16 +8111,7 @@ struct SpeakerTripleScoreHeader: View {
             )
         }
         if score >= 50 {
-            return AnyShapeStyle(
-                LinearGradient(
-                    colors: [
-                        Color(red: 1.0, green: 0.78, blue: 0.34),
-                        Color(red: 0.93, green: 0.42, blue: 0.12)
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
+            return AnyShapeStyle(Theme.Gradients.accentText)
         }
         return AnyShapeStyle(PD.ColorToken.toneWrong.opacity(0.92))
     }

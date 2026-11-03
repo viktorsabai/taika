@@ -32,6 +32,8 @@ struct FavoriteView: View {
     @ObservedObject private var favFilter = FavoritesFilterState.shared
 
     @State private var selectedTab: FavoriteScreenTab = .cards
+    /// Куда въезжает следующая коллекция: словарь справа, избранное слева.
+    @State private var favoritesSlideEdge: Edge = .trailing
     @State private var isEditing: Bool = false
     @State private var isTrainingPickerPresented: Bool = false
     @State private var selectedTrainingGameMode: GameModeType = .match
@@ -75,7 +77,6 @@ struct FavoriteView: View {
                 ],
                 primaryCTA: TaikaAssistantHubPrimaryCTA(
                     title: "К урокам",
-                    accent: Color(red: 0.28, green: 0.72, blue: 0.98),
                     action: openCoursesBase
                 )
             )
@@ -113,40 +114,15 @@ struct FavoriteView: View {
             VStack(spacing: 0) {
                 favoritesScreenHeader()
 
-                if let empty = currentEmptySpec {
-                    favEmptyState(
-                        systemImage: empty.systemImage,
-                        lines: empty.lines,
-                        assembleGateKey: empty.assembleGateKey,
-                        primaryCTA: empty.primaryCTA,
-                        onSelectCourse: openFavoriteCourse
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    TaikaRootVerticalScroll {
-                        VStack(spacing: 0) {
-                            favoritesCollectionSummary()
-                                .padding(.horizontal, CD.Spacing.screen)
-                                .padding(.top, 6)
-                                .padding(.bottom, 8)
-
-                            favoritesTabContent()
-                                .frame(maxWidth: .infinity, alignment: .topLeading)
-
-                            // The training CTA is pinned above the app toolbar; keep scroll content clear of it.
-                            Spacer(minLength: showsBottomTrainingBar ? ToolBar.recommendedBottomInset + 104 : bottomContentInset)
-                        }
-                    }
-                    .environment(\.taikaRootHeaderClearance, 0)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                ZStack(alignment: .top) {
+                    favoritesCollectionBody
+                        .id(selectedTab == .dictionary)
+                        .transition(favoritesCollectionTransition)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .clipped()
             }
             .padding(.top, Theme.Layout.rootHeaderClearance)
-            .onAppear {
-                withAnimation(.easeInOut(duration: 0.34)) {
-                    ThemeManager.shared.hubAtmosphere = .favorites
-                }
-            }
 
             if showsBottomTrainingBar {
                 favoritesTrainingCTA()
@@ -225,40 +201,92 @@ struct FavoriteView: View {
         }
     }
 
-    private var collectionTitle: String {
-        selectedTab == .dictionary ? "Словарь" : "Избранное"
+    private var showsDictionary: Bool { selectedTab == .dictionary }
+
+    private var favoritesCollectionTransition: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: favoritesSlideEdge),
+            removal: .move(edge: favoritesSlideEdge == .trailing ? .leading : .trailing)
+        )
     }
 
     private func favoritesScreenHeader() -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            TaikaScreenPageTitle(title: collectionTitle) {
-                if showsViewModeToggle {
-                    FDFavViewModeToggle(viewMode: activeViewMode)
+        HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: 14) {
+                TaikaPeerTitleButton(title: "Избранное", isOn: !showsDictionary) {
+                    selectCollection(.cards)
+                }
+                TaikaPeerTitleButton(title: "Словарь", isOn: showsDictionary) {
+                    selectCollection(.dictionary)
                 }
             }
-            FDCollectionSwitch(selection: collectionSelection)
-                .padding(.horizontal, CD.Spacing.screen)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if showsViewModeToggle {
+                TaikaHeaderSettingsMenu(accessibilityLabel: "Как отображать") {
+                    ForEach(FavCardsViewMode.allCases) { mode in
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            activeViewMode.wrappedValue = mode
+                        } label: {
+                            if activeViewMode.wrappedValue == mode {
+                                Label(mode.accessibilityLabel, systemImage: "checkmark")
+                            } else {
+                                Text(mode.accessibilityLabel)
+                            }
+                        }
+                    }
+                }
+            }
         }
+        .padding(.horizontal, CD.Spacing.screen)
         .padding(.top, 4)
     }
 
-    private var collectionSelection: Binding<FavoriteScreenTab> {
-        Binding(
-            get: {
-                selectedTab == .dictionary ? .dictionary : .cards
-            },
-            set: { next in
-                let normalized: FavoriteScreenTab = next == .dictionary ? .dictionary : .cards
-                guard selectedTab != normalized else { return }
-                selectedTab = normalized
-                favFilter.selectedTab = normalized
+    private func selectCollection(_ tab: FavoriteScreenTab) {
+        let next: FavoriteScreenTab = tab == .dictionary ? .dictionary : .cards
+        guard showsDictionary != (next == .dictionary) else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        favoritesSlideEdge = next == .dictionary ? .trailing : .leading
+        withAnimation(.easeInOut(duration: 0.32)) {
+            selectedTab = next
+            favFilter.selectedTab = next
+        }
+    }
+
+    @ViewBuilder
+    private var favoritesCollectionBody: some View {
+        if let empty = currentEmptySpec {
+            favEmptyState(
+                systemImage: empty.systemImage,
+                lines: empty.lines,
+                assembleGateKey: empty.assembleGateKey,
+                primaryCTA: empty.primaryCTA,
+                onSelectCourse: openFavoriteCourse
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            TaikaRootVerticalScroll {
+                VStack(spacing: 0) {
+                    favoritesCollectionSummary()
+                        .padding(.horizontal, CD.Spacing.screen)
+                        .padding(.top, 6)
+                        .padding(.bottom, 8)
+
+                    favoritesTabContent()
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                    Spacer(minLength: showsBottomTrainingBar ? ToolBar.recommendedBottomInset + 104 : bottomContentInset)
+                }
             }
-        )
+            .environment(\.taikaRootHeaderClearance, 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
     }
 
     private func favoritesCollectionSummary() -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(selectedTab == .dictionary ? "Сохранено в словаре" : "Сохранённые карточки")
+            Text(selectedTab == .dictionary ? "Сохранённые фразы" : "Сохранённые карточки")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(PD.ColorToken.textSecondary)
             Text("·")
@@ -290,8 +318,6 @@ struct FavoriteView: View {
 
     private func trainCurrentTabInSpeaker() {
         SpeakerManager.shared.setSpeakerUIMode(.training)
-        // Небесный акцент до смены таба — syncTabAtmosphere(2) подхватит __favorites__/__dictionary__.
-        ThemeManager.shared.hubAtmosphere = .favorites
         if selectedTab == .dictionary {
             // Один handoff: pending → SpeakerView.loadQueueForCourse. Не грузим очередь дважды заранее.
             DictionarySessionSelection.shared.activate(nil)

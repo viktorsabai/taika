@@ -83,14 +83,6 @@ public final class ThemeManager: ObservableObject {
 extension ThemeManager {
     /// Gradient used for text/icon foregrounds (matches existing usage of Theme.Gradients.accentText)
     public var currentAccentGradient: LinearGradient {
-        if let hubAtmosphere {
-            switch hubAtmosphere {
-            case .speaker: return Theme.Gradients.accentText
-            case .learn: return Theme.Gradients.accentCourseGreen
-            case .favorites: return Theme.Gradients.accentHeart
-            case .console: return Theme.Gradients.consoleGold
-            }
-        }
         switch accent {
         case .pink:
             return Theme.Gradients.accentText
@@ -108,14 +100,6 @@ extension ThemeManager {
 
     /// Solid tint sampled from the active accent — for glass washes.
     public var currentAccentTintColor: Color {
-        if let hubAtmosphere {
-            switch hubAtmosphere {
-            case .speaker: return Color(red: 0.95, green: 0.36, blue: 0.65)
-            case .learn: return Color(red: 0.28, green: 0.78, blue: 0.52)
-            case .favorites: return Color(red: 0.28, green: 0.72, blue: 0.98)
-            case .console: return Color(red: 0.96, green: 0.68, blue: 0.18)
-            }
-        }
         switch accent {
         case .pink:  return Color(red: 0.95, green: 0.36, blue: 0.65)
         case .azure: return Color(red: 0.28, green: 0.72, blue: 0.98)
@@ -137,15 +121,7 @@ struct AccentPickerPanel: View {
                 .padding(.top, 6)
                 .accessibilityHidden(true)
 
-            HStack(spacing: 4) {
-                Text("tai") // 'Thai' in Thai script
-                    .font(.custom("ONMARK Trial", size: 48))
-                    .foregroundStyle(Color.white.opacity(0.92))
-                Text("kAAA")
-                    .font(.custom("ONMARK Trial", size: 48))
-                    .fontWeight(.bold)
-                    .foregroundStyle(theme.currentAccentFill)
-            }
+            TaikaWordmarkLockup(fontSize: 48)
             .padding(.top, 8)
             .accessibilityHidden(true)
 

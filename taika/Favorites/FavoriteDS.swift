@@ -436,8 +436,7 @@ struct FDFavPhraseCard: View {
         let thaiSize = min(22, max(16, layoutWidth * 0.105))
 
         VStack(alignment: .leading, spacing: 12) {
-            Text("taikA")
-                .font(Font.custom("ONMARK Trial", size: 14))
+            TaikaWordmarkLockup(fontSize: 14)
                 .foregroundStyle(PD.ColorToken.textSecondary)
 
             Spacer(minLength: 0)
@@ -616,8 +615,7 @@ struct FDMiniHackCard: View {
             if lessonSummarySquare {
                 VStack(alignment: .leading, spacing: 10) {
                     FDMiniStepBalancedChrome {
-                        Text("taikA")
-                            .font(Font.custom("ONMARK Trial", size: 13))
+                        TaikaWordmarkLockup(fontSize: 13)
                             .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.9))
                     } trailing: {
                         Group {
@@ -676,8 +674,7 @@ struct FDMiniHackCard: View {
                 .padding(14)
             } else if !showTopTrailingKindChip {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("taikA")
-                        .font(Font.custom("ONMARK Trial", size: 14))
+                    TaikaWordmarkLockup(fontSize: 14)
                         .foregroundStyle(PD.ColorToken.textSecondary)
 
                     Spacer(minLength: 0)
@@ -704,8 +701,7 @@ struct FDMiniHackCard: View {
             } else {
                 VStack(alignment: .center, spacing: 14) {
                     FDMiniStepBalancedChrome {
-                        Text("taikA")
-                            .font(Font.custom("ONMARK Trial", size: 14))
+                        TaikaWordmarkLockup(fontSize: 14)
                             .foregroundStyle(.secondary)
                     } trailing: {
                         Group {
@@ -1181,8 +1177,7 @@ struct FDMiniCourseCard: View {
 
     private var cardHeaderRow: some View {
         return HStack(spacing: 8) {
-            Text("taikA")
-                .font(Font.custom("ONMARK Trial", size: 14))
+            TaikaWordmarkLockup(fontSize: 14)
                 .foregroundStyle(Color.secondary)
             Spacer(minLength: 4)
             if resolvedStyle == .reinforcement {
@@ -1334,8 +1329,7 @@ struct FDContinueCourseCard: View {
         let showCourseCaption = !lessonName.isEmpty && !courseName.isEmpty
 
         VStack(alignment: .leading, spacing: 12) {
-            Text("taikA")
-                .font(Font.custom("ONMARK Trial", size: 14))
+            TaikaWordmarkLockup(fontSize: 14)
                 .foregroundStyle(PD.ColorToken.textSecondary)
 
             Spacer(minLength: 0)

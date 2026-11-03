@@ -251,7 +251,6 @@ struct StoryLabEditorMainHubSession: View {
         .navigationBarHidden(true)
         .onAppear {
             clock.start()
-            syncAtmosphere(hubMode)
         }
         .onDisappear {
             clock.stop()
@@ -262,7 +261,6 @@ struct StoryLabEditorMainHubSession: View {
             withAnimation(.spring(response: 0.42, dampingFraction: 0.84)) {
                 hubMode = newMode
             }
-            syncAtmosphere(newMode)
         }
         .onChange(of: scene.sphere) { _, v in
             if v > 0.12, !kicked {
@@ -353,15 +351,7 @@ struct StoryLabEditorMainHubSession: View {
     }
 
     private func syncAtmosphere(_ mode: MDMainHubMode) {
-        let atmosphere: ThemeManager.HubAtmosphere
-        switch mode {
-        case .speaker: atmosphere = .speaker
-        case .learn: atmosphere = .learn
-        case .favorites: atmosphere = .favorites
-        }
-        withAnimation(.easeInOut(duration: 0.34)) {
-            ThemeManager.shared.hubAtmosphere = atmosphere
-        }
+        _ = mode
     }
 
     // MARK: Chrome

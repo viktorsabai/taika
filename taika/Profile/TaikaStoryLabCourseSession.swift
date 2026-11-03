@@ -475,10 +475,7 @@ struct StoryLabEditorCourseSession: View {
 
     private var brandHeader: some View {
         HStack {
-            HStack(spacing: 2) {
-                Text("tai").font(.custom("Onmark Trial", size: 22)).foregroundStyle(.white)
-                Text("kAAA").font(.custom("Onmark Trial", size: 22)).foregroundStyle(theme.currentAccentFill)
-            }
+            TaikaWordmarkLockup(fontSize: 22)
             Spacer()
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")

@@ -611,10 +611,7 @@ struct StoryLabEditorSpeakerSession: View {
     }
 
     private var brandMark: some View {
-        HStack(spacing: 2) {
-            Text("tai").font(.custom("Onmark Trial", size: 20)).foregroundStyle(.white)
-            Text("kAAA").font(.custom("Onmark Trial", size: 20)).foregroundStyle(theme.currentAccentFill)
-        }
+        TaikaWordmarkLockup(fontSize: 20)
     }
 
     private var dictionaryHeaderChip: some View {

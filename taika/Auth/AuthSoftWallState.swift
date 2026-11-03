@@ -10,7 +10,7 @@
 //  - Не показывали в последние 7 дней (cooldown в UserDefaults authSoftWall.lastShownDate).
 //
 //  Триггеры:
-//  1. Закрытие экрана успеха урока в StepView (крестик, тап по фону, «Следующий урок», «Следующий курс», «К курсам»).
+//  1. Закрытие экрана успеха урока в StepView. Если сразу открылась игра — окно ждёт возврата на курс.
 //  2. onAppear вкладки «Профиль» (ProfileView) — без отдельного cooldown-ключа; shouldShowSoftWall() уже проверяет 7 дней.
 //     calledFromProfile: true — не пишем lastShown при показе из Профиля (можно повторять, пока не войдёт).
 //
@@ -68,12 +68,46 @@ public enum AuthSoftWallState {
         lastShownDate = Date()
     }
 
+    /// Игра на экране: «Сохрани результат» не кладём поверх доски и подсказки у звезды.
+    private static var gameCoversScreen = false
+    /// Показ отложен, пока игрок не вернётся на экран курса.
+    private static var waitingForCalmScreen = false
+
+    public static func setGameCoversScreen(_ open: Bool) {
+        let wasOpen = gameCoversScreen
+        gameCoversScreen = open
+        if wasOpen, !open {
+            flushAfterGame()
+        }
+    }
+
+    private static func flushAfterGame() {
+        guard waitingForCalmScreen else { return }
+        waitingForCalmScreen = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+            Task { @MainActor in
+                if gameCoversScreen {
+                    waitingForCalmScreen = true
+                    return
+                }
+                tryPresentSoftWall()
+            }
+        }
+    }
+
     /// Проверить условия и при выполнении показать overlay authSoftWall.
     /// - Parameter calledFromProfile: если true, не обновляем cooldown — сообщение можно показывать при каждом заходе в Профиль, пока пользователь не войдёт.
     public static func tryPresentSoftWall(calledFromProfile: Bool = false) {
         #if DEBUG
         print("[AuthSoftWall] tryPresentSoftWall called fromProfile=\(calledFromProfile)")
         #endif
+        if gameCoversScreen, !calledFromProfile {
+            waitingForCalmScreen = true
+            #if DEBUG
+            print("[AuthSoftWall] deferred until the course screen")
+            #endif
+            return
+        }
         guard shouldShowSoftWall() else { return }
         let state = ProgressManager.shared.publishedState
         #if DEBUG

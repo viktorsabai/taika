@@ -483,6 +483,59 @@ private extension LessonsView {
         presentGameModePicker(for: ids, cardKeys: keys)
     }
 
+    /// Уроки, из которых уже можно собрать игру: закрытые и те, где есть выученные карточки.
+    private var finishedLessonIdsForGame: [String] {
+        guard let cid = currentCourse?.courseID else { return [] }
+        return lessonsSorted.compactMap { lesson in
+            switch statusForLesson(lesson) {
+            case .completed:
+                return lesson.lessonID
+            case .inProgress:
+                let learned = homeTaskManager.learnedIndices(courseId: cid, lessonId: lesson.lessonID)
+                return learned.isEmpty ? nil : lesson.lessonID
+            case .locked:
+                return nil
+            }
+        }
+    }
+
+    /// На незаконченном курсе галочек нет: берём все пройденные. На закрытом — только отмеченные.
+    private func headerGameLessonIds() -> [String] {
+        let finished = finishedLessonIdsForGame
+        guard isCompletedCourse else { return finished }
+        let selected = selectedReinforcementLessonIds ?? Set(finished)
+        return Array(selected.intersection(Set(finished))).sorted()
+    }
+
+    private func syncHeaderReinforceReady() {
+        lessonsHeaderStore.setReinforceReady(!finishedLessonIdsForGame.isEmpty)
+    }
+
+    private func handleHeaderReinforce() {
+        let ids = headerGameLessonIds()
+        guard !ids.isEmpty else {
+            reinforceBlockedNote = isCompletedCourse
+                ? "Выбери уроки ниже — без них игру собрать не из чего."
+                : "Сначала закрой хотя бы один урок. Игра соберётся из пройденного, весь курс для этого не нужен."
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            return
+        }
+        launchGameTraining(for: ids, cardKeys: nil)
+    }
+
+    private func installHeaderActions() {
+        if isTheoryBonusCourse {
+            lessonsHeaderStore.setActions(onSpeaker: nil, onReinforce: nil)
+            lessonsHeaderStore.setReinforceReady(false)
+            return
+        }
+        lessonsHeaderStore.setActions(
+            onSpeaker: { launchSpeakerTraining() },
+            onReinforce: { handleHeaderReinforce() }
+        )
+        syncHeaderReinforceReady()
+    }
+
     private func launchSelectedErrorFocus() {
         guard let cid = currentCourse?.courseID else { return }
         let ids = Array(Set(effectiveReinforcementLessonIds).intersection(weakCompletedLessonIds)).sorted()
@@ -887,6 +940,7 @@ public struct LessonsView: View {
     /// Local paywall sheet for a locked game tapped from the course grade sheet.
     /// It keeps the LessonsView context instead of presenting the global full-screen paywall.
     @State private var showLocalGamesPaywall: Bool = false
+    @State private var reinforceBlockedNote: String?
     @State private var selectedGameLessonId: String? = nil
     /// Material scope currently owned by the game picker; it must survive mode selection.
     @State private var pendingGameLessonIds: [String] = []
@@ -1332,31 +1386,9 @@ let withTasks = base
         if isTheoryBonusCourse {
             courseContentMode = .lifehacks
             lessonsHeaderStore.setActions(onSpeaker: nil, onReinforce: nil)
+            lessonsHeaderStore.setReinforceReady(false)
         } else {
-            lessonsHeaderStore.setActions(
-                onSpeaker: {
-                    launchSpeakerTraining()
-                },
-                onReinforce: {
-                    guard let cid = currentCourse?.courseID else { return }
-                    let scope = currentReinforcementScope()
-                    guard scope.cardCount > 0 else { return }
-                    selectedGameLessonId = nil
-                    selectedGameType = .match
-                    pendingGameLessonIds = scope.lessonIds
-                    pendingGameCardKeys = scope.cardKeys
-                    GameRequestedCourseScope.shared.set(
-                        courseId: cid,
-                        lessonIds: scope.lessonIds,
-                        cardKeys: scope.cardKeys
-                    )
-                    frozenSnapshot = captureWindowSnapshot()
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                        showGameOverlay = true
-                        showGameModePicker = true
-                    }
-                }
-            )
+            installHeaderActions()
         }
 
     }
@@ -1383,6 +1415,7 @@ let withTasks = base
     .onReceive(lessonsManager.$progress) { _ in
 
         reconcileResumeSelectionAfterProgressChange()
+        syncHeaderReinforceReady()
         scheduleHeaderRefresh()
 
     }
@@ -1480,21 +1513,26 @@ let withTasks = base
                 }
                 if isTheoryBonusCourse {
                     lessonsHeaderStore.setActions(onSpeaker: nil, onReinforce: nil)
+                    lessonsHeaderStore.setReinforceReady(false)
                 } else {
-                    lessonsHeaderStore.setActions(
-                        onSpeaker: {
-                            launchSpeakerTraining()
-                        },
-                        onReinforce: {
-                            launchGameTraining()
-                        }
-                    )
+                    installHeaderActions()
                 }
             }
             .onDisappear {
                 GameHeaderStore.shared.config = nil
                 lessonsHeaderStore.clearActions()
                 lessonsHeaderStore.setCompletedCourse(false)
+            }
+            .alert(
+                "Игра",
+                isPresented: Binding(
+                    get: { reinforceBlockedNote != nil },
+                    set: { if !$0 { reinforceBlockedNote = nil } }
+                )
+            ) {
+                Button("Понятно", role: .cancel) {}
+            } message: {
+                Text(reinforceBlockedNote ?? "")
             }
             .onChange(of: lessonsHeaderStore.resetRequested) { _, requested in
                 if requested {

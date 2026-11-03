@@ -68,7 +68,7 @@ struct AuthSoftWallView: View {
     }
 
     private var progressLine: String {
-        if masteryPercent <= 0, streakDays <= 0 {
+        if masteryPercent <= 0 {
             return "Пока он только на этом телефоне. Войди — и он останется с тобой."
         }
         return "Пока он только на этом телефоне. Войди — и \(masteryPercent)% не пропадут."

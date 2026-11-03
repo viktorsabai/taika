@@ -15,6 +15,8 @@ public final class LessonsHeaderStore: ObservableObject {
     /// Инкремент при setActions/clearActions — чтобы AppShell пересобрал хедер с актуальными замыканиями.
     @Published public private(set) var actionsRevision: UInt = 0
     @Published public private(set) var isCompletedCourse: Bool = false
+    /// false — в курсе ещё нет урока, из которого можно собрать игру. Иконка тусклая, тап объясняет почему.
+    @Published public private(set) var reinforceReady: Bool = false
 
     public var onSpeaker: (() -> Void)?
     public var onReinforce: (() -> Void)?
@@ -38,6 +40,13 @@ public final class LessonsHeaderStore: ObservableObject {
     public func clearActions() {
         onSpeaker = nil
         onReinforce = nil
+        reinforceReady = false
+        actionsRevision &+= 1
+    }
+
+    public func setReinforceReady(_ ready: Bool) {
+        guard reinforceReady != ready else { return }
+        reinforceReady = ready
         actionsRevision &+= 1
     }
 

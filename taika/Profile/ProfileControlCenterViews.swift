@@ -484,6 +484,7 @@ struct ProfileDestinationIntro: View {
     let eyebrow: String
     let title: String
     let subtitle: String
+    var subtitleUsesAccent: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -496,7 +497,11 @@ struct ProfileDestinationIntro: View {
                 .foregroundStyle(PD.ColorToken.text)
             Text(subtitle)
                 .font(PD.FontToken.caption(14))
-                .foregroundStyle(PD.ColorToken.textSecondary)
+                .foregroundStyle(
+                    subtitleUsesAccent
+                    ? AnyShapeStyle(Theme.Gradients.accentText)
+                    : AnyShapeStyle(PD.ColorToken.textSecondary)
+                )
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 4)

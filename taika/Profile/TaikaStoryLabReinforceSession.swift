@@ -591,10 +591,7 @@ struct StoryLabEditorReinforceSession: View {
             .id("sl-game-header-\(scene.gameTitle)")
         } else {
             HStack {
-                HStack(spacing: 2) {
-                    Text("tai").font(.custom("Onmark Trial", size: 22)).foregroundStyle(.white)
-                    Text("kAAA").font(.custom("Onmark Trial", size: 22)).foregroundStyle(theme.currentAccentFill)
-                }
+                TaikaWordmarkLockup(fontSize: 22)
                 Spacer()
                 Image(systemName: "crown.fill")
                     .font(.system(size: 14, weight: .semibold))

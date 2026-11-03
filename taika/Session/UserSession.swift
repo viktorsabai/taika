@@ -567,7 +567,18 @@ public struct USSnapshot: Codable, Equatable {
     }
 
     /// Зафиксировать явный старт курса/урока
+    /// Каталожный курс для «Продолжить» на Главной. Словарь / избранное / выученное — не курсы.
+    public static func isCatalogCourseId(_ raw: String) -> Bool {
+        let id = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !id.isEmpty else { return false }
+        let lowered = id.lowercased()
+        if lowered.hasPrefix("__") || lowered.hasPrefix("--") { return false }
+        if lowered == "user_dict" { return false }
+        return true
+    }
+
     public func markStarted(courseId: String, lessonId: String? = nil) {
+        guard Self.isCatalogCourseId(courseId) else { return }
         objectWillChange.send()
         snapshot.startedCourses.insert(courseId)
         if let lid = lessonId { snapshot.startedLessons[courseId, default: []].insert(lid) }
@@ -576,6 +587,7 @@ public struct USSnapshot: Codable, Equatable {
 
     /// Явно пометить активный курс
     public func markActive(courseId: String) {
+        guard Self.isCatalogCourseId(courseId) else { return }
         objectWillChange.send()
         snapshot.lastCourseId = courseId
         snapshot.startedCourses.insert(courseId)
@@ -584,6 +596,7 @@ public struct USSnapshot: Codable, Equatable {
 
     /// Явно пометить активный урок в курсе
     public func markActive(courseId: String, lessonId: String) {
+        guard Self.isCatalogCourseId(courseId) else { return }
         objectWillChange.send()
         snapshot.lastCourseId = courseId
         snapshot.lastLessonByCourse[courseId] = lessonId
@@ -594,6 +607,7 @@ public struct USSnapshot: Codable, Equatable {
 
     /// Явно пометить активный шаг (индекс в уроке)
     public func markActive(courseId: String, lessonId: String, stepIndex: Int) {
+        guard Self.isCatalogCourseId(courseId) else { return }
         objectWillChange.send()
         snapshot.lastCourseId = courseId
         snapshot.lastLessonByCourse[courseId] = lessonId

@@ -77,6 +77,11 @@ struct SpeakerView: View {
         speaker.refreshUserPhoneticFromASRIfNeeded()
         guard hasFullToneBreakdownAccess else { return }
         if speaker.hasBreakdownForCurrentAttempt() { return }
+        let heardRaw = speaker.speakerUIMode == .conversation
+            ? (speaker.conversationHeardThaiASR ?? "")
+            : (speaker.trainingHeardThaiASR ?? "")
+        let heard = heardRaw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !heard.isEmpty else { return }
         let thaiSnap = speaker.conversationExpectedThai?.trimmingCharacters(in: .whitespacesAndNewlines)
         let phSnap = speaker.conversationExpectedTranslitForFeedback?.trimmingCharacters(in: .whitespacesAndNewlines)
             ?? speaker.current.map { $0.face.phonetic }?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -231,6 +236,9 @@ struct SpeakerView: View {
             onPlayReference: onPlayReference,
             onPlayAttempt: onPlayAttempt,
             onPlayReferenceSyllableAtIndex: onPlayReferenceSyllable,
+            onPlayAttemptSyllableAtIndex: { speaker.playAttemptSyllable(at: $0) },
+            teachingFocusLine: speaker.teachingFocusLine,
+            weakestSyllableIndex: speaker.weakestSyllableIndex,
             onPlayReferenceForId: { id in
                 speaker.playReference(for: id)
             },
@@ -376,6 +384,8 @@ struct SpeakerView: View {
             smartSpeakerPoliteness: speaker.smartSpeakerPoliteness,
             onSetSmartSpeakerPoliteness: { speaker.setSmartSpeakerPoliteness($0) },
             referencePlaybackProgress: speaker.referencePlaybackProgress,
+            referencePlaybackSyllableIndex: speaker.referencePlaybackSyllableIndex,
+            referenceSyllablePlaysFullPhrase: speaker.referenceSyllablePlaysFullPhrase,
             attemptPlaybackProgress: speaker.attemptPlaybackProgress,
             onBreakdownAppear: { speaker.resetReferenceProgress() },
             onOpenInstantTranslation: {

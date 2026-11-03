@@ -118,7 +118,7 @@ public enum Theme {
     }
     
     public enum Fonts {
-        public static func appTitle(_ size: CGFloat) -> Font { .custom("ONMARK Trial", size: size) }
+        public static func appTitle(_ size: CGFloat) -> Font { .system(size: size, weight: .bold, design: .rounded) }
         /// Legacy score/statistics font kept for compatibility outside course metrics.
         public static func stat(_ size: CGFloat) -> Font { .custom("MVSKIFERRegular", size: size) }
         /// Strict numeric face for product metrics: technical, tabular and non-decorative.
@@ -526,6 +526,201 @@ enum TaikaPhoneticText {
         flush()
         return result
     }
+
+    struct Slot: Hashable {
+        let syllable: String
+        let arrow: String
+    }
+
+    /// Слог + стрелка — один атом. Пробел делит слова, не буквы внутри слога.
+    static func slots(_ raw: String) -> [Slot] {
+        var t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        for arrow in toneArrows {
+            t = t.replacingOccurrences(of: String(arrow) + "-", with: String(arrow) + " ")
+        }
+        var out: [Slot] = []
+        var buf = ""
+        func emit(_ arrow: String) {
+            let syl = buf.trimmingCharacters(in: .whitespacesAndNewlines)
+            buf = ""
+            guard !syl.isEmpty || !arrow.isEmpty else { return }
+            out.append(Slot(syllable: syl, arrow: arrow))
+        }
+        for ch in t {
+            if toneArrows.contains(ch) {
+                emit(String(ch))
+            } else if ch.isWhitespace {
+                emit("")
+            } else {
+                buf.append(ch)
+            }
+        }
+        emit("")
+        return out
+    }
+}
+
+/// Слоты фонетики в ряд; перенос только между слогами, никогда внутри слота.
+struct TaikaPhoneticSlotFlow: Layout {
+    var alignment: HorizontalAlignment = .leading
+    var spacing: CGFloat = 5
+    var lineSpacing: CGFloat = 2
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = collectRows(widthLimit: proposal.width ?? .infinity, subviews: subviews)
+        let width = proposal.width ?? rows.map(\.width).max() ?? 0
+        let lines = CGFloat(max(rows.count - 1, 0))
+        let height = rows.reduce(0) { $0 + $1.height } + lines * lineSpacing
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let rows = collectRows(widthLimit: bounds.width, subviews: subviews)
+        var y = bounds.minY
+        var index = 0
+        for row in rows {
+            let extra = bounds.width - row.width
+            let startX: CGFloat
+            if alignment == .center {
+                startX = bounds.minX + max(0, extra / 2)
+            } else if alignment == .trailing {
+                startX = bounds.minX + max(0, extra)
+            } else {
+                startX = bounds.minX
+            }
+            var x = startX
+            for _ in 0..<row.count {
+                let sub = subviews[index]
+                let size = sub.sizeThatFits(.unspecified)
+                sub.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+                index += 1
+            }
+            y += row.height + lineSpacing
+        }
+    }
+
+    private struct Row {
+        var count: Int
+        var width: CGFloat
+        var height: CGFloat
+    }
+
+    private func collectRows(widthLimit: CGFloat, subviews: Subviews) -> [Row] {
+        var rows: [Row] = []
+        var count = 0
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+
+        func flush() {
+            guard count > 0 else { return }
+            rows.append(Row(count: count, width: width, height: height))
+            count = 0
+            width = 0
+            height = 0
+        }
+
+        for sub in subviews {
+            let size = sub.sizeThatFits(.unspecified)
+            let next = count == 0 ? size.width : width + spacing + size.width
+            if count > 0, next > widthLimit {
+                flush()
+                count = 1
+                width = size.width
+                height = size.height
+            } else {
+                count += 1
+                width = next
+                height = max(height, size.height)
+            }
+        }
+        flush()
+        return rows
+    }
+}
+
+/// Фонетика: крупно если коротко, мельче если длинно; слог не ломается столбиком.
+struct TaikaPhoneticLine: View {
+    let raw: String
+    var preferredSize: CGFloat = 18
+    var minimumSize: CGFloat = 13
+    var alignment: HorizontalAlignment = .leading
+    var activeIndex: Int = -1
+    var syllableColor: Color = PD.ColorToken.text
+
+    var body: some View {
+        let slots = TaikaPhoneticText.slots(raw)
+        let mid = max(minimumSize, ((preferredSize + minimumSize) / 2).rounded())
+        ViewThatFits(in: .horizontal) {
+            slotRow(slots, size: preferredSize)
+            slotRow(slots, size: mid)
+            slotRow(slots, size: minimumSize)
+            slotFlow(slots, size: minimumSize)
+        }
+        .frame(maxWidth: .infinity, alignment: Alignment(horizontal: alignment, vertical: .center))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(raw)
+    }
+
+    private func slotRow(_ slots: [TaikaPhoneticText.Slot], size: CGFloat) -> some View {
+        HStack(spacing: 5) {
+            ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
+                slotView(slot, index: index, size: size)
+            }
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func slotFlow(_ slots: [TaikaPhoneticText.Slot], size: CGFloat) -> some View {
+        TaikaPhoneticSlotFlow(alignment: alignment, spacing: 5, lineSpacing: 2) {
+            ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
+                slotView(slot, index: index, size: size)
+            }
+        }
+    }
+
+    private func slotView(_ slot: TaikaPhoneticText.Slot, index: Int, size: CGFloat) -> some View {
+        HStack(spacing: 2) {
+            if !slot.syllable.isEmpty {
+                Text(slot.syllable)
+                    .foregroundStyle(syllableColor)
+            }
+            if !slot.arrow.isEmpty {
+                Text(slot.arrow)
+                    .foregroundStyle(AnyShapeStyle(ThemeManager.shared.currentAccentFill))
+                    .modifier(TaikaPhoneticTonePulse(arrow: slot.arrow, isActive: index == activeIndex))
+            }
+        }
+        .font(.system(size: size, weight: .semibold))
+        .lineLimit(1)
+        .fixedSize()
+    }
+}
+
+private struct TaikaPhoneticTonePulse: ViewModifier {
+    let arrow: String
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .offset(y: toneOffset)
+            .scaleEffect(toneScale)
+            .animation(.easeOut(duration: 0.2), value: isActive)
+    }
+
+    private var toneOffset: CGFloat {
+        guard isActive else { return 0 }
+        switch arrow {
+        case "↗", "↑": return -4
+        case "↘", "↓": return 4
+        default: return 0
+        }
+    }
+
+    private var toneScale: CGFloat {
+        guard isActive else { return 1 }
+        return (arrow == "→") ? 1.16 : 1.08
+    }
 }
 
 struct ThemePreview: View {
@@ -803,7 +998,7 @@ private struct FontShowcaseView: View {
         VStack(alignment: .leading, spacing: 16) {
             SectionHeader(text: "Typography — Brand Set")
 
-            // Название приложения (ONMARK Trial)
+            // Название приложения
             VStack(alignment: .leading, spacing: 4) {
                 Text("Название приложения")
                     .font(.caption)
@@ -953,6 +1148,48 @@ enum TaikaNeutralPickerChrome {
     static let selectedFill = Color.white.opacity(0.12)
     static let selectedForeground = Color.white.opacity(0.92)
     static let selectedStroke = Color.white.opacity(0.22)
+}
+
+/// Два равноправных имени в строке заголовка: открытое яркое, второе тихое.
+struct TaikaPeerTitleButton: View {
+    let title: String
+    let isOn: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(isOn ? CD.ColorToken.text : CD.ColorToken.text.opacity(0.38))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(height: 34, alignment: .center)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+        .accessibilityHint(isOn ? "Открыто" : "Открыть")
+    }
+}
+
+/// Стрелка в шапке: открывает меню настройки, не второй заголовок.
+struct TaikaHeaderSettingsMenu<MenuContent: View>: View {
+    var accessibilityLabel: String
+    @ViewBuilder var menu: () -> MenuContent
+
+    var body: some View {
+        Menu {
+            menu()
+        } label: {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(CD.ColorToken.text.opacity(0.72))
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(accessibilityLabel)
+    }
 }
 
 /// Крупный заголовок корневой вкладки; опционально — интерактивный фильтр справа (одна строка).

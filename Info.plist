@@ -2,21 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>REVENUECAT_PUBLIC_API_KEY</key>
-	<string> </string>
+	<string>appl_kDzTFveiGmbwjxQJuXmSiZJLEQD</string>
 	<key>TaikaAPIBaseURL</key>
 	<string>https://taika-production.up.railway.app</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Nexa-Book_0.otf</string>
-		<string>Onmark TRIAL Regular.otf</string>
 		<string>HP001Full1-Medium_2.ttf</string>
 		<string>MV-SKIFER.otf</string>
 	</array>

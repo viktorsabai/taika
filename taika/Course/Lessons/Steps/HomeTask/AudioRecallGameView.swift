@@ -408,6 +408,7 @@ struct AudioRecallGameView: View {
                 id: "audio_fifty",
                 title: "50/50",
                 cost: TaikaStarsStore.costAudioRecallFiftyFifty,
+                detail: "Уберёт половину неверных ответов в этом вопросе.",
                 isEnabled: canUse,
                 action: applyAudioFiftyFiftyHint
             )

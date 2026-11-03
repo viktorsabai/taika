@@ -335,7 +335,6 @@ struct DictionaryQuickDrawerView: View {
             primaryCTA: TaikaAssistantHubPrimaryCTA(
                 title: "Добавить фразу",
                 icon: "plus.circle.fill",
-                accent: Color(red: 0.28, green: 0.72, blue: 0.98),
                 action: onOpenSpeaker
             ),
             bottomInset: Theme.Layout.bottomToolbarHeight + 12
@@ -500,15 +499,12 @@ struct DictionaryDrawerRow: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     if !phonetic.isEmpty {
-                        TaikaPhoneticText.styled(
-                            phonetic,
-                            font: .system(size: 17, weight: .semibold),
-                            baseColor: CD.ColorToken.text
+                        TaikaPhoneticLine(
+                            raw: phonetic,
+                            preferredSize: 17,
+                            minimumSize: 12,
+                            alignment: .leading
                         )
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .lineLimit(isSelectionMode ? 2 : 3)
-                        .minimumScaleFactor(0.85)
                     }
                     if !card.title.isEmpty {
                         Text(card.title)
@@ -909,7 +905,6 @@ struct DictionaryFullView: View {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 #endif
         SpeakerManager.shared.setSpeakerUIMode(.training)
-        ThemeManager.shared.hubAtmosphere = .favorites
         // Single handoff via pending — avoid double load wiping selection timing.
         SpeakerRequestedCourseId.shared.set("__dictionary__")
         if nav.path.contains(where: { if case .dictionary = $0 { return true }; return false }) {

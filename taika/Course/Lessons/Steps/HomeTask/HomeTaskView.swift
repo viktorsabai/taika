@@ -534,6 +534,7 @@ public struct HomeTaskView: View {
                 id: "match_half",
                 title: "оставить 3 пары",
                 cost: TaikaStarsStore.costMatchHalfBoard,
+                detail: "Лишние карточки уйдут в очередь и вернутся, когда закроешь эти три. Это не пропажа.",
                 isEnabled: canUse,
                 action: applyMatchHalfBoardHint
             )

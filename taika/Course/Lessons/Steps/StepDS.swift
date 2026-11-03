@@ -425,6 +425,7 @@ public struct SDStepCard: View {
     public var item: SDStepItem
     public var onTap: ()->Void
     public var onPlay: ()->Void
+    public var onPlaySlow: (() -> Void)?
     public var onToggleFavorite: ()->Void
     public var onMarkLearned: ()->Void
     public var onNext: ()->Void
@@ -435,6 +436,7 @@ public struct SDStepCard: View {
     private var introBarBuilder: () -> AnyView
     private var summaryBarBuilder: () -> AnyView
 
+    @ObservedObject private var stepAudio = StepAudio.shared
     @State private var favPulse: Bool = false
     @State private var playPulse: Bool = false
     @State private var nextPulse: Bool = false
@@ -491,6 +493,7 @@ public struct SDStepCard: View {
         item: SDStepItem,
         onTap: @escaping ()->Void = {},
         onPlay: @escaping ()->Void = {},
+        onPlaySlow: (() -> Void)? = nil,
         onToggleFavorite: @escaping ()->Void = {},
         onMarkLearned: @escaping ()->Void = {},
         onNext: @escaping ()->Void = {},
@@ -506,6 +509,7 @@ public struct SDStepCard: View {
         self.item = item
         self.onTap = onTap
         self.onPlay = onPlay
+        self.onPlaySlow = onPlaySlow
         self.onToggleFavorite = onToggleFavorite
         self.onMarkLearned = onMarkLearned
         self.onNext = onNext
@@ -583,10 +587,19 @@ public struct SDStepCard: View {
                         isFavorite: isFav,
                         isLearned: isLearned,
                         allowLearn: !isReadOnly,
+                        isAudioPlaying: stepAudio.activeStepSpeechItemId == item.id,
+                        offersSlow: stepAudio.slowOfferItemId == item.id,
                         onPlay: {
                             playPulse = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) { playPulse = false }
                             onPlay()
+                        },
+                        onPlaySlow: onPlaySlow.map { slow in
+                            {
+                                playPulse = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) { playPulse = false }
+                                slow()
+                            }
                         },
                         onFavorite: {
                             onToggleFavorite()
@@ -761,6 +774,7 @@ public struct SDStepCarousel: View {
     public var favorites: Set<Int>
     public var onTap: (SDStepItem)->Void
     public var onPlay: (SDStepItem)->Void
+    public var onPlaySlow: ((SDStepItem) -> Void)?
     public var onFav: (SDStepItem)->Void
     public var onDone: (SDStepItem)->Void
     public var onActiveIndexChange: ((Int) -> Void)?
@@ -788,6 +802,7 @@ public struct SDStepCarousel: View {
         favorites: Set<Int> = [],
         onTap: @escaping (SDStepItem)->Void = {_ in},
         onPlay: @escaping (SDStepItem)->Void = {_ in},
+        onPlaySlow: ((SDStepItem) -> Void)? = nil,
         onFav: @escaping (SDStepItem)->Void = {_ in},
         onDone: @escaping (SDStepItem)->Void = {_ in},
         onActiveIndexChange: ((Int) -> Void)? = nil,
@@ -811,6 +826,7 @@ public struct SDStepCarousel: View {
         self.favorites = favorites
         self.onTap = onTap
         self.onPlay = onPlay
+        self.onPlaySlow = onPlaySlow
         self.onFav = onFav
         self.onDone = onDone
         self.onActiveIndexChange = onActiveIndexChange
@@ -992,6 +1008,7 @@ public struct SDStepCarousel: View {
                 onTap(effective)
             },
             onPlay: { onPlay(effective) },
+            onPlaySlow: onPlaySlow.map { slow in { slow(effective) } },
             onToggleFavorite: {
                 onFav(effective)
                 onFavAt?(idx, effective)
@@ -1119,10 +1136,7 @@ public struct SDStepHintsSection: View {
     private var heroHeader: some View {
         VStack(spacing: 6) {
             // brand wordmark
-            Text("taikA")
-                .font(.custom("ONMARK Trial", size: 30))
-                .foregroundColor(PD.ColorToken.textSecondary.opacity(0.92))
-                .kerning(0.2)
+            TaikaWordmarkLockup(fontSize: 30, taiOpacity: 0.92, accentOpacity: 0.92)
 
             // lesson title (thin subtitle under brand)
             if !title.isEmpty {

@@ -13,86 +13,76 @@ struct TaikaProSuccessView: View {
     @ObservedObject private var theme = ThemeManager.shared
     @ObservedObject private var pro = ProManager.shared
     @State private var appeared = false
-    @State private var crownBounce: CGFloat = 0.78
+
+    private var isOpen: Bool { pro.isPro }
+
+    private var title: String {
+        if !isOpen { return "Подписка ещё не открылась" }
+        if pro.isInIntroTrial { return "Пробный период открыт" }
+        return "Taika Pro с тобой"
+    }
+
+    private var subtitle: String {
+        if !isOpen {
+            return "Оплата прошла. Открой профиль → Покупки, если доступ не появится сам."
+        }
+        if pro.isInIntroTrial {
+            return "\(TaikaProConfig.introTrialDaysPhrase) бесплатно. Отмена в любой момент в Apple ID."
+        }
+        return pro.subscriptionStatusSubtitle
+    }
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.55)
+            Color(red: 13 / 255, green: 13 / 255, blue: 15 / 255)
+                .opacity(0.92)
                 .ignoresSafeArea()
                 .onTapGesture { onContinue() }
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 40)
+            VStack(spacing: 14) {
+                Text(title)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(CD.ColorToken.text)
+                    .multilineTextAlignment(.center)
 
-                VStack(spacing: 18) {
-                    ZStack {
-                        Circle()
-                            .fill(theme.currentAccentFill.opacity(0.2))
-                            .frame(width: 96, height: 96)
-                            .blur(radius: 2)
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: 36, weight: .semibold))
-                            .foregroundStyle(AnyShapeStyle(theme.currentAccentFill))
-                            .scaleEffect(crownBounce)
-                    }
-                    .padding(.top, 8)
+                Text(subtitle)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Theme.Gradients.accentText)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                    Text(pro.isInIntroTrial ? "Пробный период открыт" : "Taika Pro с тобой")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(CD.ColorToken.text)
-                        .multilineTextAlignment(.center)
-
-                    Text(pro.subscriptionStatusSubtitle)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 8)
-
-                    if pro.isInIntroTrial {
-                        Text("Закрепляй голосом и играми — \(TaikaProConfig.introTrialDaysPhrase), отмена в любой момент.")
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundStyle(CD.ColorToken.textSecondary.opacity(0.85))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 4)
-                    }
-
-                    Button {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        onContinue()
-                    } label: {
-                        Text("К урокам")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(Color(white: 0.1))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 15)
-                            .background(Capsule().fill(theme.currentAccentFill))
-                    }
-                    .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
-                    .padding(.top, 8)
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    onContinue()
+                } label: {
+                    Text(isOpen ? "К урокам" : "Понятно")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color(white: 0.1))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .background(Capsule().fill(theme.currentAccentFill))
                 }
-                .padding(24)
-                .frame(maxWidth: 360)
-                .background(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(CD.ColorToken.card)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Theme.Strokes.strokeSubtle, lineWidth: 1)
-                )
-                .padding(.horizontal, 28)
-                .scaleEffect(appeared ? 1 : 0.94)
-                .opacity(appeared ? 1 : 0)
-
-                Spacer(minLength: 40)
+                .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.97))
+                .padding(.top, 4)
             }
+            .padding(24)
+            .frame(maxWidth: 360)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(CD.ColorToken.card)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Theme.Strokes.strokeSubtle, lineWidth: 1)
+            )
+            .padding(.horizontal, 28)
+            .scaleEffect(appeared ? 1 : 0.96)
+            .opacity(appeared ? 1 : 0)
         }
         .onAppear {
-            withAnimation(.spring(response: 0.48, dampingFraction: 0.82)) {
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.88)) {
                 appeared = true
-                crownBounce = 1.0
             }
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
     }
 }

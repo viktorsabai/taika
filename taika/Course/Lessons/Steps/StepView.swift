@@ -888,6 +888,7 @@ struct StepView: View {
             favorites: favorites,
             onTap: { handleTapItem($0) },
             onPlay: { handlePlayItem($0) },
+            onPlaySlow: { handlePlayItem($0, pace: .slow) },
             onFav: { handleFavItem($0) },
             onDone: { handleDoneItem($0) },
             onNext: { handleNextItem($0) },
@@ -933,6 +934,7 @@ struct StepView: View {
             favorites: anim.favorites,
             onTap: { handleTapItem($0) },
             onPlay: { handlePlayItem($0) },
+            onPlaySlow: { handlePlayItem($0, pace: .slow) },
             onFav: { handleFavItem($0) },
             onDone: { handleDoneItem($0) },
             onNext: { handleNextItem($0) },
@@ -1728,11 +1730,16 @@ struct StepView: View {
         }
     }
 
-    private func handlePlayItem(_ item: SDStepItem) {
+    private func handlePlayItem(_ item: SDStepItem, pace: StepAudio.SpeechPace = .usual) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         switch item.kind {
         case .word, .phrase, .casual:
-            StepAudio.shared.speakThai(item.subtitleTH)
+            StepAudio.shared.speakThai(
+                item.subtitleTH,
+                stepItemId: item.id,
+                pace: pace,
+                offersSlowOnFinish: pace == .usual
+            )
         default:
             break
         }
@@ -1740,12 +1747,7 @@ struct StepView: View {
 
     /// Тайская строка для озвучки без латиницы в скобках (как в карточке).
     private func thaiLineForSpeech(from item: SDStepItem) -> String {
-        let raw = item.subtitleTH.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return "" }
-        if let open = raw.firstIndex(of: "("), open > raw.startIndex {
-            return String(raw[..<open]).trimmingCharacters(in: .whitespaces)
-        }
-        return raw
+        StepAudio.sanitizeThaiForSpeech(item.subtitleTH)
     }
 
     private func learnedLearnableCount() -> Int {

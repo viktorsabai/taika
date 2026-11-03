@@ -16,6 +16,8 @@ enum ProFeature: String, CaseIterable {
     case unlimitedSessions
     case aiAdvanced
     case speakerAdvanced
+    /// Окраска и скорость эталона. Мужской и женский голос остаются бесплатными.
+    case voiceTuning
 
     // Games
     case recallGame
@@ -251,6 +253,9 @@ final class ProManager: ObservableObject {
             return tier == .pro
 
         case .speakerAdvanced:
+            return tier == .pro
+
+        case .voiceTuning:
             return tier == .pro
         }
     }

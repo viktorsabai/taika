@@ -10,11 +10,13 @@ struct ProfileIDOverlayView: View {
     @ObservedObject private var pro = ProManager.shared
     @ObservedObject private var auth = AuthService.shared
     @ObservedObject private var profile = ProfileManager.shared
-
     @State private var showSupport = false
     @State private var showLegal = false
     @State private var showDebugSheet = false
     @State private var showResetAllConfirm = false
+    @State private var showSignOutConfirm = false
+    @State private var showDeleteAccountConfirm = false
+    @State private var deleteAccountInProgress = false
     @State private var authInProgress = false
     @State private var authErrorMessage: String?
     @State private var storeRestoreMessage: String?
@@ -29,44 +31,14 @@ struct ProfileIDOverlayView: View {
     var body: some View {
         ZStack {
             OverlayEtalonBackground(onDismiss: onDismiss)
-            OverlayEtalonCard(title: "Профиль", onDismiss: onDismiss, role: .message) {
+            OverlayEtalonCard(title: "Профиль", onDismiss: onDismiss, role: .message, usesContextPlacement: true) {
                 VStack(alignment: .leading, spacing: 0) {
-                    idRow(
-                        title: auth.isLoggedIn ? (auth.displayName ?? "Apple ID") : "Аккаунт",
-                        subtitle: auth.isLoggedIn ? "Нажми, чтобы выйти" : "Войти с Apple ID",
-                        systemImage: "apple.logo"
-                    ) {
-                        if auth.isLoggedIn {
-                            try? auth.signOut()
-                            ProManager.shared.reset()
-                        } else {
-                            signInWithApple()
-                        }
-                    }
-                    if authInProgress {
-                        ProgressView()
-                            .padding(.leading, 42)
-                            .padding(.bottom, 8)
-                    }
-                    if let authErrorMessage, !authErrorMessage.isEmpty {
-                        Text(authErrorMessage)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .padding(.horizontal, 18)
-                            .padding(.bottom, 8)
-                    }
+                    accountBlock
 
-                    Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
-
-                    idRow(
-                        title: "Восстановить покупки",
-                        subtitle: restoreInFlight ? "Проверяю…" : "Подписка с этого Apple ID",
-                        systemImage: "arrow.clockwise"
-                    ) {
-                        Task { await restorePurchases() }
-                    }
-
-                    Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
+                    Divider()
+                        .overlay(PD.ColorToken.stroke.opacity(0.40))
+                        .padding(.horizontal, CD.Spacing.screen)
+                        .padding(.vertical, 6)
 
                     idRow(
                         title: "Taika Pro",
@@ -79,44 +51,30 @@ struct ProfileIDOverlayView: View {
                         }
                     }
 
-                    Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
+                    Divider()
+                        .overlay(PD.ColorToken.stroke.opacity(0.40))
+                        .padding(.horizontal, CD.Spacing.screen)
+                        .padding(.top, 4)
+                        .padding(.bottom, 8)
 
-                    idRow(
-                        title: "Поддержка",
-                        subtitle: "Помощь и обратная связь",
-                        systemImage: "questionmark.bubble"
-                    ) {
-                        showSupport = true
-                    }
+                    quietLinks
 
-                    Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
-
-                    idRow(
-                        title: "Правовые документы",
-                        subtitle: "Версия \(appVersionLabel)",
-                        systemImage: "doc.on.doc"
-                    ) {
-                        showLegal = true
-                    }
+                    Text("версия \(appVersionLabel)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 14)
+                        .padding(.bottom, 4)
 
                     #if DEBUG
-                    Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
-                    idRow(
-                        title: "Сбросить прогресс",
-                        subtitle: "Только локальные данные",
-                        systemImage: "trash"
-                    ) {
-                        showResetAllConfirm = true
+                    HStack(spacing: 16) {
+                        Button("Сбросить") { showResetAllConfirm = true }
+                        Button("Отладка") { showDebugSheet = true }
                     }
-
-                    Divider().overlay(PD.ColorToken.stroke.opacity(0.40))
-                    idRow(
-                        title: "Отладка",
-                        subtitle: "Taika Pro, онбординг, демо",
-                        systemImage: "wrench.and.screwdriver"
-                    ) {
-                        showDebugSheet = true
-                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.75))
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 4)
                     #endif
                 }
                 .padding(.bottom, 18)
@@ -162,6 +120,108 @@ struct ProfileIDOverlayView: View {
         } message: {
             Text("Удалим прогресс уроков, избранное и кэш разминки. Подписка не сбросится.")
         }
+        .alert("Выйти из аккаунта?", isPresented: $showSignOutConfirm) {
+            Button("Отмена", role: .cancel) {}
+            Button("Выйти", role: .destructive) {
+                try? auth.signOut()
+                ProManager.shared.reset()
+            }
+        } message: {
+            Text("Прогресс останется на этом телефоне. На другом без входа его не будет.")
+        }
+        .alert("Удалить аккаунт?", isPresented: $showDeleteAccountConfirm) {
+            Button("Отмена", role: .cancel) {}
+            Button("Удалить", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+        } message: {
+            Text("Удалим вход через Apple на этом телефоне. Прогресс уроков останется. Подписку отмени в настройках Apple ID, если она ещё активна.")
+        }
+    }
+
+    @ViewBuilder
+    private var accountBlock: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if auth.isLoggedIn {
+                HStack(spacing: 12) {
+                    Image(systemName: "apple.logo")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                        .frame(width: 26)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(auth.displayName ?? "Apple ID")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(PD.ColorToken.text)
+                        Text("Прогресс сохранён")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Theme.Gradients.accentText)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, CD.Spacing.screen)
+                .padding(.top, 4)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Button("Выйти") {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showSignOutConfirm = true
+                    }
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+
+                    Button(deleteAccountInProgress ? "Удаляем…" : "Удалить аккаунт") {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showDeleteAccountConfirm = true
+                    }
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.toneWrong.opacity(0.92))
+                    .disabled(deleteAccountInProgress)
+                }
+                .padding(.horizontal, CD.Spacing.screen)
+            } else {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    signInWithApple()
+                } label: {
+                    HStack(spacing: 10) {
+                        if authInProgress {
+                            ProgressView()
+                                .tint(PD.ColorToken.text)
+                        } else {
+                            Image(systemName: "apple.logo")
+                                .font(.body.weight(.semibold))
+                        }
+                        Text(authInProgress ? "Входим…" : "Войти с Apple")
+                            .font(.system(size: 16, weight: .semibold))
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(PD.ColorToken.text)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(PD.ColorToken.text.opacity(0.08))
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(authInProgress)
+                .padding(.horizontal, CD.Spacing.screen)
+                .padding(.top, 4)
+
+                Text("Чтобы прогресс не пропал при смене телефона.")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.Gradients.accentText)
+                    .padding(.horizontal, CD.Spacing.screen)
+            }
+
+            if let authErrorMessage, !authErrorMessage.isEmpty {
+                Text(authErrorMessage)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+                    .padding(.horizontal, CD.Spacing.screen)
+            }
+        }
+        .padding(.bottom, 8)
     }
 
     private func idRow(title: String, subtitle: String, systemImage: String, action: @escaping () -> Void) -> some View {
@@ -186,6 +246,29 @@ struct ProfileIDOverlayView: View {
             }
             .padding(.horizontal, CD.Spacing.screen)
             .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var quietLinks: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            quietLink(restoreInFlight ? "Проверяю…" : "Покупки") {
+                Task { await restorePurchases() }
+            }
+            quietLink("Поддержка") { showSupport = true }
+            quietLink("Документы") { showLegal = true }
+        }
+        .padding(.horizontal, CD.Spacing.screen)
+        .padding(.top, 4)
+    }
+
+    private func quietLink(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -233,6 +316,24 @@ struct ProfileIDOverlayView: View {
         } catch {
             storeRestoreMessage = error.localizedDescription
         }
+    }
+
+    @MainActor
+    private func deleteAccount() async {
+        guard !deleteAccountInProgress else { return }
+        deleteAccountInProgress = true
+        authErrorMessage = nil
+        do {
+            try await auth.deleteAccount()
+            ProManager.shared.reset()
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        } catch AuthService.AuthError.cancelled {
+            // Пользователь закрыл окно Apple — аккаунт на месте.
+        } catch {
+            authErrorMessage = error.localizedDescription
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+        }
+        deleteAccountInProgress = false
     }
 
     private func performFullReset() {

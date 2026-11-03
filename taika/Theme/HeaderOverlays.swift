@@ -1062,22 +1062,124 @@ struct FavoritesFiltersOverlayView: View {
 // MARK: - Voice Settings Overlay (тот же стиль chrome, что и фильтры)
 struct VoiceSettingsOverlayView: View {
     var onDismiss: () -> Void
+    @ObservedObject private var voice = TaikaVoicePreference.shared
+    @ObservedObject private var pro = ProManager.shared
+    @State private var heardProPreview = false
+    @State private var previewGender: TaikaVoicePreference.Reader?
+
+    private var canTune: Bool { pro.can(.voiceTuning) }
 
     var body: some View {
         ZStack {
             OverlayEtalonBackground(onDismiss: onDismiss)
-            UnifiedOverlayChrome(title: "Голос Таики", onDismiss: onDismiss) {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Скоро здесь можно будет выбрать голос для Таики (стандартный, для PRO — ещё варианты).")
-                        .font(.system(size: 15))
-                        .foregroundStyle(CD.ColorToken.textSecondary)
-                        .multilineTextAlignment(.leading)
-                    OverlayEtalonPrimaryButton(title: "Закрыть", action: onDismiss)
+            UnifiedOverlayChrome(title: "Голос", onDismiss: onDismiss) {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        voiceChoice("Как в уроках", selected: true, listenOnly: false) {
+                            heardProPreview = false
+                            previewGender = nil
+                            voice.selectReader(.system)
+                            StepAudio.shared.speakThai(TaikaVoicePreference.lessonPreviewThai)
+                        }
+                        voiceChoice("Женский", selected: false, listenOnly: true) {
+                            listenGender(.female)
+                        }
+                        voiceChoice("Мужской", selected: false, listenOnly: true) {
+                            listenGender(.male)
+                        }
+
+                        if let previewGender {
+                            voiceChoice("Мягче", selected: false, crowned: !canTune, listenOnly: true) {
+                                applyTint(.soft, gender: previewGender)
+                            }
+                            if previewGender == .male {
+                                voiceChoice("Ниже", selected: false, crowned: !canTune, listenOnly: true) {
+                                    applyTint(.low, gender: previewGender)
+                                }
+                            }
+                            voiceChoice("Медленнее", selected: false, crowned: !canTune, listenOnly: true) {
+                                applyRate(TaikaVoicePreference.slowRate, gender: previewGender)
+                            }
+                            voiceChoice("Быстрее", selected: false, crowned: !canTune, listenOnly: true) {
+                                applyRate(TaikaVoicePreference.fastRate, gender: previewGender)
+                            }
+                        }
+
+                        if heardProPreview, !canTune {
+                            Button {
+                                OverlayPresenter.shared.presentPro(reason: .voice)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "crown.fill")
+                                        .foregroundStyle(Color(red: 0.93, green: 0.76, blue: 0.36))
+                                    Text("Оставить в Taika Pro")
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(CD.ColorToken.text)
+                                .padding(.vertical, 10)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(CD.Spacing.screen)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(CD.Spacing.screen)
             }
         }
+    }
+
+    private func listenGender(_ gender: TaikaVoicePreference.Reader) {
+        previewGender = gender
+        heardProPreview = false
+        StepAudio.shared.speakThaiPreview(
+            TaikaVoicePreference.lessonPreviewThai,
+            choice: voice.previewChoice(reader: gender, color: .base, rate: TaikaVoicePreference.usualRate)
+        )
+    }
+
+    private func applyTint(_ color: TaikaVoicePreference.Color, gender: TaikaVoicePreference.Reader) {
+        if !canTune { heardProPreview = true }
+        StepAudio.shared.speakThaiPreview(
+            TaikaVoicePreference.lessonPreviewThai,
+            choice: voice.previewChoice(reader: gender, color: color, rate: TaikaVoicePreference.usualRate)
+        )
+    }
+
+    private func applyRate(_ rate: Double, gender: TaikaVoicePreference.Reader) {
+        if !canTune { heardProPreview = true }
+        StepAudio.shared.speakThaiPreview(
+            TaikaVoicePreference.lessonPreviewThai,
+            choice: voice.previewChoice(reader: gender, color: .base, rate: rate)
+        )
+    }
+
+    private func voiceChoice(
+        _ title: String,
+        selected: Bool,
+        crowned: Bool = false,
+        listenOnly: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: selected ? "checkmark.circle.fill" : "speaker.wave.2")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(selected ? CD.ColorToken.text : CD.ColorToken.textSecondary.opacity(0.7))
+                Text(title)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(CD.ColorToken.text)
+                Spacer(minLength: 0)
+                if crowned {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color(red: 0.93, green: 0.76, blue: 0.36))
+                }
+            }
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(listenOnly || crowned ? "Послушать пример. Голос в уроках не сменится" : "Учитель карточек")
     }
 }
 
@@ -1235,7 +1337,6 @@ struct GameParkOverlayView: View {
             return {
                 onDismiss()
                 SpeakerManager.shared.setSpeakerUIMode(.training)
-                ThemeManager.shared.hubAtmosphere = .favorites
                 SpeakerRequestedCourseId.shared.set("__favorites__")
                 SpeakerReturnContext.shared.saveFromRootTab(3)
                 nav.requestTab(2)
@@ -1244,7 +1345,6 @@ struct GameParkOverlayView: View {
             return {
                 onDismiss()
                 SpeakerManager.shared.setSpeakerUIMode(.training)
-                ThemeManager.shared.hubAtmosphere = .favorites
                 SpeakerRequestedCourseId.shared.set("__dictionary__")
                 DictionarySessionSelection.shared.activate(nil)
                 SpeakerReturnContext.shared.saveFromRootTab(3)

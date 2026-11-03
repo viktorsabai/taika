@@ -18,6 +18,9 @@ struct MainView: View {
     @State private var dailyIndex: Int = 1
     /// Разминка больше не занимает весь скролл главной инлайн — открывается по тапу с компактной карточки.
     @State private var showDailyPicksSheet: Bool = false
+    @State private var showWarmupSummary: Bool = false
+    @State private var didShowWarmupSummaryOnce: Bool = false
+    @State private var pendingWarmupLearnToken: UUID?
     @State private var doneHaptic = UINotificationFeedbackGenerator()
     @State private var learnedIds: Set<String> = []
     @State private var favoriteIds: Set<String> = []
@@ -159,6 +162,10 @@ struct MainView: View {
                     guard i >= 0, i < items.count else { return }
                     handlePlayItem(items[i])
                 },
+                onPlaySlow: { i in
+                    guard i >= 0, i < items.count else { return }
+                    handlePlayItem(items[i], pace: .slow)
+                },
                 onDone: { i in
                     guard i >= 0, i < items.count else { return false }
                     return handleDoneItem(items[i])
@@ -240,7 +247,10 @@ struct MainView: View {
                         .frame(minHeight: 44, alignment: .trailing)
                 }
                 .padding(.horizontal, Theme.Layout.pageHorizontal)
-                .padding(.bottom, 6)
+
+                MDWarmupRefreshCaption()
+                    .padding(.top, 2)
+                    .padding(.bottom, 10)
 
                 GeometryReader { proxy in
                     ScrollView(.vertical, showsIndicators: false) {
@@ -351,41 +361,20 @@ struct MainView: View {
     }
 
     private func hubHeroLines(for mode: MDMainHubMode? = nil) -> [String] {
-        let mode = mode ?? mainHubMode
+        _ = mode
         var lines: [String] = [heroGreetingText]
 
-        switch mode {
-        case .speaker:
-            if let item = activeResumeItem() {
-                let name = continueCourseShortName(item)
-                if !name.isEmpty { lines.append("Продолжи «\(name)»") }
-            } else {
-                lines.append("Свайпни сферу — или скажи фразу")
-                lines.append("Тап по сфере — умный спикер")
-            }
-            let remaining = warmupRemainingCount
-            if remaining > 0 {
-                lines.append("В разминке ещё \(remaining) \(cardWord(remaining))")
-            }
-            if activeResumeItem() != nil {
-                lines.append("Или скажи новую фразу — разберём")
-            }
-        case .learn:
-            lines.append("Тап по сфере — к курсам")
-            if let item = activeResumeItem() {
-                let name = continueCourseShortName(item)
-                if !name.isEmpty { lines.append("Или продолжи «\(name)»") }
-            } else {
-                lines.append("Или начни с первой фразы в курсе")
-            }
-            let remaining = warmupRemainingCount
-            if remaining > 0 {
-                lines.append("Разминка: ещё \(remaining) \(cardWord(remaining))")
-            }
-        case .favorites:
-            lines.append("Твои фразы — всегда под рукой")
-            lines.append("Тап по сфере — открыть избранное")
-            lines.append("Свайпни обратно — к спикеру или курсам")
+        if let item = activeResumeItem() {
+            let name = continueCourseShortName(item)
+            if !name.isEmpty { lines.append("Продолжи «\(name)»") }
+            lines.append("Или скажи новую фразу — разберём")
+        } else {
+            lines.append("Тап по сфере — умный спикер")
+            lines.append("Скажи фразу — разберём")
+        }
+        let remaining = warmupRemainingCount
+        if remaining > 0 {
+            lines.append("В разминке ещё \(remaining) \(cardWord(remaining))")
         }
 
         var seen = Set<String>()
@@ -393,81 +382,35 @@ struct MainView: View {
     }
 
     private func hubPrimaryCTA() -> TaikaAssistantHubPrimaryCTA {
-        switch mainHubMode {
-        case .speaker, .learn:
-            return TaikaAssistantHubPrimaryCTA(
-                title: continuePillTitle(),
-                icon: "graduationcap.fill",
-                action: handleContinueCardTap
-            )
-        case .favorites:
-            return TaikaAssistantHubPrimaryCTA(
-                title: "Открыть избранное",
-                icon: "heart.fill",
-                action: openFavoritesHub
-            )
-        }
+        TaikaAssistantHubPrimaryCTA(
+            title: continuePillTitle(),
+            icon: "graduationcap.fill",
+            action: handleContinueCardTap
+        )
     }
 
     private func hubGhostCTA() -> TaikaAssistantHubGhostCTA {
-        switch mainHubMode {
-        case .speaker, .learn:
-            return TaikaAssistantHubGhostCTA(
-                icon: "bolt.fill",
-                title: "Разминка",
-                action: {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
-                        showDailyPicksSheet = true
-                    }
+        TaikaAssistantHubGhostCTA(
+            icon: "bolt.fill",
+            title: "Разминка",
+            action: {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
+                    showDailyPicksSheet = true
                 }
-            )
-        case .favorites:
-            return TaikaAssistantHubGhostCTA(
-                icon: "bookmark.fill",
-                title: "Словарь",
-                action: openDictionaryFromHub
-            )
-        }
-    }
-
-    private func syncHubAtmosphere(_ mode: MDMainHubMode) {
-        let atmosphere: ThemeManager.HubAtmosphere
-        switch mode {
-        case .speaker: atmosphere = .speaker
-        case .learn: atmosphere = .learn
-        case .favorites: atmosphere = .favorites
-        }
-        withAnimation(.easeInOut(duration: 0.34)) {
-            ThemeManager.shared.hubAtmosphere = atmosphere
-        }
+            }
+        )
     }
 
     @ViewBuilder
     private var hubChipZone: some View {
-        switch mainHubMode {
-        case .speaker:
-            MDExamplePhraseMarquee(leadPhrases: heroLeadPhrases) { phrase in
-                openSpeakerConversationWithPhrase(phrase)
-            }
-        case .learn:
-            MDMainLearnChipMarquee(
-                courseTitles: forYouCourses.map(\.title),
-                onOpenCourses: openCoursesHub
-            )
-        case .favorites:
-            MDMainFavoritesChipMarquee(onOpenFavorites: openFavoritesHub)
+        MDExamplePhraseMarquee(leadPhrases: heroLeadPhrases) { phrase in
+            openSpeakerConversationWithPhrase(phrase)
         }
     }
 
     private func activateHubMode(_ mode: MDMainHubMode) {
-        switch mode {
-        case .speaker:
-            openSpeakerConversationIdle()
-        case .learn:
-            openCoursesHub()
-        case .favorites:
-            openFavoritesHub()
-        }
+        openSpeakerConversationIdle()
+        _ = mode
     }
 
     private func openCoursesHub() {
@@ -1041,8 +984,8 @@ struct MainView: View {
                 primaryCTA: hubPrimaryCTA(),
                 ghostCTA: hubGhostCTA()
             ) {
-                MDMainHubSphere(mode: $mainHubMode, onActivate: { mode in
-                    activateHubMode(mode)
+                MDMainHubSphere(mode: $mainHubMode, onActivate: { _ in
+                    activateHubMode(.speaker)
                 }, onBootFinished: {
                     showHubSpinner = false
                 })
@@ -1051,16 +994,13 @@ struct MainView: View {
             }
             .allowsHitTesting(!isModalPresented)
             .frame(width: geo.size.width, height: geo.size.height)
-            .animation(.easeOut(duration: 0.22), value: mainHubMode)
         }
         .onAppear {
-            syncHubAtmosphere(mainHubMode)
+            mainHubMode = .speaker
+            ThemeManager.shared.hubAtmosphere = nil
             suppressReactiveRefreshUntil = Date().addingTimeInterval(0.55)
             progress.refreshProfileState()
             weekProgressState = progress.publishedState
-        }
-        .onChange(of: mainHubMode) { _, newMode in
-            syncHubAtmosphere(newMode)
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ProgressDidChange"))) { _ in
             guard Date() >= suppressReactiveRefreshUntil else { return }
@@ -1113,9 +1053,8 @@ struct MainView: View {
 
 var body: some View {
     ZStack {
-        TaikaTechnoSpaceBackdrop(intensity: 0.52, heroAnchor: UnitPoint(x: 0.5, y: 0.38))
+        TaikaTechnoSpaceBackdrop(intensity: 0.52, heroAnchor: TaikaHeroColumn.backdropAnchor)
             .ignoresSafeArea()
-            .animation(.easeInOut(duration: 0.34), value: mainHubMode)
 
         if !isPreparingHub {
             VStack(spacing: 0) {
@@ -1169,6 +1108,20 @@ var body: some View {
         }
 
         dailyPicksFullOverlay
+
+        if showWarmupSummary {
+            HomeTaskSummaryOverlay(
+                title: "Разминка закрыта",
+                subtitle: "Сегодняшние карточки на месте",
+                primaryTitle: "На главную",
+                secondaryTitle: "",
+                onPrimary: dismissWarmupSummary,
+                onSecondary: dismissWarmupSummary,
+                onClose: dismissWarmupSummary
+            )
+            .ignoresSafeArea()
+            .zIndex(30)
+        }
     }
     .ignoresSafeArea(.keyboard, edges: .bottom)
     .animation(.easeInOut(duration: 0.55), value: showHubSpinner)
@@ -1866,12 +1819,17 @@ var body: some View {
         self.favoriteIds = next
     }
 
-    private func handlePlayItem(_ item: SDStepItem) {
+    private func handlePlayItem(_ item: SDStepItem, pace: StepAudio.SpeechPace = .usual) {
         if item.isPro {
             presentWarmupProPaywall()
             return
         }
-        StepAudio.shared.speakThai(item.subtitleTH, stepItemId: item.id)
+        StepAudio.shared.speakThai(
+            item.subtitleTH,
+            stepItemId: item.id,
+            pace: pace,
+            offersSlowOnFinish: pace == .usual
+        )
     }
 
     private func handleFavItem(_ item: SDStepItem) {
@@ -1892,12 +1850,10 @@ var body: some View {
         let ref = main.dailyPicks.refs[idx]
         guard ref.index >= 0, !item.isPro else { return false }
 
-        // toggle learned
         let wasLearned = ProgressManager.shared
             .learnedSet(courseId: ref.courseId, lessonId: ref.lessonId)
             .contains(ref.index)
 
-        // 1) local UI update immediately
         if let key = stepKey(for: idx) {
             if wasLearned {
                 learnedIds.remove(key)
@@ -1908,11 +1864,15 @@ var body: some View {
 
         if wasLearned {
             doneHaptic.notificationOccurred(.warning)
+            pendingWarmupLearnToken = nil
+            didShowWarmupSummaryOnce = false
+            if showWarmupSummary {
+                withAnimation(.easeInOut(duration: 0.2)) { showWarmupSummary = false }
+            }
         } else {
             doneHaptic.notificationOccurred(.success)
         }
 
-        // 2) commit progress via StepManager (single writer path) — без лишней паузы 220ms
         Task { @MainActor in
             StepManager.shared.setLearned(
                 courseId: ref.courseId,
@@ -1922,8 +1882,74 @@ var body: some View {
             )
         }
 
-        // advance only when we mark as learned; on unlearn do not advance
-        return !wasLearned
+        guard !wasLearned else { return false }
+
+        let thai = StepAudio.sanitizeThaiForSpeech(item.subtitleTH)
+        let remaining = warmupRemainingCount
+        let shouldAdvance = remaining > 0
+        let justCompleted = remaining == 0
+        let token = UUID()
+        pendingWarmupLearnToken = token
+
+        let finishLearnFlow = {
+            guard self.pendingWarmupLearnToken == token else { return }
+            self.pendingWarmupLearnToken = nil
+            if shouldAdvance {
+                self.advanceWarmupToNextUnlearned(after: idx)
+            }
+            if justCompleted {
+                self.presentWarmupSummaryIfEligible()
+            }
+        }
+
+        if thai.isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: finishLearnFlow)
+        } else {
+            StepAudio.shared.speakThai(thai, stepItemId: item.id) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: finishLearnFlow)
+            }
+        }
+        return false
+    }
+
+    private func advanceWarmupToNextUnlearned(after idx: Int) {
+        let items = main.dailyPicks.items
+        let n = items.count
+        guard n > 0 else { return }
+        let learnedIdx = computeLearnedIdx(
+            itemsCount: items.count,
+            courseIds: main.dailyPicks.refs.map(\.courseId),
+            lessonIds: main.dailyPicks.refs.map(\.lessonId),
+            indices: main.dailyPicks.refs.map(\.index)
+        )
+        for offset in 1...n {
+            let i = (idx + offset) % n
+            guard i < items.count else { continue }
+            if items[i].isPro { continue }
+            if i < main.dailyPicks.refs.count, main.dailyPicks.refs[i].courseId == "__pro__" { continue }
+            if !learnedIdx.contains(i) {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+                    dailyIndex = i
+                }
+                return
+            }
+        }
+    }
+
+    private func presentWarmupSummaryIfEligible() {
+        guard warmupRemainingCount == 0, !didShowWarmupSummaryOnce else { return }
+        didShowWarmupSummaryOnce = true
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+            showWarmupSummary = true
+        }
+    }
+
+    private func dismissWarmupSummary() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showWarmupSummary = false
+            showDailyPicksSheet = false
+        }
     }
     // MARK: - Calendar overlay (scoped to MainView)
 

@@ -107,6 +107,35 @@ public final class AuthService: NSObject, ObservableObject {
         updateState()
     }
 
+    /// Удаляет аккаунт Apple/Firebase на этом телефоне. Прогресс уроков не трогает.
+    public func deleteAccount() async throws {
+        guard FirebaseApp.app() != nil else {
+            throw AuthError.notConfigured
+        }
+        guard let user = Auth.auth().currentUser else {
+            throw AuthError.noCredential
+        }
+        do {
+            try await user.delete()
+        } catch {
+            let ns = error as NSError
+            let needsReauth = ns.domain == AuthErrorDomain
+                && ns.code == AuthErrorCode.requiresRecentLogin.rawValue
+            if needsReauth {
+                try await signInWithApple()
+                guard let fresh = Auth.auth().currentUser else {
+                    throw AuthError.noCredential
+                }
+                try await fresh.delete()
+            } else {
+                throw AuthError.firebaseError(error)
+            }
+        }
+        displayName = nil
+        UserDefaults.standard.removeObject(forKey: Self.displayNameKey)
+        updateState()
+    }
+
     public enum AuthError: LocalizedError {
         case notConfigured
         case noCredential
@@ -115,8 +144,8 @@ public final class AuthService: NSObject, ObservableObject {
 
         public var errorDescription: String? {
             switch self {
-            case .notConfigured: return "Firebase not configured"
-            case .noCredential: return "No Apple credential"
+            case .notConfigured: return "Сейчас войти не получилось. Попробуй ещё раз."
+            case .noCredential: return "Apple не вернул данные входа."
             case .cancelled: return "Sign in cancelled"
             case .firebaseError(let e): return e.localizedDescription
             }

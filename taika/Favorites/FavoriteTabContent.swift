@@ -1000,15 +1000,12 @@ private struct FDFavPhraseCompactRow: View {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
                     if !phonetic.isEmpty {
-                        TaikaPhoneticText.styled(
-                            phonetic,
-                            font: .system(size: 16, weight: .semibold),
-                            baseColor: PD.ColorToken.text
+                        TaikaPhoneticLine(
+                            raw: phonetic,
+                            preferredSize: 16,
+                            minimumSize: 12,
+                            alignment: .leading
                         )
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .lineLimit(3)
-                        .minimumScaleFactor(0.85)
                     }
                     if !russian.isEmpty {
                         Text(russian)
@@ -1189,7 +1186,6 @@ struct FDFavCardsTabList: View {
                 ],
                 primaryCTA: TaikaAssistantHubPrimaryCTA(
                     title: "К урокам",
-                    accent: Color(red: 0.28, green: 0.72, blue: 0.98),
                     action: { nav.openCourseCatalog(tab: .base) }
                 ),
                 onSelectCourse: onOpenCourse
@@ -1320,19 +1316,18 @@ private struct FDFavPhraseGridCard: View {
         favCardPhonetic(dto)
     }
 
-    private var heroPhoneticFont: Font {
+    private var heroPhoneticSize: CGFloat {
         let len = phonetic.count
-        if len > 42 { return .system(size: 17, weight: .bold) }
-        if len > 28 { return .system(size: 20, weight: .bold) }
-        return .system(size: 24, weight: .bold)
+        if len > 42 { return 17 }
+        if len > 28 { return 20 }
+        return 24
     }
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
         ZStack(alignment: .topTrailing) {
             VStack(alignment: .leading, spacing: 0) {
-                Text("taikA")
-                    .font(Font.custom("ONMARK Trial", size: 14))
+                TaikaWordmarkLockup(fontSize: 14)
                     .foregroundStyle(Color.secondary)
 
                 Spacer(minLength: 10)
@@ -1352,16 +1347,12 @@ private struct FDFavPhraseGridCard: View {
 
                 Group {
                     if !phonetic.isEmpty {
-                        TaikaPhoneticText.styled(
-                            phonetic,
-                            font: heroPhoneticFont,
-                            baseColor: PD.ColorToken.text
+                        TaikaPhoneticLine(
+                            raw: phonetic,
+                            preferredSize: heroPhoneticSize,
+                            minimumSize: 13,
+                            alignment: .leading
                         )
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .lineLimit(4)
-                        .minimumScaleFactor(0.72)
-                        .fixedSize(horizontal: false, vertical: true)
                     } else if !russian.isEmpty {
                         Text(russian)
                             .font(.headline.weight(.semibold))
@@ -1710,7 +1701,6 @@ struct FDFavDictionaryTabList: View {
                     title: "Скажи сам",
                     icon: "mic.fill",
                     isEnabled: onOpenSpeaker != nil,
-                    accent: Color(red: 0.28, green: 0.72, blue: 0.98),
                     action: { onOpenSpeaker?() }
                 ),
                 onSelectCourse: openDictionaryCourse
@@ -1804,7 +1794,6 @@ struct FDFavDictionaryTabList: View {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 #endif
         SpeakerManager.shared.setSpeakerUIMode(.training)
-        ThemeManager.shared.hubAtmosphere = .favorites
         SpeakerRequestedCourseId.shared.set("__dictionary__")
         DictionarySessionSelection.shared.activate(nil)
         if nav.path.isEmpty {
@@ -1958,7 +1947,6 @@ struct FDFavHacksTabGrid: View {
                 ],
                 primaryCTA: TaikaAssistantHubPrimaryCTA(
                     title: "К урокам",
-                    accent: Color(red: 0.28, green: 0.72, blue: 0.98),
                     action: { nav.openCourseCatalog(tab: .base) }
                 ),
                 onSelectCourse: { courseId in
@@ -2040,7 +2028,6 @@ struct FDFavCoursesTabGrid: View {
                 ],
                 primaryCTA: TaikaAssistantHubPrimaryCTA(
                     title: "К курсам",
-                    accent: Color(red: 0.28, green: 0.72, blue: 0.98),
                     action: { nav.openCourseCatalog(tab: .base) }
                 ),
                 onSelectCourse: { courseId in

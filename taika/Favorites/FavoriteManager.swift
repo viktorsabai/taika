@@ -157,15 +157,21 @@ final class FavoriteManager: ObservableObject {
                 return a.id > b.id
             }
             .map { it in
-                FDCardDTO(
+                let lexical = SpeakerManager.stripTrailingPoliteness(thai: it.th, phonetic: it.phonetic)
+                var parts = it.phraseParts
+                if let last = parts?.last, SpeakerManager.isPolitenessToken(last.p) {
+                    parts = Array(parts!.dropLast())
+                    if parts?.isEmpty == true { parts = nil }
+                }
+                return FDCardDTO(
                     sourceId: it.id,
                     title: it.ru,
-                    subtitle: it.th,
-                    meta: it.phonetic,
+                    subtitle: lexical.thai,
+                    meta: lexical.phonetic,
                     lessonTitle: "словарь",
                     tagText: nil,
                     addedAt: it.createdAt,
-                    phraseParts: it.phraseParts
+                    phraseParts: parts
                 )
             }
     }
@@ -827,8 +833,9 @@ final class FavoriteManager: ObservableObject {
         phraseParts: [FavoritePhrasePart]? = nil
     ) {
         let ruTrim = ru.trimmingCharacters(in: .whitespacesAndNewlines)
-        let thTrim = thai.trimmingCharacters(in: .whitespacesAndNewlines)
-        let phTrim = phonetic.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lexical = SpeakerManager.stripTrailingPoliteness(thai: thai, phonetic: phonetic)
+        let thTrim = lexical.thai
+        let phTrim = lexical.phonetic
         guard !thTrim.isEmpty, !phTrim.isEmpty else { return }
 
         let courseId = "user_dict"
@@ -849,11 +856,14 @@ final class FavoriteManager: ObservableObject {
 
         let cleanedParts: [FavoritePhrasePart]? = {
             guard let phraseParts, !phraseParts.isEmpty else { return nil }
-            let mapped = phraseParts.compactMap { part -> FavoritePhrasePart? in
+            var mapped = phraseParts.compactMap { part -> FavoritePhrasePart? in
                 let p = part.p.trimmingCharacters(in: .whitespacesAndNewlines)
                 let m = part.m.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !p.isEmpty, !m.isEmpty else { return nil }
                 return FavoritePhrasePart(p: p, m: m)
+            }
+            if let last = mapped.last, SpeakerManager.isPolitenessToken(last.p) {
+                mapped.removeLast()
             }
             return mapped.isEmpty ? nil : mapped
         }()
@@ -872,8 +882,12 @@ final class FavoriteManager: ObservableObject {
 
         DispatchQueue.main.async {
             withAnimation {
-                // de-dup by (thai + phonetic) inside user_dict to avoid spam taps
-                self.items.removeAll { self.normalized($0.courseId) == courseId && self.normalized($0.lessonId) == lessonId && self.normalized($0.th) == self.normalized(thTrim) }
+                // de-dup by lexical thai (particle stripped) so old кхрап-cards collapse
+                self.items.removeAll {
+                    self.normalized($0.courseId) == courseId
+                        && self.normalized($0.lessonId) == lessonId
+                        && self.normalized(SpeakerManager.stripTrailingPoliteness(thai: $0.th, phonetic: $0.phonetic).thai) == self.normalized(thTrim)
+                }
                 self.items.removeAll { self.normalized($0.id) == self.normalized(favId) }
                 self.items.insert(stored, at: 0)
             }
@@ -887,12 +901,17 @@ final class FavoriteManager: ObservableObject {
 
     /// Разбор фразы для карточки словаря: только то, что сохранили из Спикера (API parts).
     func dictionaryPhraseParts(for card: FDCardDTO) -> [FavoritePhrasePart] {
-        if let saved = card.phraseParts, !saved.isEmpty { return saved }
-        if let item = items.first(where: { normalized($0.id) == normalized(card.sourceId) }),
-           let parts = item.phraseParts, !parts.isEmpty {
-            return parts
+        var parts: [FavoritePhrasePart] = []
+        if let saved = card.phraseParts, !saved.isEmpty {
+            parts = saved
+        } else if let item = items.first(where: { normalized($0.id) == normalized(card.sourceId) }),
+           let stored = item.phraseParts, !stored.isEmpty {
+            parts = stored
         }
-        return []
+        if let last = parts.last, SpeakerManager.isPolitenessToken(last.p) {
+            parts.removeLast()
+        }
+        return parts
     }
 
     /// Перезаписывает разбор карточки на месте (id, createdAt и порядок сохраняются).

@@ -27,6 +27,12 @@ fastlane/test_output
 *.env
 *.p12
 *.mobileprovision
+taika/GoogleService-Info.plist
+
+# server runtime data / local leftovers
+*.db
+__pycache__/
+steps.json.bak-*
 
 .spm-cache/
 .cursor/

@@ -24,85 +24,102 @@ struct TaikaGiftRedeemSheet: View {
     @State private var authInProgress = false
 
     var body: some View {
-        NavigationStack {
-            ProfileGlassBackdrop {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        ProfileDestinationIntro(
-                            eyebrow: "ПОДАРОК",
-                            title: success ? "Taika Pro с тобой" : "У меня есть подарок",
-                            subtitle: success
-                                ? "Доступ открыт. Можно сразу на главную."
-                                : "Вставь код от друга — без почты и без новой оплаты."
-                        )
+        ZStack {
+            OverlayEtalonBackground(onDismiss: close)
 
-                        if success {
-                            Image(systemName: "gift.fill")
-                                .font(.system(size: 36, weight: .semibold))
-                                .foregroundStyle(theme.currentAccentFill)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                        } else {
-                            TextField("TAIKA-XXXX-XXXX-XXXX", text: $code)
-                                .textInputAutocapitalization(.characters)
-                                .autocorrectionDisabled()
-                                .font(.system(size: 17, weight: .semibold, design: .monospaced))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 14)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(Color.white.opacity(0.06))
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
-                                )
-
-                            if let errorMessage {
-                                Text(errorMessage)
-                                    .font(PD.FontToken.caption(13, weight: .medium))
-                                    .foregroundStyle(theme.currentAccentTintColor)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-
-                            Button {
-                                Task { await activate() }
-                            } label: {
-                                HStack(spacing: 8) {
-                                    if inFlight || authInProgress {
-                                        ProgressView().tint(Color.black.opacity(0.75))
-                                    }
-                                    Image(systemName: "gift.fill")
-                                    Text(auth.isLoggedIn ? "Активировать" : "Войти и активировать")
-                                        .font(.system(size: 16, weight: .bold))
-                                }
-                                .foregroundStyle(Color.black.opacity(0.88))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(Capsule().fill(theme.currentAccentFill))
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(inFlight || authInProgress || code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            GlassSurface(cornerRadius: TaikaOverlayTokens.Layout.cardRadius) {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Spacer(minLength: 0)
+                        Button(action: close) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(CD.ColorToken.textSecondary)
+                                .frame(width: 32, height: 32)
+                                .background(Circle().fill(CD.ColorToken.chip.opacity(0.9)))
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(success ? "Готово" : "Закрыть")
                     }
-                    .padding(.horizontal, PD.Spacing.screen)
-                    .padding(.top, 18)
-                    .padding(.bottom, 34)
-                }
-            }
-            .navigationTitle("Подарок")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(success ? "Готово" : "Закрыть") {
-                        if success { onActivated?() }
-                        onDismiss()
+
+                    Text(success ? "Taika Pro с тобой" : "У меня есть код")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(CD.ColorToken.text)
+
+                    Text(success
+                         ? "Доступ открыт. Можно сразу к урокам."
+                         : "Вставь код от друга. Почта не нужна.")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if success {
+                        Image(systemName: "gift.fill")
+                            .font(.system(size: 32, weight: .semibold))
+                            .foregroundStyle(theme.currentAccentFill)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 4)
+                    } else {
+                        TextField("TAIKA-XXXX-XXXX-XXXX", text: $code)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .font(.system(size: 17, weight: .semibold, design: .monospaced))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color.white.opacity(0.06))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                            )
+
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(theme.currentAccentTintColor)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Button {
+                            Task { await activate() }
+                        } label: {
+                            HStack(spacing: 8) {
+                                if inFlight || authInProgress {
+                                    ProgressView().tint(Color.black.opacity(0.75))
+                                }
+                                Image(systemName: "gift.fill")
+                                Text(auth.isLoggedIn ? "Активировать" : "Войти и активировать")
+                                    .font(.system(size: 16, weight: .bold))
+                            }
+                            .foregroundStyle(Color.black.opacity(0.88))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Capsule().fill(theme.currentAccentFill))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(inFlight || authInProgress || code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                 }
+                .padding(.horizontal, 18)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
             }
+            .frame(maxWidth: 420)
+            .overlay {
+                RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous)
+                    .strokeBorder(theme.currentAccentFill.opacity(0.28), lineWidth: Theme.Strokes.strokeCardLineWidth)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
+    }
+
+    private func close() {
+        if success { onActivated?() }
+        onDismiss()
     }
 
     @MainActor
@@ -171,23 +188,32 @@ struct TaikaGiftIssuedSheet: View {
     @ObservedObject private var theme = ThemeManager.shared
 
     var body: some View {
-        NavigationStack {
-            ProfileGlassBackdrop {
-                VStack(spacing: 18) {
-                    Image(systemName: "gift.fill")
-                        .font(.system(size: 40, weight: .semibold))
-                        .foregroundStyle(theme.currentAccentFill)
-                        .padding(.top, 12)
+        ZStack {
+            OverlayEtalonBackground(onDismiss: onDismiss)
+
+            GlassSurface(cornerRadius: TaikaOverlayTokens.Layout.cardRadius) {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Spacer(minLength: 0)
+                        Button(action: onDismiss) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(CD.ColorToken.textSecondary)
+                                .frame(width: 32, height: 32)
+                                .background(Circle().fill(CD.ColorToken.chip.opacity(0.9)))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Готово")
+                    }
 
                     Text("Подарок готов")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(PD.ColorToken.text)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(CD.ColorToken.text)
 
-                    Text("Отправь код другу. В приложении: У меня есть подарок.")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 8)
+                    Text("Отправь код другу. В приложении: У меня есть код.")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(CD.ColorToken.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Text(code)
                         .font(.system(size: 20, weight: .bold, design: .monospaced))
@@ -227,22 +253,20 @@ struct TaikaGiftIssuedSheet: View {
                                 .background(Capsule().fill(theme.currentAccentFill))
                         }
                     }
-
-                    Spacer(minLength: 0)
                 }
-                .padding(.horizontal, PD.Spacing.screen)
-                .padding(.bottom, 28)
+                .padding(.horizontal, 18)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
             }
-            .navigationTitle("Подарок")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") { onDismiss() }
-                }
+            .frame(maxWidth: 420)
+            .overlay {
+                RoundedRectangle(cornerRadius: TaikaOverlayTokens.Layout.cardRadius, style: .continuous)
+                    .strokeBorder(theme.currentAccentFill.opacity(0.28), lineWidth: Theme.Strokes.strokeCardLineWidth)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
     }
 
     private var shareText: String {

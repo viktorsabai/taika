@@ -67,14 +67,7 @@ struct TaikaBootAssembleView: View {
 
             Spacer().frame(height: 40)
 
-            HStack(spacing: 6) {
-                Text("tai")
-                    .font(.custom("Onmark Trial", size: 42))
-                    .foregroundStyle(PD.ColorToken.text)
-                Text("kAAA")
-                    .font(.custom("Onmark Trial", size: 42))
-                    .foregroundStyle(AnyShapeStyle(theme.currentAccentFill))
-            }
+            TaikaWordmarkLockup(fontSize: 42)
             .opacity(wordmarkVisible ? 1 : 0)
             .offset(y: wordmarkVisible ? 0 : 8)
             .blur(radius: wordmarkVisible ? 0 : 5)
@@ -161,14 +154,7 @@ struct SplashTaikaView: View {
 
                 Spacer().frame(height: 40)
 
-                HStack(spacing: 6) {
-                    Text("tai")
-                        .font(.custom("Onmark Trial", size: 42))
-                        .foregroundStyle(PD.ColorToken.text)
-                    Text("kAAA")
-                        .font(.custom("Onmark Trial", size: 42))
-                        .foregroundStyle(AnyShapeStyle(theme.currentAccentFill))
-                }
+                TaikaWordmarkLockup(fontSize: 42)
 
                 Spacer().frame(height: 28)
 

@@ -92,11 +92,14 @@ async def post_assess(
         description="Cyrillic teaching phonetic; syllable count follows these chunks, not Thai tokenizer",
     ),
     text_score: int | None = Form(None, description="Optional: 0-100 text similarity from client (ASR); used for hybrid_score"),
+    heard_segments: str | None = Form(
+        None,
+        description="JSON list of ASR times [{text,start,end}] — cuts audio on what was heard",
+    ),
 ):
     """
     Accept an audio file and target text; return total_score and per-syllable tone assessment.
-    If text_score (0-100) is provided, adds hybrid_score = 0.4*text + 0.3*phoneme_avg + 0.3*tone_avg
-    (phoneme_avg = tone_avg until phoneme_score per syllable is wired).
+    hybrid_score only when real phoneme_score values exist. Never substitute tone for phoneme.
     """
     if not text or not text.strip():
         raise HTTPException(status_code=400, detail="text is required")
@@ -134,6 +137,7 @@ async def post_assess(
                     text.strip(),
                     expected_tones,
                     phonetic_in or None,
+                    heard_segments,
                 ),
             ),
             timeout=ASSESS_TIMEOUT_S,
@@ -155,16 +159,14 @@ async def post_assess(
     syl_count = len(result.get("syllables") or [])
     print(f"[assess] ok: total_score={result.get('total_score')} syllables={syl_count}", file=sys.stderr, flush=True)
 
-    # Hybrid score: 0.4*text + 0.3*phoneme + 0.3*tone (phoneme_avg = tone_avg for now)
-    if text_score is not None and 0 <= text_score <= 100:
-        syllables = result.get("syllables") or []
+    # Hybrid only if GoP phoneme_score is real. Do not mint it from tone_avg.
+    syllables = result.get("syllables") or []
+    phoneme_scores = [s.get("phoneme_score") for s in syllables if s.get("phoneme_score") is not None]
+    if text_score is not None and 0 <= text_score <= 100 and phoneme_scores:
         tone_scores = [s.get("tone_score") for s in syllables if isinstance(s.get("tone_score"), (int, float))]
         tone_avg = sum(tone_scores) / len(tone_scores) if tone_scores else 0
-        phoneme_scores = [s.get("phoneme_score") for s in syllables if s.get("phoneme_score") is not None]
-        phoneme_avg = sum(phoneme_scores) / len(phoneme_scores) if phoneme_scores else tone_avg
+        phoneme_avg = sum(phoneme_scores) / len(phoneme_scores)
         result["hybrid_score"] = int(round(0.4 * text_score + 0.3 * phoneme_avg + 0.3 * tone_avg))
-    else:
-        result["hybrid_score"] = result.get("total_score", 0)
 
     return result
 
@@ -2800,18 +2802,47 @@ async def retone_phrase(req: RetoneReq):
     return {"phonetic": _arrows_per_syllable(thai, phonetic)}
 
 
+def _deterministic_phonetic_from_thai(thai: str) -> str | None:
+    """Letters + tone arrows without LLM. None = engine could not read a token."""
+    try:
+        from speaker_quality import engine_phonetic
+    except Exception as e:
+        print(f"[thai_phonetic] engine import failed: {e}", file=sys.stderr, flush=True)
+        return None
+    t = (thai or "").strip()
+    if not t:
+        return None
+    try:
+        from pythainlp.tokenize import word_tokenize
+
+        tokens = [tok for tok in word_tokenize(t, engine="newmm", keep_whitespace=False) if tok.strip()]
+    except Exception:
+        tokens = [t]
+    if not tokens:
+        return None
+    parts: list[str] = []
+    for tok in tokens:
+        ph = engine_phonetic(tok)
+        if not ph:
+            return None
+        parts.append(ph)
+    return " ".join(parts)
+
+
 @app.post("/thai_phonetic")
 async def thai_phonetic(req: ThaiPhoneticReq):
     """
-    Кириллическая фонетика произношения тайской строки (для колонки «ты сказал» после ASR в умном спикере).
-    Тот же LLM-проход, что и при санитизации phonetic в /smart_speaker.
+    Кириллическая фонетика тайской строки для колонки «ты сказала».
+    Сначала детерминированный G2P курса, LLM — только fallback.
     """
     t = (req.text_th or "").strip()
     if not t:
         raise HTTPException(status_code=400, detail="text_th is required")
     if len(t) > 200:
         raise HTTPException(status_code=413, detail="text_th too long")
-    raw = _llm_phonetic_from_thai_script(t)
+    raw = _deterministic_phonetic_from_thai(t)
+    if not raw:
+        raw = _llm_phonetic_from_thai_script(t)
     if not raw:
         raise HTTPException(
             status_code=503,

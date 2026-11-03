@@ -35,14 +35,7 @@ struct TaikaQuickStartView: View {
                 .allowsHitTesting(false)
 
             VStack(spacing: 0) {
-                HStack(spacing: 4) {
-                    Text("tai")
-                        .font(.custom("Onmark Trial", size: 26))
-                        .foregroundStyle(.white.opacity(0.92))
-                    Text("kAAA")
-                        .font(.custom("Onmark Trial", size: 26))
-                        .foregroundStyle(AnyShapeStyle(theme.currentAccentFill))
-                }
+                TaikaWordmarkLockup(fontSize: 26)
                 .padding(.top, 28)
                 .opacity(appeared ? 1 : 0)
 

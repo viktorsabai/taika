@@ -606,6 +606,7 @@ public struct MDDailyPicksComposite: View {
     public var onOpenCourse: (Int) -> Void
     public var onTapItem: ((Int) -> Void)?
     public var onPlay: ((Int) -> Void)?
+    public var onPlaySlow: ((Int) -> Void)?
     public var onDone: ((Int) -> Bool)?
     public var onFav: ((Int) -> Bool)?
     public var onIndexChange: ((Int) -> Void)?
@@ -625,6 +626,7 @@ public struct MDDailyPicksComposite: View {
         onOpenCourse: @escaping (Int) -> Void = { _ in },
         onTapItem: ((Int) -> Void)? = nil,
         onPlay: ((Int) -> Void)? = nil,
+        onPlaySlow: ((Int) -> Void)? = nil,
         onDone: ((Int) -> Bool)? = nil,
         onFav: ((Int) -> Bool)? = nil,
         onIndexChange: ((Int) -> Void)? = nil,
@@ -642,6 +644,7 @@ public struct MDDailyPicksComposite: View {
         self.onOpenCourse = onOpenCourse
         self.onTapItem = onTapItem
         self.onPlay = onPlay
+        self.onPlaySlow = onPlaySlow
         self.onDone = onDone
         self.onFav = onFav
         self.onIndexChange = onIndexChange
@@ -661,6 +664,7 @@ public struct MDDailyPicksComposite: View {
         onOpenCourse: @escaping (Int) -> Void = { _ in },
         onTapItem: ((Int) -> Void)? = nil,
         onPlay: ((Int) -> Void)? = nil,
+        onPlaySlow: ((Int) -> Void)? = nil,
         onDone: ((Int) -> Bool)? = nil,
         onFav: ((Int) -> Bool)? = nil,
         onIndexChange: ((Int) -> Void)? = nil
@@ -684,6 +688,7 @@ public struct MDDailyPicksComposite: View {
         self.onOpenCourse = onOpenCourse
         self.onTapItem = onTapItem
         self.onPlay = onPlay
+        self.onPlaySlow = onPlaySlow
         self.onDone = onDone
         self.onFav = onFav
         self.onIndexChange = onIndexChange
@@ -705,6 +710,7 @@ public struct MDDailyPicksComposite: View {
         self.onOpenCourse = { _ in }
         self.onTapItem = nil
         self.onPlay = nil
+        self.onPlaySlow = nil
         self.onDone = nil
         self.onFav = nil
         self.onIndexChange = nil
@@ -725,30 +731,9 @@ public struct MDDailyPicksComposite: View {
     private func nextIndex(from i: Int) -> Int { min(max(0, i + 1), max(0, items.count - 1)) }
     private func prevIndex(from i: Int) -> Int { max(0, min(items.count - 1, i - 1)) }
 
-    @State private var now: Date = Date()
-
-    private var refreshCountdownLabel: String {
-        MDDailyRefreshCountdown.label(now: now)
-    }
-
-    private var sectionCountdownTitle: String {
-        let label = refreshCountdownLabel.uppercased()
-        if label == "СКОРО" { return "СКОРО ОБНОВЛЕНИЕ" }
-        return "ЧЕРЕЗ \(label)"
-    }
-
     public var body: some View {
         VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
-            VStack(alignment: .leading, spacing: 8) {
-                TaikaSectionHeaderRow(sectionCountdownTitle) {
-                    if !items.isEmpty {
-                        Text("\(activeIndex + 1)/\(items.count)")
-                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(PD.ColorToken.textSecondary)
-                            .monospacedDigit()
-                    }
-                }
-
+            VStack(alignment: .leading, spacing: 10) {
                 if !items.isEmpty {
                     let courseTitle = courseNameDerived(at: activeIndex)
                     let lessonTitle = lessonNameDerived(at: activeIndex)
@@ -761,59 +746,48 @@ public struct MDDailyPicksComposite: View {
                         && !lessonTitle.isEmpty
                         && normalizedLesson != normalizedCourse
 
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Group {
-                            if isProActive {
-                                Text("TAIKA+ · ПОДБОРКА ДНЯ")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                                    .lineLimit(1)
-                            } else if !courseTitle.isEmpty {
+                    VStack(alignment: .leading, spacing: 3) {
+                        if isProActive {
+                            Text("Taika+ · подборка дня")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(PD.ColorToken.text)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            if showsLesson {
+                                Button {
+                                    onTapLesson(activeIndex)
+                                } label: {
+                                    Text(lessonTitle)
+                                        .font(.system(size: 17, weight: .semibold))
+                                        .foregroundStyle(PD.ColorToken.text)
+                                        .multilineTextAlignment(.leading)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Открыть урок \(lessonTitle)")
+                            }
+                            if !courseTitle.isEmpty {
                                 Button {
                                     onOpenCourse(activeIndex)
                                 } label: {
-                                    Text(courseTitle.uppercased())
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundStyle(ThemeManager.shared.currentAccentFill)
-                                        .lineLimit(1)
-                                        .truncationMode(.tail)
+                                    Text(courseTitle)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(PD.ColorToken.textSecondary)
+                                        .multilineTextAlignment(.leading)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityLabel("Открыть курс \(courseTitle)")
-                            } else {
-                                Color.clear.frame(height: 1)
                             }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        if showsLesson {
-                            Button {
-                                onTapLesson(activeIndex)
-                            } label: {
-                                Text(lessonTitle)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(PD.ColorToken.text)
-                                    .lineLimit(2)
-                                    .multilineTextAlignment(.trailing)
-                                    .truncationMode(.tail)
-                            }
-                            .buttonStyle(.plain)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                            .accessibilityLabel("Открыть урок \(lessonTitle)")
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding(.horizontal, PD.Spacing.screen)
             .animation(.easeOut(duration: 0.2), value: activeIndex)
-            .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { date in
-                let prevDay = MDBangkokCalendar.cal.startOfDay(for: now)
-                now = date
-                let newDay = MDBangkokCalendar.cal.startOfDay(for: date)
-                if newDay != prevDay {
-                    NotificationCenter.default.post(name: Notification.Name("DailyPicksDidReset"), object: nil)
-                }
-            }
 
             // Карусель + прогресс-ряд: отступ сверху как в CDSectionWithAction (sectionTitleToContent)
             VStack(alignment: .leading, spacing: Theme.Layout.sectionContentV) {
@@ -831,6 +805,9 @@ public struct MDDailyPicksComposite: View {
                         },
                         onPlay: { item in
                             if let idx = items.firstIndex(where: { $0.id == item.id }) { onPlay?(idx) }
+                        },
+                        onPlaySlow: { item in
+                            if let idx = items.firstIndex(where: { $0.id == item.id }) { onPlaySlow?(idx) }
                         },
                         onFav: { item in
                             if let idx = items.firstIndex(where: { $0.id == item.id }) {
@@ -1002,8 +979,7 @@ public struct MDWarmupPhraseCard: View {
         let caption = lessonCaption.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "урок" : lessonCaption
 
         VStack(alignment: .leading, spacing: 12) {
-            Text("taikA")
-                .font(Font.custom("ONMARK Trial", size: 14))
+            TaikaWordmarkLockup(fontSize: 14)
                 .foregroundStyle(PD.ColorToken.textSecondary)
 
             Spacer(minLength: 0)
@@ -1807,6 +1783,25 @@ public struct MDVoiceSphere: View {
 
 // MARK: - Taika Assistant Screen (единая композиция: гайд → сфера → чипы/CTA)
 
+/// Idle column shared by Главная, пустое Избранное, Закрепление and Спикер:
+/// sphere, then the typewriter line. Chips, CTAs and «Текст» stay outside this pair.
+public enum TaikaHeroColumn {
+    public static let spacing: CGFloat = 18
+    public static let lineMinHeight: CGFloat = 62
+    public static let lineHoldSeconds: TimeInterval = 2.6
+    public static let lineFont: Font = .system(size: 22, weight: .bold)
+    /// Та же полоса, что у сферы на Главной. От неё считается и центр, и зазор до строки.
+    public static let sphereBand: CGFloat = 268
+    public static let planetFrame: CGFloat = 248
+    public static let planetScale: CGFloat = 0.86
+    /// Shared band under the typewriter for chips, CTA and «Текст».
+    public static let bottomChrome: CGFloat = 160
+    /// Тот же подъём колонки, что у хаба Главной: таб-бар плюс нижние кнопки.
+    public static var columnLift: CGFloat { Theme.Layout.bottomToolbarHeight + 12 + bottomChrome }
+    /// Glow sits on the sphere, which is one line-slot above the middle of the column.
+    public static let backdropAnchor = UnitPoint(x: 0.5, y: 0.42)
+}
+
 public enum TaikaAssistantLayout {
     /// Внутри скролла (Main).
     case embedded
@@ -2037,10 +2032,6 @@ public struct TaikaAssistantHub<ChipZone: View>: View {
 
     private var screenLayout: TaikaAssistantLayout { .embedded }
 
-    private var topBreathing: CGFloat {
-        layout == .mainEmbedded ? 0 : 0
-    }
-
     private var showsDock: Bool {
         primaryCTA != nil || ghostCTA != nil || showsGhostSlot
     }
@@ -2060,23 +2051,32 @@ public struct TaikaAssistantHub<ChipZone: View>: View {
         ].joined(separator: "|")
     }
 
+    /// Dock is pinned over the bottom and must not change where the sphere sits.
+    private var dockReserve: CGFloat {
+        guard showsDock else { return 0 }
+        var height: CGFloat = 8
+        if primaryCTA != nil { height += 52 }
+        if ghostCTA != nil { height += 46 }
+        if showsGhostSlot { height += 48 }
+        return height
+    }
+
     public var body: some View {
         GeometryReader { geo in
-            VStack(spacing: 0) {
-                Spacer(minLength: topBreathing)
-
+            ZStack(alignment: .bottom) {
                 TaikaAssistantScreen(
                     lines: lines,
                     layout: screenLayout,
-                    assembleGateKey: assembleGateKey
+                    assembleGateKey: assembleGateKey,
+                    columnBottomInset: TaikaHeroColumn.columnLift,
+                    pinnedFooterInset: bottomInset + dockReserve
                 ) {
                     hero()
                 } footer: {
                     chipZone()
                 }
                 .environmentObject(assembleCoordinator)
-
-                Spacer(minLength: 16)
+                .frame(width: geo.size.width, height: geo.size.height)
 
                 if showsDock {
                     VStack(spacing: 0) {
@@ -2110,6 +2110,7 @@ public struct TaikaAssistantHub<ChipZone: View>: View {
                     )
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, Theme.Layout.pageHorizontal)
+                    .padding(.bottom, bottomInset)
                     .opacity(showDock ? 1 : 0)
                     .offset(y: showDock ? 0 : 10)
                     .allowsHitTesting(showDock)
@@ -2117,8 +2118,7 @@ public struct TaikaAssistantHub<ChipZone: View>: View {
                     .animation(.spring(response: 0.38, dampingFraction: 0.86), value: dockContentId)
                 }
             }
-            .padding(.bottom, bottomInset)
-            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+            .frame(width: geo.size.width, height: geo.size.height)
         }
         .onAppear {
             if assembleGateKey == nil {
@@ -2525,6 +2525,10 @@ public struct TaikaAssistantScreen<Footer: View>: View {
     public var lines: [String]
     public var layout: TaikaAssistantLayout
     public var assembleGateKey: String?
+    /// Lifts the sphere+line pair above the tab bar and the shared bottom band.
+    public var columnBottomInset: CGFloat
+    /// Lifts chips above the tab bar and the pinned dock. Does not move the sphere.
+    public var pinnedFooterInset: CGFloat
     @ViewBuilder public var hero: () -> AnyView
     @ViewBuilder public var footer: () -> Footer
 
@@ -2537,12 +2541,16 @@ public struct TaikaAssistantScreen<Footer: View>: View {
         lines: [String],
         layout: TaikaAssistantLayout = .fullscreen,
         assembleGateKey: String? = nil,
+        columnBottomInset: CGFloat = 0,
+        pinnedFooterInset: CGFloat = 0,
         @ViewBuilder hero: @escaping () -> some View,
         @ViewBuilder footer: @escaping () -> Footer = { EmptyView() }
     ) {
         self.lines = lines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         self.layout = layout
         self.assembleGateKey = assembleGateKey
+        self.columnBottomInset = columnBottomInset
+        self.pinnedFooterInset = pinnedFooterInset
         self.hero = { AnyView(hero()) }
         self.footer = footer
         // With a gate, never show typewriter before sphere finishes — avoids text→vanish→assemble flash.
@@ -2552,41 +2560,41 @@ public struct TaikaAssistantScreen<Footer: View>: View {
     }
 
     public var body: some View {
-        VStack(spacing: 18) {
-            if layout == .fullscreen { Spacer(minLength: 0) }
+        ZStack(alignment: .bottom) {
+            VStack(spacing: TaikaHeroColumn.spacing) {
+                hero()
 
-            // Sphere first, then typewriter (matches assemble ritual).
-            hero()
-
-            if !lines.isEmpty {
-                ZStack {
-                    Color.clear.frame(minHeight: 62)
-                    if showTypewriter {
-                        MDCyclingTypewriter(
-                            lines: lines,
-                            font: .system(size: 22, weight: .bold),
-                            holdSeconds: 2.6,
-                            minHeight: 62,
-                            isCentered: true
-                        )
-                        .transition(
-                            .opacity.combined(with: .offset(y: 10))
-                        )
+                if !lines.isEmpty {
+                    ZStack {
+                        Color.clear.frame(minHeight: TaikaHeroColumn.lineMinHeight)
+                        if showTypewriter {
+                            MDCyclingTypewriter(
+                                lines: lines,
+                                font: TaikaHeroColumn.lineFont,
+                                holdSeconds: TaikaHeroColumn.lineHoldSeconds,
+                                minHeight: TaikaHeroColumn.lineMinHeight,
+                                isCentered: true
+                            )
+                            .transition(
+                                .opacity.combined(with: .offset(y: 10))
+                            )
+                        }
                     }
+                    .animation(.easeOut(duration: 0.32), value: showTypewriter)
                 }
-                .animation(.easeOut(duration: 0.32), value: showTypewriter)
             }
+            .padding(.bottom, columnBottomInset)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 
             footer()
                 .opacity(showFooter ? 1 : 0)
                 .offset(y: showFooter ? 0 : 8)
+                .padding(.bottom, pinnedFooterInset)
                 .allowsHitTesting(showFooter)
                 .animation(.easeOut(duration: 0.34), value: showFooter)
-
-            if layout == .fullscreen { Spacer(minLength: 0) }
         }
         .padding(.horizontal, Theme.Layout.pageHorizontal)
-        .frame(maxWidth: .infinity, maxHeight: layout == .fullscreen ? .infinity : nil)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             if assembleGateKey == nil {
                 assembleCoordinator.skipToComplete()
@@ -3172,6 +3180,56 @@ public enum MDDailyRefreshCountdown {
         if minutes > 0 { return "\(minutes)м \(seconds)с" }
         if seconds > 0 { return "\(seconds)с" }
         return "скоро"
+    }
+
+    public static func refreshHint(now: Date = Date()) -> String {
+        let parts = refreshParts(now: now)
+        if parts.time.isEmpty { return parts.caption }
+        return "\(parts.caption) \(parts.time)"
+    }
+
+    public static func refreshParts(now: Date = Date()) -> (time: String, caption: String) {
+        let remaining = remainingSeconds(now: now)
+        let hours = remaining / 3600
+        let minutes = (remaining % 3600) / 60
+        let seconds = remaining % 60
+        if hours > 0 { return ("\(hours) ч \(minutes) мин", "новые карточки") }
+        if minutes > 0 { return ("\(minutes) мин", "новые карточки") }
+        if seconds > 0 { return ("\(seconds) сек", "новые карточки") }
+        return ("", "карточки сейчас обновятся")
+    }
+}
+
+struct MDWarmupRefreshCaption: View {
+    @State private var now = Date()
+
+    var body: some View {
+        let parts = MDDailyRefreshCountdown.refreshParts(now: now)
+        VStack(spacing: 4) {
+            if !parts.time.isEmpty {
+                Text(parts.time)
+                    .font(.system(size: 26, weight: .semibold, design: .rounded))
+                    .foregroundStyle(ThemeManager.shared.currentAccentFill)
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.8)
+                    .lineLimit(1)
+            }
+            Text(parts.caption)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(PD.ColorToken.textSecondary)
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
+            let prevDay = MDBangkokCalendar.cal.startOfDay(for: now)
+            now = date
+            let newDay = MDBangkokCalendar.cal.startOfDay(for: date)
+            if newDay != prevDay {
+                NotificationCenter.default.post(name: Notification.Name("DailyPicksDidReset"), object: nil)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(MDDailyRefreshCountdown.refreshHint(now: now))
     }
 }
 

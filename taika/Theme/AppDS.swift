@@ -130,7 +130,7 @@ public enum AppHeaderStyle {
         showsWordmark: Bool
     )
     /// Экран списка уроков курса: иконки Спикер/Игры опциональны (теория-only курс).
-    case lessons(onBack: () -> Void, onSpeaker: (() -> Void)?, onReinforce: (() -> Void)?, onReset: () -> Void, gameParkActive: Bool)
+    case lessons(onBack: () -> Void, onSpeaker: (() -> Void)?, onReinforce: (() -> Void)?, onReset: () -> Void, gameParkActive: Bool, reinforceReady: Bool)
     case game(GameHeaderConfig)
 }
 
@@ -381,30 +381,12 @@ public struct AppHeader: View {
     }
 
     private func rootHeaderLogo(size: CGFloat) -> some View {
-        HStack(spacing: size > 32 ? 6 : 4) {
-            Text("tai")
-                .font(.custom("Onmark Trial", size: size))
-                .foregroundColor(CD.ColorToken.text)
-            Text("kAAA")
-                .font(.custom("Onmark Trial", size: size))
-                .foregroundStyle(lessonsHeaderStore.isCompletedCourse ? AnyShapeStyle(TaikaMasteryTokens.greenGradient) : AnyShapeStyle(theme.currentAccentFill))
-        }
-        .fixedSize(horizontal: true, vertical: false)
-        .accessibilityLabel("taikAAA")
+        TaikaWordmarkLockup(fontSize: size)
     }
 
     /// Компактный логотип для минимального игрового хедера (не конкурирует с контентом).
     private var gameHeaderMinimalLogo: some View {
-        HStack(spacing: 3) {
-            Text("tai")
-                .font(.custom("Onmark Trial", size: 22))
-                .foregroundColor(CD.ColorToken.text.opacity(0.42))
-            Text("kAAA")
-                .font(.custom("Onmark Trial", size: 22))
-                .foregroundStyle(theme.currentAccentFill.opacity(0.5))
-        }
-        .fixedSize(horizontal: true, vertical: false)
-        .accessibilityLabel("taikAAA")
+        TaikaWordmarkLockup(fontSize: 22, taiOpacity: 0.42, accentOpacity: 0.5)
     }
 
     private var headerMinHeight: CGFloat {
@@ -738,7 +720,12 @@ public struct AppHeader: View {
                         EmptyView()
                     }
                     if showPro {
-                        headerProButton()
+                        if tab == 0 {
+                            headerProButton()
+                                .taikaCoachAnchor(.profileCrown)
+                        } else {
+                            headerProButton()
+                        }
                     }
                 }
 
@@ -769,7 +756,7 @@ public struct AppHeader: View {
                     }
                 }
 
-            case .lessons(_, let onSpeaker, let onReinforce, _, let gameParkActive):
+            case .lessons(_, let onSpeaker, let onReinforce, _, let gameParkActive, let reinforceReady):
                 logo
 
                 Spacer(minLength: 0)
@@ -780,18 +767,21 @@ public struct AppHeader: View {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             onSpeaker()
                         })
+                        .taikaCoachAnchor(.courseMic)
                         .accessibilityLabel("Спикер")
                     }
                     if let onReinforce {
                         headerIconButton(
                             "gamecontroller.fill",
-                            showsBadge: gameParkActive,
+                            tone: reinforceReady ? .idle : .dim,
+                            showsBadge: gameParkActive && reinforceReady,
                             action: {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 onReinforce()
                             }
                         )
-                        .accessibilityLabel("Игры")
+                        .taikaCoachAnchor(.courseJoystick)
+                        .accessibilityLabel(reinforceReady ? "Игра по пройденным урокам" : "Игра пока недоступна")
                     }
                     if showPro {
                         headerProButton()
@@ -935,16 +925,7 @@ public struct AppBackHeader: View {
     }
 
     private var logo: some View {
-        HStack(spacing: 6) {
-            Text("tai")
-                .font(.custom("Onmark Trial", size: 36))
-                .foregroundColor(CD.ColorToken.text)
-            Text("kAAA")
-                .font(.custom("Onmark Trial", size: 36))
-                .foregroundStyle(ThemeManager.shared.currentAccentFill)
-        }
-        .accessibilityLabel("taikAAA")
-        .fixedSize(horizontal: true, vertical: false)
+        TaikaWordmarkLockup(fontSize: 36)
     }
 
     public var body: some View {
@@ -998,16 +979,7 @@ public struct AppGameHeader: View {
     }
 
     private var logo: some View {
-        HStack(spacing: 6) {
-            Text("tai")
-                .font(.custom("Onmark Trial", size: 36))
-                .foregroundColor(CD.ColorToken.text)
-            Text("kAAA")
-                .font(.custom("Onmark Trial", size: 36))
-                .foregroundStyle(ThemeManager.shared.currentAccentFill)
-        }
-        .accessibilityLabel("taikAAA")
-        .fixedSize(horizontal: true, vertical: false)
+        TaikaWordmarkLockup(fontSize: 36)
     }
 
     private func hudPill(icon: String, text: String, tint: some ShapeStyle) -> some View {
@@ -2968,7 +2940,7 @@ public struct LessonSummaryOverlay: View {
                         centerSymbol: "checkmark",
                         lite: true,
                         showsCarousel: true,
-                        palette: .course,
+                        palette: .theme,
                         idleAccent: 0.58
                     )
                     .frame(width: 156, height: 156)
@@ -3143,6 +3115,7 @@ public struct HomeTaskSummaryOverlay: View {
             }
             .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
 
+            if !secondaryTitle.isEmpty {
             Button(action: {
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                 onSecondary()
@@ -3200,6 +3173,7 @@ public struct HomeTaskSummaryOverlay: View {
                 .contentShape(Capsule())
             }
             .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.97))
+            }
         }
         .frame(maxWidth: .infinity)
     }
@@ -4380,7 +4354,7 @@ public struct TaikaListenActionSlot: View {
             .frame(maxWidth: .infinity, minHeight: 48)
             .contentShape(Rectangle())
         }
-        .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.94, useBouncySpring: false, flashOpacity: 0.04))
+        .buttonStyle(PressDownStyle(scale: 0.96, fade: 0.94, useBouncySpring: false))
         .disabled(!isEnabled)
         .accessibilityLabel(title)
     }
@@ -4687,18 +4661,22 @@ public struct AppInlineFilterPicker: View {
     public var selectionAccent: AnyShapeStyle?
     /// Если false — в закрытом чипе только стрелка (название видно в меню / в заголовке секции).
     public var showsSelectedTitle: Bool
+    /// Подпись, под которую держится ширина капсулы, чтобы рамка не прыгала между короткими названиями.
+    public var labelWidthTitle: String?
 
     public init(
         titles: [String],
         selectedIndex: Int,
         showsSelectedTitle: Bool = true,
         selectionAccent: AnyShapeStyle? = nil,
+        labelWidthTitle: String? = nil,
         onSelect: @escaping (Int) -> Void
     ) {
         self.titles = titles
         self.selectedIndex = selectedIndex
         self.showsSelectedTitle = showsSelectedTitle
         self.selectionAccent = selectionAccent
+        self.labelWidthTitle = labelWidthTitle
         self.onSelect = onSelect
     }
 
@@ -4725,11 +4703,20 @@ public struct AppInlineFilterPicker: View {
         } label: {
             HStack(spacing: 6) {
                 if showsSelectedTitle {
-                    Text(selectedTitle)
-                        .font(.system(size: 13, weight: .semibold))
-                        .kerning(0.1)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+                    ZStack {
+                        if let labelWidthTitle, !labelWidthTitle.isEmpty {
+                            Text(labelWidthTitle)
+                                .font(.system(size: 13, weight: .semibold))
+                                .kerning(0.1)
+                                .lineLimit(1)
+                                .hidden()
+                        }
+                        Text(selectedTitle)
+                            .font(.system(size: 13, weight: .semibold))
+                            .kerning(0.1)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                    }
                 }
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .bold))

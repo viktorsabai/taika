@@ -55,9 +55,7 @@ public enum PD {
 
     public enum BrandFont {
         public static func appTitle(_ size: CGFloat) -> Font {
-            // Use brand font if available; fallback to rounded system
-            if UIFont(name: "OnmarkTRIAL", size: size) != nil { return .custom("OnmarkTRIAL", size: size) }
-            return .system(size: size, weight: .bold, design: .rounded)
+            .system(size: size, weight: .bold, design: .rounded)
         }
     }
 

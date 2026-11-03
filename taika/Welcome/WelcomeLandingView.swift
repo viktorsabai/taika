@@ -172,14 +172,7 @@ struct WelcomeLandingView: View {
 
     private var brandingBlock: some View {
         VStack(spacing: 14) {
-            HStack(spacing: 6) {
-                Text("tai")
-                    .font(.custom("Onmark Trial", size: 52))
-                    .foregroundStyle(Color.white)
-                Text("kAAA")
-                    .font(.custom("Onmark Trial", size: 52))
-                    .foregroundStyle(AnyShapeStyle(theme.currentAccentFill))
-            }
+            TaikaWordmarkLockup(fontSize: 52)
 
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text("твоя персональная кун кру")

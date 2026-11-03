@@ -5,18 +5,12 @@
 import SwiftUI
 import AVKit
 
-// MARK: - Title font (system – Helvetica‑like)
-private enum TaikaFontPS {
-    static let title = "ONMARK Trial" // PostScript name
-}
-
-/// Canonical app wordmark: `tai` + accent `kAAA` (same lockup as `AppChromeHeader` / `AppBackHeader`, not legacy single-string `taikA`).
+/// Canonical app wordmark: baked `tai` + gradient `kAAA` image (no trial font in the binary).
 public struct TaikaWordmarkLockup: View {
     public var fontSize: CGFloat
-    /// Opacity for the white `tai` half (accent half uses `accentOpacity`).
+    /// Kept for call-site compatibility; both halves live in one image.
     public var taiOpacity: Double
     public var accentOpacity: Double
-    /// Optional semantic tint for completed cards; nil preserves the global brand accent.
     public var accentColor: Color?
 
     public init(fontSize: CGFloat = 16, taiOpacity: Double = 1, accentOpacity: Double = 1, accentColor: Color? = nil) {
@@ -27,17 +21,13 @@ public struct TaikaWordmarkLockup: View {
     }
 
     public var body: some View {
-        let spacing = max(2, fontSize * 0.15)
-        return HStack(spacing: spacing) {
-            Text("tai")
-                .font(.custom("Onmark Trial", size: fontSize))
-                .foregroundColor(CD.ColorToken.text.opacity(taiOpacity))
-                Text("kAAA")
-                .font(.custom("Onmark Trial", size: fontSize))
-                .foregroundStyle(accentColor.map { AnyShapeStyle($0.opacity(accentOpacity)) } ?? AnyShapeStyle(ThemeManager.shared.currentAccentFill.opacity(accentOpacity)))
-        }
-        .fixedSize(horizontal: true, vertical: false)
-        .accessibilityLabel("taikAAA")
+        Image("TaikaWordmark")
+            .resizable()
+            .interpolation(.high)
+            .scaledToFit()
+            .frame(height: fontSize)
+            .opacity(min(taiOpacity, accentOpacity))
+            .accessibilityLabel("taikAAA")
     }
 }
 
@@ -214,6 +204,7 @@ public struct StepWordCardVisual: View {
     public let isAudioPlaying: Bool
     public let showsTypeChip: Bool
     public let onPlay: (() -> Void)?
+    public let onPlaySlow: (() -> Void)?
     public let onFavorite: () -> Void
     public let onLearn: () -> Void
 
@@ -231,6 +222,7 @@ public struct StepWordCardVisual: View {
         isAudioPlaying: Bool = false,
         showsTypeChip: Bool = true,
         onPlay: (() -> Void)? = nil,
+        onPlaySlow: (() -> Void)? = nil,
         onFavorite: @escaping () -> Void = {},
         onLearn: @escaping () -> Void = {}
     ) {
@@ -256,6 +248,7 @@ public struct StepWordCardVisual: View {
         self.isAudioPlaying = isAudioPlaying
         self.showsTypeChip = showsTypeChip
         self.onPlay = onPlay
+        self.onPlaySlow = onPlaySlow
         self.onFavorite = onFavorite
         self.onLearn = onLearn
     }
@@ -276,6 +269,7 @@ public struct StepWordCardVisual: View {
             isAudioPlaying: isAudioPlaying,
             showsTypeChip: showsTypeChip,
             onPlay: onPlay,
+            onPlaySlow: onPlaySlow,
             onFavorite: onFavorite,
             onLearn: onLearn
         )
@@ -616,11 +610,6 @@ extension Font {
         .system(size: size, weight: .semibold, design: .default)
     }
 
-    /// App logo only — ONMARK Trial
-    static func taikaLogo(_ size: CGFloat) -> Font {
-        .custom(TaikaFontPS.title, size: size, relativeTo: .title2)
-    }
-
     /// Скор и статистика курса/урока — MV-SKIFER (`MVSKIFERRegular`).
     static func taikaStat(_ size: CGFloat) -> Font {
         Theme.Fonts.stat(size)
@@ -631,10 +620,6 @@ extension UIFont {
     /// UI titles: system font
     static func taikaTitle(_ size: CGFloat) -> UIFont {
         .systemFont(ofSize: size, weight: .semibold)
-    }
-    /// App logo only — ONMARK Trial
-    static func taikaLogo(_ size: CGFloat) -> UIFont {
-        UIFont(name: TaikaFontPS.title, size: size) ?? .systemFont(ofSize: size, weight: .bold)
     }
 }
 
@@ -648,6 +633,14 @@ public enum CardDS {
     public enum AccentTreatment {
         case none
         case taikaValues(fill: AnyShapeStyle, glow: Color)
+
+        /// Живая карточка: тот же розовый, что kAAA. Не sky / не grape-wash.
+        public static var brandLive: AccentTreatment {
+            .taikaValues(
+                fill: AnyShapeStyle(Theme.Gradients.accentText),
+                glow: ThemeManager.shared.currentAccentTintColor
+            )
+        }
     }
 
     public struct Metrics {
@@ -1070,7 +1063,10 @@ public struct StepCardActionBar: View {
     public let favoriteOnly: Bool
     /// Highlights the speaker control while TTS for this card is playing.
     public let isAudioPlaying: Bool
+    /// После полного прослушивания эталона — слот «медленнее».
+    public let offersSlow: Bool
     public let onPlay: (() -> Void)?
+    public let onPlaySlow: (() -> Void)?
     public let onFavorite: () -> Void
     public let onLearn: () -> Void
     public let onNext: (() -> Void)?
@@ -1089,7 +1085,9 @@ public struct StepCardActionBar: View {
         showsPlayAndFavorite: Bool = true,
         favoriteOnly: Bool = false,
         isAudioPlaying: Bool = false,
+        offersSlow: Bool = false,
         onPlay: (() -> Void)? = nil,
+        onPlaySlow: (() -> Void)? = nil,
         onFavorite: @escaping () -> Void,
         onLearn: @escaping () -> Void,
         onNext: (() -> Void)? = nil,
@@ -1105,7 +1103,9 @@ public struct StepCardActionBar: View {
         self.showsPlayAndFavorite = showsPlayAndFavorite
         self.favoriteOnly = favoriteOnly
         self.isAudioPlaying = isAudioPlaying
+        self.offersSlow = offersSlow
         self.onPlay = onPlay
+        self.onPlaySlow = onPlaySlow
         self.onFavorite = onFavorite
         self.onLearn = onLearn
         self.onNext = onNext
@@ -1140,12 +1140,19 @@ public struct StepCardActionBar: View {
                         action: { onExpand?() }
                     )
                 } else if showsPlayAndFavorite {
+                    let listenSlow = offersSlow && !isAudioPlaying && onPlaySlow != nil
                     actionSlot(
-                        systemName: "speaker.wave.2.fill",
-                        title: "слушать",
-                        isActive: false,
+                        systemName: listenSlow ? "tortoise.fill" : "speaker.wave.2.fill",
+                        title: listenSlow ? "медленнее" : "слушать",
+                        isActive: listenSlow,
                         playbackActive: isAudioPlaying,
-                        action: { onPlay?() }
+                        action: {
+                            if listenSlow {
+                                onPlaySlow?()
+                            } else {
+                                onPlay?()
+                            }
+                        }
                     )
                 } else {
                     Color.clear.frame(maxWidth: .infinity, minHeight: 48)
@@ -2402,93 +2409,6 @@ struct CourseInlineProgressView: View {
     }
 }
 
-// MARK: - Pro wash (как Main «подборка дня»)
-/// Static wash — animated TimelineView on every Pro card was hammering carousel FPS.
-private struct CourseProCardWash: View {
-    var cornerRadius: CGFloat
-
-    var body: some View {
-        CourseProCardWashLayers(
-            cornerRadius: cornerRadius,
-            phase: 0.35,
-            tint: ThemeManager.shared.currentAccentTintColor
-        )
-        .drawingGroup(opaque: false)
-    }
-}
-
-private struct CourseProCardWashLayers: View {
-    var cornerRadius: CGFloat
-    var phase: Double
-    var tint: Color
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        ZStack {
-            shape.fill(washGradient)
-            waveCanvas.mask(waveMask)
-        }
-        .clipShape(shape)
-    }
-
-    private var washGradient: LinearGradient {
-        LinearGradient(
-            colors: [tint.opacity(0.16), Color.clear, tint.opacity(0.10)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
-    private var waveMask: LinearGradient {
-        LinearGradient(
-            colors: [.clear, .white.opacity(0.55), .white],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
-    private var waveCanvas: some View {
-        Canvas { context, size in
-            CourseProCardWashDrawer.drawWaves(
-                context: context,
-                size: size,
-                phase: phase,
-                tint: tint
-            )
-        }
-    }
-}
-
-private enum CourseProCardWashDrawer {
-    static func drawWaves(
-        context: GraphicsContext,
-        size: CGSize,
-        phase: Double,
-        tint: Color
-    ) {
-        for i in 0..<4 {
-            let t = Double(i) / 3.0
-            var path = Path()
-            let y0 = size.height * (0.35 + t * 0.45)
-            let amp = 8.0 + t * 10.0
-            var x: CGFloat = 0
-            while x <= size.width {
-                let xn = Double(x / max(size.width, 1))
-                let y = y0 + sin((xn * 2.2 + t + phase) * .pi * 2) * amp
-                let pt = CGPoint(x: x, y: y)
-                if x == 0 {
-                    path.move(to: pt)
-                } else {
-                    path.addLine(to: pt)
-                }
-                x += 6
-            }
-            let opacity = 0.10 + (1 - t) * 0.12
-            context.stroke(path, with: .color(tint.opacity(opacity)), lineWidth: 0.9)
-        }
-    }
-}
-
 /// Вовлекающая корона Taika Pro — лёгкий pulse + soft glow, без текста «Taika Pro».
 private struct CourseProAnimatedCrown: View {
     var onTap: (() -> Void)? = nil
@@ -2861,57 +2781,21 @@ public struct CourseLessonCard: View {
         onFavoriteTap?()
     }
 
-    private var showsProWash: Bool { isPro || showProCrown }
-
-    @ViewBuilder
-    private var courseProWashOverlay: some View {
-        if showsProWash {
-            CourseProCardWash(cornerRadius: CardDS.Metrics.radius)
-                .clipShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
-                .allowsHitTesting(false)
-        }
-    }
-
-    private var courseProShadowColor: Color {
-        showsProWash ? ThemeManager.shared.currentAccentTintColor.opacity(0.18) : .clear
-    }
-
-    private var courseProShadowRadius: CGFloat { showsProWash ? 12 : 0 }
-    private var courseProShadowY: CGFloat { showsProWash ? 5 : 0 }
-
     private var effectiveAccentTreatment: CardDS.AccentTreatment {
-        // Status wash is never replaced by favorite pink — favorite only adds pink lines on top.
         if case .none = accentTreatment {
-            if statusKind == .completed {
-                return .taikaValues(
-                    fill: AnyShapeStyle(TaikaMasteryTokens.greenGradient),
-                    glow: TaikaMasteryTokens.greenGlow
-                )
-            }
-            if statusKind == .inProgress {
-                return .taikaValues(
-                    fill: AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient),
-                    glow: TaikaMasteryTokens.continueSkyGlow
-                )
-            }
-            if favoriteOn {
-                return .taikaValues(
-                    fill: AnyShapeStyle(ThemeManager.shared.currentAccentFill),
-                    glow: ThemeManager.shared.currentAccentTintColor
-                )
+            if statusKind == .inProgress || favoriteOn {
+                return .brandLive
             }
         }
         return accentTreatment
     }
 
     private var statusWaveLineStyle: AnyShapeStyle? {
-        switch statusKind {
-        case .completed:
-            return AnyShapeStyle(TaikaMasteryTokens.greenGradient)
-        case .inProgress:
-            return AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient)
-        default:
+        switch effectiveAccentTreatment {
+        case .none:
             return nil
+        case let .taikaValues(fill, _):
+            return fill
         }
     }
 
@@ -2987,8 +2871,8 @@ public struct CourseLessonCard: View {
                             title: statusChipTitle?.isEmpty == false ? (statusChipTitle ?? "в процессе") : "в процессе",
                             icon: "",
                             trailingIcon: "",
-                            fill: AnyShapeStyle(TaikaMasteryTokens.continueSkyGradient),
-                            shadowColor: TaikaMasteryTokens.continueSky
+                            fill: AnyShapeStyle(Theme.Gradients.accentText),
+                            shadowColor: ThemeManager.shared.currentAccentTintColor
                         )
                     } else {
                         AppStatusChip(kind: statusKind, title: statusChipTitle)
@@ -3025,10 +2909,7 @@ public struct CourseLessonCard: View {
                         statusControl(isBack: false)
                         Spacer(minLength: 0)
                     } else {
-                        TaikaWordmarkLockup(
-                            fontSize: 16,
-                            accentColor: statusKind == .completed ? TaikaMasteryTokens.green : nil
-                        )
+                        TaikaWordmarkLockup(fontSize: 16)
                         Spacer(minLength: 0)
                     }
                     HStack(spacing: 8) {
@@ -3441,7 +3322,6 @@ public struct CourseLessonCard: View {
                 // Internal card treatment belongs to the same rotating surface as the face.
                 // This keeps the organic waves physically attached during the flip.
                 .overlay { accentTreatmentOverlay }
-                .overlay { courseProWashOverlay }
                 // Only one face is measured at a time (prevents layout shifts).
                 .transition(.opacity)
                 .compositingGroup()
@@ -3452,7 +3332,6 @@ public struct CourseLessonCard: View {
                 // Open course via the play control in the action row.
                 frontCard
                     .overlay { accentTreatmentOverlay }
-                    .overlay { courseProWashOverlay }
             }
         }
         .animation(.spring(response: 0.34, dampingFraction: 0.86), value: lockedActionHint)
@@ -3461,10 +3340,9 @@ public struct CourseLessonCard: View {
         .compositingGroup()
         // Internal treatments are attached above to the rotating face/back surface.
         .clipShape(RoundedRectangle(cornerRadius: CardDS.Metrics.radius, style: .continuous))
-        .shadow(color: courseProShadowColor, radius: courseProShadowRadius, y: courseProShadowY)
         .scaleEffect(visualScale)
         .rotation3DEffect(.degrees(flipEnabled ? 0 : visualRotateY), axis: (x: 0, y: 1, z: 0), perspective: 0.8)
-        .opacity(visualOpacity)
+        .opacity(visualOpacity * (showProCrown ? 0.88 : 1))
         .padding(.horizontal, 0)
         // Prevent state leak between reused carousel cells.
         .onAppear { favoriteLit = isFavoriteActive }
@@ -4359,6 +4237,7 @@ public struct StepWordCard: View {
     public let isLearned: Bool
     public let allowLearn: Bool
     public let isAudioPlaying: Bool
+    public let offersSlow: Bool
     /// When true, renders a slightly smaller action bar (useful for mini variants like Favorites).
     public let compactActionBar: Bool
     /// См. `StepCardActionBar.miniLearnedCheckmarkOnly` — для мини-карточек в избранном.
@@ -4366,6 +4245,7 @@ public struct StepWordCard: View {
     /// «слово / фраза» справа сверху; для PRO-витрины выключить и показать корону.
     public let showsTypeChip: Bool
     public let onPlay: (() -> Void)?
+    public let onPlaySlow: (() -> Void)?
     public let onFavorite: () -> Void
     public let onLearn: () -> Void
 
@@ -4382,10 +4262,12 @@ public struct StepWordCard: View {
         isLearned: Bool = false,
         allowLearn: Bool = true,
         isAudioPlaying: Bool = false,
+        offersSlow: Bool = false,
         compactActionBar: Bool = false,
         miniLearnedCheckmarkOnly: Bool = false,
         showsTypeChip: Bool = true,
         onPlay: (() -> Void)? = nil,
+        onPlaySlow: (() -> Void)? = nil,
         onFavorite: @escaping () -> Void = {},
         onLearn: @escaping () -> Void = {}
     ) {
@@ -4401,10 +4283,12 @@ public struct StepWordCard: View {
         self.isLearned = isLearned
         self.allowLearn = allowLearn
         self.isAudioPlaying = isAudioPlaying
+        self.offersSlow = offersSlow
         self.compactActionBar = compactActionBar
         self.miniLearnedCheckmarkOnly = miniLearnedCheckmarkOnly
         self.showsTypeChip = showsTypeChip
         self.onPlay = onPlay
+        self.onPlaySlow = onPlaySlow
         self.onFavorite = onFavorite
         self.onLearn = onLearn
     }
@@ -4447,7 +4331,9 @@ public struct StepWordCard: View {
                     tipShowsLearnSlot: false,
                     showsPlayAndFavorite: true,
                     isAudioPlaying: isAudioPlaying,
+                    offersSlow: offersSlow,
                     onPlay: onPlay,
+                    onPlaySlow: onPlaySlow,
                     onFavorite: onFavorite,
                     onLearn: onLearn,
                     onNext: nil,
@@ -4484,17 +4370,13 @@ public struct StepWordCard: View {
 
                     if let phoneticView {
                         phoneticView
-                            .multilineTextAlignment(.center)
-                            .lineLimit(Theme.StepCardText.phoneticLines)
-                            .minimumScaleFactor(Theme.StepCardText.phoneticScale)
-                            .allowsTightening(true)
                     } else {
-                        phoneticStyledText(translit)
-                            .font(.system(size: Theme.StepCardText.phoneticFontSize, weight: .semibold))
-                            .multilineTextAlignment(.center)
-                            .lineLimit(Theme.StepCardText.phoneticLines)
-                            .minimumScaleFactor(Theme.StepCardText.phoneticScale)
-                            .allowsTightening(true)
+                        TaikaPhoneticLine(
+                            raw: translit,
+                            preferredSize: 16,
+                            minimumSize: 11,
+                            alignment: .center
+                        )
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -4507,6 +4389,7 @@ public struct StepWordCard: View {
                 EmptyView()
             }
         )
+        .dynamicTypeSize(.medium ... .xLarge)
     }
 }
 
@@ -5274,13 +5157,12 @@ public extension CardDS {
                                 .minimumScaleFactor(0.78)
                                 .allowsTightening(true)
 
-                            // phonetic (accent)
-                            phoneticStyledText(item.phonetic)
-                                .font(.system(size: 16, weight: .semibold))
-                                .multilineTextAlignment(.center)
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.78)
-                                .allowsTightening(true)
+                            TaikaPhoneticLine(
+                                raw: item.phonetic,
+                                preferredSize: 16,
+                                minimumSize: 12,
+                                alignment: .center
+                            )
 
                             // thai (secondary)
                             Text(item.thai)

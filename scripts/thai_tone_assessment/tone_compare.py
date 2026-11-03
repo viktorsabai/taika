@@ -144,23 +144,22 @@ def process_syllable_contour(
     times: np.ndarray,
     f0_hz: np.ndarray,
     tone_expected: str,
-) -> tuple[str, int, str, np.ndarray]:
+) -> tuple[str | None, int | None, str, np.ndarray]:
     """
     Normalize F0 to semitones, resample to template length, classify, get feedback.
     Returns (tone_actual, tone_score, feedback, contour_semitones) for optional UI plot.
-    If contour has no usable pitch, returns (tone_expected, 50, "Not enough pitch data...", contour).
+    If contour has no usable pitch, returns (None, None, "тона нет", contour).
+    Never invent Mid / 50% / 81% from silence.
     """
     semitones = hz_to_semitones(f0_hz)
     contour = contour_to_fixed_length(times, semitones, TEMPLATE_LEN)
-    contour_max = float(np.max(np.abs(contour)))
-    if contour_max < CONTOUR_EMPTY_THRESHOLD:
-        _log(f"  слог ожид.{tone_expected}: контур пустой (max_abs={contour_max:.2f} < {CONTOUR_EMPTY_THRESHOLD}) -> 50%, 'Not enough pitch data'")
-        return (
-            tone_expected,
-            50,
-            "Not enough pitch data to assess. Speak clearly, closer to the mic.",
-            contour,
+    contour_max = float(np.max(np.abs(contour))) if contour.size else 0.0
+    if contour.size == 0 or contour_max < CONTOUR_EMPTY_THRESHOLD:
+        _log(
+            f"  слог ожид.{tone_expected}: контур пустой "
+            f"(max_abs={contour_max:.2f} < {CONTOUR_EMPTY_THRESHOLD}) -> no tone"
         )
+        return (None, None, "тона нет — в этом куске нет голоса", contour)
     tone_actual, tone_score, _ = classify_contour(contour)
     # Логика для пользователя: верный тон → 100%; неверный тон → не выше 89%, чтобы не показывать «Идеальный тон!» при ошибке.
     if tone_actual == tone_expected:

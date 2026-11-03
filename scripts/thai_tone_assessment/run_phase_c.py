@@ -44,6 +44,7 @@ def assess(
     text: str,
     expected_tones: str | None = None,
     phonetic: str | None = None,
+    heard_segments=None,
 ) -> dict:
     """
     Run tone assessment; returns Phase D–compatible dict with total_score and syllables.
@@ -63,6 +64,7 @@ def assess(
             audio_path,
             text,
             syllable_labels=chunks or None,
+            heard_segments=heard_segments,
         )
         _log("extract_pitch_contours: done")
     except Exception as e:
@@ -100,11 +102,11 @@ def assess(
             "start_s": round(float(c.get("start_s", 0)), 3),
             "end_s": round(float(c.get("end_s", 0)), 3),
         }
-        # Normalized pitch contour (semitones) for UI "wow" graph
         contour_list = contour.tolist() if hasattr(contour, "tolist") else list(contour)
         syl_item["f0_contour"] = [round(x, 2) for x in contour_list]
         syllables_out.append(syl_item)
-        scores.append(tone_score)
+        if isinstance(tone_score, (int, float)):
+            scores.append(tone_score)
 
     total_score = int(round(sum(scores) / len(scores))) if scores else 0
     _log(f"итог: scores={scores} total_score={total_score}")

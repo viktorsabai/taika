@@ -483,7 +483,7 @@ final class MainManager: ObservableObject {
         var usedCourseIds = Set<String>()
 
         func appendResume(courseId cid: String, preferredLessonId: String?) {
-            guard !cid.isEmpty, !usedCourseIds.contains(cid) else { return }
+            guard UserSession.isCatalogCourseId(cid), !usedCourseIds.contains(cid) else { return }
             let lid = resolvedResumeLessonId(courseId: cid, preferredLessonId: preferredLessonId)
             ordered.append((courseId: cid, lessonId: lid))
             usedCourseIds.insert(cid)

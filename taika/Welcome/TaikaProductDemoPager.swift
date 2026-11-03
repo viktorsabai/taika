@@ -114,14 +114,7 @@ struct TaikaProductDemoPager: View {
 
             Spacer(minLength: 8)
 
-            HStack(spacing: 4) {
-                Text("tai")
-                    .font(.custom("Onmark Trial", size: storyboard ? 24 : 22))
-                    .foregroundStyle(.white.opacity(0.92))
-                Text("kAAA")
-                    .font(.custom("Onmark Trial", size: storyboard ? 24 : 22))
-                    .foregroundStyle(AnyShapeStyle(theme.currentAccentFill))
-            }
+            TaikaWordmarkLockup(fontSize: storyboard ? 24 : 22)
 
             Spacer(minLength: 8)
 

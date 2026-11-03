@@ -18,6 +18,7 @@ enum ProGateReason: String, Equatable, CaseIterable, Identifiable {
     case games
     case personalPath
     case dictionary
+    case voice
 
     var id: String { rawValue }
 
@@ -31,6 +32,7 @@ enum ProGateReason: String, Equatable, CaseIterable, Identifiable {
         case .games: return TaikaValueSlideID.practiceUnlimited
         case .personalPath: return TaikaValueSlideID.speakerAI
         case .dictionary: return TaikaValueSlideID.practiceUnlimited
+        case .voice: return TaikaValueSlideID.voice
         }
     }
 
@@ -50,6 +52,8 @@ enum ProGateReason: String, Equatable, CaseIterable, Identifiable {
             return "Словарь под рукой"
         case .dictionary:
             return "Словарь → тренировка"
+        case .voice:
+            return "Голос, который слышно"
         }
     }
 
@@ -69,6 +73,8 @@ enum ProGateReason: String, Equatable, CaseIterable, Identifiable {
             return "Словарь из спикера — практика без лимитов"
         case .dictionary:
             return "Личный словарь уже есть — Taika Pro открывает практику."
+        case .voice:
+            return "Мягче, ниже и скорость. Мужской и женский уже твои."
         }
     }
 
@@ -79,6 +85,7 @@ enum ProGateReason: String, Equatable, CaseIterable, Identifiable {
         case .lockedCourse: return "Открыть курс"
         case .games: return "Открыть игры"
         case .personalPath, .dictionary: return "Открыть Taika Pro"
+        case .voice: return "Открыть окраску голоса"
         case .general: return "Открыть Taika Pro"
         }
     }
@@ -104,6 +111,7 @@ enum TaikaValueSlideID {
     static let speakerAI = "speaker_ai"
     static let practiceUnlimited = "practice_unlimited"
     static let moreCourses = "more_courses"
+    static let voice = "voice"
 }
 
 // MARK: - Slide model
@@ -212,6 +220,12 @@ enum TaikaValueDeck {
             icon: "books.vertical.fill",
             title: "Больше курсов",
             subtitle: "Сценарии и полные курсы открываются целиком."
+        ),
+        .init(
+            id: TaikaValueSlideID.voice,
+            icon: "waveform",
+            title: "Голос, который слышно",
+            subtitle: "Мягче, ниже и медленнее — чтобы разобрать тон."
         )
     ]
 

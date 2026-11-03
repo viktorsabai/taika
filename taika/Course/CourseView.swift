@@ -441,27 +441,62 @@ struct CourseView: View {
         }
     }
 
-    /// Dynamic tabs: completed and favorite-card courses are separate scopes.
+    /// База и Сценарии всегда. Остальные имена — только когда для них есть курсы.
     private var visibleCourseTabs: [CourseScreenTab] {
-        var tabs = CourseScreenTab.mvpTabs.filter { tab in
-            tab != .resume || !allCatalogInProgress.isEmpty
-        }
-        if !allCatalogCompleted.isEmpty {
-            let insertIndex = tabs.firstIndex(of: .base) ?? tabs.endIndex
-            tabs.insert(.completed, at: insertIndex)
-        }
-        if !allCatalogFavoriteCourses.isEmpty {
-            let insertIndex = tabs.firstIndex(of: .base) ?? tabs.endIndex
-            tabs.insert(.favorites, at: insertIndex)
-        }
+        var tabs: [CourseScreenTab] = [.base, .scenarios]
+        if !allCatalogInProgress.isEmpty { tabs.append(.resume) }
+        if !allCatalogCompleted.isEmpty { tabs.append(.completed) }
+        if !allCatalogFavoriteCourses.isEmpty { tabs.append(.favorites) }
         return tabs
     }
 
     private func courseScreenHeaderView() -> some View {
-        TaikaScreenPageTitle(title: "Курсы") {
-            CDCourseTabBar(selection: $selectedCourseTab, tabs: visibleCourseTabs)
+        let tabs = visibleCourseTabs
+        return HStack(alignment: .center, spacing: 12) {
+            Text("Курсы")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(CD.ColorToken.text)
+                .lineLimit(1)
+                .layoutPriority(1)
+                .accessibilityAddTraits(.isHeader)
+
+            Spacer(minLength: 8)
+
+            Menu {
+                ForEach(tabs) { tab in
+                    Button {
+                        selectCourseTab(tab)
+                    } label: {
+                        if selectedCourseTab == tab {
+                            Label(tab.title, systemImage: "checkmark")
+                        } else {
+                            Text(tab.title)
+                        }
+                    }
+                }
+            } label: {
+                HStack(alignment: .center, spacing: 5) {
+                    Text(selectedCourseTab.title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(CD.ColorToken.text)
+                        .lineLimit(1)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(CD.ColorToken.text.opacity(0.72))
+                }
+            }
+            .accessibilityLabel("Раздел курсов")
+            .accessibilityValue(selectedCourseTab.title)
         }
+        .padding(.horizontal, CD.Spacing.screen)
         .padding(.top, 4)
+        .animation(nil, value: selectedCourseTab)
+    }
+
+    private func selectCourseTab(_ tab: CourseScreenTab) {
+        guard selectedCourseTab != tab else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        selectedCourseTab = tab
     }
 
     private func ensureValidCourseTabSelection() {
@@ -789,7 +824,6 @@ struct CourseView: View {
     }
 
     private func courseFmSection(for tab: CourseScreenTab) -> some View {
-        // Без маскота и мелкого FM-бабла: печатающийся гайд по странице, как typewriter на Main.
         MDCyclingTypewriter(
             lines: courseGuideLines(for: tab),
             font: .system(size: 19, weight: .bold),
@@ -801,50 +835,74 @@ struct CourseView: View {
         .padding(.top, 2)
         .padding(.bottom, 4)
         .id("course-guide-\(tab.rawValue)")
-        .frame(maxWidth: .infinity)
-        .accessibilityLabel("Подсказки по странице курсов")
+        .accessibilityLabel(courseGuideLines(for: tab).joined(separator: ". "))
     }
 
-    /// Краткий туториал-навигатор по Course View (не «вайб-сообщения» FM).
+    /// Голос страницы: что делать сейчас. Не туториал по кнопкам.
     private func courseGuideLines(for tab: CourseScreenTab) -> [String] {
+        let resumeTitle = allCatalogInProgress
+            .first?
+            .title
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let namedResume = (resumeTitle?.isEmpty == false) ? resumeTitle : nil
+
         switch tab {
         case .resume:
-            return [
-                "Продолжи с того места, где остановился",
-                "Тап по карточке — сразу в урок",
-                "Игра и спикер — иконки внизу карточки"
-            ]
+            var lines: [String] = []
+            if let namedResume {
+                lines.append("Продолжи «\(namedResume)»")
+            }
+            lines.append("С того места, где остановился")
+            if allCatalogInProgress.count > 1 {
+                let rest = allCatalogInProgress.count - 1
+                lines.append("Ещё \(rest) \(courseCountWord(rest)) ждут")
+            }
+            return lines
         case .completed:
+            if allCatalogCompleted.isEmpty {
+                return ["Закрой курс — он появится здесь"]
+            }
             return [
-                "Твои закрытые курсы — как библиотека достижений",
-                "Открой курс, чтобы продолжить закрепление",
-                "Повторяй уроки и возвращайся к слабым местам"
+                "Твои закрытые курсы",
+                "Открой снова — закрепить"
             ]
         case .favorites:
+            if allCatalogFavoriteCourses.isEmpty {
+                return ["Сохрани курс сердцем — будет здесь"]
+            }
             return [
-                "Курсы, которые ты сохранил сердцем — в одном месте",
-                "Открой курс и продолжи обучение",
-                "Избранные карточки живут в отдельном разделе"
+                "Курсы, которые ты сохранил",
+                "Открой и продолжай"
             ]
         case .base:
+            if let namedResume {
+                return [
+                    "Продолжи «\(namedResume)»",
+                    "Или открой новый курс"
+                ]
+            }
             return [
-                "Листай курсы — свайп влево и вправо",
-                "Сверху переключай База и Сценарии",
-                "Начать — открыть курс одним тапом",
-                "На карточке: избранное, игра и спикер"
+                "Выбери курс — сразу в урок",
+                "Сценарии — живые ситуации"
             ]
         case .scenarios:
             return [
-                "Сценарии — живые ситуации в Тае",
-                "Выбери вайб и нажми Начать",
-                "Закрепляй фразы в игре или спикере"
+                "Живые ситуации в Тае",
+                "Выбери вайб и начни"
             ]
         case .dictionary, .mine:
             return [
-                "Листай курсы — свайп влево и вправо",
-                "Сверху переключай вкладки каталога"
+                "Выбери курс — сразу в урок"
             ]
         }
+    }
+
+    private func courseCountWord(_ n: Int) -> String {
+        let mod10 = n % 10
+        let mod100 = n % 100
+        if mod10 == 1, mod100 != 11 { return "курс" }
+        if (2...4).contains(mod10), !(12...14).contains(mod100) { return "курса" }
+        return "курсов"
     }
 
     // EPIC 2: search moved to header; no courseSearchHeader in body
@@ -1457,10 +1515,7 @@ private struct CourseInfoMiniPhraseCard: View {
         let round = RoundedRectangle(cornerRadius: PD.Radius.card, style: .continuous)
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("taikA")
-                    .font(.custom("ONMARK Trial", size: 14))
-                    .tracking(0.6)
-                    .foregroundStyle(PD.ColorToken.text)
+                TaikaWordmarkLockup(fontSize: 14)
                 Spacer(minLength: 6)
             }
 

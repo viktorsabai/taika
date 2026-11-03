@@ -485,13 +485,19 @@ struct StoryLabEditorChromeSession: View {
 
     private var draftHeader: some View {
         HStack(spacing: 12) {
-            HStack(spacing: 2) {
-                Text("tai")
-                    .font(wordmarkFont)
-                    .foregroundStyle(Color.white)
-                Text("kAAA")
-                    .font(wordmarkFont)
-                    .foregroundStyle(accentStroke)
+            Group {
+                if scene.useOnmark {
+                    TaikaWordmarkLockup(fontSize: scene.wordmarkSize)
+                } else {
+                    HStack(spacing: 2) {
+                        Text("tai")
+                            .font(wordmarkFont)
+                            .foregroundStyle(Color.white)
+                        Text("kAAA")
+                            .font(wordmarkFont)
+                            .foregroundStyle(accentStroke)
+                    }
+                }
             }
             .animation(.easeOut(duration: 0.22), value: scene.wordmarkSize)
             .animation(.easeOut(duration: 0.22), value: scene.useOnmark)
@@ -513,10 +519,7 @@ struct StoryLabEditorChromeSession: View {
     }
 
     private var wordmarkFont: Font {
-        if scene.useOnmark {
-            return .custom("Onmark Trial", size: scene.wordmarkSize)
-        }
-        return .system(size: scene.wordmarkSize, weight: scene.wordmarkWeight, design: .rounded)
+        .system(size: scene.wordmarkSize, weight: scene.wordmarkWeight, design: .rounded)
     }
 
     // MARK: Toolbar
