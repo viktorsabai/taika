@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Taika · Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; overflow: hidden;
+    font-family: "Segoe UI", Inter, system-ui, sans-serif;
+    background: #0b0b0b; color: #e6e6e6; user-select: none;
+  }
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: 40px 1fr;
+    min-width: 1100px;
+  }
+  .top {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 12px; background: #151515;
+    border-bottom: 1px solid #2a2a2a; font-size: 12px; z-index: 20;
+  }
+  .fname { font-weight: 500; }
+  .badge { font-size: 10px; color: #888; border: 1px solid #333; padding: 1px 6px; }
+  .grow { flex: 1; }
+  .zchip { border: 1px solid #333; padding: 3px 8px; color: #bbb; min-width: 44px; text-align: center; }
+  .share {
+    background: #0d99ff; color: #fff; border: 0;
+    border-radius: 6px; padding: 5px 11px; font-size: 12px; font-weight: 600;
+  }
+  .avs { display: flex; align-items: center; margin-right: 4px; }
+  .avs i {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid #151515; margin-left: -6px;
+    display: grid; place-items: center;
+    font-size: 9px; font-weight: 700; font-style: normal;
+  }
+  .avs i:first-child { margin-left: 0; }
+  .a1 { background: #e4572e; } .a2 { background: #18a0fb; } .a3 { background: #0acf83; }
+
+  .main {
+    position: relative; overflow: hidden; min-height: 0;
+    background: #101010;
+  }
+  .main::before {
+    content: "";
+    position: absolute; inset: 0; opacity: .2; pointer-events: none;
+    background-image: radial-gradient(circle, #2c2c2c 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .world {
+    position: absolute; left: 0; top: 0;
+    width: 1400px; height: 2400px;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+
+  .title {
+    position: absolute; left: 60px; top: 30px;
+    font-size: 20px; font-weight: 700;
+    opacity: 0; transition: opacity .3s;
+  }
+  .title.on { opacity: 1; }
+  .title span { color: #777; font-weight: 500; font-size: 13px; margin-left: 10px; }
+
+  .band {
+    position: absolute;
+    font-size: 10px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: #666;
+    opacity: 0; transition: opacity .3s;
+  }
+  .band.on { opacity: 1; }
+
+  .box {
+    position: absolute;
+    border: 1.5px solid #c8c8c8;
+    background: #141414;
+    padding: 9px 11px;
+    font-size: 12px; font-weight: 650;
+    opacity: 0; transition: opacity .28s, border-color .2s, background .2s;
+  }
+  .box.on { opacity: 1; }
+  .box.sel { border-color: #fff; background: #1c1c1c; }
+  .box .sub {
+    display: block; margin-top: 3px;
+    font-size: 10px; font-weight: 500; color: #6a6a6a;
+  }
+
+  .db {
+    position: absolute; width: 84px; height: 66px;
+    opacity: 0; transition: opacity .3s;
+  }
+  .db.on { opacity: 1; }
+  .db svg { width: 100%; height: 100%; display: block; }
+  .db .cap {
+    position: absolute; left: 0; right: 0; top: 24px;
+    text-align: center; font-size: 11px; font-weight: 700;
+  }
+  .db .sub {
+    position: absolute; left: 0; right: 0; top: 40px;
+    text-align: center; font-size: 9px; color: #666;
+  }
+
+  .phone {
+    position: absolute;
+    left: 480px; top: 1280px;
+    width: 230px; height: 460px;
+    border: 2px solid #c8c8c8;
+    border-radius: 26px;
+    background: #0a0a0a;
+    opacity: 0; transition: opacity .35s;
+  }
+  .phone.on { opacity: 1; }
+  .phone .screen {
+    position: absolute; inset: 14px 10px 10px;
+    border: 1px solid #2e2e2e; border-radius: 16px;
+  }
+  .phone .island {
+    position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+    width: 58px; height: 6px; background: #1a1a1a;
+  }
+  .slot {
+    position: absolute; border: 1px dashed #3a3a3a;
+    opacity: 0; transition: opacity .25s, border-color .25s, background .25s;
+  }
+  .slot.on { opacity: 1; }
+  .slot.live {
+    border-style: solid; border-color: #5a5a5a;
+    background: rgba(255,255,255,.03);
+  }
+  .slot .t {
+    position: absolute; left: 5px; top: 3px;
+    font-size: 8px; font-weight: 700; color: #555; letter-spacing: .05em;
+  }
+  .slot.live .t { color: #888; }
+  .s-h { left: 16px; top: 32px; right: 16px; height: 28px; }
+  .s-b { left: 16px; top: 70px; right: 16px; height: 250px; }
+  .s-t { left: 12px; bottom: 16px; right: 12px; height: 40px; }
+  .tabs {
+    position: absolute; inset: 6px 4px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;
+    opacity: 0; transition: opacity .25s;
+  }
+  .tabs.on { opacity: 1; }
+  .tabs i {
+    border: 1px solid #3a3a3a; font-style: normal;
+    font-size: 7px; font-weight: 700; color: #666;
+    display: grid; place-items: center;
+    opacity: 0; transition: opacity .2s, border-color .2s, color .2s;
+  }
+  .tabs i.on { opacity: 1; }
+  .tabs i.hot { border-color: #bbb; color: #ddd; }
+
+  .arrows {
+    position: absolute; left: 0; top: 0;
+    width: 1400px; height: 2400px;
+    pointer-events: none;
+  }
+  .arrows path {
+    fill: none;
+    stroke: #d2d2d2;
+    stroke-width: 2.2;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  .arrows path.on { opacity: 1; }
+  .arrows path.soft {
+    stroke: #7a7a7a;
+    stroke-width: 1.6;
+    stroke-dasharray: 5 4;
+  }
+
+  .alabel {
+    position: absolute;
+    font-size: 11px; font-weight: 700; color: #b0b0b0;
+    background: #101010; padding: 1px 5px;
+    opacity: 0; transition: opacity .25s;
+    white-space: nowrap;
+  }
+  .alabel.on { opacity: 1; }
+
+  .flow {
+    position: absolute;
+    display: flex; align-items: center;
+    opacity: 0; transition: opacity .35s;
+  }
+  .flow.on { opacity: 1; }
+  .flow .step {
+    border: 1.5px solid #aaa;
+    background: #141414;
+    padding: 8px 14px;
+    font-size: 12px; font-weight: 700;
+  }
+  .flow .arr {
+    width: 32px; height: 2px; background: #aaa; position: relative; margin: 0 2px;
+  }
+  .flow .arr::after {
+    content: "";
+    position: absolute; right: -1px; top: -4px;
+    border: 5px solid transparent;
+    border-left: 7px solid #aaa;
+  }
+
+  .note {
+    position: absolute;
+    font-size: 11px; color: #6e6e6e;
+    border-left: 2px solid #3a3a3a;
+    padding-left: 8px; line-height: 1.35;
+    opacity: 0; transition: opacity .3s; max-width: 180px;
+  }
+  .note.on { opacity: 1; }
+
+  .cursor {
+    position: absolute; z-index: 30; pointer-events: none;
+    width: 14px; height: 14px;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,.5));
+    transition: left .35s cubic-bezier(.2,.8,.2,1), top .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .pc {
+    position: absolute; z-index: 12; pointer-events: none;
+    transition: left 1s cubic-bezier(.25,.1,.25,1), top 1s cubic-bezier(.25,.1,.25,1);
+  }
+  .pc svg { width: 11px; height: 11px; display: block; }
+  .pc .tag {
+    margin: 1px 0 0 6px; font-size: 9px; font-weight: 700;
+    padding: 1px 4px; color: #fff; background: #4a6a80;
+  }
+
+  /* Figma chrome — light touch */
+  .dock {
+    position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+    z-index: 42;
+    display: flex; align-items: center; gap: 2px;
+    background: #1e1e1e; border: 1px solid #333;
+    border-radius: 12px; padding: 5px 7px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  }
+  .dock .tb {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: grid; place-items: center;
+    color: #aaa; font-size: 13px;
+  }
+  .dock .tb.on { background: #0d99ff; color: #fff; }
+  .dock .div { width: 1px; height: 18px; background: #3a3a3a; margin: 0 4px; }
+
+  .ctx {
+    position: absolute; z-index: 25;
+    min-width: 168px;
+    background: #2c2c2c; border: 1px solid #404040;
+    border-radius: 10px; padding: 5px;
+    box-shadow: 0 14px 36px rgba(0,0,0,.55);
+    opacity: 0; pointer-events: none;
+    transform: scale(.96);
+    transition: opacity .15s, transform .15s;
+  }
+  .ctx.on { opacity: 1; transform: none; }
+  .ctx .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 10px; border-radius: 6px;
+    font-size: 12px; color: #ddd;
+  }
+  .ctx .row.hot { background: #0d99ff; color: #fff; }
+  .ctx .row .k { color: #777; font-size: 11px; font-family: ui-monospace, Menlo, monospace; }
+  .ctx .row.hot .k { color: rgba(255,255,255,.7); }
+  .ctx .sep { height: 1px; background: #3a3a3a; margin: 4px 6px; }
+
+  .actions {
+    position: absolute; z-index: 24;
+    display: flex; gap: 2px;
+    background: #2a2a2a; border: 1px solid #3d3d3d;
+    border-radius: 10px; padding: 4px;
+    box-shadow: 0 10px 28px rgba(0,0,0,.5);
+    opacity: 0; pointer-events: none;
+    transform: translateY(4px);
+    transition: opacity .18s, transform .18s;
+  }
+  .actions.on { opacity: 1; transform: none; }
+  .actions button {
+    border: 0; background: transparent; color: #ccc;
+    font-size: 11px; font-weight: 600;
+    padding: 6px 10px; border-radius: 7px; white-space: nowrap;
+  }
+  .actions button.hot { background: #3a3a3a; color: #fff; }
+
+  .toast {
+    position: absolute; bottom: 64px; left: 50%; transform: translateX(-50%);
+    z-index: 40; background: #1a1a1a; border: 1px solid #333; color: #bbb;
+    font-size: 11px; padding: 6px 12px;
+    opacity: 0; transition: opacity .2s;
+  }
+  .toast.on { opacity: 1; }
+  .fig-toast {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    z-index: 43;
+    background: #2c2c2c; border: 1px solid #444; color: #eee;
+    font-size: 12px; font-weight: 600;
+    padding: 8px 14px; border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    opacity: 0; transition: opacity .18s;
+  }
+  .fig-toast.on { opacity: 1; }
+  .hint {
+    position: absolute; left: 10px; bottom: 12px; z-index: 40;
+    font-size: 10px; color: #2e2e2e;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .hud {
+    position: absolute; left: 10px; top: 10px; z-index: 50;
+    width: 200px; padding: 8px; background: #1a1a1a; border: 1px solid #333;
+    opacity: 0; pointer-events: none;
+  }
+  .hud.on { opacity: 1; pointer-events: auto; }
+  .hud input { width: 100%; }
+  .hud .r { display: flex; gap: 6px; margin-top: 6px; font-size: 11px; align-items: center; }
+  .hud button {
+    background: #222; border: 1px solid #444; color: #ddd;
+    padding: 4px 8px; cursor: pointer; font-size: 11px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="fname">Taika / architecture.board <span class="badge">draft</span></div>
+    <div class="grow"></div>
+    <div class="avs"><i class="a1">P</i><i class="a2">A</i><i class="a3">M</i></div>
+    <button class="share" type="button">Share</button>
+    <div class="zchip" id="zoomChip">48%</div>
+  </header>
+
+  <div class="main" id="vp">
+    <div class="world" id="world">
+      <div class="title" id="title">Architecture <span>↓ sources → … → UI</span></div>
+
+      <svg class="arrows">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#d2d2d2"/>
+          </marker>
+          <marker id="ahS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#7a7a7a"/>
+          </marker>
+        </defs>
+
+        <!-- sources ↓ managers -->
+        <path id="w1" d="M140 200 L140 250" marker-end="url(#ah)"/>
+        <path id="w2" d="M300 200 L300 250" marker-end="url(#ah)"/>
+        <path id="w3" d="M460 200 L460 250" marker-end="url(#ah)"/>
+        <path id="w4" d="M620 200 L620 250" marker-end="url(#ah)"/>
+
+        <!-- managers ↓ DS -->
+        <path id="w5" d="M140 335 L140 385" marker-end="url(#ah)"/>
+        <path id="w6" d="M320 335 L320 385" marker-end="url(#ah)"/>
+        <path id="w7" d="M500 335 L500 385" marker-end="url(#ah)"/>
+        <path id="w8" d="M680 335 L680 385" marker-end="url(#ah)"/>
+
+        <!-- DS ↓ collect → spine -->
+        <path id="w9" d="M140 465 L140 520 L900 520 L900 555" marker-end="url(#ah)"/>
+        <path id="w10" d="M320 465 L320 520" class="soft"/>
+        <path id="w11" d="M500 465 L500 520" class="soft"/>
+        <path id="w12" d="M680 465 L680 520" class="soft"/>
+
+        <!-- spine internal ↓ -->
+        <path id="w13" d="M1020 620 L1020 650" marker-end="url(#ah)"/>
+        <path id="w14" d="M1020 715 L1020 745" marker-end="url(#ah)"/>
+        <path id="w15" d="M1020 810 L1020 840" marker-end="url(#ah)"/>
+
+        <!-- spine ↓ surfaces -->
+        <path id="w16" d="M1020 905 L1020 960 L595 960" marker-end="url(#ah)"/>
+
+        <!-- surfaces ↓ phone -->
+        <path id="w17" d="M595 1020 L595 1275" marker-end="url(#ah)"/>
+
+        <!-- spine → phone slots (orthogonal) -->
+        <path id="w18" d="M900 880 L820 880 L820 1330 L595 1330" class="soft" marker-end="url(#ahS)"/>
+        <path id="w19" d="M1140 880 L1220 880 L1220 1480 L710 1480" class="soft" marker-end="url(#ahS)"/>
+
+        <!-- value ↺ sync -->
+        <path id="w20" d="M200 1880 L60 1880 L60 285 L90 285" class="soft" marker-end="url(#ahS)"/>
+      </svg>
+
+      <!-- 01 -->
+      <div class="band" id="b1" style="left:60px;top:70px">01 · sources</div>
+      <div class="db" id="db1" style="left:98px;top:100px">
+        <svg viewBox="0 0 84 66">
+          <ellipse cx="42" cy="12" rx="34" ry="9" fill="none" stroke="#c8c8c8" stroke-width="1.5"/>
+          <path d="M8 12 V50" fill="none" stroke="#c8c8c8" stroke-width="1.5"/>
+          <path d="M76 12 V50" fill="none" stroke="#c8c8c8" stroke-width="1.5"/>
+          <ellipse cx="42" cy="50" rx="34" ry="9" fill="none" stroke="#c8c8c8" stroke-width="1.5"/>
+        </svg>
+        <div class="cap">DB</div>
+        <div class="sub">firestore</div>
+      </div>
+      <div class="box" id="s1" style="left:230px;top:120px;width:130px">API<span class="sub">REST · callable</span></div>
+      <div class="box" id="s2" style="left:390px;top:120px;width:130px">Storage<span class="sub">audio · assets</span></div>
+      <div class="box" id="s3" style="left:550px;top:120px;width:130px">Auth<span class="sub">Firebase Auth</span></div>
+
+      <!-- 02 -->
+      <div class="band" id="b2" style="left:60px;top:230px">02 · managers</div>
+      <div class="box" id="m1" style="left:70px;top:260px;width:140px">SyncManager<span class="sub">pull · push</span></div>
+      <div class="box" id="m2" style="left:240px;top:260px;width:150px">ProgressManager<span class="sub">steps · streaks</span></div>
+      <div class="box" id="m3" style="left:420px;top:260px;width:150px">SpeakerManager<span class="sub">tones · score</span></div>
+      <div class="box" id="m4" style="left:600px;top:260px;width:140px">ProManager<span class="sub">entitlements</span></div>
+
+      <!-- 03 -->
+      <div class="band" id="b3" style="left:60px;top:360px">03 · data stores</div>
+      <div class="box" id="d1" style="left:70px;top:390px;width:140px">CourseDS<span class="sub">course→lesson→step</span></div>
+      <div class="box" id="d2" style="left:250px;top:390px;width:140px">SpeakerDS<span class="sub">composer · gloss</span></div>
+      <div class="box" id="d3" style="left:430px;top:390px;width:140px">MainDS<span class="sub">hub · chips</span></div>
+      <div class="box" id="d4" style="left:610px;top:390px;width:140px">Favorites<span class="sub">dictionary</span></div>
+
+      <!-- 04 spine -->
+      <div class="band" id="b4" style="left:900px;top:500px">04 · app spine</div>
+      <div class="box" id="p1" style="left:900px;top:530px;width:240px">AppShell<span class="sub">tabs · overlays</span></div>
+      <div class="box" id="p2" style="left:900px;top:625px;width:240px">ToolBar<span class="sub">5 tabs · center Speak</span></div>
+      <div class="box" id="p3" style="left:900px;top:720px;width:240px">NavigationIntent<span class="sub">route · return</span></div>
+      <div class="box" id="p4" style="left:900px;top:815px;width:240px">Theme / hub contract<span class="sub">tokens · header · CTA</span></div>
+
+      <!-- 05 surfaces -->
+      <div class="band" id="b5" style="left:180px;top:930px">05 · surfaces ← tabs</div>
+      <div class="box" id="t1" style="left:180px;top:960px;width:90px">Learn</div>
+      <div class="box" id="t2" style="left:290px;top:960px;width:90px">Fav</div>
+      <div class="box" id="t3" style="left:400px;top:960px;width:90px">Speak</div>
+      <div class="box" id="t4" style="left:510px;top:960px;width:90px">Park</div>
+      <div class="box" id="t5" style="left:620px;top:960px;width:90px">Profile</div>
+
+      <!-- 06 phone BELOW -->
+      <div class="band" id="b6" style="left:480px;top:1245px">06 · UI shell</div>
+      <div class="phone" id="phone">
+        <div class="screen">
+          <div class="slot s-h" id="slotH"><span class="t">header</span></div>
+          <div class="slot s-b" id="slotB"><span class="t">content</span></div>
+          <div class="slot s-t" id="slotT">
+            <span class="t">toolbar</span>
+            <div class="tabs" id="tabs"><i>L</i><i>F</i><i>S</i><i>R</i><i>P</i></div>
+          </div>
+        </div>
+        <div class="island"></div>
+      </div>
+
+      <!-- 07 -->
+      <div class="band" id="b7" style="left:180px;top:1810px">07 · value loop</div>
+      <div class="flow" id="flow" style="left:180px;top:1840px">
+        <div class="step">учить</div>
+        <div class="arr"></div>
+        <div class="step">сказать</div>
+        <div class="arr"></div>
+        <div class="step">закрепить</div>
+        <div class="arr"></div>
+        <div class="step">sync</div>
+      </div>
+
+      <div class="alabel" id="l1" style="left:150px;top:218px">↓ read</div>
+      <div class="alabel" id="l2" style="left:150px;top:352px">↓ state</div>
+      <div class="alabel" id="l3" style="left:760px;top:500px">→ bind</div>
+      <div class="alabel" id="l4" style="left:1040px;top:930px">↓ map</div>
+      <div class="alabel" id="l5" style="left:610px;top:1120px">↓ render</div>
+      <div class="alabel" id="l6" style="left:70px;top:1780px">↺ back</div>
+
+      <div class="note" id="n1" style="left:780px;top:1320px">мокап снизу =<br>UI-контракт</div>
+      <div class="note" id="n2" style="left:780px;top:1500px">таб ← DS + manager</div>
+      <div class="note" id="n3" style="left:780px;top:1850px">петля через<br>все слои</div>
+
+      <div class="pc" id="cA" style="left:180px;top:130px">
+        <svg viewBox="0 0 24 24"><path d="M5 3l14 8.5-6.2 1.6L10 21 5 3z" fill="#8ab4c8"/></svg>
+        <div class="tag">A</div>
+      </div>
+
+      <!-- Context menu + quick actions (in world) -->
+      <div class="ctx" id="ctx">
+        <div class="row" data-act="copy"><span>Copy</span><span class="k">⌘C</span></div>
+        <div class="row" data-act="paste"><span>Paste</span><span class="k">⌘V</span></div>
+        <div class="row" data-act="dup"><span>Duplicate</span><span class="k">⌘D</span></div>
+        <div class="sep"></div>
+        <div class="row" data-act="bring"><span>Bring to front</span><span class="k">]</span></div>
+        <div class="row" data-act="group"><span>Group selection</span><span class="k">⌘G</span></div>
+      </div>
+      <div class="actions" id="actions">
+        <button type="button" data-a="copy">Copy</button>
+        <button type="button" data-a="paste">Paste</button>
+        <button type="button" data-a="link">Connect</button>
+        <button type="button" data-a="comment">Comment</button>
+      </div>
+    </div>
+
+    <div class="dock" id="dock">
+      <div class="tb on" data-tool="select">↖</div>
+      <div class="tb" data-tool="frame">⬚</div>
+      <div class="tb" data-tool="pen">✎</div>
+      <div class="div"></div>
+      <div class="tb" data-tool="text">T</div>
+      <div class="tb" data-tool="conn">／</div>
+      <div class="tb" data-tool="comment">💬</div>
+      <div class="div"></div>
+      <div class="tb" data-tool="more">+</div>
+    </div>
+    <div class="fig-toast" id="figToast">Copied</div>
+
+    <div class="cursor" id="mc">
+      <svg width="14" height="14" viewBox="0 0 24 24"><path d="M5 3l14 8.5-6.2 1.6L10 21 5 3z" fill="#eee" stroke="#111" stroke-width="1"/></svg>
+    </div>
+    <div class="toast" id="toast"></div>
+    <div class="hint">Space · pause · Esc · restart · dblclick · scrub</div>
+    <div class="hud" id="hud">
+      <input type="range" id="scrub" min="0" max="66" step="0.05" value="0"/>
+      <div class="r">
+        <button type="button" id="btnPlay">Pause</button>
+        <button type="button" id="btnRestart">Restart</button>
+        <span id="timeLabel">0.0s</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const DURATION = 66;
+  const MOVE = 1.1;
+
+  // Camera: mostly same X (~620), move DOWN
+  const SHOTS = [
+    { t: 0,  s: 0.48, x: 620, y: 420, toast: null },
+    { t: 3,  s: 0.85, x: 420, y: 200, toast: 'sources' },
+    { t: 11, s: 0.85, x: 420, y: 310, toast: 'managers' },
+    { t: 19, s: 0.85, x: 420, y: 430, toast: 'DS' },
+    { t: 27, s: 0.80, x: 980, y: 700, toast: 'spine' },
+    { t: 36, s: 0.82, x: 520, y: 980, toast: 'surfaces' },
+    { t: 44, s: 0.92, x: 595, y: 1480, toast: 'UI' },
+    { t: 54, s: 0.78, x: 480, y: 1860, toast: 'value loop' },
+    { t: 60, s: 0.40, x: 620, y: 1000, toast: null },
+  ];
+
+  function ease(u) {
+    return u < 0.5 ? 2*u*u : 1 - Math.pow(-2*u + 2, 2) / 2;
+  }
+  function camAt(t) {
+    let i = 0;
+    for (let k = 0; k < SHOTS.length; k++) if (t >= SHOTS[k].t) i = k;
+    const cur = SHOTS[i], prev = SHOTS[Math.max(0, i - 1)];
+    if (i === 0) return cur;
+    const e = t - cur.t;
+    if (e < MOVE) {
+      const u = ease(e / MOVE);
+      return {
+        s: prev.s + (cur.s - prev.s) * u,
+        x: prev.x + (cur.x - prev.x) * u,
+        y: prev.y + (cur.y - prev.y) * u,
+        toast: e > MOVE * 0.5 ? cur.toast : prev.toast,
+      };
+    }
+    return cur;
+  }
+
+  const vp = document.getElementById('vp');
+  const world = document.getElementById('world');
+  const mc = document.getElementById('mc');
+  const toast = document.getElementById('toast');
+  const zoomChip = document.getElementById('zoomChip');
+  const cA = document.getElementById('cA');
+  const ctx = document.getElementById('ctx');
+  const actions = document.getElementById('actions');
+  const figToast = document.getElementById('figToast');
+  const dockTools = [...document.querySelectorAll('#dock .tb[data-tool]')];
+
+  function setTool(name) {
+    dockTools.forEach((el) => el.classList.toggle('on', el.dataset.tool === name));
+  }
+
+  function setCtx(on, x, y, hot) {
+    ctx.classList.toggle('on', on);
+    if (on) {
+      ctx.style.left = x + 'px';
+      ctx.style.top = y + 'px';
+      [...ctx.querySelectorAll('.row')].forEach((row) => {
+        row.classList.toggle('hot', row.dataset.act === hot);
+      });
+    }
+  }
+
+  function setActions(on, x, y, hot) {
+    actions.classList.toggle('on', on);
+    if (on) {
+      actions.style.left = x + 'px';
+      actions.style.top = y + 'px';
+      [...actions.querySelectorAll('button')].forEach((b) => {
+        b.classList.toggle('hot', b.dataset.a === hot);
+      });
+    }
+  }
+
+  function on(id, yes) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('on', yes);
+  }
+  function sel(id, yes) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('sel', yes);
+  }
+
+  function setCamera(t) {
+    const c = camAt(t);
+    const vw = vp.clientWidth, vh = vp.clientHeight;
+    const tx = vw/2 - c.x * c.s;
+    const ty = vh/2 - c.y * c.s;
+    world.style.transform = `translate(${tx}px,${ty}px) scale(${c.s})`;
+    zoomChip.textContent = Math.round(c.s * 100) + '%';
+    toast.textContent = c.toast || '';
+    toast.classList.toggle('on', !!c.toast);
+    return { s: c.s, x: c.x, y: c.y, tx, ty };
+  }
+
+  function toVp(wx, wy, cam) {
+    return { x: cam.tx + wx * cam.s, y: cam.ty + wy * cam.s };
+  }
+
+  const SHOW = [
+    ['title', 1],
+    ['b1', 3.2], ['db1', 3.8], ['s1', 5], ['s2', 6], ['s3', 7],
+    ['w1', 8], ['w2', 8.2], ['w3', 8.4], ['w4', 8.6], ['l1', 8.3],
+    ['b2', 11], ['m1', 11.5], ['m2', 12.6], ['m3', 13.7], ['m4', 14.8],
+    ['w5', 16], ['w6', 16.2], ['w7', 16.4], ['w8', 16.6], ['l2', 16.3],
+    ['b3', 19], ['d1', 19.5], ['d2', 20.6], ['d3', 21.7], ['d4', 22.8],
+    ['w10', 24], ['w11', 24.2], ['w12', 24.4], ['w9', 25], ['l3', 25.2],
+    ['b4', 27], ['p1', 27.5], ['w13', 28.6], ['p2', 29.2], ['w14', 30.4],
+    ['p3', 31], ['w15', 32.2], ['p4', 32.8],
+    ['w16', 35], ['l4', 35.2],
+    ['b5', 36], ['t1', 36.5], ['t2', 37.2], ['t3', 37.9], ['t4', 38.6], ['t5', 39.3],
+    ['w17', 42], ['l5', 42.2],
+    ['b6', 43.5], ['phone', 44],
+    ['slotH', 45.5], ['slotB', 46.5], ['slotT', 47.5],
+    ['w18', 48.5], ['w19', 49.5],
+    ['tabs', 50.5],
+    ['b7', 54], ['flow', 54.5], ['w20', 56], ['l6', 56.2],
+    ['n1', 45], ['n2', 51], ['n3', 57],
+  ];
+
+  const BOX = new Set(['s1','s2','s3','m1','m2','m3','m4','d1','d2','d3','d4','p1','p2','p3','p4','t1','t2','t3','t4','t5']);
+
+  const HOPS = [
+    [0, 180, 130], [6, 340, 150], [12, 380, 290],
+    [20, 380, 420], [28, 1020, 700], [37, 450, 980],
+    [45, 595, 1450], [55, 360, 1860],
+  ];
+  function hop(t) {
+    let i = 0;
+    for (let k = 0; k < HOPS.length; k++) if (t >= HOPS[k][0]) i = k;
+    return HOPS[i];
+  }
+
+  function apply(t) {
+    const cam = setCamera(t);
+    let cx = cam.x + 16, cy = cam.y + 10;
+
+    SHOW.forEach(([id, at]) => {
+      on(id, t >= at);
+      if (BOX.has(id)) {
+        const active = t >= at && t < at + 0.55;
+        sel(id, active);
+        if (active) {
+          const el = document.getElementById(id);
+          cx = parseFloat(el.style.left) + 50;
+          cy = parseFloat(el.style.top) + 14;
+        }
+      }
+    });
+
+    document.getElementById('slotH').classList.toggle('live', t >= 48);
+    document.getElementById('slotB').classList.toggle('live', t >= 49);
+    document.getElementById('slotT').classList.toggle('live', t >= 50);
+
+    [...document.querySelectorAll('#tabs i')].forEach((el, i) => {
+      el.classList.toggle('on', t >= 50.5 + i * 0.3);
+      el.classList.toggle('hot', t >= 52.5 && i === 2);
+    });
+
+    // ── Figma chrome beats (copy/paste + quick actions) ──
+    let tool = 'select';
+    setCtx(false);
+    setActions(false);
+    figToast.classList.remove('on');
+
+    // After CourseDS appears: quick actions above it
+    if (t >= 23.2 && t < 25.5) {
+      setActions(true, 70, 360, t < 24.2 ? 'copy' : 'link');
+      tool = t < 24.2 ? 'select' : 'conn';
+      cx = 160; cy = 380;
+    }
+
+    // Copy AppShell via context menu
+    if (t >= 33.2 && t < 35.8) {
+      setCtx(true, 1150, 560, t < 34.2 ? 'copy' : (t < 35 ? 'dup' : 'group'));
+      tool = 'select';
+      cx = 1160; cy = 580;
+    }
+    if (t >= 34.3 && t < 35.2) {
+      figToast.textContent = 'Copied · AppShell';
+      figToast.classList.add('on');
+    }
+
+    // Paste / connect near surfaces
+    if (t >= 40.0 && t < 42.5) {
+      setCtx(true, 720, 940, t < 41 ? 'paste' : 'bring');
+      tool = 'select';
+      cx = 740; cy = 960;
+    }
+    if (t >= 40.5 && t < 41.4) {
+      figToast.textContent = 'Pasted';
+      figToast.classList.add('on');
+    }
+
+    // Quick actions on phone slot
+    if (t >= 47.8 && t < 50.2) {
+      setActions(true, 720, 1290, t < 48.8 ? 'comment' : 'link');
+      tool = t < 48.8 ? 'comment' : 'conn';
+      cx = 760; cy = 1310;
+    }
+
+    if (t >= 25 && t < 27) tool = 'conn';
+    if (t >= 42 && t < 44) tool = 'conn';
+    setTool(tool);
+
+    const h = hop(t);
+    cA.style.left = h[1] + 'px';
+    cA.style.top = h[2] + 'px';
+
+    const p = toVp(cx, cy, cam);
+    mc.style.left = p.x + 'px';
+    mc.style.top = p.y + 'px';
+
+    document.getElementById('scrub').value = String(t);
+    document.getElementById('timeLabel').textContent = t.toFixed(1) + 's';
+    document.getElementById('btnPlay').textContent = playing ? 'Pause' : 'Play';
+  }
+
+  let t = 0, playing = true, last = performance.now();
+  function tick(now) {
+    const dt = (now - last) / 1000;
+    last = now;
+    if (playing) {
+      t = Math.min(DURATION, t + dt);
+      if (t >= DURATION) playing = false;
+    }
+    apply(t);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  function toggle() {
+    playing = !playing;
+    if (playing && t >= DURATION) t = 0;
+    last = performance.now();
+  }
+  function restart() { t = 0; playing = true; last = performance.now(); }
+
+  document.getElementById('btnPlay').onclick = toggle;
+  document.getElementById('btnRestart').onclick = restart;
+  document.getElementById('scrub').oninput = (e) => { t = Number(e.target.value); apply(t); };
+  vp.addEventListener('dblclick', () => document.getElementById('hud').classList.toggle('on'));
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); toggle(); }
+    if (e.key === 'Escape') restart();
+  });
+  window.addEventListener('resize', () => apply(t));
+})();
+</script>
+</body>
+</html>

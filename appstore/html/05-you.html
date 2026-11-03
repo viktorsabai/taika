@@ -1,0 +1,136 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><style>
+@font-face {
+  font-family: "Onmark Trial";
+  src: url("file:///Users/product/Projects/taika/appstore/fonts/Onmark%20TRIAL%20Regular.otf") format("opentype");
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1290px; height: 2796px; overflow: hidden; background: #F25CA6; }
+.screen {
+  width: 1290px; height: 2796px; position: relative; overflow: hidden;
+  background: #F25CA6;
+  font-family: -apple-system, "SF Pro Display", "SF Pro Text", sans-serif;
+  color: #1A0A12;
+}
+h1 {
+  position: absolute; left: 96px; right: 96px; top: 128px;
+  font-size: 92px; line-height: 0.98; font-weight: 760;
+  letter-spacing: -2.4px;
+  white-space: pre-line;
+}
+.phone {
+  position: absolute; left: 145px; top: 520px;
+  width: 1000px; height: 2400px;
+  background: #0A0A0C;
+  border-radius: 96px;
+  padding: 18px;
+  box-shadow: 0 36px 70px rgba(60, 10, 30, 0.22);
+}
+.screen-in {
+  height: 100%; border-radius: 76px; overflow: hidden;
+  background: #0D0D0F; position: relative;
+  display: flex; flex-direction: column;
+  padding: 28px 36px 0;
+}
+.statusbar {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  color: #fff; font-size: 28px; font-weight: 650;
+  padding: 18px 22px 0;
+}
+.statusbar .side { text-align: left; }
+.statusbar .side.end { text-align: right; }
+.island { width: 196px; height: 34px; border-radius: 18px; background: #000; }
+.appbar { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; }
+.mark { display: flex; align-items: baseline; gap: 6px; }
+.mark .tai, .mark .aaa, .mini .tai, .mini .aaa {
+  font-family: "Onmark Trial", serif; font-weight: 400; line-height: 1;
+}
+.mark .tai { font-size: 48px; color: #fff; }
+.mark .aaa { font-size: 48px; color: #F25CA6; }
+.polite {
+  display: flex; align-items: center; gap: 8px;
+  height: 52px; padding: 0 16px; border-radius: 999px;
+  background: rgba(32,32,37,0.9);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.62);
+  font-size: 22px; font-weight: 650;
+}
+.card {
+  margin: 28px auto 0;
+  width: 860px; height: 920px;
+  background: #202025;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 48px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.45);
+  display: flex; flex-direction: column;
+  padding: 28px 32px 18px;
+  color: #fff;
+}
+.cardtop { display: flex; align-items: center; justify-content: space-between; }
+.mini { display: flex; align-items: baseline; gap: 3px; }
+.mini .tai, .mini .aaa { font-size: 28px; }
+.mini .tai { color: #fff; }
+.mini .aaa { color: #F25CA6; }
+.chip {
+  height: 46px; padding: 0 18px; border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  font-size: 22px; font-weight: 650;
+  display: flex; align-items: center;
+}
+.meta {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center; gap: 16px;
+  padding: 8px 18px;
+}
+.th { font-size: 34px; color: rgba(255,255,255,0.6); }
+.ru { font-size: 52px; font-weight: 650; letter-spacing: -0.8px; }
+.ph { font-size: 40px; font-weight: 650; }
+.ph .arr, .syl .arr { color: #F25CA6; }
+.syls { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.syl { font-size: 36px; font-weight: 650; }
+.syl.on { box-shadow: inset 0 -3px 0 #F25CA6; }
+.actions { display: flex; justify-content: space-between; padding: 4px 8px 0; }
+.act { width: 180px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: rgba(255,255,255,0.9); }
+.act span { font-size: 18px; font-weight: 500; color: rgba(255,255,255,0.55); }
+.act.on, .act.on span { color: #F25CA6; }
+.procopy { font-size: 26px; line-height: 1.35; font-weight: 500; color: rgba(255,255,255,0.62); }
+.peek {
+  margin: 22px auto 0;
+  width: 860px; height: 760px;
+  background: #202025;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 48px;
+  opacity: 0.45;
+}
+.cta {
+  margin: 0 28px 22px; height: 76px; border-radius: 999px;
+  background: #F25CA6; color: rgba(0,0,0,0.88);
+  font-size: 28px; font-weight: 650;
+  display: flex; align-items: center; justify-content: center;
+}
+</style></head>
+<body><div class="screen">
+  <h1>Говори так,
+как говоришь ты</h1>
+  
+    <div class="phone"><div class="screen-in">
+      <div class="statusbar"><span class="side">9:41</span><div class="island"></div><span class="side end">5G</span></div>
+      <div class="appbar"><div class="mark"><span class="tai">tai</span><span class="aaa">kAAA</span></div><div class="polite"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="3.2"/><path d="M6.2 18.5c1.2-2.6 3.2-3.8 5.8-3.8s4.6 1.2 5.8 3.8"/></svg><span>Ж</span></div></div>
+      
+    <div class="card">
+      <div class="cardtop"><div class="mini"><span class="tai">tai</span><span class="aaa">kAAA</span></div><div class="chip">Фраза</div></div>
+      <div class="meta">
+        <div class="th">ขอบคุณค่ะ</div>
+        <div class="ru">Спасибо</div>
+        <div class="ph">кхоп<span class="arr">↓</span> кхун<span class="arr">→</span> кха<span class="arr">↘</span></div>
+      </div>
+      
+    <div class="actions">
+      <div class="act"><svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9.2v5.6h3.6L12 19.2V4.8L6.6 9.2H3z"/><path d="M15.6 8.4a4.6 4.6 0 0 1 0 7.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M18.1 6.1a8 8 0 0 1 0 11.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>слушать</span></div>
+      <div class="act"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 19s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z"/></svg><span>в избранное</span></div>
+      <div class="act"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M8.5 12.2l2.3 2.3 4.7-5"/></svg><span>запомнить</span></div>
+    </div>
+    </div>
+      <div class="peek"></div>
+    </div></div>
+</div></body></html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MOO · платформа</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #07090f; }
+  body { display: grid; place-items: center; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+  #stage {
+    width: min(100vw, calc(100vh * 16 / 9));
+    aspect-ratio: 16 / 9;
+    position: relative;
+    overflow: hidden;
+    background: #07090f;
+  }
+  #board {
+    width: 1280px; height: 720px;
+    position: absolute; left: 0; top: 0; transform-origin: 0 0;
+  }
+  .phone, .admin, .note {
+    position: absolute;
+  }
+  .phone {
+    width: 340px; height: 640px; top: 40px; left: 470px;
+    border-radius: 36px; padding: 10px;
+    background: #05070c;
+    box-shadow: 0 30px 80px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06);
+  }
+  .screen {
+    height: 100%; border-radius: 28px; overflow: hidden;
+    background: #0e1422; color: #f3f5fb;
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+  .hd {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding: 18px 16px 12px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .hd b { display: block; font-size: 22px; font-weight: 800; letter-spacing: -.03em; }
+  .open { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: #aeb6c8; font-size: 13px; font-weight: 600; }
+  .open i { width: 7px; height: 7px; border-radius: 50%; background: #3ddc84; display: block; }
+  .icons { display: flex; gap: 14px; color: #c5cad6; font-size: 16px; padding-top: 4px; }
+  .tabs { display: flex; gap: 18px; padding: 12px 16px 0; font-size: 14px; font-weight: 700; color: #8b93a7; }
+  .tabs span { padding-bottom: 8px; }
+  .tabs span.on { color: #f3f5fb; box-shadow: inset 0 -2px 0 #f3f5fb; }
+  .search {
+    margin: 12px 16px 0; height: 38px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.1); color: #8b93a7;
+    display: flex; align-items: center; padding: 0 12px; font-size: 14px;
+  }
+  .list { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .dish {
+    display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .dish strong { display: block; font-size: 15px; }
+  .dish em { font-style: normal; color: #9aa3b8; font-size: 12px; font-weight: 600; }
+  .dish b { font-size: 14px; }
+  .plus {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: grid; place-items: center;
+    border: 1px solid rgba(255,255,255,.16); font-size: 16px;
+  }
+  .plus.on { background: #7f96ff; color: #0e1422; border-color: #7f96ff; font-size: 13px; font-weight: 800; }
+  .nav {
+    margin-top: auto; height: 64px;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid rgba(255,255,255,.08);
+    background: #0c111c;
+  }
+  .nav i {
+    font-style: normal; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; font-size: 10px; font-weight: 650; color: #8b93a7;
+  }
+  .nav i.on { color: #8ea2ff; }
+  .nav b { font-size: 15px; font-weight: 500; }
+  .admin {
+    width: 360px; top: 70px; left: 640px; height: 580px;
+    border-radius: 24px; padding: 22px;
+    background: #121826; color: #f3f5fb;
+    border: 1px solid rgba(255,255,255,.08);
+    box-shadow: 0 24px 60px rgba(0,0,0,.35);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .admin .who { color: #9aa3b8; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .admin h2 { margin: 0; font-size: 28px; letter-spacing: -.03em; }
+  .inbox {
+    padding: 14px; border-radius: 16px; background: #1a2233; border: 1px solid rgba(255,255,255,.08);
+  }
+  .inbox span { color: #9aa3b8; font-size: 12px; font-weight: 700; }
+  .inbox strong { display: block; margin-top: 4px; font-size: 16px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { padding: 12px; border-radius: 14px; background: #1a2233; border: 1px solid rgba(255,255,255,.06); }
+  .stat em { display: block; font-style: normal; font-size: 20px; font-weight: 800; }
+  .stat span { color: #9aa3b8; font-size: 12px; font-weight: 600; }
+  .sec { display: flex; justify-content: space-between; align-items: center; padding: 10px 2px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .sec strong { display: block; font-size: 14px; }
+  .sec span { color: #9aa3b8; font-size: 12px; }
+  .note {
+    width: 280px; padding: 16px 18px; border-radius: 16px;
+    background: #f4f6fb; color: #121826;
+    font-size: 18px; font-weight: 750; line-height: 1.25; letter-spacing: -.02em;
+    box-shadow: 0 16px 40px rgba(0,0,0,.28);
+  }
+  .note.left { left: 48px; }
+  .note.right { right: 48px; }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div id="board">
+      <div class="note left" id="nL"></div>
+      <div class="note right" id="nR"></div>
+
+      <div class="phone" id="phone">
+        <div class="screen">
+          <div class="hd">
+            <div>
+              <b>USSR</b>
+              <div class="open"><i></i>открыто</div>
+            </div>
+            <div class="icons">☀ 🛒 👤</div>
+          </div>
+          <div class="tabs">
+            <span class="on" id="tabA">ресторан</span>
+            <span id="tabB">магазин</span>
+          </div>
+          <div class="search">поиск</div>
+          <div class="list" id="list"></div>
+          <div class="nav">
+            <i><b>⌂</b>главная</i>
+            <i class="on"><b>☰</b>доставка</i>
+            <i><b>↻</b>подписка</i>
+            <i><b>○</b>профиль</i>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin" id="admin">
+        <div class="who">личный кабинет</div>
+        <h2>Входящие</h2>
+        <div class="inbox">
+          <span>новый заказ</span>
+          <strong id="inboxLine">Пад тай · 299 THB</strong>
+        </div>
+        <div class="stats">
+          <div class="stat"><em>1</em><span>заказ сегодня</span></div>
+          <div class="stat"><em>299</em><span>выручка, THB</span></div>
+        </div>
+        <div class="sec"><div><strong>Заказы</strong><span>принят → готовится</span></div><span>›</span></div>
+        <div class="sec"><div><strong>Меню и товары</strong><span>ресторан и магазин</span></div><span>›</span></div>
+        <div class="sec"><div><strong>Подписчики</strong><span>запрос на рацион</span></div><span>›</span></div>
+        <div class="sec"><div><strong>Посещаемость</strong><span>кто зашёл и что в корзине</span></div><span>›</span></div>
+      </div>
+    </div>
+  </div>
+<script>
+const D = 34;
+const stage = document.getElementById('stage');
+const board = document.getElementById('board');
+const menu = [['🍜','Том ям','349','в наличии'],['🍤','Пад тай','299','в наличии']];
+const shop = [['🥟','Пельмени','280','магазин'],['🥤','Вода','40','магазин']];
+function ramp(t,a,b){ if(b<=a) return t>=b?1:0; return Math.max(0,Math.min(1,(t-a)/(b-a))); }
+function rows(items){
+  return items.map((d,i)=>`<div class="dish" data-i="${i}"><span>${d[0]}</span><div><strong>${d[1]}</strong><em>${d[3]}</em></div><div><b>${d[2]}</b> <span class="plus" data-p="${i}">+</span></div></div>`).join('');
+}
+const list = document.getElementById('list');
+function render(t){
+  const s = stage.clientWidth / 1280;
+  if (s>0) board.style.transform = `scale(${s})`;
+  const shopOn = t>=8 && t<12.5;
+  const added = t>=6.2;
+  const owner = t>=16;
+  list.dataset.k = shopOn ? 's' : 'm';
+  if (list.dataset.drawn !== list.dataset.k) {
+    list.dataset.drawn = list.dataset.k;
+    list.innerHTML = rows(shopOn ? shop : menu);
+  }
+  document.getElementById('tabA').classList.toggle('on', !shopOn);
+  document.getElementById('tabB').classList.toggle('on', shopOn);
+  list.querySelectorAll('.dish').forEach((el)=>{
+    const i = Number(el.dataset.i);
+    const d = ramp(t, shopOn?8.2:1.4, shopOn?8.8:2.1) ;
+    el.style.opacity = d;
+    const plus = el.querySelector('.plus');
+    const on = !shopOn && added && i===1;
+    plus.classList.toggle('on', on);
+    plus.textContent = on ? '1' : '+';
+  });
+
+  const phoneX = owner ? 290 : 470;
+  const px = 470 + (phoneX - 470) * ramp(t, 16, 17.6);
+  document.getElementById('phone').style.left = px + 'px';
+  const admin = document.getElementById('admin');
+  const ax = ramp(t, 16.4, 18.2);
+  admin.style.opacity = ax;
+  admin.style.transform = `translateX(${(1 - ax) * 70}px)`;
+
+  const notes = owner
+    ? [['Новый заказ сразу в кабинете владельца', 150], ['Деньги и гости остаются у ресторана', 360]]
+    : shopOn
+    ? [['Рядом магазин — товары, не только кухня', 180], ['', 0]]
+    : added
+    ? [['Блюдо в корзине у вас, не у агрегатора', 200], ['', 0]]
+    : [['Гость открывает ваше меню в Telegram', 160], ['', 0]];
+
+  const L = document.getElementById('nL');
+  const R = document.getElementById('nR');
+  const showL = ramp(t, 3.2, 4.2) * (owner ? 1 : 1);
+  L.textContent = notes[0][0];
+  L.style.top = notes[0][1] + 'px';
+  L.style.left = owner ? '24px' : '36px';
+  L.style.width = '240px';
+  L.style.opacity = owner ? ramp(t, 18.4, 19.2) : (shopOn ? ramp(t, 8.6, 9.3) : ramp(t, 3.2, 4.1));
+  L.style.transform = `translateX(${(1 - Number(L.style.opacity)) * -24}px)`;
+  R.textContent = notes[1][0];
+  R.style.top = (notes[1][1] || 200) + 'px';
+  R.style.right = 'auto';
+  R.style.left = '1020px';
+  R.style.width = '236px';
+  R.style.opacity = owner ? ramp(t, 20.2, 21) : 0;
+  R.style.transform = `translateX(${(1 - Number(R.style.opacity)) * 24}px)`;
+}
+let t=0, playing=true, last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(playing && !window.__freeze) t+=dt;
+  if(t>=D) t=0;
+  render(t);
+  requestAnimationFrame(loop);
+}
+window.__moo={seek(v){t=v;playing=false;render(t);},play(){playing=true;}};
+stage.addEventListener('click',()=>{playing=!playing;});
+window.addEventListener('keydown',(e)=>{ if(e.code==='Space'){e.preventDefault();playing=!playing;} });
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

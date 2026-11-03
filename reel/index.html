@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Промпт с экрана</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #16140f;
+    --paper: #f3efe6;
+    --mark: #ddf250;
+    --gold: #c6a36a;
+    --night: #0b0c0e;
+    --cream: #f2f0ec;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: #000; overflow: hidden;
+    font-family: Manrope, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body { user-select: none; }
+  .artboard {
+    position: absolute; left: 50%; top: 50%;
+    width: 1080px; height: 1920px;
+    background: var(--paper); color: var(--ink);
+    transform-origin: center center; overflow: hidden;
+  }
+
+  .ask {
+    position: absolute; top: 72px; left: 64px; right: 64px;
+    margin: 0;
+    font-size: 48px; font-weight: 800; letter-spacing: -0.045em; line-height: 1.05;
+    opacity: 0;
+  }
+  .ask.on { opacity: 1; }
+  .site {
+    position: absolute; top: 196px; left: 64px;
+    margin: 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 24px; letter-spacing: 0.04em; color: #6f6a62;
+    opacity: 0;
+  }
+  .site.on { opacity: 1; }
+
+  .phone {
+    position: absolute; top: 250px; left: 250px;
+    width: 580px; height: 1257px;
+    border: 3px solid var(--ink); border-radius: 36px;
+    overflow: hidden; background: #111;
+    opacity: 0;
+  }
+  .phone.on { opacity: 1; }
+  .layer { position: absolute; inset: 0; opacity: 0; }
+  .layer.on { opacity: 1; }
+  .layer img { width: 100%; height: 100%; object-fit: fill; display: block; }
+  .box {
+    position: absolute; left: 3.5%; right: 3.5%;
+    border: 4px solid var(--mark);
+    box-shadow: 0 0 0 2000px rgba(12,10,8,.45);
+    opacity: 0;
+  }
+  .box.on { opacity: 1; }
+
+  .screen {
+    position: absolute; inset: 0;
+    padding: 36px 28px 28px;
+    color: var(--cream);
+    background:
+      linear-gradient(rgba(242,240,236,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(242,240,236,.05) 1px, transparent 1px),
+      var(--night);
+    background-size: 32px 32px, 32px 32px, auto;
+    display: flex; flex-direction: column;
+    opacity: 0;
+  }
+  .screen.on { opacity: 1; }
+  .brand { font-size: 16px; letter-spacing: 0.32em; font-weight: 700; }
+  .sheetno {
+    margin-top: 12px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 16px; color: rgba(242,240,236,.5); letter-spacing: 0.06em;
+  }
+  .screen h2 { margin: 22px 0 0; font-size: 48px; font-weight: 800; letter-spacing: -0.045em; line-height: 1; }
+  .choices { margin-top: 28px; display: flex; flex-direction: column; gap: 12px; }
+  .choice { border: 1.5px solid rgba(242,240,236,.28); padding: 18px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .choice b { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; }
+  .choice span { font-size: 18px; color: rgba(242,240,236,.55); }
+  .place { margin-top: 16px; font-size: 64px; font-weight: 800; letter-spacing: -0.045em; }
+  .tags { margin-top: 12px; display: flex; gap: 8px; }
+  .tags i { font-style: normal; border: 1px solid rgba(198,163,106,.75); color: var(--gold); padding: 5px 10px; font-size: 18px; }
+  .stats { margin-top: 28px; }
+  .stats div { border-top: 1px solid rgba(198,163,106,.4); padding: 14px 0; }
+  .stats em {
+    display: block; font-style: normal;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 15px; letter-spacing: 0.08em; color: rgba(242,240,236,.5); text-transform: uppercase;
+  }
+  .stats b { display: block; margin-top: 4px; font-size: 36px; font-weight: 800; letter-spacing: -0.04em; }
+  .code { margin-top: 12px; font-size: 64px; font-weight: 800; letter-spacing: -0.045em; line-height: .95; }
+  .gold { margin-top: 12px; font-family: "IBM Plex Mono", ui-monospace, monospace; color: var(--gold); font-size: 24px; }
+  .plan { margin-top: 20px; width: 100%; height: auto; }
+  .askbig { margin-top: 28px; font-size: 52px; font-weight: 800; letter-spacing: -0.045em; line-height: 1; }
+  .asknote { margin-top: 14px; font-size: 24px; color: rgba(242,240,236,.62); line-height: 1.3; }
+  .send {
+    margin-top: auto; height: 84px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--gold); color: var(--night);
+    font-size: 28px; font-weight: 800; letter-spacing: -0.03em;
+  }
+  .zone.hot { outline: 4px solid var(--mark); outline-offset: 5px; }
+
+  .prompt {
+    position: absolute; left: 64px; right: 64px; top: 1540px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .prompt p {
+    margin: 0;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 30px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.25;
+    opacity: 0; transform: translateY(8px);
+  }
+  .prompt p.on { opacity: 1; transform: none; }
+  .prompt p::before { content: "> "; color: #8a847a; }
+
+  .split, .close {
+    position: absolute; inset: 0;
+    background: var(--paper);
+    opacity: 0; pointer-events: none;
+  }
+  .split.on, .close.on { opacity: 1; }
+  .split { display: flex; align-items: center; justify-content: center; }
+  .cols {
+    width: 960px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 48px;
+  }
+  .cols h3 { margin: 0 0 28px; font-size: 32px; font-weight: 800; letter-spacing: -0.04em; }
+  .cols p {
+    margin: 0 0 22px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 28px; line-height: 1.25; letter-spacing: -0.03em;
+  }
+  .cols p::before { content: "> "; color: #8a847a; }
+  .close {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 0 80px; gap: 28px;
+  }
+  .close strong {
+    font-size: 72px; font-weight: 800; letter-spacing: -0.05em; line-height: 1.02;
+  }
+  .close span { font-size: 32px; font-weight: 700; color: #6f6a62; letter-spacing: -0.03em; line-height: 1.35; }
+
+  .instant, .instant * { transition: none !important; }
+  .hint {
+    position: fixed; left: 22px; bottom: 18px;
+    color: rgba(255,255,255,.4);
+    font: 700 15px/1.45 Manrope, sans-serif;
+    transition: opacity .8s ease 2s;
+  }
+  body.went .hint { opacity: 0; }
+</style>
+</head>
+<body>
+  <div class="artboard" id="art">
+    <p class="ask" id="ask">какой промпт это собрал?</p>
+    <p class="site" id="site"></p>
+    <div class="phone" id="phone">
+      <div class="layer on" id="shot">
+        <img src="img/real/prestige.png" alt="">
+        <i class="box" data-z="0" style="top:4%;height:44%"></i>
+        <i class="box" data-z="1" style="top:54%;height:13%"></i>
+        <i class="box" data-z="2" style="top:78%;height:8%"></i>
+        <i class="box" data-z="3" style="top:93%;height:6%"></i>
+      </div>
+      <div class="layer" id="paradise">
+        <section class="screen" data-step="0">
+          <div class="brand">PARADISE</div>
+          <div class="sheetno">A-01 · Пхукет</div>
+          <h2>С чего начнём?</h2>
+          <div class="choices zone">
+            <div class="choice"><b>Купить</b><span>Вилла или апартаменты</span></div>
+            <div class="choice"><b>Снять</b><span>От месяца до года</span></div>
+            <div class="choice"><b>Пока присматриваюсь</b><span>Покажем свежие объекты</span></div>
+          </div>
+        </section>
+        <section class="screen" data-step="1">
+          <div class="brand">PARADISE</div>
+          <div class="sheetno">A-02 · район</div>
+          <div class="place">Равай</div>
+          <div class="tags"><i>Тихо</i><i>Для семей</i><i>Рестораны</i></div>
+          <div class="stats zone">
+            <div><em>до аэропорта</em><b>55 мин</b></div>
+            <div><em>до моря</em><b>300 м</b></div>
+            <div><em>цена за м²</em><b>58k THB</b></div>
+          </div>
+        </section>
+        <section class="screen" data-step="2">
+          <div class="brand">PARADISE</div>
+          <div class="sheetno">A-03 · объект · Мыс Панва</div>
+          <div class="zone pack">
+            <div class="code">CP-R02</div>
+            <div class="gold">15 000 THB / мес</div>
+            <div class="sheetno">1 спальня · 7.8232°N 98.4071°E</div>
+            <svg class="plan" viewBox="0 0 560 280">
+              <g fill="none" stroke="#f2f0ec" stroke-width="1.6">
+                <rect x="16" y="16" width="340" height="210"/>
+                <line x1="16" y1="110" x2="180" y2="110"/>
+                <line x1="180" y1="16" x2="180" y2="226"/>
+                <path d="M180 110 A60 60 0 0 1 240 170"/>
+              </g>
+              <g fill="none" stroke="#c6a36a" stroke-width="1.6">
+                <rect x="230" y="150" width="220" height="90"/>
+              </g>
+              <g fill="#c6a36a" font-family="IBM Plex Mono, monospace" font-size="16">
+                <text x="28" y="70">LIVING</text>
+                <text x="196" y="56">BED</text>
+                <text x="248" y="202">POOL</text>
+              </g>
+            </svg>
+          </div>
+        </section>
+        <section class="screen" data-step="3">
+          <div class="brand">PARADISE</div>
+          <div class="sheetno">A-04 · связь</div>
+          <div class="askbig">Написать менеджеру</div>
+          <div class="asknote">Telegram · ответ за 15 минут<br>в рабочее время</div>
+          <div class="send zone">Написать в Telegram</div>
+        </section>
+      </div>
+    </div>
+    <div class="prompt" id="prompt"></div>
+
+    <div class="split" id="split">
+      <div class="cols">
+        <div>
+          <h3>Phuket Prestige</h3>
+          <p>вилла на весь экран</p>
+          <p>слоган про дом мечты</p>
+          <p>кнопка на первом экране</p>
+          <p>купить или снять</p>
+        </div>
+        <div>
+          <h3>Paradise</h3>
+          <p>сначала вопрос, не каталог</p>
+          <p>район — море, аэропорт, метр</p>
+          <p>объект: код, план и цена</p>
+          <p>дальше один шаг — менеджер</p>
+        </div>
+      </div>
+    </div>
+    <div class="close" id="close">
+      <strong>промпт читается с экрана</strong>
+      <span>не исходный файл.<br>то, без чего экран не собрался бы</span>
+    </div>
+  </div>
+  <div class="hint">пробел — пауза<br>R — заново</div>
+
+<script>
+const plain = [
+  "вилла на весь экран",
+  "слоган про дом мечты",
+  "кнопка на первом экране",
+  "купить или снять"
+];
+const paradise = [
+  "сначала вопрос, не каталог",
+  "район — море, аэропорт, метр",
+  "объект: код, план и цена",
+  "дальше один шаг — менеджер"
+];
+
+const art = document.getElementById("art");
+const ask = document.getElementById("ask");
+const site = document.getElementById("site");
+const phone = document.getElementById("phone");
+const shot = document.getElementById("shot");
+const para = document.getElementById("paradise");
+const prompt = document.getElementById("prompt");
+const split = document.getElementById("split");
+const close = document.getElementById("close");
+const boxes = [...shot.querySelectorAll(".box")];
+const screens = [...para.querySelectorAll(".screen")];
+
+function fit() {
+  const s = Math.min(innerWidth / 1080, innerHeight / 1920);
+  art.style.transform = `translate(-50%, -50%) scale(${s})`;
+  document.querySelector(".hint").hidden = (innerWidth - 1080 * s) / 2 < 90;
+}
+addEventListener("resize", fit);
+fit();
+
+function lines(list, n) {
+  prompt.innerHTML = list.slice(0, n + 1).map(text => `<p class="on">${text}</p>`).join("");
+}
+function showPlain(i) {
+  split.classList.remove("on");
+  close.classList.remove("on");
+  ask.classList.add("on");
+  site.textContent = "Phuket Prestige";
+  site.classList.add("on");
+  phone.classList.add("on");
+  shot.classList.add("on");
+  para.classList.remove("on");
+  boxes.forEach((b, n) => b.classList.toggle("on", n === i));
+  lines(plain, i);
+}
+function showParadise(i) {
+  split.classList.remove("on");
+  close.classList.remove("on");
+  ask.classList.add("on");
+  site.textContent = "Paradise";
+  site.classList.add("on");
+  phone.classList.add("on");
+  shot.classList.remove("on");
+  para.classList.add("on");
+  screens.forEach((el, n) => {
+    el.classList.toggle("on", n === i);
+    el.querySelectorAll(".zone").forEach(z => z.classList.remove("hot"));
+  });
+  const zone = screens[i].querySelector(".zone");
+  if (zone) zone.classList.add("hot");
+  lines(paradise, i);
+}
+function showSplit() {
+  phone.classList.remove("on");
+  prompt.innerHTML = "";
+  site.classList.remove("on");
+  ask.classList.remove("on");
+  close.classList.remove("on");
+  split.classList.add("on");
+}
+function showClose() {
+  split.classList.remove("on");
+  close.classList.add("on");
+}
+function clearBoard() {
+  ask.classList.remove("on");
+  site.classList.remove("on");
+  phone.classList.remove("on");
+  shot.classList.add("on");
+  para.classList.remove("on");
+  split.classList.remove("on");
+  close.classList.remove("on");
+  boxes.forEach(b => b.classList.remove("on"));
+  screens.forEach(el => {
+    el.classList.remove("on");
+    el.querySelectorAll(".zone").forEach(z => z.classList.remove("hot"));
+  });
+  prompt.innerHTML = "";
+  site.textContent = "";
+}
+
+const cues = [];
+const at = (t, fn) => cues.push([t, fn]);
+at(300, () => ask.classList.add("on"));
+at(1400, () => showPlain(0));
+at(3800, () => showPlain(1));
+at(6200, () => showPlain(2));
+at(8600, () => showPlain(3));
+at(11600, () => showParadise(0));
+at(14600, () => showParadise(1));
+at(17600, () => showParadise(2));
+at(20600, () => showParadise(3));
+at(24000, () => showSplit());
+at(28500, () => showClose());
+const LOOP = 33500;
+cues.sort((a, b) => a[0] - b[0]);
+
+let raf = 0, t0 = null, elapsed = 0, cursor = 0, running = true;
+function frame(now) {
+  if (t0 == null) t0 = now - elapsed;
+  elapsed = now - t0;
+  while (cursor < cues.length && elapsed >= cues[cursor][0]) { cues[cursor][1](); cursor++; }
+  if (elapsed >= LOOP) {
+    clearBoard();
+    void art.offsetWidth;
+    t0 = now; elapsed = 0; cursor = 0;
+  }
+  if (running) raf = requestAnimationFrame(frame);
+}
+function pauseToggle() {
+  running = !running;
+  if (running) { t0 = null; raf = requestAnimationFrame(frame); }
+  else cancelAnimationFrame(raf);
+}
+function restart() {
+  cancelAnimationFrame(raf);
+  clearBoard();
+  void art.offsetWidth;
+  t0 = null; elapsed = 0; cursor = 0; running = true;
+  document.body.classList.add("went");
+  raf = requestAnimationFrame(frame);
+}
+addEventListener("keydown", (e) => {
+  if (e.code === "Space") { e.preventDefault(); pauseToggle(); }
+  if (e.key === "r" || e.key === "R" || e.key === "к" || e.key === "К") restart();
+});
+
+const params = new URLSearchParams(location.search);
+const seek = Number(params.get("t") || 0);
+if (seek > 0) {
+  document.body.classList.add("instant");
+  elapsed = seek;
+  while (cursor < cues.length && elapsed >= cues[cursor][0]) { cues[cursor][1](); cursor++; }
+  if (params.get("pause") === "1") running = false;
+  requestAnimationFrame(() => document.body.classList.remove("instant"));
+}
+document.body.classList.add("went");
+if (running) raf = requestAnimationFrame(frame);
+</script>
+</body>
+</html>

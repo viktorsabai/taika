@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Taika · FigJam — JTBD Canvas</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; overflow: hidden;
+    font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: #0e0e0e; color: #fff; user-select: none;
+  }
+
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: 48px 1fr;
+    min-width: 1280px;
+  }
+
+  /* ── Left file rail (FigJam) ── */
+  .rail {
+    grid-row: 1 / -1;
+    background: #1a1a1a;
+    border-right: 1px solid #2a2a2a;
+    padding: 14px 10px;
+    font-size: 12px;
+    color: #b5b5b5;
+    z-index: 50;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .rail .brand {
+    display: flex; align-items: center; gap: 8px;
+    color: #fff; font-weight: 600; font-size: 13px;
+    margin-bottom: 14px; padding: 0 6px;
+  }
+  .fj {
+    width: 20px; height: 20px; border-radius: 5px;
+    background: linear-gradient(135deg, #a259ff, #7b61ff);
+  }
+  .rail .nav {
+    padding: 7px 8px; border-radius: 6px; color: #9a9a9a;
+  }
+  .rail .sec {
+    margin: 14px 6px 6px; font-size: 10px; letter-spacing: .06em;
+    text-transform: uppercase; color: #666;
+  }
+  .rail .file {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 6px; color: #c8c8c8;
+  }
+  .rail .file.on { background: #2a2a2a; color: #fff; }
+  .rail .dot {
+    width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
+  }
+  .d-purple { background: #a259ff; }
+  .d-green { background: #0acf83; }
+  .d-orange { background: #f24e1e; }
+  .d-blue { background: #18a0fb; }
+  .rail .invite {
+    margin-top: auto; margin: auto 6px 4px;
+    border: 1px solid #333; border-radius: 8px;
+    padding: 8px 10px; text-align: center; color: #aaa;
+  }
+
+  /* ── Top ── */
+  .top {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 14px;
+    background: #1e1e1e;
+    border-bottom: 1px solid #2a2a2a;
+    z-index: 40; font-size: 12px;
+  }
+  .fname { color: #fff; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .badge {
+    font-size: 10px; color: #bbb; background: #333;
+    padding: 2px 7px; border-radius: 4px;
+  }
+  .grow { flex: 1; }
+  .avs { display: flex; align-items: center; }
+  .avs i {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid #1e1e1e; margin-left: -7px;
+    display: grid; place-items: center;
+    font-size: 10px; font-weight: 700; font-style: normal;
+  }
+  .avs i:first-child { margin-left: 0; }
+  .a1 { background: #e4572e; } .a2 { background: #18a0fb; }
+  .a3 { background: #0acf83; } .a4 { background: #f5c542; color: #222; }
+  .plus { color: #aaa; font-size: 11px; margin-left: 6px; }
+  .share {
+    background: #9747ff; color: #fff; border: 0;
+    border-radius: 6px; padding: 7px 14px; font-size: 12px; font-weight: 600;
+  }
+  .zchip {
+    background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 6px;
+    padding: 4px 10px; color: #ddd; min-width: 48px; text-align: center;
+  }
+
+  /* ── Main viewport ── */
+  .main {
+    position: relative; min-height: 0; overflow: hidden;
+    background: #141414;
+  }
+
+  .world {
+    position: absolute; left: 0; top: 0;
+    width: 2600px; height: 1700px;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+
+  /* Canvas title */
+  .title-block {
+    position: absolute; left: 80px; top: 60px;
+  }
+  .title-block h1 {
+    font-size: 36px; font-weight: 700; color: #f2f2f2; letter-spacing: -0.02em;
+  }
+  .title-block p {
+    margin-top: 6px; font-size: 13px; color: #8a8a8a; max-width: 420px;
+  }
+  .brand-pill {
+    position: absolute; left: 980px; top: 68px;
+    background: #222; border: 1px solid #333; border-radius: 10px;
+    padding: 8px 14px; font-weight: 700; font-size: 14px; color: #fff;
+  }
+  .brand-pill span { color: #c47a3a; }
+
+  /* Sections */
+  .sec {
+    position: absolute;
+  }
+  .sec .head {
+    display: flex; align-items: baseline; gap: 8px;
+    margin-bottom: 10px;
+  }
+  .sec .num {
+    font-size: 11px; font-weight: 700; opacity: .7;
+  }
+  .sec h3 {
+    font-size: 14px; font-weight: 700; letter-spacing: .02em;
+  }
+  .sec .sub {
+    font-size: 11px; color: #777; margin-top: 2px; margin-bottom: 10px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 148px);
+    gap: 10px;
+  }
+  .grid.row {
+    grid-template-columns: repeat(4, 170px);
+  }
+
+  .s1 { left: 80px;  top: 160px; }
+  .s2 { left: 580px; top: 160px; }
+  .s3 { left: 1080px;top: 160px; }
+  .s4 { left: 80px;  top: 520px; }
+  .s5 { left: 580px; top: 520px; }
+  .s6 { left: 1080px;top: 520px; }
+  .s7 { left: 80px;  top: 880px; }
+
+  .c-purple { color: #c9a0ff; }
+  .c-blue { color: #7ec8ff; }
+  .c-green { color: #7dffb3; }
+  .c-yellow { color: #ffe066; }
+  .c-orange { color: #ffb366; }
+  .c-indigo { color: #9aa8ff; }
+
+  /* Stickies */
+  .sticky {
+    width: 148px; min-height: 92px;
+    border-radius: 8px;
+    padding: 12px 11px;
+    font-size: 13px; font-weight: 600; line-height: 1.25;
+    color: #1a1a1a;
+    box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    opacity: 0;
+    transform: scale(.92);
+    transition: opacity .28s ease, transform .32s cubic-bezier(.2,.8,.2,1),
+                box-shadow .2s, outline-color .15s, filter .25s;
+    position: relative;
+  }
+  .sticky.wide { width: 170px; min-height: 78px; font-size: 12px; }
+  .sticky.on { opacity: 1; transform: none; }
+  .sticky.sel {
+    outline: 2px solid #0d99ff;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(13,153,255,.25), 0 6px 16px rgba(0,0,0,.4);
+  }
+  .sticky.gone {
+    opacity: 0 !important;
+    transform: scale(.8) rotate(-4deg) !important;
+    filter: blur(1px);
+    pointer-events: none;
+  }
+  .sticky.moved {
+    transform: translate(18px, -10px) rotate(2deg);
+  }
+
+  .y { background: #ffe566; }
+  .p { background: #f5a3c7; }
+  .b { background: #8ec8ff; }
+  .g { background: #8eefb0; }
+  .o { background: #ffb86c; }
+  .v { background: #d2b8ff; }
+  .i { background: #a8b4ff; }
+
+  /* Stamp overlays on stickies */
+  .stamp {
+    position: absolute; right: -6px; top: -8px;
+    font-size: 18px; opacity: 0;
+    transform: scale(.4) rotate(-12deg);
+    transition: opacity .2s, transform .3s cubic-bezier(.2,1.2,.3,1);
+    pointer-events: none; z-index: 5;
+  }
+  .stamp.on { opacity: 1; transform: scale(1) rotate(-8deg); }
+
+  /* Right synthesis panels */
+  .panel {
+    position: absolute;
+    left: 1620px;
+    width: 320px;
+    background: #1c1c1c;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 14px 16px;
+    opacity: 0;
+    transform: translateX(16px);
+    transition: opacity .35s ease, transform .4s cubic-bezier(.2,.8,.2,1);
+  }
+  .panel.on { opacity: 1; transform: none; }
+  .p-job { top: 160px; }
+  .p-keys { top: 360px; }
+  .p-ops { top: 560px; }
+  .p-next { top: 740px; }
+  .panel .ico { font-size: 14px; margin-right: 6px; }
+  .panel h4 {
+    font-size: 13px; font-weight: 700; color: #eee; margin-bottom: 10px;
+  }
+  .panel .body-text {
+    font-size: 12px; line-height: 1.45; color: #b8b8b8;
+    min-height: 72px;
+  }
+  .panel .body-text .cursor-blink {
+    display: inline-block; width: 2px; height: 12px;
+    background: #9747ff; vertical-align: -1px; margin-left: 1px;
+    animation: blink 0.8s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .panel ul { list-style: none; }
+  .panel li {
+    font-size: 12px; color: #b8b8b8; padding: 4px 0;
+    opacity: 0; transform: translateY(4px);
+    transition: opacity .25s, transform .3s;
+  }
+  .panel li.on { opacity: 1; transform: none; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips span {
+    background: #243528; color: #8eefb0; border: 1px solid #2f4a38;
+    border-radius: 999px; padding: 5px 10px; font-size: 11px; font-weight: 600;
+    opacity: 0; transform: scale(.9);
+    transition: opacity .25s, transform .3s;
+  }
+  .chips span.on { opacity: 1; transform: none; }
+  .check {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: #b8b8b8; padding: 5px 0;
+    opacity: 0; transition: opacity .25s;
+  }
+  .check.on { opacity: 1; }
+  .check .box {
+    width: 14px; height: 14px; border-radius: 3px;
+    border: 1.5px solid #555; flex-shrink: 0;
+    display: grid; place-items: center; font-size: 10px; color: #0acf83;
+  }
+  .check.done .box {
+    background: #1a3a28; border-color: #0acf83;
+  }
+  .check.done .box::after { content: "✓"; }
+
+  /* Connector scribble */
+  .wire {
+    position: absolute;
+    left: 520px; top: 400px;
+    width: 80px; height: 40px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .wire.on { opacity: 1; transition: opacity .3s; }
+  .wire path {
+    fill: none; stroke: #9747ff; stroke-width: 2;
+    stroke-dasharray: 120; stroke-dashoffset: 120;
+  }
+  .wire.draw path {
+    animation: drawWire .6s ease forwards;
+  }
+  @keyframes drawWire { to { stroke-dashoffset: 0; } }
+
+  /* Context menu */
+  .ctx {
+    position: absolute; z-index: 30;
+    background: #2a2a2a; border: 1px solid #3d3d3d;
+    border-radius: 10px; padding: 6px;
+    min-width: 150px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.5);
+    opacity: 0; pointer-events: none;
+    transform: scale(.96);
+    transition: opacity .15s, transform .15s;
+  }
+  .ctx.on { opacity: 1; transform: none; }
+  .ctx div {
+    padding: 7px 10px; border-radius: 6px;
+    font-size: 12px; color: #ddd;
+  }
+  .ctx div.hot { background: #9747ff; color: #fff; }
+  .ctx .danger { color: #ff7b7b; }
+
+  /* Floating bottom toolbar */
+  .dock {
+    position: absolute; bottom: 22px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 45;
+    display: flex; align-items: center; gap: 2px;
+    background: #2a2a2a; border: 1px solid #3a3a3a;
+    border-radius: 14px; padding: 6px 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.45);
+  }
+  .dock .tb {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: grid; place-items: center;
+    color: #ccc; font-size: 15px;
+  }
+  .dock .tb.on { background: #9747ff; color: #fff; }
+  .dock .div { width: 1px; height: 22px; background: #444; margin: 0 4px; }
+
+  /* Mini left floating tools */
+  .float-left {
+    position: absolute; left: 16px; top: 50%;
+    transform: translateY(-50%);
+    z-index: 45;
+    background: #2a2a2a; border: 1px solid #3a3a3a;
+    border-radius: 12px; padding: 6px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .float-left .tb {
+    width: 34px; height: 34px; border-radius: 8px;
+    display: grid; place-items: center; color: #ccc; font-size: 14px;
+  }
+  .float-left .tb.on { background: #3a3a3a; color: #fff; }
+
+  /* Cursors */
+  .pc {
+    position: absolute; z-index: 20; pointer-events: none;
+    transition: left .8s cubic-bezier(.25,.1,.25,1), top .8s cubic-bezier(.25,.1,.25,1);
+  }
+  .pc svg { display: block; width: 14px; height: 14px; }
+  .pc .tag {
+    margin: 1px 0 0 8px; font-size: 10px; font-weight: 700;
+    padding: 2px 5px; border-radius: 3px; color: #fff; white-space: nowrap;
+  }
+  .mc {
+    position: absolute; z-index: 48; pointer-events: none;
+    width: 16px; height: 16px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.5));
+    transition: left .3s cubic-bezier(.2,.8,.2,1), top .3s cubic-bezier(.2,.8,.2,1);
+  }
+
+  .toast {
+    position: absolute; bottom: 78px; left: 50%; transform: translateX(-50%);
+    z-index: 46; pointer-events: none;
+    background: #2a2a2a; border: 1px solid #3a3a3a; color: #eee;
+    font-size: 12px; font-weight: 500;
+    padding: 8px 14px; border-radius: 8px;
+    opacity: 0; transition: opacity .2s;
+  }
+  .toast.on { opacity: 1; }
+
+  .hint {
+    position: absolute; left: 70px; bottom: 18px; z-index: 44;
+    font-size: 10px; color: rgba(255,255,255,.22);
+    font-family: ui-monospace, Menlo, monospace;
+  }
+
+  .hud {
+    position: absolute; left: 70px; top: 12px; z-index: 60;
+    width: 210px; padding: 10px;
+    background: rgba(30,30,30,.94); border: 1px solid #444; border-radius: 10px;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .hud.on { opacity: 1; pointer-events: auto; }
+  .hud input { width: 100%; }
+  .hud .r { display: flex; gap: 8px; margin-top: 8px; align-items: center; font-size: 12px; }
+  .hud button {
+    background: #333; border: 1px solid #555; color: #fff;
+    border-radius: 7px; padding: 5px 10px; cursor: pointer; font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><div class="fj"></div> FigJam</div>
+    <div class="nav">⌕ Search</div>
+    <div class="nav">Recent</div>
+    <div class="nav">Drafts</div>
+    <div class="sec">Favorite files</div>
+    <div class="file on"><span class="dot d-purple"></span> 02_JTBD_Canvas_Taika</div>
+    <div class="file"><span class="dot d-green"></span> 01_Personas</div>
+    <div class="file"><span class="dot d-orange"></span> Competitor map</div>
+    <div class="file"><span class="dot d-blue"></span> Research dump</div>
+    <div class="sec">Projects</div>
+    <div class="file"><span class="dot d-purple"></span> Taika</div>
+    <div class="file"><span class="dot d-green"></span> MOO</div>
+    <div class="invite">Invite to team</div>
+  </aside>
+
+  <header class="top">
+    <div class="fname">02_JTBD_Canvas_Taika.figjam <span class="badge">Draft</span></div>
+    <div class="grow"></div>
+    <div class="avs">
+      <i class="a1">P</i><i class="a2">A</i><i class="a3">M</i><i class="a4">K</i>
+      <span class="plus">+2</span>
+    </div>
+    <button class="share" type="button">Share</button>
+    <div class="zchip" id="zoomChip">42%</div>
+  </header>
+
+  <div class="main" id="vp">
+    <div class="world" id="world">
+      <div class="title-block">
+        <h1>JTBD Canvas — Taika</h1>
+        <p>What the user is trying to do, in what context, and why.</p>
+      </div>
+      <div class="brand-pill">taika <span>· thai</span></div>
+
+      <section class="sec s1" id="s-when">
+        <div class="head"><span class="num c-purple">1</span><h3 class="c-purple">WHEN / КОГДА</h3></div>
+        <div class="sub">situation · trigger</div>
+        <div class="grid" id="g-when"></div>
+      </section>
+      <section class="sec s2" id="s-want">
+        <div class="head"><span class="num c-blue">2</span><h3 class="c-blue">I WANT / Я ХОЧУ</h3></div>
+        <div class="sub">progress · job</div>
+        <div class="grid" id="g-want"></div>
+      </section>
+      <section class="sec s3" id="s-so">
+        <div class="head"><span class="num c-green">3</span><h3 class="c-green">SO I CAN / ЧТОБЫ</h3></div>
+        <div class="sub">outcome</div>
+        <div class="grid" id="g-so"></div>
+      </section>
+      <section class="sec s4" id="s-pain">
+        <div class="head"><span class="num c-yellow">4</span><h3 class="c-yellow">PAINS / БОЛИ</h3></div>
+        <div class="sub">friction</div>
+        <div class="grid" id="g-pain"></div>
+      </section>
+      <section class="sec s5" id="s-gain">
+        <div class="head"><span class="num c-orange">5</span><h3 class="c-orange">GAINS / ВЫГОДЫ</h3></div>
+        <div class="sub">desired push</div>
+        <div class="grid" id="g-gain"></div>
+      </section>
+      <section class="sec s6" id="s-ctx">
+        <div class="head"><span class="num c-indigo">6</span><h3 class="c-indigo">CONTEXT / КОНТЕКСТ</h3></div>
+        <div class="sub">where · mode</div>
+        <div class="grid" id="g-ctx"></div>
+      </section>
+      <section class="sec s7" id="s-opp">
+        <div class="head"><span class="num c-green">7</span><h3 class="c-green">OPPORTUNITIES</h3></div>
+        <div class="sub">product bets</div>
+        <div class="grid row" id="g-opp"></div>
+      </section>
+
+      <svg class="wire" id="wire" viewBox="0 0 80 40">
+        <path d="M4 20 C 28 4, 52 36, 76 18"/>
+      </svg>
+
+      <div class="panel p-job" id="pJob">
+        <h4><span class="ico">◎</span> Job Statement</h4>
+        <div class="body-text" id="jobText"></div>
+      </div>
+      <div class="panel p-keys" id="pKeys">
+        <h4><span class="ico">💡</span> Key Takeaways</h4>
+        <ul id="keysList"></ul>
+      </div>
+      <div class="panel p-ops" id="pOps">
+        <h4><span class="ico">★</span> Opportunities</h4>
+        <div class="chips" id="oppChips"></div>
+      </div>
+      <div class="panel p-next" id="pNext">
+        <h4><span class="ico">🚀</span> Next Steps</h4>
+        <div id="nextList"></div>
+      </div>
+
+      <div class="ctx" id="ctx">
+        <div>Copy</div>
+        <div class="hot">Change color</div>
+        <div>Add stamp</div>
+        <div class="danger">Delete</div>
+      </div>
+
+      <div class="pc" id="cA" style="left:200px;top:280px">
+        <svg viewBox="0 0 24 24"><path d="M5 3l14 8.5-6.2 1.6L10 21 5 3z" fill="#18a0fb"/></svg>
+        <div class="tag" style="background:#18a0fb">Anya</div>
+      </div>
+      <div class="pc" id="cB" style="left:900px;top:340px">
+        <svg viewBox="0 0 24 24"><path d="M5 3l14 8.5-6.2 1.6L10 21 5 3z" fill="#0acf83"/></svg>
+        <div class="tag" style="background:#0acf83">Max</div>
+      </div>
+    </div>
+
+    <div class="float-left">
+      <div class="tb on" id="flSelect">↖</div>
+      <div class="tb" id="flShape">⬚</div>
+      <div class="tb" id="flHand">✋</div>
+      <div class="tb" id="flText">T</div>
+      <div class="tb" id="flStamp">◉</div>
+    </div>
+
+    <div class="dock" id="dock">
+      <div class="tb on" data-tool="select">↖</div>
+      <div class="tb" data-tool="pen">✎</div>
+      <div class="tb" data-tool="sticky">🗒</div>
+      <div class="div"></div>
+      <div class="tb" data-tool="text">T</div>
+      <div class="tb" data-tool="shape">◇</div>
+      <div class="tb" data-tool="conn">／</div>
+      <div class="div"></div>
+      <div class="tb" data-tool="stamp">💮</div>
+      <div class="tb" data-tool="react">✋</div>
+      <div class="tb" data-tool="more">+</div>
+    </div>
+
+    <div class="mc" id="mc">
+      <svg width="16" height="16" viewBox="0 0 24 24"><path d="M5 3l14 8.5-6.2 1.6L10 21 5 3z" fill="#fff" stroke="#111" stroke-width="1"/></svg>
+    </div>
+    <div class="toast" id="toast"></div>
+    <div class="hint">Space · pause · Esc · restart · dblclick · scrub</div>
+
+    <div class="hud" id="hud">
+      <input type="range" id="scrub" min="0" max="72" step="0.05" value="0"/>
+      <div class="r">
+        <button type="button" id="btnPlay">Pause</button>
+        <button type="button" id="btnRestart">Restart</button>
+        <span id="timeLabel">0.0s</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const DURATION = 72;
+
+  const ZONES = {
+    when: { color: 'v', items: ['Тай', '✈️ trip', 'рынок', 'на месте', 'в дороге', 'после урока'] },
+    want: { color: 'b', items: ['говорить', 'нормы', 'быт', 'не турист', 'живое', 'контекст'] },
+    so:   { color: 'g', items: ['свобода', 'уверенность', 'время', 'без переводчика', 'кайф', 'свои'] },
+    pain: { color: 'y', items: ['хаос', 'страх', 'устарело', 'игра ≠ жизнь', 'тоны', 'забываю'] },
+    gain: { color: 'o', items: ['ясно', 'вслух', 'кру рядом', 'сцены', 'память', 'ритм'] },
+    ctx:  { color: 'i', items: ['trip', 'work', 'everyday', 'дом', 'транспорт', 'разговор'] },
+    opp:  { color: 'g', items: ['Smart Speaker', 'Словарь рядом', 'Сцены / JTBD', 'Тоны вслух', 'Закрепление', 'Культура', 'Быт-пакеты', 'Голос → смысл'], wide: true },
+  };
+
+  const stickyMap = {};
+  Object.keys(ZONES).forEach((z) => {
+    const root = document.getElementById('g-' + z);
+    const { color, items, wide } = ZONES[z];
+    stickyMap[z] = items.map((text, idx) => {
+      const el = document.createElement('div');
+      el.className = `sticky ${color}` + (wide ? ' wide' : '');
+      el.dataset.zone = z;
+      el.dataset.idx = String(idx);
+      el.innerHTML = `<span class="label">${text}</span><span class="stamp" data-stamp></span>`;
+      root.appendChild(el);
+      return el;
+    });
+  });
+
+  // One sticky we'll delete as "wrong idea" — last pain "забываю" kept; use pain[2] устарело for delete demo? Better: a duplicate-ish "турист-режим" we inject
+  // Use pain index 2 "устарело" for color change; want index 5 for delete after wrong drop
+  const deleteTarget = stickyMap.want[5]; // контекст — we'll replace narrative: delete a weak sticky
+  deleteTarget.querySelector('.label').textContent = 'просто слова';
+
+  const keys = ['Главная ценность — говорить в жизни, не в игре', 'Тоны = страх №1', 'Контекст важнее грамматики'];
+  const keysList = document.getElementById('keysList');
+  const keyEls = keys.map((t) => {
+    const li = document.createElement('li');
+    li.textContent = '· ' + t;
+    keysList.appendChild(li);
+    return li;
+  });
+
+  const chips = ['Speaker', 'Dictionary', 'Scenes', 'Tones'];
+  const chipRoot = document.getElementById('oppChips');
+  const chipEls = chips.map((t) => {
+    const s = document.createElement('span');
+    s.textContent = t;
+    chipRoot.appendChild(s);
+    return s;
+  });
+
+  const nexts = ['Сформулировать HMW', 'Приоритизировать bets', 'Собрать Speaker MVP'];
+  const nextRoot = document.getElementById('nextList');
+  const nextEls = nexts.map((t) => {
+    const d = document.createElement('div');
+    d.className = 'check';
+    d.innerHTML = `<span class="box"></span><span>${t}</span>`;
+    nextRoot.appendChild(d);
+    return d;
+  });
+
+  const JOB_FULL = 'Когда я в Тае и мне нужно говорить по делу — я хочу живой язык с контекстом, чтобы чувствовать себя своим, а не туристом.';
+
+  /* Camera: HOLD → ease → HOLD */
+  const MOVE = 1.1;
+  const SHOTS = [
+    { t: 0,    s: 0.40, x: 980,  y: 620, toast: null },
+    { t: 3.5,  s: 0.88, x: 320,  y: 320, toast: 'When' },
+    { t: 14,   s: 0.88, x: 820,  y: 320, toast: 'I want' },
+    { t: 24,   s: 0.88, x: 1320, y: 320, toast: 'So I can' },
+    { t: 33,   s: 0.82, x: 320,  y: 680, toast: 'Pains' },
+    { t: 41,   s: 0.82, x: 820,  y: 680, toast: 'Gains' },
+    { t: 48,   s: 0.82, x: 1320, y: 680, toast: 'Context' },
+    { t: 55,   s: 0.72, x: 620,  y: 980, toast: 'Opportunities' },
+    { t: 62,   s: 0.78, x: 1780, y: 520, toast: 'Synthesize' },
+    { t: 68,   s: 0.42, x: 1000, y: 640, toast: null },
+  ];
+
+  function easeInOut(u) {
+    return u < 0.5 ? 2*u*u : 1 - Math.pow(-2*u + 2, 2) / 2;
+  }
+
+  function camAt(t) {
+    let i = 0;
+    for (let k = 0; k < SHOTS.length; k++) if (t >= SHOTS[k].t) i = k;
+    const cur = SHOTS[i];
+    const prev = SHOTS[Math.max(0, i - 1)];
+    if (i === 0) return { scale: cur.s, fx: cur.x, fy: cur.y, toast: cur.toast };
+    const elapsed = t - cur.t;
+    if (elapsed < MOVE) {
+      const u = easeInOut(elapsed / MOVE);
+      return {
+        scale: prev.s + (cur.s - prev.s) * u,
+        fx: prev.x + (cur.x - prev.x) * u,
+        fy: prev.y + (cur.y - prev.y) * u,
+        toast: elapsed > MOVE * 0.55 ? cur.toast : prev.toast,
+      };
+    }
+    return { scale: cur.s, fx: cur.x, fy: cur.y, toast: cur.toast };
+  }
+
+  const REVEAL = {
+    when: { start: 4.8, step: 0.55 },
+    want: { start: 15.2, step: 0.5 },
+    so:   { start: 25.2, step: 0.48 },
+    pain: { start: 34.2, step: 0.48 },
+    gain: { start: 42.2, step: 0.48 },
+    ctx:  { start: 49.2, step: 0.45 },
+    opp:  { start: 56.2, step: 0.35 },
+  };
+
+  // Sparse collab hops
+  const HOPS_A = [[0,200,280],[7,280,360],[18,760,300],[35,260,700],[50,1200,700],[58,500,980],[64,1700,400]];
+  const HOPS_B = [[0,900,340],[12,1000,400],[28,1380,340],[40,760,720],[52,1400,720],[60,700,1000],[65,1750,600]];
+
+  function hopAt(hops, t) {
+    let i = 0;
+    for (let k = 0; k < hops.length; k++) if (t >= hops[k][0]) i = k;
+    return hops[i];
+  }
+
+  const vp = document.getElementById('vp');
+  const world = document.getElementById('world');
+  const mc = document.getElementById('mc');
+  const toast = document.getElementById('toast');
+  const zoomChip = document.getElementById('zoomChip');
+  const cA = document.getElementById('cA');
+  const cB = document.getElementById('cB');
+  const ctx = document.getElementById('ctx');
+  const wire = document.getElementById('wire');
+  const dockTools = [...document.querySelectorAll('#dock .tb[data-tool]')];
+
+  function setTool(name) {
+    dockTools.forEach((el) => el.classList.toggle('on', el.dataset.tool === name));
+    document.getElementById('flStamp').classList.toggle('on', name === 'stamp');
+    document.getElementById('flSelect').classList.toggle('on', name === 'select' || name === 'sticky');
+  }
+
+  function setCamera(t) {
+    const { scale, fx, fy, toast: toastText } = camAt(t);
+    const vw = vp.clientWidth, vh = vp.clientHeight;
+    const tx = vw / 2 - fx * scale;
+    const ty = vh / 2 - fy * scale;
+    world.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    zoomChip.textContent = Math.round(scale * 100) + '%';
+    toast.textContent = toastText || '';
+    toast.classList.toggle('on', !!toastText);
+    return { scale, fx, fy, tx, ty };
+  }
+
+  function worldToVp(wx, wy, cam) {
+    return { x: cam.tx + wx * cam.scale, y: cam.ty + wy * cam.scale };
+  }
+
+  // Approximate sticky world positions for cursor targeting
+  const SEC_POS = {
+    when: [80, 160], want: [580, 160], so: [1080, 160],
+    pain: [80, 520], gain: [580, 520], ctx: [1080, 520], opp: [80, 880],
+  };
+
+  function stickyWorldPos(z, idx) {
+    const [sx, sy] = SEC_POS[z];
+    const cols = z === 'opp' ? 4 : 3;
+    const w = z === 'opp' ? 180 : 158;
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    return [sx + 10 + col * w + 70, sy + 60 + row * 102 + 40];
+  }
+
+  function apply(t) {
+    const cam = setCamera(t);
+
+    // Clear selection/gone each frame via classes
+    let selected = null;
+    let cursorWX = cam.fx + 20, cursorWY = cam.fy + 10;
+    let tool = 'select';
+
+    Object.keys(REVEAL).forEach((z) => {
+      const { start, step } = REVEAL[z];
+      stickyMap[z].forEach((el, i) => {
+        const at = start + i * step;
+        el.classList.toggle('on', t >= at);
+        el.classList.remove('sel');
+      });
+    });
+
+    // ── Liveliness beats ──
+
+    // Want: after stickies land, select weak one → context menu → delete
+    if (t >= 20.5 && t < 23.5) {
+      tool = 'select';
+      deleteTarget.classList.add('sel');
+      selected = deleteTarget;
+      const [wx, wy] = stickyWorldPos('want', 5);
+      cursorWX = wx; cursorWY = wy;
+      if (t >= 21.2 && t < 22.6) {
+        ctx.classList.add('on');
+        ctx.style.left = (wx + 40) + 'px';
+        ctx.style.top = (wy + 10) + 'px';
+        // highlight Delete
+        [...ctx.children].forEach((c, i) => c.classList.toggle('hot', i === 3));
+      } else {
+        ctx.classList.remove('on');
+      }
+    } else {
+      ctx.classList.remove('on');
+    }
+    if (t >= 22.6) {
+      deleteTarget.classList.add('gone');
+    } else {
+      deleteTarget.classList.remove('gone');
+    }
+
+    // Pain: stamp 🔥 on "тоны"
+    const stampSticky = stickyMap.pain[4];
+    const stampEl = stampSticky.querySelector('[data-stamp]');
+    if (t >= 37.5 && t < 39.5) {
+      tool = 'stamp';
+      stampSticky.classList.add('sel');
+      selected = stampSticky;
+      const [wx, wy] = stickyWorldPos('pain', 4);
+      cursorWX = wx; cursorWY = wy;
+    }
+    if (t >= 38.2) {
+      stampEl.textContent = '🔥';
+      stampEl.classList.add('on');
+    } else {
+      stampEl.classList.remove('on');
+      stampEl.textContent = '';
+    }
+
+    // Gains: thumbs stamp + slight move of one sticky (drag)
+    const moveSticky = stickyMap.gain[2];
+    const stamp2 = moveSticky.querySelector('[data-stamp]');
+    if (t >= 45 && t < 47) {
+      tool = 'stamp';
+      moveSticky.classList.add('sel');
+      const [wx, wy] = stickyWorldPos('gain', 2);
+      cursorWX = wx; cursorWY = wy;
+    }
+    if (t >= 45.6) {
+      stamp2.textContent = '👍';
+      stamp2.classList.add('on');
+    } else {
+      stamp2.classList.remove('on');
+      stamp2.textContent = '';
+    }
+    if (t >= 46.2 && t < 55) {
+      moveSticky.classList.add('moved');
+    } else {
+      moveSticky.classList.remove('moved');
+    }
+
+    // So → connector scribble briefly
+    if (t >= 30.5 && t < 32.5) {
+      tool = 'conn';
+      wire.classList.add('on', 'draw');
+      cursorWX = 560; cursorWY = 400;
+    } else if (t < 30.5) {
+      wire.classList.remove('on', 'draw');
+    }
+
+    // Context: color change via menu on one sticky
+    const colorSticky = stickyMap.ctx[0];
+    if (t >= 51.5 && t < 53.5) {
+      tool = 'select';
+      colorSticky.classList.add('sel');
+      selected = colorSticky;
+      const [wx, wy] = stickyWorldPos('ctx', 0);
+      cursorWX = wx; cursorWY = wy;
+      if (t >= 52 && t < 53) {
+        ctx.classList.add('on');
+        ctx.style.left = (wx + 40) + 'px';
+        ctx.style.top = (wy + 10) + 'px';
+        [...ctx.children].forEach((c, i) => c.classList.toggle('hot', i === 1));
+      }
+    }
+    if (t >= 53) {
+      colorSticky.classList.remove('v', 'i', 'b', 'y');
+      colorSticky.classList.add('o');
+    } else {
+      colorSticky.classList.remove('o');
+      colorSticky.classList.add('i');
+    }
+
+    // Reveal selection pulse for currently appearing sticky
+    Object.keys(REVEAL).forEach((z) => {
+      const { start, step } = REVEAL[z];
+      stickyMap[z].forEach((el, i) => {
+        if (el === deleteTarget && t >= 22.6) return;
+        const at = start + i * step;
+        if (t >= at && t < at + 0.4 && !selected) {
+          el.classList.add('sel');
+          selected = el;
+          const [wx, wy] = stickyWorldPos(z, i);
+          cursorWX = wx; cursorWY = wy;
+          tool = 'sticky';
+        }
+      });
+    });
+
+    // Right panels
+    document.getElementById('pJob').classList.toggle('on', t >= 62.5);
+    document.getElementById('pKeys').classList.toggle('on', t >= 63.5);
+    document.getElementById('pOps').classList.toggle('on', t >= 64.5);
+    document.getElementById('pNext').classList.toggle('on', t >= 65.5);
+
+    // Type job statement
+    const jobText = document.getElementById('jobText');
+    if (t >= 62.8 && t < 67) {
+      const u = Math.min(1, (t - 62.8) / 3.2);
+      const n = Math.floor(JOB_FULL.length * u);
+      jobText.innerHTML = JOB_FULL.slice(0, n) + (u < 1 ? '<span class="cursor-blink"></span>' : '');
+      cursorWX = 1780; cursorWY = 220;
+      tool = 'text';
+    } else if (t >= 67) {
+      jobText.textContent = JOB_FULL;
+    } else {
+      jobText.textContent = '';
+    }
+
+    keyEls.forEach((el, i) => el.classList.toggle('on', t >= 63.8 + i * 0.45));
+    chipEls.forEach((el, i) => el.classList.toggle('on', t >= 64.8 + i * 0.35));
+    nextEls.forEach((el, i) => {
+      const on = t >= 65.8 + i * 0.4;
+      el.classList.toggle('on', on);
+      el.classList.toggle('done', t >= 66.5 + i * 0.45);
+    });
+
+    if (t >= 62) {
+      cursorWX = 1780;
+      cursorWY = 400 + Math.min(200, (t - 62) * 40);
+    }
+
+    setTool(tool);
+
+    // Collab
+    const ha = hopAt(HOPS_A, t);
+    const hb = hopAt(HOPS_B, t);
+    cA.style.left = ha[1] + 'px';
+    cA.style.top = ha[2] + 'px';
+    cB.style.left = hb[1] + 'px';
+    cB.style.top = hb[2] + 'px';
+
+    const p = worldToVp(cursorWX, cursorWY, cam);
+    mc.style.left = p.x + 'px';
+    mc.style.top = p.y + 'px';
+
+    document.getElementById('scrub').value = String(t);
+    document.getElementById('timeLabel').textContent = t.toFixed(1) + 's';
+    document.getElementById('btnPlay').textContent = playing ? 'Pause' : 'Play';
+  }
+
+  let t = 0, playing = true, last = performance.now();
+  function tick(now) {
+    const dt = (now - last) / 1000;
+    last = now;
+    if (playing) {
+      t = Math.min(DURATION, t + dt);
+      if (t >= DURATION) playing = false;
+    }
+    apply(t);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  function toggle() {
+    playing = !playing;
+    if (playing && t >= DURATION) t = 0;
+    last = performance.now();
+  }
+  function restart() { t = 0; playing = true; last = performance.now(); }
+
+  document.getElementById('btnPlay').onclick = toggle;
+  document.getElementById('btnRestart').onclick = restart;
+  document.getElementById('scrub').oninput = (e) => { t = Number(e.target.value); apply(t); };
+  vp.addEventListener('dblclick', () => document.getElementById('hud').classList.toggle('on'));
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); toggle(); }
+    if (e.key === 'Escape') restart();
+  });
+  window.addEventListener('resize', () => apply(t));
+})();
+</script>
+</body>
+</html>

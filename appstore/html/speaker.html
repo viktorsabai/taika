@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face {
+  font-family: "Onmark Trial";
+  src: url("file:///Users/product/Projects/taika/appstore/fonts/Onmark%20TRIAL%20Regular.otf") format("opentype");
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1290px; height: 2796px; overflow: hidden; background: #F25CA6; }
+.screen {
+  width: 1290px; height: 2796px; position: relative; overflow: hidden;
+  background: #F25CA6;
+  font-family: -apple-system, "SF Pro Display", "SF Pro Text", sans-serif;
+  color: #1A0A12;
+}
+h1 {
+  position: absolute; left: 88px; top: 96px; right: 88px;
+  font-size: 96px; line-height: 0.96; font-weight: 760;
+  letter-spacing: -2.6px; white-space: pre-line;
+}
+.phone {
+  position: absolute; left: 78px; top: 390px;
+  width: 1134px; height: 2406px;
+  background: #0A0A0C; border-radius: 86px 86px 0 0; padding: 14px 14px 0;
+}
+.glass {
+  height: 100%; border-radius: 72px 72px 0 0; overflow: hidden;
+  background: #0D0D0F; color: #fff;
+  padding: 22px 40px 72px;
+  display: flex; flex-direction: column;
+}
+.bar {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  height: 54px; font-size: 28px; font-weight: 650;
+}
+.bar .r { text-align: right; }
+.island { width: 168px; height: 32px; border-radius: 16px; background: #000; }
+.mark { display: flex; gap: 6px; align-items: baseline; margin: 22px 0 8px; }
+.mark span { font-family: "Onmark Trial", serif; font-size: 40px; line-height: 1; }
+.mark .a { color: #F25CA6; }
+.kicker {
+  margin-top: 28px; font-size: 22px; font-weight: 650;
+  letter-spacing: 0.8px; text-transform: uppercase; color: rgba(255,255,255,0.45);
+}
+.ru { margin-top: 18px; font-size: 72px; font-weight: 700; letter-spacing: -1.2px; }
+.ph { margin-top: 14px; font-size: 46px; font-weight: 650; }
+.ph .arr { color: #F25CA6; }
+.th { margin-top: 6px; font-size: 32px; color: rgba(255,255,255,0.55); }
+.sec {
+  margin-top: 64px; font-size: 22px; font-weight: 650;
+  letter-spacing: 0.6px; color: rgba(255,255,255,0.55);
+}
+.row { padding: 44px 0 18px; }
+.top { display: flex; align-items: center; gap: 16px; }
+.dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.dot.ok { background: #4CD973; }
+.dot.bad { background: #FA595F; }
+.name { font-size: 36px; font-weight: 650; }
+.sub { margin-top: 4px; font-size: 24px; font-weight: 550; color: rgba(255,255,255,0.55); }
+.sub .ok { color: #4CD973; }
+.sub .bad { color: #FA595F; }
+.score { margin-left: auto; font-size: 32px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.score.ok { color: #4CD973; }
+.score.bad { color: #FA595F; }
+.wave {
+  margin: 28px 0 0 30px; height: 96px;
+  display: flex; align-items: flex-end; gap: 10px;
+}
+.wave i {
+  display: block; width: 8px; border-radius: 4px; background: #fff;
+}
+.listen {
+  margin: 22px 0 0 30px; display: flex; align-items: center; gap: 10px;
+  color: #F25CA6; font-size: 28px; font-weight: 650;
+}
+.again {
+  margin: 36px 8px 0;
+  height: 96px; border-radius: 999px; background: #F25CA6; color: #1A0A12;
+  font-size: 32px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.hint {
+  margin: 14px 0 0 30px; font-size: 26px; line-height: 1.35;
+  font-weight: 550; color: rgba(255,255,255,0.88); max-width: 860px;
+}
+.line { height: 1px; background: rgba(255,255,255,0.11); margin: 18px 0 0 30px; }
+.spark { display: block; margin: 22px 0 0 30px; height: 150px; width: 980px; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <h1>Слышишь, где
+тон уехал</h1>
+  <div class="phone"><div class="glass">
+    <div class="bar"><span>9:41</span><div class="island"></div><span class="r">5G</span></div>
+    <div class="mark"><span>tai</span><span class="a">kAAA</span></div>
+    <div class="kicker">Спикер · разбор</div>
+    <div class="ru">Бронировал номер</div>
+    <div class="ph">джонг<span class="arr">→</span> хонг<span class="arr">↘</span></div>
+    <div class="th">จองห้อง</div>
+    <div class="sec">ПО СЛОГАМ</div>
+
+    <div class="row">
+      <div class="top">
+        <div class="dot ok"></div>
+        <div>
+          <div class="name">джонг</div>
+          <div class="sub">нужен → <span class="ok">· совпало</span></div>
+        </div>
+        <div class="score ok">92%</div>
+      </div>
+      <svg class="spark" width="980" height="110" viewBox="0 0 860 64">
+        <path d="M0 32 C 80 30, 140 34, 220 32 S 360 28, 440 33 S 620 36, 860 31" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="3" stroke-linecap="round"/>
+        <path d="M0 34 C 90 28, 160 36, 250 30 S 400 26, 520 32 S 700 30, 860 28" fill="none" stroke="#4CD973" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <div class="wave">
+        <i style="height:22px"></i><i style="height:38px"></i><i style="height:58px"></i>
+        <i style="height:44px"></i><i style="height:66px"></i><i style="height:36px"></i><i style="height:24px"></i>
+      </div>
+      <div class="listen">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9.2v5.6h3.6L12 19.2V4.8L6.6 9.2H3z"/><path d="M15.6 8.4a4.6 4.6 0 0 1 0 7.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M18.1 6.1a8 8 0 0 1 0 11.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        как надо
+      </div>
+      <div class="hint">Держи тон ровно, средний.</div>
+    </div>
+    <div class="line"></div>
+    <div class="row">
+      <div class="top">
+        <div class="dot bad"></div>
+        <div>
+          <div class="name">хонг</div>
+          <div class="sub">нужен ↘ <span class="bad">· было →</span></div>
+        </div>
+        <div class="score bad">54%</div>
+      </div>
+      <svg class="spark" width="980" height="110" viewBox="0 0 860 64">
+        <path d="M0 18 C 120 20, 200 22, 320 28 S 520 48, 680 56 S 780 60, 860 62" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="3" stroke-linecap="round"/>
+        <path d="M0 30 C 140 28, 240 32, 380 31 S 560 34, 860 29" fill="none" stroke="#FA595F" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <div class="hint">Голос шёл ровно. Нужен спад в конце.</div>
+      <div class="listen" style="color:rgba(255,255,255,0.72)">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9.2v5.6h3.6L12 19.2V4.8L6.6 9.2H3z"/><path d="M15.6 8.4a4.6 4.6 0 0 1 0 7.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M18.1 6.1a8 8 0 0 1 0 11.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        как надо
+      </div>
+      <div class="again">Сказать ещё раз</div>
+    </div>
+  </div></div>
+</div>
+</body>
+</html>

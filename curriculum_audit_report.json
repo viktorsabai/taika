@@ -1,0 +1,1841 @@
+{
+  "stats": {
+    "catalog_courses": 42,
+    "lesson_courses": 42,
+    "stepsets": 267,
+    "lessons_total": 267,
+    "cards_total": 2547,
+    "kind_tip": 232,
+    "kind_word": 533,
+    "phonetic_ok": 2315,
+    "kind_phrase": 1721,
+    "learnable_cards": 2315,
+    "kind_casual": 61,
+    "dup_thai_cards": 353
+  },
+  "severity": {
+    "info": 170
+  },
+  "issue_kinds": {
+    "thai_shared_across_courses": 170
+  },
+  "courses_with_errors": [],
+  "latin_by_course": {},
+  "diacritic_by_course": {},
+  "missing_arrows_by_course": {},
+  "issues": [
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "คุณมาจากไหน",
+      "places": [
+        "course_b_3/course_b_3_l6#4 phrase",
+        "course_b_1/course_b_1_l2#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "แป๊บนึง",
+      "places": [
+        "course_b_3/course_b_3_l7#12 casual",
+        "course_b_4/course_b_4_l3#12 casual"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "มา",
+      "places": [
+        "course_b_2/course_b_2_l1#3 word",
+        "course_b_5/course_b_5_l1#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "น้ำ",
+      "places": [
+        "course_b_2/course_b_2_l1#7 word",
+        "course_l_7/course_l_7_l3#6 phrase",
+        "course_l_10/course_l_10_l5#7 phrase",
+        "course_l_11/course_l_11_l1#5 phrase",
+        "course_l_15/course_l_15_l1#7 phrase"
+      ],
+      "n": 5
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ใหม่",
+      "places": [
+        "course_b_2/course_b_2_l2#3 word",
+        "course_b_6/course_b_6_l6#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไม่อยาก",
+      "places": [
+        "course_b_2/course_b_2_l2#6 phrase",
+        "course_b_5/course_b_5_l2#6 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "บ้านใหม่",
+      "places": [
+        "course_b_2/course_b_2_l2#7 phrase",
+        "course_b_6/course_b_6_l6#7 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "อร่อยมาก",
+      "places": [
+        "course_b_2/course_b_2_l3#8 phrase",
+        "course_b_2/course_b_2_l6#5 phrase",
+        "course_b_6/course_b_6_l1#5 phrase",
+        "course_l_4/course_l_4_l2#9 phrase",
+        "course_l_4/course_l_4_l6#2 word"
+      ],
+      "n": 5
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "สบายดีไหม",
+      "places": [
+        "course_b_2/course_b_2_l4#3 phrase",
+        "course_b_2/course_b_2_l6#3 phrase",
+        "course_b_1/course_b_1_l3#2 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เท่าไหร่",
+      "places": [
+        "course_b_2/course_b_2_l4#5 phrase",
+        "course_b_2/course_b_2_l6#4 phrase",
+        "course_l_2/course_l_2_l6#4 phrase",
+        "course_l_5/course_l_5_l6#8 phrase",
+        "course_l_7/course_l_7_l4#7 phrase",
+        "course_l_10/course_l_10_l1#6 phrase",
+        "course_l_12/course_l_12_l5#2 word",
+        "course_e_3/course_e_3_l4#2 phrase"
+      ],
+      "n": 9
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไปไหน",
+      "places": [
+        "course_b_2/course_b_2_l4#6 phrase",
+        "course_b_5/course_b_5_l1#3 phrase",
+        "course_l_11/course_l_11_l4#3 word"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขอบคุณมาก",
+      "places": [
+        "course_b_2/course_b_2_l4#8 phrase",
+        "course_b_2/course_b_2_l6#9 phrase",
+        "course_b_1/course_b_1_l7#3 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "สบายดี",
+      "places": [
+        "course_b_2/course_b_2_l4#10 phrase",
+        "course_b_2/course_b_2_l6#10 casual",
+        "course_b_1/course_b_1_l3#3 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ใช่",
+      "places": [
+        "course_b_2/course_b_2_l5#7 phrase",
+        "course_e_6/course_e_6_l3#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "สวัสดี",
+      "places": [
+        "course_b_2/course_b_2_l6#2 phrase",
+        "course_b_1/course_b_1_l1#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขอน้ำหน่อย",
+      "places": [
+        "course_b_2/course_b_2_l6#6 phrase",
+        "course_b_1/course_b_1_l4#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เช็คบิล",
+      "places": [
+        "course_b_2/course_b_2_l6#7 phrase",
+        "course_l_4/course_l_4_l1#10 phrase",
+        "course_l_4/course_l_4_l6#3 word",
+        "course_l_6/course_l_6_l5#2 word",
+        "course_l_6/course_l_6_l6#7 phrase",
+        "course_l_15/course_l_15_l1#8 phrase",
+        "course_l_15/course_l_15_l2#8 phrase",
+        "course_l_15/course_l_15_l6#6 phrase"
+      ],
+      "n": 9
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ยี่สิบ",
+      "places": [
+        "course_b_4/course_b_4_l2#4 phrase",
+        "course_l_3/course_l_3_l1#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ร้อย",
+      "places": [
+        "course_b_4/course_b_4_l2#8 phrase",
+        "course_l_3/course_l_3_l1#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "พัน",
+      "places": [
+        "course_b_4/course_b_4_l2#10 phrase",
+        "course_l_3/course_l_3_l7#3 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "กี่โมง",
+      "places": [
+        "course_b_4/course_b_4_l3#2 word",
+        "course_l_13/course_l_13_l4#9 phrase",
+        "course_s_2/course_s_2_l1#13 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เย็น",
+      "places": [
+        "course_b_4/course_b_4_l3#6 phrase",
+        "course_b_6/course_b_6_l3#3 word",
+        "course_l_7/course_l_7_l3#5 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ตอนนี้",
+      "places": [
+        "course_b_4/course_b_4_l3#8 word",
+        "course_l_2/course_l_2_l5#8 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "พรุ่งนี้",
+      "places": [
+        "course_b_4/course_b_4_l4#10 phrase",
+        "course_l_13/course_l_13_l2#8 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ตรงไป",
+      "places": [
+        "course_b_4/course_b_4_l5#2 word",
+        "course_l_2/course_l_2_l3#2 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เลี้ยวซ้าย",
+      "places": [
+        "course_b_4/course_b_4_l5#3 word",
+        "course_l_2/course_l_2_l3#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เข้าใจ",
+      "places": [
+        "course_b_5/course_b_5_l3#3 word",
+        "course_l_4/course_l_4_l3#9 phrase",
+        "course_l_5/course_l_5_l2#9 phrase",
+        "course_l_8/course_l_8_l1#9 phrase",
+        "course_e_1/course_e_1_l1#9 phrase",
+        "course_e_5/course_e_5_l6#3 phrase"
+      ],
+      "n": 6
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไม่เข้าใจ",
+      "places": [
+        "course_b_5/course_b_5_l3#6 phrase",
+        "course_l_1/course_l_1_l4#2 phrase",
+        "course_l_1/course_l_1_l7#4 phrase",
+        "course_l_5/course_l_5_l1#14 phrase",
+        "course_e_1/course_e_1_l1#13 phrase",
+        "course_e_3/course_e_3_l5#2 phrase",
+        "course_b_1/course_b_1_l4#10 phrase"
+      ],
+      "n": 7
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "พูดอีกที",
+      "places": [
+        "course_b_5/course_b_5_l3#10 phrase",
+        "course_l_1/course_l_1_l4#6 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ทำอะไร",
+      "places": [
+        "course_b_5/course_b_5_l5#4 phrase",
+        "course_l_11/course_l_11_l4#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "พักผ่อน",
+      "places": [
+        "course_b_5/course_b_5_l5#8 phrase",
+        "course_l_7/course_l_7_l5#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ช่วย",
+      "places": [
+        "course_b_5/course_b_5_l5#11 phrase",
+        "course_l_10/course_l_10_l4#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ช่วยหน่อย",
+      "places": [
+        "course_b_5/course_b_5_l5#12 phrase",
+        "course_l_5/course_l_5_l1#6 phrase",
+        "course_l_9/course_l_9_l1#3 word"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เอา",
+      "places": [
+        "course_b_5/course_b_5_l6#4 phrase",
+        "course_l_3/course_l_3_l6#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เอาอันนี้",
+      "places": [
+        "course_b_5/course_b_5_l6#8 phrase",
+        "course_b_7/course_b_7_l3#3 phrase",
+        "course_b_7/course_b_7_l4#3 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไม่เอา",
+      "places": [
+        "course_b_5/course_b_5_l6#11 phrase",
+        "course_b_7/course_b_7_l2#6 casual"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "อยู่ที่ไหน",
+      "places": [
+        "course_b_5/course_b_5_l7#10 phrase",
+        "course_b_1/course_b_1_l5#2 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "อร่อย",
+      "places": [
+        "course_b_6/course_b_6_l1#2 word",
+        "course_l_4/course_l_4_l1#9 phrase",
+        "course_l_7/course_l_7_l3#9 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เผ็ดน้อย",
+      "places": [
+        "course_b_6/course_b_6_l1#6 phrase",
+        "course_l_4/course_l_4_l1#7 phrase",
+        "course_l_4/course_l_4_l3#2 word"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "แซ่บ",
+      "places": [
+        "course_b_6/course_b_6_l1#11 casual",
+        "course_s_3/course_s_3_l2#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "สวย",
+      "places": [
+        "course_b_6/course_b_6_l2#2 word",
+        "course_l_7/course_l_7_l5#6 phrase",
+        "course_l_11/course_l_11_l2#8 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "สวยมาก",
+      "places": [
+        "course_b_6/course_b_6_l2#3 phrase",
+        "course_l_11/course_l_11_l3#8 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ราคา",
+      "places": [
+        "course_b_6/course_b_6_l2#5 word",
+        "course_l_8/course_l_8_l2#3 word",
+        "course_l_15/course_l_15_l2#3 word"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ใส่น้ำแข็ง",
+      "places": [
+        "course_b_6/course_b_6_l3#9 phrase",
+        "course_l_15/course_l_15_l1#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "น้ำแข็ง",
+      "places": [
+        "course_b_6/course_b_6_l3#12 phrase",
+        "course_l_7/course_l_7_l3#7 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขนาด",
+      "places": [
+        "course_b_6/course_b_6_l4#4 phrase",
+        "course_l_5/course_l_5_l4#7 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "สะดวก",
+      "places": [
+        "course_b_6/course_b_6_l5#3 phrase",
+        "course_l_10/course_l_10_l5#8 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ปกติ",
+      "places": [
+        "course_b_6/course_b_6_l5#5 phrase",
+        "course_b_1/course_b_1_l3#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "โอเค",
+      "places": [
+        "course_b_6/course_b_6_l5#12 casual",
+        "course_l_7/course_l_7_l5#8 phrase",
+        "course_l_10/course_l_10_l2#9 phrase",
+        "course_l_12/course_l_12_l5#7 phrase",
+        "course_l_13/course_l_13_l6#7 phrase",
+        "course_l_15/course_l_15_l2#7 phrase",
+        "course_b_1/course_b_1_l3#9 casual",
+        "course_b_7/course_b_7_l5#5 phrase"
+      ],
+      "n": 9
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เร็ว",
+      "places": [
+        "course_b_6/course_b_6_l6#4 phrase",
+        "course_l_9/course_l_9_l1#9 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ช้า",
+      "places": [
+        "course_b_6/course_b_6_l6#5 phrase",
+        "course_l_13/course_l_13_l2#7 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ได้",
+      "places": [
+        "course_l_1/course_l_1_l1#2 phrase",
+        "course_l_1/course_l_1_l7#2 phrase",
+        "course_l_4/course_l_4_l7#8 phrase",
+        "course_l_5/course_l_5_l5#9 phrase",
+        "course_e_5/course_e_5_l1#9 phrase"
+      ],
+      "n": 5
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขอโทษ",
+      "places": [
+        "course_l_1/course_l_1_l1#3 phrase",
+        "course_e_4/course_e_4_l1#10 phrase",
+        "course_b_1/course_b_1_l7#4 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เข้าใจแล้ว",
+      "places": [
+        "course_l_1/course_l_1_l1#5 casual",
+        "course_l_1/course_l_1_l4#5 casual",
+        "course_e_1/course_e_1_l1#12 phrase",
+        "course_e_2/course_e_2_l1#16 phrase",
+        "course_e_3/course_e_3_l5#6 casual",
+        "course_s_3/course_s_3_l1#12 phrase",
+        "course_b_1/course_b_1_l4#13 phrase",
+        "course_b_7/course_b_7_l5#4 phrase"
+      ],
+      "n": 8
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "นี่พาสปอร์ต",
+      "places": [
+        "course_l_1/course_l_1_l2#4 phrase",
+        "course_l_6/course_l_6_l6#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "นี่เอกสาร",
+      "places": [
+        "course_l_1/course_l_1_l2#5 casual",
+        "course_long_1/course_long_1_l6#1 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "หมวกกันน็อค",
+      "places": [
+        "course_l_1/course_l_1_l3#2 phrase",
+        "course_long_4/course_long_4_l3#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไปคนเดียว",
+      "places": [
+        "course_l_1/course_l_1_l3#4 phrase",
+        "course_long_4/course_long_4_l1#6 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "พูดช้าหน่อย",
+      "places": [
+        "course_l_1/course_l_1_l4#3 phrase",
+        "course_e_3/course_e_3_l5#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ต้องทำอะไร",
+      "places": [
+        "course_l_1/course_l_1_l4#4 phrase",
+        "course_l_1/course_l_1_l5#2 phrase",
+        "course_l_1/course_l_1_l7#5 phrase",
+        "course_e_2/course_e_2_l1#13 phrase",
+        "course_e_3/course_e_3_l5#5 phrase"
+      ],
+      "n": 5
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "จ่ายบัตรได้ไหม",
+      "places": [
+        "course_l_1/course_l_1_l5#6 phrase",
+        "course_l_2/course_l_2_l1#15 phrase",
+        "course_e_3/course_e_3_l6#5 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "โอเค เข้าใจแล้ว",
+      "places": [
+        "course_l_1/course_l_1_l6#5 casual",
+        "course_e_3/course_e_3_l2#6 casual"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขอเวลาหน่อย",
+      "places": [
+        "course_l_1/course_l_1_l6#8 phrase",
+        "course_s_5/course_s_5_l4#9 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "นี่ที่อยู่",
+      "places": [
+        "course_l_2/course_l_2_l1#9 phrase",
+        "course_l_9/course_l_9_l6#3 word",
+        "course_l_14/course_l_14_l2#3 word"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "แพง",
+      "places": [
+        "course_l_2/course_l_2_l2#3 phrase",
+        "course_l_3/course_l_3_l1#8 phrase",
+        "course_l_8/course_l_8_l2#7 phrase",
+        "course_l_15/course_l_15_l2#4 phrase",
+        "course_b_1/course_b_1_l6#4 phrase"
+      ],
+      "n": 5
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ตกลง",
+      "places": [
+        "course_l_2/course_l_2_l2#9 phrase",
+        "course_l_3/course_l_3_l4#7 phrase",
+        "course_l_3/course_l_3_l7#8 phrase",
+        "course_l_13/course_l_13_l5#8 phrase",
+        "course_e_4/course_e_4_l6#2 word"
+      ],
+      "n": 5
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ตรงนั้น",
+      "places": [
+        "course_l_2/course_l_2_l4#4 phrase",
+        "course_l_8/course_l_8_l1#8 phrase",
+        "course_l_9/course_l_9_l4#6 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "หน้าประตู",
+      "places": [
+        "course_l_2/course_l_2_l4#6 phrase",
+        "course_l_14/course_l_14_l2#8 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "พอ",
+      "places": [
+        "course_l_2/course_l_2_l4#7 phrase",
+        "course_s_5/course_s_5_l4#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขอบคุณ",
+      "places": [
+        "course_l_2/course_l_2_l4#9 phrase",
+        "course_l_2/course_l_2_l7#9 phrase",
+        "course_l_3/course_l_3_l6#4 phrase",
+        "course_l_5/course_l_5_l6#7 phrase",
+        "course_l_6/course_l_6_l1#9 phrase",
+        "course_l_6/course_l_6_l6#8 phrase",
+        "course_l_8/course_l_8_l3#9 phrase",
+        "course_l_8/course_l_8_l6#4 phrase"
+      ],
+      "n": 18
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เสร็จแล้ว",
+      "places": [
+        "course_l_2/course_l_2_l5#9 phrase",
+        "course_l_12/course_l_12_l6#2 word",
+        "course_s_4/course_s_4_l1#13 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "นี่ ขอบคุณ",
+      "places": [
+        "course_l_2/course_l_2_l6#8 phrase",
+        "course_l_7/course_l_7_l6#6 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ลาก่อน",
+      "places": [
+        "course_l_2/course_l_2_l6#10 phrase",
+        "course_l_6/course_l_6_l5#8 phrase",
+        "course_l_7/course_l_7_l6#7 phrase",
+        "course_l_8/course_l_8_l6#5 phrase",
+        "course_l_12/course_l_12_l6#5 phrase"
+      ],
+      "n": 5
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "รอหน้าประตู",
+      "places": [
+        "course_l_2/course_l_2_l7#8 phrase",
+        "course_l_14/course_l_14_l4#6 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "อันนี้เท่าไหร่",
+      "places": [
+        "course_l_3/course_l_3_l1#7 phrase",
+        "course_l_8/course_l_8_l2#2 word",
+        "course_b_1/course_b_1_l6#3 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ลดได้ไหม",
+      "places": [
+        "course_l_3/course_l_3_l1#9 phrase",
+        "course_l_3/course_l_3_l3#4 phrase",
+        "course_b_1/course_b_1_l6#5 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ราคาที่แคชเชียร์ไม่ตรง",
+      "places": [
+        "course_l_3/course_l_3_l3#11 phrase",
+        "course_l_8/course_l_8_l1#14 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "โอเคเอา",
+      "places": [
+        "course_l_3/course_l_3_l4#4 phrase",
+        "course_l_7/course_l_7_l2#9 phrase",
+        "course_l_8/course_l_8_l2#9 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "มะพร้าว",
+      "places": [
+        "course_l_3/course_l_3_l5#6 phrase",
+        "course_l_7/course_l_7_l3#2 word",
+        "course_l_7/course_l_7_l6#12 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "รวมเท่าไหร่",
+      "places": [
+        "course_l_3/course_l_3_l6#2 word",
+        "course_l_7/course_l_7_l6#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "นี่",
+      "places": [
+        "course_l_3/course_l_3_l6#3 word",
+        "course_l_5/course_l_5_l6#9 phrase",
+        "course_l_8/course_l_8_l3#6 phrase",
+        "course_e_4/course_e_4_l1#8 word"
+      ],
+      "n": 4
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ถุง",
+      "places": [
+        "course_l_3/course_l_3_l6#7 phrase",
+        "course_l_8/course_l_8_l4#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "รวมกี่บาท",
+      "places": [
+        "course_l_3/course_l_3_l6#8 phrase",
+        "course_l_8/course_l_8_l6#7 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ถูกไหม",
+      "places": [
+        "course_l_3/course_l_3_l6#12 phrase",
+        "course_l_6/course_l_6_l5#7 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "รอ",
+      "places": [
+        "course_l_4/course_l_4_l5#8 phrase",
+        "course_l_10/course_l_10_l3#7 phrase",
+        "course_l_13/course_l_13_l5#5 phrase",
+        "course_l_13/course_l_13_l6#6 phrase"
+      ],
+      "n": 4
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "จ่าย",
+      "places": [
+        "course_l_4/course_l_4_l6#4 phrase",
+        "course_l_8/course_l_8_l3#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "รวม",
+      "places": [
+        "course_l_4/course_l_4_l6#5 phrase",
+        "course_l_8/course_l_8_l6#3 word",
+        "course_l_12/course_l_12_l5#4 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "แยก",
+      "places": [
+        "course_l_4/course_l_4_l6#6 phrase",
+        "course_l_12/course_l_12_l5#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "บัตร",
+      "places": [
+        "course_l_4/course_l_4_l6#7 phrase",
+        "course_l_6/course_l_6_l5#5 phrase",
+        "course_l_8/course_l_8_l3#7 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เงินสด",
+      "places": [
+        "course_l_4/course_l_4_l6#8 phrase",
+        "course_l_6/course_l_6_l5#6 phrase",
+        "course_l_8/course_l_8_l3#8 phrase",
+        "course_l_13/course_l_13_l2#6 phrase",
+        "course_b_1/course_b_1_l6#8 phrase"
+      ],
+      "n": 5
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ยา",
+      "places": [
+        "course_l_5/course_l_5_l1#3 phrase",
+        "course_long_3/course_long_3_l6#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ร้านยา",
+      "places": [
+        "course_l_5/course_l_5_l1#5 phrase",
+        "course_long_3/course_long_3_l6#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขอบคุณที่แนะนำ",
+      "places": [
+        "course_l_5/course_l_5_l1#8 phrase",
+        "course_l_10/course_l_10_l7#8 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไข้",
+      "places": [
+        "course_l_5/course_l_5_l2#3 word",
+        "course_long_3/course_long_3_l1#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "หลังกินข้าว",
+      "places": [
+        "course_l_5/course_l_5_l3#8 phrase",
+        "course_long_3/course_long_3_l6#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เช้าเย็น",
+      "places": [
+        "course_l_5/course_l_5_l4#5 phrase",
+        "course_l_10/course_l_10_l2#5 phrase",
+        "course_s_4/course_s_4_l2#3 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไม่แพ้",
+      "places": [
+        "course_l_5/course_l_5_l5#3 word",
+        "course_long_3/course_long_3_l3#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "แจ้ง",
+      "places": [
+        "course_l_5/course_l_5_l5#5 phrase",
+        "course_l_9/course_l_9_l4#8 phrase",
+        "course_l_13/course_l_13_l1#5 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "อันนี้",
+      "places": [
+        "course_l_5/course_l_5_l5#7 phrase",
+        "course_e_4/course_e_4_l1#7 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ลิฟต์",
+      "places": [
+        "course_l_6/course_l_6_l1#6 phrase",
+        "course_long_5/course_long_5_l3#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ชั้น",
+      "places": [
+        "course_l_6/course_l_6_l1#7 phrase",
+        "course_l_8/course_l_8_l1#5 phrase",
+        "course_l_14/course_l_14_l2#4 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ห้องอยู่ไหน",
+      "places": [
+        "course_l_6/course_l_6_l1#8 phrase",
+        "course_s_4/course_s_4_l4#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ผ้าเช็ดตัว",
+      "places": [
+        "course_l_6/course_l_6_l2#2 word",
+        "course_l_7/course_l_7_l2#6 phrase",
+        "course_l_10/course_l_10_l5#4 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไม่ทำงาน",
+      "places": [
+        "course_l_6/course_l_6_l3#3 word",
+        "course_l_13/course_l_13_l3#3 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "แอร์เสีย",
+      "places": [
+        "course_l_6/course_l_6_l3#4 phrase",
+        "course_l_13/course_l_13_l3#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ช่วยซ่อมหน่อย",
+      "places": [
+        "course_l_6/course_l_6_l3#5 phrase",
+        "course_l_6/course_l_6_l7#3 word",
+        "course_l_13/course_l_13_l1#7 phrase",
+        "course_l_13/course_l_13_l3#6 phrase",
+        "course_l_13/course_l_13_l7#6 phrase"
+      ],
+      "n": 5
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไม่เย็น",
+      "places": [
+        "course_l_6/course_l_6_l3#6 phrase",
+        "course_l_13/course_l_13_l3#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "น้ำรั่ว",
+      "places": [
+        "course_l_6/course_l_6_l3#7 phrase",
+        "course_l_6/course_l_6_l7#4 phrase",
+        "course_l_13/course_l_13_l1#2 word"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "จะเสร็จเมื่อไหร่",
+      "places": [
+        "course_l_6/course_l_6_l3#8 phrase",
+        "course_l_13/course_l_13_l1#11 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขอบคุณที่ซ่อม",
+      "places": [
+        "course_l_6/course_l_6_l3#9 phrase",
+        "course_l_13/course_l_13_l7#8 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขอบคุณที่ช่วย",
+      "places": [
+        "course_l_6/course_l_6_l7#9 phrase",
+        "course_e_2/course_e_2_l4#4 phrase",
+        "course_e_2/course_e_2_l6#1 word",
+        "course_long_6/course_long_6_l6#1 word"
+      ],
+      "n": 4
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ดำน้ำ",
+      "places": [
+        "course_l_7/course_l_7_l4#2 word",
+        "course_s_2/course_s_2_l1#7 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "อุปกรณ์",
+      "places": [
+        "course_l_7/course_l_7_l4#4 phrase",
+        "course_s_2/course_s_2_l2#6 phrase",
+        "course_long_4/course_long_4_l3#5 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "สนุก",
+      "places": [
+        "course_l_7/course_l_7_l4#9 phrase",
+        "course_l_11/course_l_11_l1#8 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "อันตราย",
+      "places": [
+        "course_l_7/course_l_7_l4#11 phrase",
+        "course_l_9/course_l_9_l1#15 phrase",
+        "course_l_9/course_l_9_l5#7 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ช่วยด้วย",
+      "places": [
+        "course_l_7/course_l_7_l4#12 phrase",
+        "course_l_9/course_l_9_l1#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ต้องการความช่วยเหลือ",
+      "places": [
+        "course_l_7/course_l_7_l4#13 phrase",
+        "course_l_9/course_l_9_l2#8 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "สบาย",
+      "places": [
+        "course_l_7/course_l_7_l5#4 phrase",
+        "course_l_12/course_l_12_l3#7 phrase",
+        "course_e_5/course_e_5_l3#2 word",
+        "course_s_5/course_s_5_l6#2 word"
+      ],
+      "n": 4
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไม่ใช่อันนี้",
+      "places": [
+        "course_l_8/course_l_8_l1#15 phrase",
+        "course_b_7/course_b_7_l3#2 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เปลี่ยนได้ไหม",
+      "places": [
+        "course_l_8/course_l_8_l1#16 phrase",
+        "course_l_8/course_l_8_l7#3 word",
+        "course_b_7/course_b_7_l1#4 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ลดไหม",
+      "places": [
+        "course_l_8/course_l_8_l2#5 phrase",
+        "course_l_8/course_l_8_l5#4 phrase",
+        "course_l_12/course_l_12_l5#6 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "คิว",
+      "places": [
+        "course_l_8/course_l_8_l3#3 word",
+        "course_long_1/course_long_1_l2#7 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ใบเสร็จ",
+      "places": [
+        "course_l_8/course_l_8_l3#10 phrase",
+        "course_l_8/course_l_8_l7#8 phrase",
+        "course_long_1/course_long_1_l5#3 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "สองในราคาหนึ่ง",
+      "places": [
+        "course_l_8/course_l_8_l5#9 phrase",
+        "course_l_15/course_l_15_l2#6 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ด่วน",
+      "places": [
+        "course_l_9/course_l_9_l1#4 phrase",
+        "course_l_13/course_l_13_l3#7 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "โรงพยาบาล",
+      "places": [
+        "course_l_9/course_l_9_l1#7 phrase",
+        "course_l_9/course_l_9_l3#2 word",
+        "course_long_3/course_long_3_l7#4 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ทางออก",
+      "places": [
+        "course_l_9/course_l_9_l5#8 phrase",
+        "course_e_4/course_e_4_l3#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เบอร์โทร",
+      "places": [
+        "course_l_9/course_l_9_l6#4 phrase",
+        "course_l_14/course_l_14_l2#9 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขอบคุณที่มา",
+      "places": [
+        "course_l_9/course_l_9_l6#8 phrase",
+        "course_l_13/course_l_13_l6#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ตาราง",
+      "places": [
+        "course_l_10/course_l_10_l2#3 word",
+        "course_s_4/course_s_4_l2#1 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "โย",
+      "places": [
+        "course_l_10/course_l_10_l2#6 phrase",
+        "course_l_10/course_l_10_l7#3 word",
+        "course_s_2/course_s_2_l1#3 word"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ว่างไหม",
+      "places": [
+        "course_l_10/course_l_10_l3#5 phrase",
+        "course_s_5/course_s_5_l1#11 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "อาบน้ำ",
+      "places": [
+        "course_l_10/course_l_10_l5#2 word",
+        "course_long_6/course_long_6_l4#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "บาย",
+      "places": [
+        "course_l_10/course_l_10_l6#5 phrase",
+        "course_l_15/course_l_15_l5#7 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "จะมาอีก",
+      "places": [
+        "course_l_10/course_l_10_l6#7 phrase",
+        "course_l_12/course_l_12_l6#7 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "มวยไทย",
+      "places": [
+        "course_l_10/course_l_10_l7#4 phrase",
+        "course_s_2/course_s_2_l1#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "จองพรุ่งนี้ได้ไหม",
+      "places": [
+        "course_l_10/course_l_10_l7#7 phrase",
+        "course_l_12/course_l_12_l5#8 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "งาน",
+      "places": [
+        "course_l_11/course_l_11_l4#2 word",
+        "course_e_2/course_e_2_l1#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ร่วม",
+      "places": [
+        "course_l_11/course_l_11_l4#7 phrase",
+        "course_long_5/course_long_5_l5#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขอให้สนุก",
+      "places": [
+        "course_l_11/course_l_11_l5#4 phrase",
+        "course_l_11/course_l_11_l7#4 phrase",
+        "course_l_15/course_l_15_l6#7 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เจอกัน",
+      "places": [
+        "course_l_11/course_l_11_l6#5 phrase",
+        "course_l_15/course_l_15_l6#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เบาลงหน่อย",
+      "places": [
+        "course_l_12/course_l_12_l3#9 phrase",
+        "course_long_5/course_long_5_l1#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "แบบนี้ดี",
+      "places": [
+        "course_l_12/course_l_12_l6#9 phrase",
+        "course_e_1/course_e_1_l2#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "โอน",
+      "places": [
+        "course_l_13/course_l_13_l2#5 phrase",
+        "course_long_2/course_long_2_l2#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ซ่อมได้ไหม",
+      "places": [
+        "course_l_13/course_l_13_l4#2 word",
+        "course_e_3/course_e_3_l1#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "พรุ่งนี้ได้ไหม",
+      "places": [
+        "course_l_13/course_l_13_l4#5 phrase",
+        "course_e_3/course_e_3_l3#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "แล้วคุยกัน",
+      "places": [
+        "course_l_13/course_l_13_l6#4 phrase",
+        "course_e_2/course_e_2_l6#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "คุณชื่ออะไร",
+      "places": [
+        "course_l_15/course_l_15_l3#4 phrase",
+        "course_l_15/course_l_15_l5#2 word",
+        "course_b_1/course_b_1_l2#2 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "คุยเล่น",
+      "places": [
+        "course_l_15/course_l_15_l3#6 phrase",
+        "course_e_2/course_e_2_l5#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "สนใจ",
+      "places": [
+        "course_l_15/course_l_15_l5#4 phrase",
+        "course_s_5/course_s_5_l3#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "จีบ",
+      "places": [
+        "course_l_15/course_l_15_l5#5 phrase",
+        "course_s_5/course_s_5_l1#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ขอบเขต",
+      "places": [
+        "course_l_15/course_l_15_l5#6 phrase",
+        "course_s_4/course_s_4_l6#2 word",
+        "course_s_5/course_s_5_l4#4 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ยินดีที่ได้รู้จัก",
+      "places": [
+        "course_l_15/course_l_15_l5#8 phrase",
+        "course_b_1/course_b_1_l2#6 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "อีกครั้ง",
+      "places": [
+        "course_e_1/course_e_1_l1#7 phrase",
+        "course_e_3/course_e_3_l5#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "นะ",
+      "places": [
+        "course_e_1/course_e_1_l2#1 word",
+        "course_e_6/course_e_6_l1#3 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ค่ะ",
+      "places": [
+        "course_e_1/course_e_1_l5#4 phrase",
+        "course_e_6/course_e_6_l3#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ครับ",
+      "places": [
+        "course_e_1/course_e_1_l5#5 phrase",
+        "course_e_6/course_e_6_l3#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไม่กดดัน",
+      "places": [
+        "course_e_2/course_e_2_l2#7 phrase",
+        "course_e_5/course_e_5_l6#2 word",
+        "course_s_5/course_s_5_l4#8 phrase"
+      ],
+      "n": 3
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ชม",
+      "places": [
+        "course_e_2/course_e_2_l4#6 phrase",
+        "course_s_6/course_s_6_l2#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไว้ทีหลัง",
+      "places": [
+        "course_e_3/course_e_3_l3#6 casual",
+        "course_b_7/course_b_7_l5#3 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "พูดอ้อม",
+      "places": [
+        "course_e_5/course_e_5_l4#4 phrase",
+        "course_s_5/course_s_5_l3#4 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ยินดี",
+      "places": [
+        "course_e_5/course_e_5_l4#7 phrase",
+        "course_e_6/course_e_6_l4#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "น่ารัก",
+      "places": [
+        "course_e_5/course_e_5_l4#8 word",
+        "course_s_5/course_s_5_l1#3 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ถามตรงๆ",
+      "places": [
+        "course_e_5/course_e_5_l5#9 phrase",
+        "course_s_5/course_s_5_l5#6 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ห้าห้าห้า",
+      "places": [
+        "course_s_1/course_s_1_l5#2 word",
+        "course_s_3/course_s_3_l1#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "หัวเราะดังๆ",
+      "places": [
+        "course_s_1/course_s_1_l5#3 word",
+        "course_s_3/course_s_3_l1#3 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไปด้วยกันไหม",
+      "places": [
+        "course_s_2/course_s_2_l1#10 phrase",
+        "course_s_5/course_s_5_l1#12 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "เอกสาร",
+      "places": [
+        "course_long_1/course_long_1_l2#3 phrase",
+        "course_long_4/course_long_4_l2#5 phrase"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "อธิบายอาการ",
+      "places": [
+        "course_long_3/course_long_3_l1#2 word",
+        "course_long_6/course_long_6_l3#2 word"
+      ],
+      "n": 2
+    },
+    {
+      "sev": "info",
+      "kind": "thai_shared_across_courses",
+      "thai": "ไม่เอา ขอบคุณ",
+      "places": [
+        "course_b_1/course_b_1_l4#9 phrase",
+        "course_b_7/course_b_7_l1#7 casual"
+      ],
+      "n": 2
+    }
+  ]
+}

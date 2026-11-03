@@ -1,0 +1,78 @@
+@font-face {
+  font-family: "Onmark Trial";
+  src: url("file:///Users/product/Projects/taika/appstore/fonts/Onmark%20TRIAL%20Regular.otf") format("opentype");
+}
+@font-face {
+  font-family: "SF Poster";
+  src: url("file:///Library/Fonts/SF-Pro-Text-Black.otf") format("opentype");
+  font-weight: 900;
+}
+@font-face {
+  font-family: "SF Poster";
+  src: url("file:///Library/Fonts/SF-Pro-Display-Bold.otf") format("opentype");
+  font-weight: 700;
+}
+@font-face {
+  font-family: "SF Text";
+  src: url("file:///Library/Fonts/SF-Pro-Text-Regular.otf") format("opentype");
+  font-weight: 400;
+}
+@font-face {
+  font-family: "SF Text";
+  src: url("file:///Library/Fonts/SF-Pro-Text-Semibold.otf") format("opentype");
+  font-weight: 600;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1290px; height: 2796px; overflow: hidden; background: #0D0D0F; }
+.screen {
+  width: 1290px; height: 2796px; position: relative; overflow: hidden;
+  background: #0D0D0F; color: #fff;
+  font-family: "SF Text", -apple-system, sans-serif;
+}
+.mark { display: flex; align-items: baseline; gap: 6px; }
+.mark span { font-family: "Onmark Trial", serif; font-weight: 400; line-height: 0.8; }
+.mark .a { color: #F25CA6; }
+.tag {
+  margin-top: 14px; font-size: 26px; font-weight: 400;
+  color: rgba(255,255,255,0.72); letter-spacing: -0.2px;
+}
+.kicker {
+  font-size: 22px; font-weight: 600; letter-spacing: 2.4px;
+  color: rgba(255,255,255,0.55);
+}
+h1 {
+  font-family: "SF Poster", "SF Text", sans-serif; font-weight: 900;
+  letter-spacing: -2.4px; line-height: 0.92; color: #fff;
+  -webkit-text-fill-color: #fff;
+}
+h1 em { -webkit-text-fill-color: #F25CA6; }
+h1 em { font-style: normal; color: #F25CA6; }
+.lead { font-size: 30px; line-height: 1.35; color: rgba(255,255,255,0.82); font-weight: 400; }
+.pills { display: flex; flex-wrap: wrap; gap: 14px; }
+.pills span {
+  border: 1.5px solid rgba(255,255,255,0.28);
+  border-radius: 999px; padding: 12px 22px;
+  font-size: 18px; font-weight: 600; letter-spacing: 1.4px;
+  color: rgba(255,255,255,0.88);
+}
+.foot { display: flex; align-items: center; gap: 22px; }
+.foot p { font-size: 24px; line-height: 1.25; color: rgba(255,255,255,0.78); }
+.brand, .copy, .call, .pills, .foot { z-index: 3; }
+.stage { position: absolute; perspective: 1800px; z-index: 2; }
+.device {
+  background: linear-gradient(145deg, #4a4a4e 0%, #1a1a1c 18%, #0a0a0c 55%, #2a2a2e 100%);
+  border-radius: 78px; padding: 16px;
+  box-shadow: -30px 50px 90px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.16);
+  position: relative;
+}
+.device .side {
+  position: absolute; left: -4px; top: 168px; width: 5px; height: 92px;
+  background: #2c2c30; border-radius: 3px;
+}
+.device .side.b { top: 280px; height: 64px; }
+.glass {
+  border-radius: 62px; overflow: hidden; background: #111;
+  line-height: 0;
+}
+.glass img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+.brush, .arrow { position: absolute; pointer-events: none; }

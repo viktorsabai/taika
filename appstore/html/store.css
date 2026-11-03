@@ -1,0 +1,85 @@
+@font-face {
+  font-family: "Onmark Trial";
+  src: url("file:///Users/product/Projects/taika/appstore/fonts/Onmark%20TRIAL%20Regular.otf") format("opentype");
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1290px; height: 2796px; overflow: hidden; background: #0D0D0F; }
+.screen {
+  width: 1290px; height: 2796px; position: relative; overflow: hidden;
+  background: #0D0D0F; color: #fff;
+  font-family: -apple-system, "SF Pro Display", "SF Pro Text", sans-serif;
+}
+.brush {
+  position: absolute; width: 420px; height: 80px; background: #F25CA6;
+  border-radius: 40px; opacity: 0.9; transform: rotate(-18deg);
+  filter: blur(0.2px);
+}
+.mark { display: flex; align-items: baseline; gap: 8px; position: absolute; left: 80px; top: 72px; }
+.mark span { font-family: "Onmark Trial", serif; font-size: 64px; line-height: 1; font-weight: 400; }
+.mark .a { color: #F25CA6; }
+h1 {
+  position: absolute; left: 80px; top: 168px; right: 80px;
+  font-size: 84px; line-height: 0.98; font-weight: 760; letter-spacing: -2.2px;
+}
+h1 em { font-style: normal; color: #F25CA6; }
+.phone {
+  position: absolute; left: 86px; top: 430px;
+  width: 1118px; height: 2366px;
+  background: #111113; border-radius: 84px 84px 0 0; padding: 14px 14px 0;
+}
+.glass {
+  height: 100%; border-radius: 70px 70px 0 0; overflow: hidden;
+  background: #0D0D0F; display: flex; flex-direction: column;
+  padding: 18px 36px 28px;
+}
+.bar {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  height: 48px; font-size: 26px; font-weight: 650;
+}
+.bar .r { text-align: right; }
+.island { width: 156px; height: 30px; border-radius: 15px; background: #000; }
+.appmark { display: flex; gap: 5px; align-items: baseline; margin: 18px 0 4px; }
+.appmark span { font-family: "Onmark Trial", serif; font-size: 36px; line-height: 1; }
+.appmark .a { color: #F25CA6; }
+.kicker { margin-top: 22px; font-size: 20px; font-weight: 650; letter-spacing: 0.7px; color: rgba(255,255,255,0.45); }
+.ru { margin-top: 8px; font-size: 52px; font-weight: 700; letter-spacing: -1px; }
+.ph { margin-top: 8px; font-size: 36px; font-weight: 650; }
+.ph .arr { color: #F25CA6; }
+.th { margin-top: 4px; font-size: 28px; color: rgba(255,255,255,0.55); }
+.sec { margin-top: 28px; font-size: 20px; font-weight: 650; letter-spacing: 0.5px; color: rgba(255,255,255,0.5); }
+.rows { display: flex; flex-direction: column; }
+.row { display: flex; flex-direction: column; padding-top: 22px; }
+.fit { zoom: 1.46; }
+.top { display: flex; align-items: center; gap: 14px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.dot.ok { background: #4CD973; }
+.dot.bad { background: #FA595F; }
+.name { font-size: 32px; font-weight: 650; }
+.sub { margin-top: 2px; font-size: 22px; font-weight: 550; color: rgba(255,255,255,0.55); }
+.sub .ok { color: #4CD973; }
+.sub .bad { color: #FA595F; }
+.score { margin-left: auto; font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.score.ok { color: #4CD973; }
+.score.bad { color: #FA595F; }
+.spark { display: block; margin: 8px 0 0 26px; width: 940px; height: 280px; flex: none; }
+.wave { margin: 16px 0 0 26px; height: 64px; display: flex; align-items: flex-end; gap: 8px; }
+.wave i { display: block; width: 7px; border-radius: 4px; background: #fff; }
+.listen { margin: 12px 0 0 26px; display: flex; align-items: center; gap: 8px; color: #F25CA6; font-size: 24px; font-weight: 650; }
+.hint { margin: 8px 0 0 26px; font-size: 24px; line-height: 1.3; color: rgba(255,255,255,0.88); }
+.line { height: 1px; background: rgba(255,255,255,0.11); margin: 16px 0 0 26px; }
+.btn {
+  margin-top: 28px; height: 92px; border-radius: 999px; background: #F25CA6; color: #1A0A12;
+  font-size: 32px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none;
+}
+.feed { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 28px; margin-top: 28px; }
+.card {
+  flex: 1; min-height: 0; background: #202025; border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 36px; padding: 28px 28px 18px; display: flex; flex-direction: column;
+}
+.card .meta { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 12px; }
+.card .th { font-size: 40px; }
+.card .ru { font-size: 48px; }
+.card .ph { font-size: 40px; }
+.actions { display: flex; justify-content: space-between; padding: 8px 12px 6px; }
+.act { width: 200px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: rgba(255,255,255,0.88); }
+.act span { font-size: 18px; color: rgba(255,255,255,0.55); font-weight: 550; }
