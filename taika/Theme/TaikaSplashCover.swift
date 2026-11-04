@@ -9,6 +9,15 @@
 import SwiftUI
 import UIKit
 
+/// Окно заставки поднимается только когда сцена подключена — к этому моменту SwiftUI
+/// уже успевает нарисовать Main. Пока окна нет, AppShell держит такую же заставку у себя.
+@MainActor
+final class TaikaSplashCoverState: ObservableObject {
+    static let shared = TaikaSplashCoverState()
+    @Published fileprivate(set) var handedOff = false
+    private init() {}
+}
+
 @MainActor
 enum TaikaSplashCover {
     private static var window: UIWindow?
@@ -44,12 +53,14 @@ enum TaikaSplashCover {
         cover.rootViewController = host
         cover.makeKeyAndVisible()
         window = cover
+        TaikaSplashCoverState.shared.handedOff = true
     }
 
     static func dismissNow() {
         dismissTask?.cancel()
         dismissTask = nil
         tearDown(animated: false)
+        TaikaSplashCoverState.shared.handedOff = true
     }
 
     static func dismissWhenAppReady() {

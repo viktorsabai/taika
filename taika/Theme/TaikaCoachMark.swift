@@ -28,7 +28,7 @@ enum TaikaCoachMark: String, Hashable {
 
 enum TaikaCoachPack: String, CaseIterable {
     case mainCrown = "taika.coach.pack.crown.v2"
-    case courseChrome = "taika.coach.pack.course.v4"
+    case courseChrome = "taika.coach.pack.course.v5"
     case gameStar = "taika.coach.pack.star.v2"
     case speakerPoliteness = "taika.coach.pack.politeness.v2"
 
@@ -224,18 +224,38 @@ struct TaikaCoachScrim: View {
         labelWidth: CGFloat,
         labelHeight: CGFloat
     ) -> [Placed] {
-        let pairs = targets.map { item -> (String, CGRect) in
-            let hole = item.hole.offsetBy(dx: -origin.x, dy: -origin.y).insetBy(dx: -10, dy: -10)
-            return (item.title, hole)
+        let raw = targets.map { item -> (String, CGRect) in
+            (item.title, item.hole.offsetBy(dx: -origin.x, dy: -origin.y))
         }
         .sorted { $0.1.midX < $1.1.midX }
 
-        guard !pairs.isEmpty else { return [] }
+        guard !raw.isEmpty else { return [] }
+
+        // Соседние кнопки стоят вплотную: рамки не должны налезать друг на друга.
+        var padX: CGFloat = 10
+        for (a, b) in zip(raw, raw.dropFirst()) {
+            padX = min(padX, max(0, (b.1.minX - a.1.maxX - 6) / 2))
+        }
+        let pairs = raw.map { ($0.0, $0.1.insetBy(dx: -padX, dy: -10)) }
 
         let cluster = pairs.map(\.1).reduce(CGRect.null) { $0.union($1) }
         let margin: CGFloat = 16
         let below = cluster.maxY + 56 + CGFloat(pairs.count) * 52 + 56 < screen.height
         let rightSide = cluster.midX > screen.width * 0.52
+
+        if pairs.count > 1,
+           let column = sideColumn(
+               pairs: pairs,
+               cluster: cluster,
+               screen: screen,
+               margin: margin,
+               rightSide: rightSide,
+               below: below,
+               labelHeight: labelHeight
+           ) {
+            return column
+        }
+
         let align: TextAlignment = pairs.count > 1 ? (rightSide ? .trailing : .leading) : .center
 
         var result: [Placed] = []
@@ -269,6 +289,45 @@ struct TaikaCoachScrim: View {
             )
         }
         return result
+    }
+
+    /// Несколько иконок в ряд: подписи ровной колонкой сбоку от ряда, у каждой своя ступень.
+    /// Ближняя к колонке иконка получает самую короткую линию — так линии не пересекаются.
+    private static func sideColumn(
+        pairs: [(String, CGRect)],
+        cluster: CGRect,
+        screen: CGSize,
+        margin: CGFloat,
+        rightSide: Bool,
+        below: Bool,
+        labelHeight: CGFloat
+    ) -> [Placed]? {
+        let gap: CGFloat = 12
+        let textGap: CGFloat = 8
+        let edge = rightSide ? cluster.minX - gap : cluster.maxX + gap
+        let width = min(170, (rightSide ? edge - margin : screen.width - margin - edge) - textGap)
+        guard width >= 104 else { return nil }
+
+        let nearestFirst = rightSide ? pairs : Array(pairs.reversed())
+        let align: TextAlignment = rightSide ? .trailing : .leading
+        return nearestFirst.enumerated().map { index, pair in
+            let hole = pair.1
+            let drop: CGFloat = 30 + CGFloat(index) * 50
+            let railY = below ? hole.maxY + drop : hole.minY - drop
+            let labelX = rightSide ? edge - textGap - width / 2 : edge + textGap + width / 2
+            let start = CGPoint(x: hole.midX, y: below ? hole.maxY : hole.minY)
+            let corner = CGPoint(x: hole.midX, y: railY)
+            return Placed(
+                title: pair.0,
+                hole: hole,
+                label: CGPoint(x: labelX, y: railY),
+                labelWidth: width,
+                align: align,
+                lineStart: start,
+                corner: corner,
+                lineEnd: CGPoint(x: edge, y: railY)
+            )
+        }
     }
 
     private static func makePlaced(

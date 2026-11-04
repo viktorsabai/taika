@@ -94,6 +94,8 @@ struct AppShell: View {
     @ObservedObject private var overlay = OverlayPresenter.shared
     @ObservedObject private var voicePreference = TaikaVoicePreference.shared
     @ObservedObject private var coachMarks = TaikaCoachCenter.shared
+    @ObservedObject private var splashCover = TaikaSplashCoverState.shared
+    @State private var inlineSplashAtLaunch = TaikaSplashCover.shouldShowOnLaunch()
     @ObservedObject private var gameHeaderStore = GameHeaderStore.shared
     @EnvironmentObject private var nav: NavigationIntent
     /// When switching to Speaker tab from course card, pass consumed courseId so Speaker shows full course queue (onAppear may not run in time).
@@ -386,6 +388,11 @@ struct AppShell: View {
         }
         .onPreferenceChange(TaikaCoachFrameKey.self) { frames in
             coachMarks.update(frames)
+        }
+        .overlay {
+            if inlineSplashAtLaunch, !splashCover.handedOff {
+                SplashTaikaView()
+            }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .environmentObject(ThemeManager.shared)

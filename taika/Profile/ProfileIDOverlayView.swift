@@ -127,7 +127,7 @@ struct ProfileIDOverlayView: View {
                 ProManager.shared.reset()
             }
         } message: {
-            Text("Прогресс останется на этом телефоне. На другом без входа его не будет.")
+            Text("Прогресс останется на этом телефоне.")
         }
         .alert("Удалить аккаунт?", isPresented: $showDeleteAccountConfirm) {
             Button("Отмена", role: .cancel) {}
@@ -152,7 +152,7 @@ struct ProfileIDOverlayView: View {
                         Text(auth.displayName ?? "Apple ID")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(PD.ColorToken.text)
-                        Text("Прогресс сохранён")
+                        Text("Подписка привязана к аккаунту")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(Theme.Gradients.accentText)
                     }
@@ -208,7 +208,7 @@ struct ProfileIDOverlayView: View {
                 .padding(.horizontal, CD.Spacing.screen)
                 .padding(.top, 4)
 
-                Text("Чтобы прогресс не пропал при смене телефона.")
+                Text("Чтобы подписка была привязана к тебе.")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Theme.Gradients.accentText)
                     .padding(.horizontal, CD.Spacing.screen)
