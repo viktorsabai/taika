@@ -26,6 +26,9 @@ private let cooldownDays: Int = 7
 @MainActor
 public enum AuthSoftWallState {
 
+    /// Окно обещает перенос прогресса между телефонами. Пока SyncManager пустой — не показываем.
+    static let enabled = false
+
     /// Есть ли достаточный прогресс для показа soft wall (хотя бы один выученный шаг, завершённый урок или начатый урок).
     public static var hasProgress: Bool {
         let pm = ProgressManager.shared
@@ -48,6 +51,7 @@ public enum AuthSoftWallState {
 
     /// Нужно ли показать soft wall: не залогинен, есть прогресс, не показывали недавно.
     public static func shouldShowSoftWall() -> Bool {
+        guard enabled else { return false }
         let isLoggedIn = AuthService.shared.isLoggedIn
         let prog = hasProgress
         let state = ProgressManager.shared.publishedState
