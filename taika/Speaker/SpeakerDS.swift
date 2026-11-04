@@ -1289,6 +1289,10 @@ public struct SpeakerDSRoot: View {
                     if conversationIsRecording || phase.isProcessing || phase == .hint {
                         conversationLiveStatusChip
                     }
+                    if phase.isProcessing, !conversationIsPracticeFlow {
+                        ConversationLiveProcessTicks()
+                            .frame(height: 14)
+                    }
                     conversationLiveHeroText
                 }
             } else {
@@ -1509,7 +1513,10 @@ public struct SpeakerDSRoot: View {
                         return
                     }
                     guard distance < 14 else { return }
-                    guard !phase.isProcessing else { return }
+                    guard !phase.isProcessing else {
+                        UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.5)
+                        return
+                    }
                     handleVoicePlanetTap()
                 }
         )
@@ -1642,7 +1649,7 @@ public struct SpeakerDSRoot: View {
             if phase.isFeedback || conversationHasResult { return "готово" }
             if isRec { return "слушаю" }
             if phase == .translating { return "перевожу" }
-            if phase.isProcessing { return "распознаю" }
+            if phase.isProcessing { return conversationRecognizedRU.isEmpty ? "распознаю" : "перевожу на тайский" }
             if conversationIsTextScene { return "пиши фразу" }
             return "готова слушать"
         }()
@@ -1745,7 +1752,19 @@ public struct SpeakerDSRoot: View {
                     .animation(.easeOut(duration: 0.15), value: partial)
             }
         } else if phase.isProcessing {
-            Color.clear.frame(height: 1)
+            let heard = conversationRecognizedRU
+            if heard.isEmpty {
+                Color.clear.frame(height: 1)
+            } else {
+                Text(heard)
+                    .font(.system(size: heard.count > 42 ? 18 : 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(PD.ColorToken.text)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.82)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .transition(.opacity)
+            }
         } else if phase == .hint, !taikaHints.isEmpty {
             conversationWidgetErrorCenter
         } else {
@@ -3236,6 +3255,10 @@ public struct SpeakerDSRoot: View {
 
     private var recordingPartialRU: String {
         external?.recordingPartialRU ?? ""
+    }
+
+    private var conversationRecognizedRU: String {
+        (external?.heardRU ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// In conversation mode, show result when we have Thai and/or phonetic from the conversation pipeline.
