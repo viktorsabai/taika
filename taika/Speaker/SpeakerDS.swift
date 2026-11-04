@@ -2552,7 +2552,7 @@ public struct SpeakerDSRoot: View {
                         HStack(spacing: 8) {
                             Image(systemName: "text.magnifyingglass")
                                 .font(.system(size: 13, weight: .semibold))
-                            Text("Разбор по слогам")
+                            Text(SpeakerManager.toneVerdictsReliable ? "Разбор по слогам" : "Разбор по словам")
                                 .font(.system(size: 14, weight: .semibold))
                         }
                         .foregroundStyle(PD.ColorToken.textSecondary)
@@ -4754,6 +4754,97 @@ public struct SpeakerDSRoot: View {
         }
     }
 
+    /// Разбор по словам: эталон против того, что распознала Apple. Слушать — только целую фразу сверху.
+    @ViewBuilder
+    private func breakdownWordDiffSection(expected: String, heard: String, wordsMatched: Bool) -> some View {
+        let heardPhonetic = SpeakerManager.canonicalTeachingPhonetic(SpeakerManager.withoutThaiScript(heard))
+        let isLoading = heard == Self.conversationPhoneticLoadingToken
+        let rows = (wordsMatched || isLoading || heardPhonetic.isEmpty || heardPhonetic == "—")
+            ? []
+            : PhoneticWordDiff.compare(expected: SpeakerManager.canonicalTeachingPhonetic(expected), heard: heardPhonetic)
+
+        VStack(alignment: .leading, spacing: 12) {
+            Text("По словам")
+                .font(.system(size: 12, weight: .bold))
+                .tracking(0.8)
+                .foregroundStyle(Theme.Gradients.accentText)
+
+            if wordsMatched {
+                Text("Apple услышала ровно эту фразу — все слова совпали.")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(PD.ColorToken.text.opacity(0.94))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if isLoading {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("смотрю, что услышала Apple")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(PD.ColorToken.textSecondary)
+                }
+            } else if rows.isEmpty {
+                Text("Слова не разобрала — скажи фразу ещё раз.")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                        breakdownWordDiffRow(row)
+                    }
+                }
+                Text("Стрелки у тебя — тон слова, которое узнала Apple. Голос сравни на слух сверху: эталон и моя.")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func breakdownWordDiffRow(_ row: PhoneticWordDiff) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 12) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(row.isMatch ? Self.toneMatchGradient : Self.toneMissGradient)
+                    .frame(width: 3, height: 24)
+                TaikaSmartSpeakerPhonetic.styledText(row.expected, font: .system(size: 20, weight: .semibold))
+                Spacer(minLength: 8)
+                if row.isMatch {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Self.toneMatchGradient)
+                }
+            }
+
+            if !row.isMatch {
+                VStack(alignment: .leading, spacing: 4) {
+                    if let heard = row.heard {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text("у тебя")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(PD.ColorToken.textSecondary)
+                            TaikaSmartSpeakerPhonetic.styledText(heard, font: .system(size: 16, weight: .semibold))
+                        }
+                    }
+                    ForEach(row.reasons, id: \.self) { reason in
+                        Text(reason)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.text.opacity(0.78))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.leading, 15)
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(row.isMatch ? 0.045 : 0.07))
+        }
+        .accessibilityElement(children: .combine)
+    }
+
     /// Слоговый разбор: легенда к ритму фразы. Слушать слог нельзя — эталон сверху.
     @ViewBuilder
     private func breakdownSyllableRowsHumanSection(
@@ -5624,7 +5715,13 @@ public struct SpeakerDSRoot: View {
                                     breakdownPhraseGraphPlaceholder(expected: expected, isProLocked: true)
                                 }
 
-                                if unlockTone, !syllableFeedback.isEmpty {
+                                if unlockTone, !SpeakerManager.toneVerdictsReliable {
+                                    breakdownWordDiffSection(
+                                        expected: expected,
+                                        heard: userText,
+                                        wordsMatched: textScore >= 100
+                                    )
+                                } else if unlockTone, !syllableFeedback.isEmpty {
                                     breakdownSyllableRowsHumanSection(
                                         expected: expected,
                                         syllableFeedback: syllableFeedback

@@ -2861,7 +2861,7 @@ public final class SpeakerManager: ObservableObject {
         var out = String(String.UnicodeScalarView(
             text.unicodeScalars.map { (0x0E00...0x0E7F).contains($0.value) ? " " : $0 }
         ))
-        out = out.replacingOccurrences(of: #"\(\s*\)|\[\s*\]|«\s*»"#, with: " ", options: .regularExpression)
+        out = out.replacingOccurrences(of: #"\(\s*\)|\[\s*\]|«\s*»|'\s*'|"\s*"|“\s*”|‘\s*’|„\s*“"#, with: " ", options: .regularExpression)
         out = out.replacingOccurrences(of: #"\s+([,.;:!?])"#, with: "$1", options: .regularExpression)
         out = out.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
         return out.trimmingCharacters(in: CharacterSet(charactersIn: " -–—,;:"))
@@ -2874,13 +2874,23 @@ public final class SpeakerManager: ObservableObject {
     static func isDegenerateAdvice(_ text: String) -> Bool {
         var t = text.lowercased()
         guard !t.isEmpty else { return false }
+        let trim = CharacterSet(charactersIn: ".,;:!?«»\"'()[]")
+        func tokenize(_ s: String) -> [String] {
+            s.split(whereSeparator: \.isWhitespace)
+                .map { $0.trimmingCharacters(in: trim) }
+                .filter { !$0.isEmpty }
+        }
+        // После вырезания тайского от «используй 'X' вместо 'Y'» остаётся «используй вместо».
+        let verbs: Set<String> = ["используй", "скажи", "говори", "произнеси", "произноси", "попробуй"]
+        let raw = tokenize(t)
+        for (i, w) in raw.enumerated() where w == "вместо" {
+            guard i > 0, i + 1 < raw.count else { return true }
+            if verbs.contains(raw[i - 1]) { return true }
+        }
         for phrase in ["нужно было", "а нужен", "а нужно", "а надо", "а не"] {
             t = t.replacingOccurrences(of: phrase, with: " вместо ")
         }
-        let trim = CharacterSet(charactersIn: ".,;:!?«»\"'()[]")
-        let tokens = t.split(whereSeparator: \.isWhitespace)
-            .map { $0.trimmingCharacters(in: trim) }
-            .filter { !$0.isEmpty }
+        let tokens = tokenize(t)
         for (i, w) in tokens.enumerated() where w == "вместо" {
             guard i > 0, i + 1 < tokens.count else { continue }
             if tokens[i - 1] == tokens[i + 1] { return true }
