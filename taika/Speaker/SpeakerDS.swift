@@ -2552,7 +2552,7 @@ public struct SpeakerDSRoot: View {
                         HStack(spacing: 8) {
                             Image(systemName: "text.magnifyingglass")
                                 .font(.system(size: 13, weight: .semibold))
-                            Text("Разбор тонов")
+                            Text("Разбор по слогам")
                                 .font(.system(size: 14, weight: .semibold))
                         }
                         .foregroundStyle(PD.ColorToken.textSecondary)
@@ -4866,8 +4866,9 @@ public struct SpeakerDSRoot: View {
         isPlaceholder: Bool = false,
         isFocus: Bool = false
     ) -> some View {
+        let verdicts = SpeakerManager.toneVerdictsReliable
         let scoreValue = (!isPlaceholder ? score : nil)
-        let toneMatch = (toneExpected != nil && toneActual != nil) ? (toneExpected == toneActual) : nil
+        let toneMatch = (verdicts && toneExpected != nil && toneActual != nil) ? (toneExpected == toneActual) : nil
         let expectedArrow = Self.toneToArrow(toneExpected)
         let actualArrow = Self.toneToArrow(toneActual)
         let phonetic = {
@@ -4876,7 +4877,7 @@ public struct SpeakerDSRoot: View {
             return "\(name) \(expectedArrow)"
         }()
         let missHint: String? = {
-            guard !isPlaceholder else { return nil }
+            guard verdicts, !isPlaceholder else { return nil }
             if toneActual == nil {
                 return "тона не слышно — скажи этот слог ближе"
             }
@@ -4950,7 +4951,7 @@ public struct SpeakerDSRoot: View {
                     .padding(.leading, 15)
             }
 
-            if isFocus {
+            if isFocus || (!verdicts && !isPlaceholder) {
                 breakdownSyllableListenBar(index: index, label: label, canPlayReference: true)
                     .padding(.leading, 15)
             }
@@ -5716,11 +5717,11 @@ public struct SpeakerDSRoot: View {
                             } else {
                                 breakdownPhraseGraphPlaceholder(expected: expected, isProLocked: !unlockTone)
                             }
-                            if !syllableFeedback.isEmpty {
+                            if SpeakerManager.toneVerdictsReliable, !syllableFeedback.isEmpty {
                                 breakdownSyllableRowsSection(expected: expected, syllableFeedback: syllableFeedback)
                             }
 
-                            if !syllableFeedback.isEmpty {
+                            if SpeakerManager.toneVerdictsReliable, !syllableFeedback.isEmpty {
                                 let conclusion = Self.breakdownSummaryNote(syllableFeedback: syllableFeedback)
                                 if !conclusion.isEmpty {
                                     Text(conclusion)
@@ -8031,11 +8032,19 @@ struct SpeakerTripleScoreHeader: View {
             .frame(maxWidth: .infinity, alignment: centered ? .center : .leading)
             .accessibilityLabel("слова \(heroValue) процентов")
 
-            HStack(spacing: 28) {
-                metricColumn(title: "слова", value: textScore, state: .ready)
-                metricColumn(title: "тоны", value: toneScore, state: toneColumnState)
+            if SpeakerManager.toneVerdictsReliable {
+                HStack(spacing: 28) {
+                    metricColumn(title: "слова", value: textScore, state: .ready)
+                    metricColumn(title: "тоны", value: toneScore, state: toneColumnState)
+                }
+                .frame(maxWidth: .infinity, alignment: centered ? .center : .leading)
+            } else {
+                Text("слова совпали")
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(0.3)
+                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
+                    .frame(maxWidth: .infinity, alignment: centered ? .center : .leading)
             }
-            .frame(maxWidth: .infinity, alignment: centered ? .center : .leading)
         }
         .padding(.vertical, layout == .feedback ? 4 : 0)
     }

@@ -525,8 +525,14 @@ public final class SpeakerManager: ObservableObject {
         )
     }
 
+    /// Per-syllable tone verdicts from /assess are not trustworthy yet: each chunk is normalised
+    /// to its own median (Low/Mid/High collapse) and phrase declination reads as Falling.
+    /// While false, UI shows only the phrase contour and listen-compare, never «у тебя X».
+    static let toneVerdictsReliable = false
+
     /// Когда есть разбор по тонам — средний тон по слогам (для подписи «Тон X%» в карточке разбора).
     var toneAverageScore: Int? {
+        guard Self.toneVerdictsReliable else { return nil }
         let scored = syllableFeedback.filter { $0.toneActual != nil }
         guard !scored.isEmpty else { return nil }
         return scored.map(\.score).reduce(0, +) / scored.count
@@ -534,6 +540,7 @@ public final class SpeakerManager: ObservableObject {
 
     /// Слог, который сейчас учить: худший тон, иначе первый без голоса.
     var weakestSyllableIndex: Int? {
+        guard Self.toneVerdictsReliable else { return nil }
         let n = syllableFeedback.count
         let eligible = syllableFeedback.enumerated().filter { idx, item in
             !(idx == n - 1 && n > 1 && Self.isPolitenessToken(item.syllable))
@@ -2348,7 +2355,10 @@ public final class SpeakerManager: ObservableObject {
                             default:
                                 hint = "Ошибка сети. Попробуй ещё раз"
                             }
-                        } else if e.domain == "kAFAssistantErrorDomain" || e.localizedDescription.localizedCaseInsensitiveContains("speech") {
+                        } else if e.domain == "kAFAssistantErrorDomain"
+                                    || e.domain == "kLSRErrorDomain"
+                                    || e.localizedDescription.localizedCaseInsensitiveContains("speech")
+                                    || e.localizedDescription.localizedCaseInsensitiveContains("recognizer") {
                             hint = "не расслышала. скажи ещё раз чётче"
                         } else {
                             hint = "Не удалось перевести. Попробуй ещё раз"
@@ -3277,7 +3287,7 @@ public final class SpeakerManager: ObservableObject {
                     ? (self.conversationHeardPhoneticFromASR ?? "")
                     : (self.trainingHeardPhoneticFromASR ?? self.heardTranslit ?? ""),
                 tone: self.toneAverageScore,
-                weak: self.syllableFeedback
+                weak: Self.toneVerdictsReliable ? self.syllableFeedback : []
             )
         }
         let coach = await fetchConversationCoach(
@@ -3842,6 +3852,12 @@ public final class SpeakerManager: ObservableObject {
             throw NSError(domain: "speaker.asr", code: 3)
         }
         if !recognizer.isAvailable { throw NSError(domain: "speaker.asr", code: 4) }
+
+        // URL recognition of a short m4a fails with kLSRErrorDomain 300 / 1101; PCM buffer first, same as Thai.
+        if let buffered = try? await recognizeSpeechViaBuffer(url: url, recognizer: recognizer),
+           !buffered.isEmpty {
+            return buffered.trimmedText
+        }
 
         let request = SFSpeechURLRecognitionRequest(url: url)
         request.shouldReportPartialResults = true
@@ -4563,7 +4579,7 @@ public final class SpeakerManager: ObservableObject {
         // Feed PCM first, with the expected phrase as a hint.
         var lastError: Error?
         do {
-            let buffered = try await recognizeThaiViaBuffer(url: url, recognizer: recognizer, contextual: contextual)
+            let buffered = try await recognizeSpeechViaBuffer(url: url, recognizer: recognizer, contextual: contextual)
             if !buffered.isEmpty { return buffered }
         } catch {
             lastError = error
@@ -4600,7 +4616,7 @@ public final class SpeakerManager: ObservableObject {
     private var activeThaiRecognitionTask: SFSpeechRecognitionTask?
 
     /// Fallback when URL recognition returns 1107: read file, convert to 16kHz PCM, feed buffer request.
-    private func recognizeThaiViaBuffer(url: URL, recognizer: SFSpeechRecognizer, contextual: String? = nil) async throws -> ThaiASRResult {
+    private func recognizeSpeechViaBuffer(url: URL, recognizer: SFSpeechRecognizer, contextual: String? = nil) async throws -> ThaiASRResult {
         let file = try AVAudioFile(forReading: url)
         let srcFormat = file.processingFormat
         guard let dstFormat = AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1) else {
