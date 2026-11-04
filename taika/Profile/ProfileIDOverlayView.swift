@@ -54,16 +54,32 @@ struct ProfileIDOverlayView: View {
                     Divider()
                         .overlay(PD.ColorToken.stroke.opacity(0.40))
                         .padding(.horizontal, CD.Spacing.screen)
-                        .padding(.top, 4)
-                        .padding(.bottom, 8)
+                        .padding(.vertical, 4)
 
-                    quietLinks
+                    idRow(
+                        title: restoreInFlight ? "Проверяю…" : "Восстановить покупки",
+                        subtitle: nil,
+                        systemImage: "arrow.clockwise"
+                    ) {
+                        Task { await restorePurchases() }
+                    }
+                    idRow(title: "Поддержка", subtitle: nil, systemImage: "bubble.left") {
+                        showSupport = true
+                    }
+                    idRow(title: "Документы", subtitle: nil, systemImage: "doc.text") {
+                        showLegal = true
+                    }
+
+                    if auth.isLoggedIn {
+                        accountActions
+                            .padding(.top, 12)
+                    }
 
                     Text("версия \(appVersionLabel)")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
                         .frame(maxWidth: .infinity)
-                        .padding(.top, 14)
+                        .padding(.top, 10)
                         .padding(.bottom, 4)
 
                     #if DEBUG
@@ -160,24 +176,6 @@ struct ProfileIDOverlayView: View {
                 }
                 .padding(.horizontal, CD.Spacing.screen)
                 .padding(.top, 4)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Button("Выйти") {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showSignOutConfirm = true
-                    }
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
-
-                    Button(deleteAccountInProgress ? "Удаляем…" : "Удалить аккаунт") {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showDeleteAccountConfirm = true
-                    }
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.toneWrong.opacity(0.92))
-                    .disabled(deleteAccountInProgress)
-                }
-                .padding(.horizontal, CD.Spacing.screen)
             } else {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -224,7 +222,7 @@ struct ProfileIDOverlayView: View {
         .padding(.bottom, 8)
     }
 
-    private func idRow(title: String, subtitle: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    private func idRow(title: String, subtitle: String?, systemImage: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: systemImage)
@@ -235,9 +233,11 @@ struct ProfileIDOverlayView: View {
                     Text(title)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(PD.ColorToken.text)
-                    Text(subtitle)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.textSecondary)
+                    }
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
@@ -245,32 +245,30 @@ struct ProfileIDOverlayView: View {
                     .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.55))
             }
             .padding(.horizontal, CD.Spacing.screen)
-            .padding(.vertical, 12)
+            .padding(.vertical, subtitle == nil ? 10 : 12)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
-    private var quietLinks: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            quietLink(restoreInFlight ? "Проверяю…" : "Покупки") {
-                Task { await restorePurchases() }
+    private var accountActions: some View {
+        HStack(spacing: 20) {
+            Button("Выйти") {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                showSignOutConfirm = true
             }
-            quietLink("Поддержка") { showSupport = true }
-            quietLink("Документы") { showLegal = true }
-        }
-        .padding(.horizontal, CD.Spacing.screen)
-        .padding(.top, 4)
-    }
+            .foregroundStyle(PD.ColorToken.textSecondary)
 
-    private func quietLink(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(PD.ColorToken.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+            Button(deleteAccountInProgress ? "Удаляем…" : "Удалить аккаунт") {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                showDeleteAccountConfirm = true
+            }
+            .foregroundStyle(PD.ColorToken.toneWrong.opacity(0.92))
+            .disabled(deleteAccountInProgress)
         }
+        .font(.system(size: 13, weight: .medium))
         .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
     }
 
     private func signInWithApple() {
