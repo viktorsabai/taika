@@ -319,7 +319,7 @@ struct TaikaPlusPaywallView: View {
                 title: "Год",
                 priceLine: annualPriceLine,
                 subtitle: annualSubtitle,
-                badge: TaikaProConfig.annualHeroBadge,
+                badge: nil,
                 isHero: true
             )
             planRow(

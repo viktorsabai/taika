@@ -29,7 +29,7 @@ enum TaikaProConfig {
         static let giftLifetime = "taika_gift_lifetime"
     }
 
-    /// Маркетинговые fallback-цены (THB), пока offerings не загрузились / для бейджей.
+    /// Маркетинговые fallback-цены (THB), пока offerings не загрузились.
     /// Живые цены всегда из StoreKit `localizedPriceString`.
     enum MarketingPrice {
         static let annualTHB = 1_990
@@ -37,8 +37,6 @@ enum TaikaProConfig {
         static let lifetimeTHB = 3_990
         /// ~166 ฿/мес при оплате года (1990/12).
         static let annualPerMonthTHB = 166
-        /// Плашка на annual: скидка относительно 12× monthly (~52%).
-        static let annualDiscountPercent = 52
     }
 
     /// Русская форма «N день/дня/дней».
@@ -73,10 +71,6 @@ enum TaikaProConfig {
             return "\(introTrialDaysPhrase) бесплатно на годовой подписке. Отмена в любой момент в настройках Apple ID."
         }
         return "\(introTrialDaysPhrase) бесплатно, отмена в любой момент в настройках Apple ID."
-    }
-
-    static var annualHeroBadge: String {
-        "−\(MarketingPrice.annualDiscountPercent)%"
     }
 
     static func russianDaysWord(_ days: Int) -> String {

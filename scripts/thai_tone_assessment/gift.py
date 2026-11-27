@@ -127,7 +127,6 @@ def _grant_promotional_entitlement(app_user_id: str) -> tuple[bool, str | None]:
             headers={
                 "Authorization": f"Bearer {REVENUECAT_SECRET_API_KEY}",
                 "Content-Type": "application/json",
-                "X-Platform": "ios",
             },
             json={"duration": "lifetime"},
             timeout=20,

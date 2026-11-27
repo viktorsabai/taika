@@ -4,7 +4,6 @@ import SwiftUI
 /// Attention choreography around one TaikaVoicePlanet: craft → reveal → speak → score.
 struct TaikaCoreLoopOnboardingView: View {
     let onFinished: (_ courseId: String) -> Void
-    let onOpenHome: () -> Void
     let onRequestPro: () -> Void
 
     init(
@@ -13,8 +12,8 @@ struct TaikaCoreLoopOnboardingView: View {
         onRequestPro: @escaping () -> Void = {}
     ) {
         self.onFinished = onFinished
-        self.onOpenHome = onOpenHome
         self.onRequestPro = onRequestPro
+        _ = onOpenHome
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -72,6 +71,14 @@ struct TaikaCoreLoopOnboardingView: View {
 
     private var transition: Animation {
         reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.62, dampingFraction: 0.90)
+    }
+
+    /// Пропуск не открывает новый экран: старый кадр гаснет, следующий собирается на том же месте.
+    private var reassemble: AnyTransition {
+        .asymmetric(
+            insertion: .opacity.combined(with: .scale(scale: 0.94, anchor: .center)).combined(with: .offset(y: 16)),
+            removal: .opacity.combined(with: .scale(scale: 1.03, anchor: .center))
+        )
     }
 
     private var isPracticeStage: Bool {
@@ -178,15 +185,16 @@ struct TaikaCoreLoopOnboardingView: View {
             PD.ColorToken.background
                 .ignoresSafeArea()
 
-            if isPracticeStage || (phase == .hook && introFrame == .brand) {
-                TaikaTechnoSpaceBackdrop(
-                    intensity: isPracticeStage ? 0.44 : 0.34,
-                    isLive: speaker.phase == .recording,
-                    audioLevel: onboardingOrbAudioLevel,
-                    heroAnchor: UnitPoint(x: 0.5, y: phase == .hook ? 0.42 : 0.48)
-                )
-                .ignoresSafeArea()
-            }
+            TaikaTechnoSpaceBackdrop(
+                intensity: isPracticeStage ? 0.44 : 0.34,
+                isLive: speaker.phase == .recording,
+                audioLevel: onboardingOrbAudioLevel,
+                heroAnchor: UnitPoint(x: 0.5, y: phase == .hook ? 0.42 : 0.48)
+            )
+            .ignoresSafeArea()
+            .opacity(isPracticeStage || (phase == .hook && introFrame == .brand) ? 1 : 0)
+            .animation(transition, value: phase)
+            .allowsHitTesting(false)
 
             VStack(spacing: 0) {
                 Spacer(minLength: phase == .hook ? 10 : (phase == .reinforce ? 4 : 8))
@@ -194,6 +202,7 @@ struct TaikaCoreLoopOnboardingView: View {
                 Spacer(minLength: phase == .reinforce ? 4 : 8)
                 footerSlot
             }
+            .animation(transition, value: phase)
             .padding(.horizontal, 24)
             .padding(.top, 12)
             .padding(.bottom, 12)
@@ -257,19 +266,19 @@ struct TaikaCoreLoopOnboardingView: View {
 
     @ViewBuilder
     private var heroSlot: some View {
-        Group {
+        ZStack {
             switch phase {
             case .hook:
-                hookHero
+                hookHero.transition(reassemble)
             case .crafting, .phrase, .listen, .speak, .feedback:
-                practiceHero
+                practiceHero.transition(reassemble)
             case .reinforce:
-                reinforceHero
+                reinforceHero.transition(reassemble)
             }
         }
         .frame(maxWidth: .infinity)
         .frame(height: phase == .reinforce ? 460 : 520)
-        .id(phase)
+        .animation(transition, value: phase)
     }
 
     private var hookHero: some View {
@@ -629,50 +638,57 @@ struct TaikaCoreLoopOnboardingView: View {
     @ViewBuilder
     private var footerSlot: some View {
         VStack(spacing: 12) {
+            ZStack {
             switch phase {
             case .hook:
-                switch introFrame {
-                case .brand:
-                    primaryCTA("Расскажу, как знаю тайский") { introFrame = .level }
-                        .opacity(brandVisible ? 1 : 0)
-                        .offset(y: brandVisible ? 0 : 12)
-                        .animation(
-                            reduceMotion ? .easeOut(duration: 0.16) : .spring(response: 0.55, dampingFraction: 0.86).delay(0.18),
-                            value: brandVisible
-                        )
-                case .level:
-                    primaryCTA("Продолжить") {
-                        guard selectedLevel != nil else { return }
-                        selectedGender = nil
-                        introFrame = .gender
-                    }
-                case .gender:
-                    primaryCTA("Продолжить") {
-                        guard let g = selectedGender else { return }
-                        speaker.setSmartSpeakerPoliteness(g)
-                        selectedPains.removeAll()
-                        introFrame = .pain
-                    }
-                case .pain:
-                    primaryCTA(selectedPains.isEmpty ? "Выбери, что знакомо" : "Продолжить · \(selectedPains.count)") {
-                        guard !selectedPains.isEmpty else { return }
-                        beginCrafting()
+                VStack(spacing: 0) {
+                    switch introFrame {
+                    case .brand:
+                        primaryCTA("Расскажу, как знаю тайский") { introFrame = .level }
+                            .opacity(brandVisible ? 1 : 0)
+                            .offset(y: brandVisible ? 0 : 12)
+                            .animation(
+                                reduceMotion ? .easeOut(duration: 0.16) : .spring(response: 0.55, dampingFraction: 0.86).delay(0.18),
+                                value: brandVisible
+                            )
+                    case .level:
+                        primaryCTA("Продолжить") {
+                            guard selectedLevel != nil else { return }
+                            selectedGender = nil
+                            introFrame = .gender
+                        }
+                    case .gender:
+                        primaryCTA("Продолжить") {
+                            guard let g = selectedGender else { return }
+                            speaker.setSmartSpeakerPoliteness(g)
+                            selectedPains.removeAll()
+                            introFrame = .pain
+                        }
+                    case .pain:
+                        primaryCTA(selectedPains.isEmpty ? "Выбери, что знакомо" : "Продолжить · \(selectedPains.count)") {
+                            guard !selectedPains.isEmpty else { return }
+                            beginCrafting()
+                        }
                     }
                 }
+                .transition(reassemble)
             case .crafting:
                 primaryCTA("Подбираю…") { }
                     .opacity(0.55)
+                    .transition(reassemble)
             case .phrase:
                 primaryCTA("Послушать") {
                     beginListening()
                 }
                 .opacity(phraseRevealed ? 1 : 0)
+                .transition(reassemble)
             case .listen:
                 primaryCTA(listenReadyToSpeak ? "Теперь скажу сам" : "Taika говорит…") {
                     guard listenReadyToSpeak else { return }
                     advanceToSpeakFromListen()
                 }
                 .opacity(listenReadyToSpeak ? 1 : 0.7)
+                .transition(reassemble)
             case .speak:
                 primaryCTA(speakCTATitle) {
                     guard !isPreparingRecording, !isCookingResult else { return }
@@ -681,44 +697,76 @@ struct TaikaCoreLoopOnboardingView: View {
                 }
                 .opacity(isCookingResult || speaker.phase == .analyzing ? 0.55 : 1)
                 .disabled(isCookingResult || speaker.phase == .analyzing)
+                .transition(reassemble)
             case .feedback:
-                primaryCTA("Что улучшить") { openBreakdownSheet() }
-                Button("Далее") { advance(.reinforce) }
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.72))
-                    .buttonStyle(.plain)
-            case .reinforce:
-                primaryCTA(TaikaProConfig.introTrialCTAFree) { onRequestPro() }
-                Button("Открыть Главную") { onOpenHome() }
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.92))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .buttonStyle(.plain)
-                Button {
-                    OverlayPresenter.shared.presentGiftRedeem()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "gift.fill")
-                        Text("У меня есть подарок")
-                    }
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.72))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
+                VStack(spacing: 12) {
+                    primaryCTA("Что улучшить") { openBreakdownSheet() }
+                    Button("Далее") { advance(.reinforce) }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-                Text(TaikaProConfig.introTrialLegalLine)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 18)
+                .transition(reassemble)
+            case .reinforce:
+                VStack(spacing: 12) {
+                    primaryCTA("Начать обучение") { onFinished("course_b_1") }
+                    outlineCTA(TaikaProConfig.introTrialCTAFree) { onRequestPro() }
+                    Text(TaikaProConfig.introTrialLegalLine)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 18)
+                    Button {
+                        OverlayPresenter.shared.presentGiftRedeem()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "gift.fill")
+                            Text("У меня есть подарок")
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .transition(reassemble)
+            }
             }
             if phase != .reinforce {
-                skipLink
+                skipHomeLink.transition(.opacity)
             }
         }
-        .id(phase)
+        .animation(transition, value: phase)
+    }
+
+    /// Пропуск урока на экран выбора. Приложение само не открывается.
+    private var skipHomeLink: some View {
+        Button("Пропустить") { skipLesson() }
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.72))
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Пропустить урок")
+    }
+
+    private func skipLesson() {
+        recordingTask?.cancel()
+        listenTask?.cancel()
+        craftTask?.cancel()
+        resultTask?.cancel()
+        permissionTask?.cancel()
+        analyzeWatchdogTask?.cancel()
+        showBreakdownSheet = false
+        speaker.endEphemeralPracticeSession()
+        if selectedGender == nil {
+            selectedGender = "female"
+        }
+        if let g = selectedGender {
+            speaker.setSmartSpeakerPoliteness(g)
+        }
+        withAnimation(transition) { phase = .reinforce }
     }
 
     private var captureAccessGranted: Bool {
@@ -842,32 +890,19 @@ struct TaikaCoreLoopOnboardingView: View {
         .buttonStyle(.plain)
     }
 
-    private var skipLink: some View {
-        Button("Сразу к 7 дням бесплатно") { skipToOffer() }
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(.white.opacity(0.72))
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .buttonStyle(.plain)
-            .accessibilityLabel("Сразу к семи дням бесплатно")
-    }
-
-    private func skipToOffer() {
-        recordingTask?.cancel()
-        listenTask?.cancel()
-        craftTask?.cancel()
-        resultTask?.cancel()
-        permissionTask?.cancel()
-        analyzeWatchdogTask?.cancel()
-        showBreakdownSheet = false
-        speaker.endEphemeralPracticeSession()
-        if selectedGender == nil {
-            selectedGender = "female"
+    private func outlineCTA(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.92))
+                .frame(maxWidth: .infinity)
+                .frame(height: 58)
+                .background(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.28), lineWidth: 1)
+                )
         }
-        if let g = selectedGender {
-            speaker.setSmartSpeakerPoliteness(g)
-        }
-        withAnimation(transition) { phase = .reinforce }
+        .buttonStyle(.plain)
     }
 
     private func scheduleListenReady() {
