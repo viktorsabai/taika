@@ -900,11 +900,6 @@ public struct SpeakerDSRoot: View {
         let returnTitle = external?.returnToLearningTitle
         let returnIcon = external?.returnToLearningIcon ?? "graduationcap.fill"
         let onReturn = external?.onReturnToLearning
-        let isRecording: Bool = {
-            if case .recording = phase { return true }
-            return false
-        }()
-        let isAnalyzing = phase.isProcessing
 
         return VStack(spacing: 0) {
             topCarousel
@@ -912,30 +907,24 @@ public struct SpeakerDSRoot: View {
                 .frame(height: CardDS.Metrics.speakerPhraseCardHeight + 12)
                 .padding(.top, gap)
 
-            // Как в умном спикере: чип над основным контролом, без второй волны у таба.
-            if isRecording || isAnalyzing {
-                trainingLiveListenChrome
-                    .padding(.top, 14)
-                    .padding(.horizontal, padH)
-                    .transition(.opacity)
-            }
-
-            speakerPlayerPanel
-                .padding(.top, (isRecording || isAnalyzing) ? 10 : (gap + 4))
+            trainingStatusSlot
+                .padding(.top, 10)
                 .padding(.horizontal, padH)
 
-            if !isRecording, !isAnalyzing, !phase.isFeedback {
-                idleHelperHint
-                    .padding(.top, gap)
-                    .padding(.horizontal, padH)
-            }
+            speakerPlayerPanel
+                .padding(.top, 8)
+                .padding(.horizontal, padH)
+
+            idleHelperHint
+                .padding(.top, 8)
+                .padding(.horizontal, padH)
 
             Spacer(minLength: 8)
 
             if phase.isFeedback {
                 simpleResultBlock
                     .padding(.horizontal, padH)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .transition(.opacity)
             }
 
             if let onReturn, let returnTitle, !returnTitle.isEmpty, !phase.isFeedback {
@@ -954,10 +943,22 @@ public struct SpeakerDSRoot: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .animation(.easeInOut(duration: 0.22), value: phase.label)
         .animation(.easeInOut(duration: 0.22), value: onReturn != nil)
-        .animation(.easeInOut(duration: 0.22), value: isRecording)
-        .animation(.easeInOut(duration: 0.22), value: isAnalyzing)
+    }
+
+    /// Одна и та же высота и в покое, и во время записи: кнопки под карточкой не едут.
+    @ViewBuilder private var trainingStatusSlot: some View {
+        let busy: Bool = {
+            if case .recording = phase { return true }
+            return phase.isProcessing
+        }()
+        ZStack {
+            if busy {
+                conversationLiveStatusChip
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 22)
     }
 
     // MARK: - Своя речь: один живой виджет (лента + live + sticky mic)
@@ -2601,6 +2602,17 @@ public struct SpeakerDSRoot: View {
         return asr.isEmpty ? "—" : Self.conversationPhoneticLoadingToken
     }
 
+    /// Слова совпали целиком: тон по голосу мы не судим, так что «поправь ровный на ровный» здесь врать.
+    private var takeIsClean: Bool {
+        (external?.heardConfidence ?? 0) >= 100
+    }
+
+    private var cleanTakePraise: String {
+        let ru = (external?.heardRU ?? currentItem?.hint ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return Self.tonePraiseFromKunKru(label: ru, score: external?.heardConfidence).body
+    }
+
     /// Одна конкретная правка вместо галочки «готово»: что именно исправить в следующей попытке.
     /// Пока грузится — держим ту же высоту, чтобы блок под оценкой не подпрыгивал.
     @ViewBuilder private var conversationCoachLine: some View {
@@ -2609,8 +2621,8 @@ public struct SpeakerDSRoot: View {
             headline: external?.conversationCoachHeadline,
             detail: external?.conversationCoachDetail
         )
-        let headline = focus.isEmpty ? (coach?.headline ?? "") : focus
-        let loading = focus.isEmpty && (external?.conversationCoachInFlight ?? false)
+        let headline = takeIsClean ? cleanTakePraise : (focus.isEmpty ? (coach?.headline ?? "") : focus)
+        let loading = !takeIsClean && focus.isEmpty && (external?.conversationCoachInFlight ?? false)
 
         if !headline.isEmpty || loading {
             Text(headline.isEmpty ? "смотрю, что поправить…" : headline)
@@ -2632,7 +2644,13 @@ public struct SpeakerDSRoot: View {
 
     /// Развёрнутое пояснение коуча в разборе тонов: что именно перепутано — слово, тон или слог.
     @ViewBuilder private var conversationCoachDetailBlock: some View {
-        if let focus = external?.teachingFocusLine?.trimmingCharacters(in: .whitespacesAndNewlines), !focus.isEmpty {
+        if takeIsClean {
+            Text(cleanTakePraise)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(PD.ColorToken.text.opacity(0.94))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else if let focus = external?.teachingFocusLine?.trimmingCharacters(in: .whitespacesAndNewlines), !focus.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 Text("ЧТО ПОПРАВИТЬ")
                     .font(.system(size: 11, weight: .bold))
@@ -4192,9 +4210,6 @@ public struct SpeakerDSRoot: View {
             )
             .padding(.bottom, 10)
 
-            conversationCoachLine
-                .padding(.bottom, 8)
-
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("нужно было")
@@ -4300,26 +4315,49 @@ public struct SpeakerDSRoot: View {
         external?.hasFullToneBreakdownAccess ?? external?.isProUser ?? false
     }
 
-    /// Training listen chrome — same tokens as smart speaker: status chip + compact wave, no ambient slab.
-    @ViewBuilder private var trainingLiveListenChrome: some View {
-        let isRec: Bool = {
-            if case .recording = phase { return true }
-            return false
-        }()
-        VStack(spacing: 10) {
-            conversationLiveStatusChip
-                .frame(height: 28)
-            if phase.isProcessing {
-                ConversationLiveProcessTicks()
-                    .frame(height: 14)
-            } else if isRec {
-                MiniWaveform(meter: recordingMeter)
-                    .frame(height: 26)
-                    .frame(maxWidth: 160)
+    /// «Ты сказал»: совпавший слог белый, промах красный. Если совпало всё — строка зелёная.
+    private func trainingHeardColumn(heard: String, expected: String) -> some View {
+        let paints = PhoneticWordDiff.paintHeardSyllables(expected: expected, heard: heard)
+        let font = Font.system(size: 16, weight: .semibold)
+        let arrowFont = font
+        let allOk = !paints.isEmpty && paints.allSatisfy(\.ok)
+        let miss = AnyShapeStyle(PD.ColorToken.toneWrong)
+        let okBody = AnyShapeStyle(PD.ColorToken.text)
+        let okArrow = AnyShapeStyle(ThemeManager.shared.currentAccentFill)
+        let good = AnyShapeStyle(PD.ColorToken.toneCorrect)
+        let arrows: Set<Character> = ["→", "↓", "↘", "↑", "↗"]
+
+        var line = Text("")
+        if paints.isEmpty {
+            line = TaikaSmartSpeakerPhonetic.styledText(heard, font: font)
+        } else {
+            for (index, syllable) in paints.enumerated() {
+                if index > 0 {
+                    line = line + Text(" ").font(font)
+                }
+                let body = allOk ? good : (syllable.ok ? okBody : miss)
+                let arrow = allOk ? good : (syllable.ok ? okArrow : miss)
+                var letters = ""
+                for ch in syllable.text {
+                    if arrows.contains(ch) {
+                        if !letters.isEmpty {
+                            line = line + Text(letters).font(font).foregroundStyle(body)
+                            letters = ""
+                        }
+                        line = line + Text(String(ch)).font(arrowFont).foregroundStyle(arrow)
+                    } else {
+                        letters.append(ch)
+                    }
+                }
+                if !letters.isEmpty {
+                    line = line + Text(letters).font(font).foregroundStyle(body)
+                }
             }
         }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
+        return line
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     @ViewBuilder
@@ -4339,10 +4377,7 @@ public struct SpeakerDSRoot: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
         } else if !isBreakdownExpanded {
-            PhoneticWithColoredArrowsView(phonetic: userText, font: .system(size: 16, weight: .semibold), alignment: .leading)
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
+            trainingHeardColumn(heard: userText, expected: expected)
         } else {
             highlightedUserExpanded(userText: userText, expected: expected)
         }
@@ -4793,34 +4828,75 @@ public struct SpeakerDSRoot: View {
                 .foregroundStyle(Theme.Gradients.accentText)
 
             if wordsMatched {
-                Text("Apple услышала ровно эту фразу — все слова совпали.")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(PD.ColorToken.text.opacity(0.94))
-                    .fixedSize(horizontal: false, vertical: true)
+                let chunks = Self.translitChunksForSyllables(expected)
+                let line = chunks.isEmpty ? expected : chunks.joined(separator: " ")
+                TaikaSmartSpeakerPhonetic.styledText(
+                    line,
+                    font: .system(size: 22, weight: .semibold),
+                    body: AnyShapeStyle(PD.ColorToken.toneCorrect),
+                    arrow: AnyShapeStyle(PD.ColorToken.toneCorrect)
+                )
+                .fixedSize(horizontal: false, vertical: true)
             } else if isLoading {
                 HStack(spacing: 10) {
                     ProgressView()
-                    Text("смотрю, что услышала Apple")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(PD.ColorToken.textSecondary)
+                    breakdownBrandLine(
+                        "смотрю, что услышала",
+                        size: 13,
+                        weight: .semibold,
+                        color: PD.ColorToken.textSecondary,
+                        logoFirst: false
+                    )
                 }
             } else if rows.isEmpty {
-                Text("Слова не разобрала — скажи фразу ещё раз.")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary)
+                breakdownBrandLine(
+                    "не разобрала слова — скажи фразу ещё раз.",
+                    size: 14,
+                    weight: .medium,
+                    color: PD.ColorToken.textSecondary
+                )
             } else {
                 VStack(spacing: 8) {
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                         breakdownWordDiffRow(row)
                     }
                 }
-                Text("Стрелки у тебя — тон слова, которое узнала Apple. Голос сравни на слух сверху: эталон и моя.")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.7))
-                    .fixedSize(horizontal: false, vertical: true)
+                breakdownBrandLine(
+                    "узнала слово — стрелка это его тон. Голос сравни на слух сверху: эталон и моя.",
+                    size: 12,
+                    weight: .medium,
+                    color: PD.ColorToken.textSecondary.opacity(0.7)
+                )
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Логотип — картинка, не шрифт: пробный Onmark в сборку не входит.
+    private func breakdownBrandLine(
+        _ text: String,
+        size: CGFloat,
+        weight: Font.Weight,
+        color: Color,
+        logoFirst: Bool = true
+    ) -> some View {
+        HStack(alignment: .center, spacing: 6) {
+            if logoFirst {
+                TaikaWordmarkLockup(fontSize: max(11, size - 1))
+                    .accessibilityHidden(true)
+            }
+            Text(text)
+                .font(.system(size: size, weight: weight))
+                .foregroundStyle(color)
+                .fixedSize(horizontal: false, vertical: true)
+            if !logoFirst {
+                TaikaWordmarkLockup(fontSize: max(11, size - 1))
+                    .accessibilityHidden(true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Тайка \(text)")
     }
 
     private func breakdownWordDiffRow(_ row: PhoneticWordDiff) -> some View {
@@ -4849,10 +4925,19 @@ public struct SpeakerDSRoot: View {
                         }
                     }
                     ForEach(row.reasons, id: \.self) { reason in
-                        Text(reason)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(PD.ColorToken.text.opacity(0.78))
-                            .fixedSize(horizontal: false, vertical: true)
+                        if reason.namesUs {
+                            breakdownBrandLine(
+                                reason.text,
+                                size: 13,
+                                weight: .medium,
+                                color: PD.ColorToken.text.opacity(0.78)
+                            )
+                        } else {
+                            Text(reason.text)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(PD.ColorToken.text.opacity(0.78))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
                 .padding(.leading, 15)
@@ -6401,11 +6486,7 @@ public struct SpeakerDSRoot: View {
         }
         .frame(height: 22, alignment: .center)
     }
-    // MARK: sub-header — заголовок + режим; курсы — в иконке хедера (бывшая плашка попыток).
-
-    private var trainingScopeLessonIds: [String] {
-        external?.learnedLessonIds ?? []
-    }
+    // MARK: sub-header — заголовок + режим; курсы и уроки — в иконке микрофона в хедере.
 
     private var speakerModeTransition: AnyTransition {
         .asymmetric(
@@ -6478,45 +6559,12 @@ public struct SpeakerDSRoot: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(PD.ColorToken.textSecondary)
                     .padding(.horizontal, CD.Spacing.screen)
-            } else if speakerUIMode == .training, trainingScopeLessonIds.count > 1 {
-                learnedLessonChipsRow(lessonIds: trainingScopeLessonIds)
             }
         }
         .padding(.top, rootHeaderClearance > 0 ? rootHeaderClearance : Theme.Layout.sectionTop)
         .padding(.bottom, 4)
         .animation(nil, value: speakerUIMode)
     }
-
-    private func learnedLessonChipsRow(lessonIds: [String]) -> some View {
-        let selected = external?.learnedLessonFilter
-        let titleFor: (String) -> String = { id in
-            external?.lessonTitleForLessonId?(id) ?? id
-        }
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                AppFilterChip(
-                    title: "Все уроки",
-                    isActive: selected == nil || selected?.isEmpty == true,
-                    scale: .s
-                ) {
-                    external?.onSelectLearnedLessonFilter?(nil)
-                }
-                ForEach(lessonIds, id: \.self) { lid in
-                    AppFilterChip(
-                        title: titleFor(lid),
-                        isActive: selected == lid,
-                        scale: .s
-                    ) {
-                        external?.onSelectLearnedLessonFilter?(lid)
-                    }
-                }
-            }
-            .padding(.horizontal, CD.Spacing.screen)
-        }
-        .accessibilityLabel("Фильтр по урокам")
-    }
-
-
 
     // MARK: pro wireframe
 
@@ -6744,37 +6792,22 @@ public struct SpeakerDSRoot: View {
                         external?.onMicTap()
                     }
                 } label: {
-                    HStack(spacing: 10) {
+                    VStack(spacing: 6) {
                         Image(systemName: micIcon)
-                            .font(.system(size: 17, weight: .bold))
-                        Text(micTitle)
-                            .font(.system(size: trainingLimitExhausted ? 13 : 16, weight: .bold))
-                            .lineLimit(2)
-                            .multilineTextAlignment(.center)
-                            .minimumScaleFactor(0.8)
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(micForeground)
+                            .frame(width: 64, height: 64)
+                            .background(Circle().fill(micFill))
+                        Text(trainingLimitExhausted ? "Лимит" : micTitle)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(PD.ColorToken.text.opacity(isAnalyzing ? 0.4 : 0.78))
+                            .lineLimit(1)
                     }
-                    .foregroundStyle(micForeground)
-                    .padding(.horizontal, trainingLimitExhausted ? 14 : 26)
-                    .frame(minWidth: 148, maxWidth: trainingLimitExhausted ? .infinity : 200)
-                    .frame(height: 52)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(micFill)
-                    )
-                    .overlay {
-                        if isRecording {
-                            Capsule(style: .continuous)
-                                .stroke(Color.red.opacity(idleMicPulse ? 0.62 : 0.28), lineWidth: 2)
-                                .scaleEffect(idleMicPulse ? 1.05 : 1.0)
-                        }
-                    }
+                    .frame(width: 76)
                 }
                 .buttonStyle(PressDownStyle(scale: 0.97, fade: 0.95, useBouncySpring: false, flashOpacity: 0.04))
                 .disabled(controlDisabled)
                 .accessibilityLabel(micAccessibilityLabel)
-                .onAppear {
-                    if isRecording { idleMicPulse = true }
-                }
 
                 speakerDockSideButton(
                     icon: "person.wave.2.fill",
@@ -6849,7 +6882,7 @@ public struct SpeakerDSRoot: View {
                            : AnyShapeStyle(Color.white.opacity(0.92)))
                         : AnyShapeStyle(PD.ColorToken.textSecondary.opacity(0.28))
                     )
-                    .frame(width: 44, height: 36)
+                    .frame(width: 64, height: 64)
                 Text(title)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(
@@ -7271,15 +7304,20 @@ private enum TaikaSmartSpeakerPhonetic {
     }
 
     /// Как `phoneticStyledText` в CardDS: слоги — текст, стрелки — brand gradient (не flat tint).
-    static func styledText(_ raw: String, font: Font) -> Text {
+    /// `body` / `arrow` — для совпавшего разбора, где вся строка зелёная.
+    static func styledText(
+        _ raw: String,
+        font: Font,
+        body: AnyShapeStyle = AnyShapeStyle(PD.ColorToken.text),
+        arrow: AnyShapeStyle? = nil
+    ) -> Text {
         let norm = normalize(raw)
         guard !norm.isEmpty else {
             return Text("").font(font)
         }
         var result = Text("")
         var buffer = ""
-        let accent = AnyShapeStyle(ThemeManager.shared.currentAccentFill)
-        let body = AnyShapeStyle(PD.ColorToken.text)
+        let accent = arrow ?? AnyShapeStyle(ThemeManager.shared.currentAccentFill)
 
         func flushBody() {
             guard !buffer.isEmpty else { return }
@@ -8159,7 +8197,7 @@ struct SpeakerTripleScoreHeader: View {
                 }
                 .frame(maxWidth: .infinity, alignment: centered ? .center : .leading)
             } else {
-                Text("слова совпали")
+                Text("слова")
                     .font(.system(size: 11, weight: .semibold))
                     .tracking(0.3)
                     .foregroundStyle(PD.ColorToken.textSecondary.opacity(0.72))

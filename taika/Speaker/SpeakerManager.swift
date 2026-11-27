@@ -2895,6 +2895,17 @@ public final class SpeakerManager: ObservableObject {
             guard i > 0, i + 1 < tokens.count else { continue }
             if tokens[i - 1] == tokens[i + 1] { return true }
         }
+        // «нужен ровный, а прозвучал ровный»: тон один и тот же, советовать нечего.
+        func toneStem(after anchor: String) -> String? {
+            guard let i = raw.firstIndex(of: anchor) else { return nil }
+            let stems = ["ровн", "низк", "пада", "высок", "восход", "средн"]
+            return raw.dropFirst(i + 1).prefix(6).compactMap { word in
+                stems.first { word.hasPrefix($0) }
+            }.first
+        }
+        let asked = ["нужен", "нужно", "нужна", "надо"].compactMap(toneStem).first
+        let heard = ["прозвучал", "прозвучала", "слышится", "слышен", "сейчас"].compactMap(toneStem).first
+        if let asked, let heard, asked == heard { return true }
         return false
     }
 
@@ -2905,8 +2916,9 @@ public final class SpeakerManager: ObservableObject {
         var headline = withoutThaiScript(rawHeadline ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         var detail = withoutThaiScript(rawDetail ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if isDegenerateAdvice(headline) { headline = "" }
-        if isDegenerateAdvice(detail) { detail = "" }
+        let detailWasNoise = isDegenerateAdvice(detail)
+        if isDegenerateAdvice(headline) || detailWasNoise { headline = "" }
+        if detailWasNoise { detail = "" }
 
         if headline.isEmpty {
             guard !detail.isEmpty else { return nil }

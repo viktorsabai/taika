@@ -19,21 +19,47 @@ struct PhoneticWordDiff: Equatable {
 
     var isMatch: Bool { heard != nil && issues.isEmpty }
 
-    var reasons: [String] {
-        guard heard != nil else { return ["это слово не услышала"] }
+    /// Слог из колонки «ты сказал»: красным только тот, чей звук не совпал с эталоном.
+    /// Расхождение одной стрелки не красим — это словарный тон, не измеренный голос.
+    struct PaintedSyllable: Equatable, Hashable {
+        let text: String
+        let ok: Bool
+    }
+
+    static func paintHeardSyllables(expected: String, heard: String) -> [PaintedSyllable] {
+        let exp = syllables(expected)
+        let hrd = syllables(heard)
+        guard !hrd.isEmpty else { return [] }
+        let match = align(exp, hrd)
+        var ok = Array(repeating: false, count: hrd.count)
+        for (i, heardIndex) in match.enumerated() {
+            guard let heardIndex, exp[i].key == hrd[heardIndex].key else { continue }
+            ok[heardIndex] = true
+        }
+        return zip(hrd, ok).map { PaintedSyllable(text: $0.0.text, ok: $0.1) }
+    }
+
+    /// `namesUs` — строку произносит Taika, на экране перед ней картинка логотипа, не слово «Apple».
+    struct Reason: Equatable, Hashable {
+        let text: String
+        let namesUs: Bool
+    }
+
+    var reasons: [Reason] {
+        guard heard != nil else { return [Reason(text: "не услышала это слово", namesUs: true)] }
         return issues.map { issue in
             switch issue {
             case .lostAspiration(let onset):
-                return "без придыхания: \(onset) → \(onset.prefix(1))"
+                return Reason(text: "без придыхания: \(onset) → \(onset.prefix(1))", namesUs: false)
             case .addedAspiration(let onset):
-                return "лишнее придыхание: \(onset.prefix(1)) → \(onset)"
+                return Reason(text: "лишнее придыхание: \(onset.prefix(1)) → \(onset)", namesUs: false)
             case .otherWord:
-                return "Apple услышала другое слово"
+                return Reason(text: "услышала другое слово", namesUs: true)
             case .missingSyllable(let syllable):
-                return "не хватает «\(syllable)»"
+                return Reason(text: "не хватает «\(syllable)»", namesUs: false)
             case .tone(let syllable, let expected, let heard):
                 let line = "тон \(heard), а нужен \(expected)"
-                return syllable.map { "\($0): \(line)" } ?? line
+                return Reason(text: syllable.map { "\($0): \(line)" } ?? line, namesUs: false)
             }
         }
     }
